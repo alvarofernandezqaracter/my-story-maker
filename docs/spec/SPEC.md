@@ -339,3 +339,46 @@ Cada incidencia lleva cita textual, severidad (`grave` o `aviso`) y una sugerenc
 **Qué recibe el escritor al reintentar.** El mismo paquete de contexto, las incidencias del intento anterior ordenadas por severidad y, solo en el intento 2, su propio texto: ahí se le pide arreglo quirúrgico, tocar lo señalado y no reescribir lo que ya funciona. El intento 3 va desde cero con las incidencias acumuladas de los dos anteriores, porque si dos pasadas quirúrgicas no han bastado el problema no está en las frases sino en el planteamiento de la escena.
 
 **Al agotar los tres intentos.** El capítulo queda `bloqueado`, el proyecto también, y el sistema para en vez de seguir con el siguiente: escribir sobre un canon con un agujero solo propaga el problema. Se conserva el intento con mejor media, en estado `propuesto`, y sus revisiones. Tienes tres salidas, todas manuales: editar el texto a mano y aprobarlo, retocar la ficha de capítulo y relanzar con el contador a cero, o bajar el umbral solo para ese capítulo dejando constancia.
+
+## §8 Editor global
+
+Corre una sola vez, cuando el proyecto entra en `escrito`, y fuera del loop. Lee los resúmenes de todos los capítulos, los hilos que siguen abiertos al final, la escaleta y las fichas de personaje. No lee el texto: si algo no se ve en los resúmenes, es que el cronista no lo registró, y ese es un fallo que se arregla en §5, no leyendo 200.000 palabras.
+
+Devuelve una lista corta de retoques. Cada retoque tiene id, tipo (`arco`, `promesa`, `ritmo` o `personaje`), capítulos afectados, una descripción accionable de una o dos frases y una severidad. Se le pide brevedad y concreción: diez retoques que se puedan ejecutar valen más que cuarenta observaciones.
+
+La lista se guarda como `retoques.md` junto al canon, no dentro. El canon es la verdad de la novela escrita y esto es una lista de tareas para mí; mezclarlas haría que el canon dejara de ser lo que dice §2.
+
+El editor no aplica nada ni dispara reescrituras. En 0.1.0 el bucle se cierra a mano: yo decido qué retoques valen y los aplico editando capítulos. Automatizar esa vuelta es lo primero que queda fuera de alcance (§1) y está apuntado en §11 (DA-07).
+
+## §9 Operación
+
+**Qué pasa cuando algo falla a mitad.** El estado vive en el canon, nunca en memoria del proceso, así que un corte de red, un error del proveedor o un Ctrl+C no pierden más que el intento en curso. Como el canon solo se toca después del gate y en una única escritura validada del cronista, no existe el estado a medias: o el capítulo entró entero o no entró. Lo peor que deja una caída es un Markdown huérfano en `capitulos/` con su fila en estado `propuesto`, que al relanzar se descarta. Ante un error del proveedor se reintenta la llamada una vez; si vuelve a fallar, el proceso para y deja el estado escrito en lugar de insistir. No hay política de backoff ni de reintentos finos en 0.1.0, y es deliberado: con un solo usuario, parar y mirar sale más barato que automatizar la recuperación.
+
+**Reanudación.** Un único comando reanudar, sin argumentos: lee el estado del proyecto, localiza el primer capítulo no aprobado y sigue desde ahí. Relanzar con el proyecto ya `escrito` no reescribe nada, solo vuelve a ofrecer el editor global. El par capítulo e intento identifica cada fichero, así que repetir un intento sobrescribe en lugar de duplicar.
+
+**Configuración.** Un solo fichero junto al canon, con todo lo que se toca sin tocar código.
+
+| Parámetro | Por defecto | Para qué |
+|---|---|---|
+| `nota_minima` | 3 | Suelo por revisor en el gate |
+| `media_minima` | 3,7 | Media exigida a las tres notas |
+| `max_intentos` | 3 | Reintentos del escritor antes de bloquear |
+| `tope_contexto` | por definir con el stack | Tope de tokens del paquete de contexto |
+| `ventana_resumenes` | 3 | Capítulos anteriores que van con resumen completo |
+| `palabras_enganche` | 400 | Cola literal del capítulo anterior |
+| `modelo_por_rol` | ver §5 | Modelo de cada agente |
+| `busqueda_web` | activada | Permite al investigador verificar datos dudosos |
+
+## §10 Roadmap por fases
+
+Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo que tiene que pasar para empezar la siguiente, no una fecha.
+
+| Fase | Qué entra | Criterio de salida |
+|---|---|---|
+| F0 Esqueleto | Canon vacío, brief y comandos de lectura y escritura | Meto un personaje y un capítulo a mano y los leo desde el canon |
+| F1 Preparación | Investigador sin búsqueda y arquitecto | Un brief produce dossier y escaleta completos y coherentes entre sí |
+| F2 Un capítulo | Generador de contexto, escritor y cronista, sin revisión | El capítulo 1 se escribe y actualiza el canon sin que yo toque nada |
+| F3 Calidad | Los tres revisores en paralelo y el gate con reintentos | Un capítulo malo a propósito se rechaza y el reintento lo arregla |
+| F4 Novela entera | Loop sobre toda la escaleta, bloqueo y reanudación | Una novela corta completa, con al menos un bloqueo resuelto a mano |
+| F5 Cierre | Editor global y `retoques.md` | La lista de retoques es accionable sin releer los capítulos |
+| F6 Rigor | Búsqueda web del investigador y estados de verificación reales | La mayoría de datos del dossier llevan fuente comprobable |
