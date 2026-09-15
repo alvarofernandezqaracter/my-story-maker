@@ -434,26 +434,13 @@ Un único `config.json` en la raíz del proyecto, junto al canon. Aquí vive tod
 
 **Por qué dos márgenes de palabras.** VD-08 tiene que distinguir el capítulo que se queda corto del que no sirve. Dentro de `palabras_aviso` el texto vale y la desviación viaja como aviso al reintento; pasado `palabras_bloqueo` no se gasta la llamada al validador y se reintenta la generación. Con un solo umbral había que elegir entre no filtrar nada o tirar capítulos aprovechables.
 
-`busqueda_web` queda activada por herencia de la tabla anterior, pero la búsqueda real no entra hasta F6 (§14): hasta entonces el investigador la ignora y el parámetro está puesto para no tocar el esquema más tarde.
+`busqueda_web` queda activada, como estaba, pero la búsqueda real no entra hasta F6 (§14): hasta entonces el investigador la ignora y el parámetro está puesto para no tocar el esquema más tarde.
 
 ## §13 Operación: fallos y reanudación
 
 **Qué pasa cuando algo falla a mitad.** El estado vive en el canon, nunca en memoria del proceso, así que un corte de red, un error del proveedor o un Ctrl+C no pierden más que el intento en curso. Como el canon solo se toca después del gate y en una única escritura validada del cronista, no existe el estado a medias: o el capítulo entró entero o no entró. Lo peor que deja una caída es un Markdown huérfano en `capitulos/` con su fila en estado `propuesto`, que al relanzar se descarta. Ante un error del proveedor se reintenta la llamada una vez; si vuelve a fallar, el proceso para y deja el estado escrito en lugar de insistir. No hay política de backoff ni de reintentos finos en el alcance inicial, y es deliberado: con un solo usuario, parar y mirar sale más barato que automatizar la recuperación.
 
 **Reanudación.** Un único comando reanudar, sin argumentos: lee el estado del proyecto, localiza el primer capítulo no aprobado y sigue desde ahí. Relanzar con el proyecto ya `escrito` no reescribe nada, solo vuelve a ofrecer el editor global. El par capítulo e intento identifica cada fichero, así que repetir un intento sobrescribe en lugar de duplicar.
-
-**Configuración.** Un solo fichero junto al canon, con todo lo que se toca sin tocar código.
-
-| Parámetro | Por defecto | Para qué |
-|---|---|---|
-| `nota_minima` | 3 | Suelo por dimensión en el gate |
-| `media_minima` | 3,7 | Media exigida a las tres notas |
-| `max_intentos` | 3 | Reintentos del escritor antes de bloquear |
-| `tope_contexto` | por definir con el stack | Tope de tokens del paquete de contexto |
-| `ventana_resumenes` | 3 | Capítulos anteriores que van con resumen completo |
-| `palabras_enganche` | 400 | Cola literal del capítulo anterior |
-| `modelo_por_rol` | ver §5 | Modelo de cada agente |
-| `busqueda_web` | activada | Permite al investigador verificar datos dudosos |
 
 ## §14 Roadmap por fases
 
