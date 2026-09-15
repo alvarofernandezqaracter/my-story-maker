@@ -422,3 +422,27 @@ Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección
 - Sustituye a un borrador anterior de 4.212 líneas, descartado por inabarcable y conservado en el tag `spec-v0-detallado`.
 
 **Regla permanente.** Todo cambio futuro sube la versión de la cabecera y añade aquí su entrada, indicando sección tocada y motivo. Los números de sección son estables y no se reutilizan: si una sección desaparece, su número queda muerto.
+
+## §13 Log de commits del spec
+
+Registro literal de los commits que han tocado `docs/spec/`, desde el reset que abrió esta versión del documento. §12 dice por qué cambió algo; esta tabla dice cuándo y en qué commit. Los 23 commits anteriores pertenecen al borrador descartado y viven en el tag `spec-v0-detallado`.
+
+| Commit | Fecha | Mensaje |
+|---|---|---|
+| `9c8500a` | 2026-09-15 | docs(spec): §1 visión y alcance |
+| `7ab736d` | 2026-09-15 | docs(spec): §2 glosario |
+| `8d8b1a3` | 2026-09-15 | docs(spec): §3 modelo de datos del canon |
+| `9e1a339` | 2026-09-15 | docs(spec): §4 arquitectura y flujo |
+| `858c9cf` | 2026-09-15 | docs(spec): §5 agentes |
+| `3c26465` | 2026-09-15 | docs(spec): correcciones §1-§5 (agente cronista, faltantes del escritor, DA-03, unificación brief/estados/notas) |
+| `921d596` | 2026-09-15 | docs(spec): §6 generador de contexto |
+| `e4e80f0` | 2026-09-15 | docs(spec): §7 loop de capítulo y gate |
+| `f855fad` | 2026-09-15 | docs(spec): §8-§10 editor global, operación y roadmap |
+| `5f9fb47` | 2026-09-15 | docs(spec): §11 decisiones abiertas |
+| `2793bf7` | 2026-09-15 | docs(spec): §12 historial de cambios |
+
+La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
+
+```
+git log --reverse --pretty='| `%h` | %ad | %s |' --date=short -- docs/spec/
+```
