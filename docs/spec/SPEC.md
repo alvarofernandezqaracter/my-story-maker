@@ -198,12 +198,12 @@ flowchart TD
 
     %% ---------- Estilos (leyenda del drawio) ----------
     classDef agente fill:#EEEDFE,stroke:#534AB7,color:#26215C;
-    classDef revisor fill:#FAECE7,stroke:#993C1D,color:#4A1B0C;
+    classDef validador fill:#FAECE7,stroke:#993C1D,color:#4A1B0C;
     classDef datos fill:#FFFFFF,stroke:#1D9E75,color:#04342C;
     classDef harness fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
 
     class inv,arq,escritor,cronista,editor agente;
-    class val revisor;
+    class val validador;
     class outinv,outarq,c1,c2,c3,c4 datos;
     class brief,genctx,gate harness;
 
@@ -419,7 +419,7 @@ El editor no aplica nada ni dispara reescrituras. En 0.1.0 el bucle se cierra a 
 
 | Parámetro | Por defecto | Para qué |
 |---|---|---|
-| `nota_minima` | 3 | Suelo por revisor en el gate |
+| `nota_minima` | 3 | Suelo por dimensión en el gate |
 | `media_minima` | 3,7 | Media exigida a las tres notas |
 | `max_intentos` | 3 | Reintentos del escritor antes de bloquear |
 | `tope_contexto` | por definir con el stack | Tope de tokens del paquete de contexto |
@@ -437,7 +437,7 @@ Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo q
 | F0 Esqueleto | Canon vacío, brief y comandos de lectura y escritura | Meto un personaje y un capítulo a mano y los leo desde el canon |
 | F1 Preparación | Investigador sin búsqueda y arquitecto | Un brief produce dossier y escaleta completos y coherentes entre sí |
 | F2 Un capítulo | Generador de contexto, escritor y cronista, sin revisión | El capítulo 1 se escribe y actualiza el canon sin que yo toque nada |
-| F3 Calidad | Los tres revisores en paralelo y el gate con reintentos | Un capítulo malo a propósito se rechaza y el reintento lo arregla |
+| F3 Calidad | El agente validador y el gate con reintentos | Un capítulo malo a propósito se rechaza y el reintento lo arregla |
 | F4 Novela entera | Loop sobre toda la escaleta, bloqueo y reanudación | Una novela corta completa, con al menos un bloqueo resuelto a mano |
 | F5 Cierre | Editor global y `retoques.md` | La lista de retoques es accionable sin releer los capítulos |
 | F6 Rigor | Búsqueda web del investigador y estados de verificación reales | La mayoría de datos del dossier llevan fuente comprobable |
@@ -448,8 +448,8 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 
 | Id | Decisión pendiente | Por qué importa | Cuándo decidirla |
 |---|---|---|---|
-| DA-01 | Lenguaje y stack del harness | Fija cómo se consulta el canon y cómo se lanzan los tres revisores en paralelo | Antes de F0 |
-| DA-02 | Modelo definitivo de cada agente | Los revisores son la mayoría de llamadas; el reparto decide el coste del libro | Antes de F3 |
+| DA-01 | Lenguaje y stack del harness | Fija cómo se consulta el canon y cómo se orquestan las llamadas a agentes | Antes de F0 |
+| DA-02 | Modelo definitivo de cada agente | Validador y escritor se llevan casi todas las llamadas; el reparto decide el coste del libro | Antes de F3 |
 | DA-03 | Parada humana al acabar la preparación | Es la revisión más barata y un fallo de escaleta contamina el libro entero | Antes de F4 |
 | DA-04 | Proveedor de búsqueda del investigador | Define qué significa exactamente `verificado` en el dossier | Antes de F6 |
 | DA-05 | Qué hacer con los `faltantes` del escritor | Hoy se registran y nadie los mira; podrían disparar una consulta al investigador | Antes de F4 |
