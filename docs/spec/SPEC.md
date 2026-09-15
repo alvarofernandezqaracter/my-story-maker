@@ -3880,7 +3880,68 @@ Las unidades del eje son relativas (bloques de trabajo), no semanas: este docume
 
 ## §17 Riesgos y decisiones abiertas
 
-> Estado: pendiente
+> Estado: completa (es la sección que recoge lo abierto; se actualiza en cada versión)
+
+### §17.1 Decisiones abiertas
+
+Cada fila es algo que el autor del spec no puede cerrar solo, o que depende de datos que aún no existen. "Cuándo" indica el último momento razonable para decidir sin rehacer trabajo.
+
+| Id | Decisión | Opciones | Recomendación | Impacto si me equivoco | Cuándo | Secciones |
+|---|---|---|---|---|---|---|
+| D-01 | Framework de orquestación | (a) Orquestador propio sobre `asyncio`; (b) framework de grafos (LangGraph o similar); (c) SDK de agentes de un proveedor | (a). El flujo es lineal con un solo punto de paralelismo; el estado ya es nuestro `estado.json`. | Con (b): dependencia pesada y estado duplicado; migrar después cuesta reescribir `harness/`. Con (a) y un flujo que crezca mucho: reimplementar checkpointing que un framework ya trae. | Antes de empezar la fase 1 | §4.8, §18.2 |
+| D-02 | Proveedor y modelo concretos por nivel | Cualquier combinación de §13 `niveles` | Empezar con el proveedor del que el usuario tenga clave; nivel alto para investigador, arquitecto, escritor y editor; medio para revisores. | Coste por capítulo o calidad fuera de objetivo. Se corrige por configuración sin tocar código. | Fase 1 (uno), fase 2 (calibrar) | §5.0, §13 |
+| D-03 | Nivel del revisor de anacronismos | `medio` / `alto` | `medio` hasta que §15.6 mida recall; si < 4/5 en anacronismos plantados, `alto`. | Anacronismos reales que pasan el gate (medio) o coste ×3 en ese revisor (alto). | Fase 2, tras el set de evaluación | §5.5, §15.6 |
+| D-04 | Valor de K (resúmenes completos en contexto) | 1 / 3 / 5 | 3. | K bajo: pérdida de enlace entre capítulos; K alto: tokens y coste sin ganancia medida. | Fase 2, con la pasada de K de §15.6 | §6.3, §15.6 |
+| D-05 | Búsqueda web del investigador | Desactivada / activada con `buscar_web` + `leer_url` | Desactivada en fase 1; activar en fase 2 y medir fuentes reales en §15.6. | Desactivada: dossier con fuentes de memoria no verificables (R-01). Activada: coste, latencia, inyección (R-02). | Fase 2 | §5.1, §18.9 |
+| D-06 | Resumen global generado por LLM para libros largos | Mantener composición determinista / añadir compactación LLM cada M capítulos | Mantener determinista hasta ver fallos atribuibles a B5 recortado en libros > 40 capítulos. | Con LLM: un agente fuera del diagrama y coste extra. Sin él: pérdida de hechos antiguos en libros muy largos. | Fase 3, solo con evidencia | §6.7, §3.8.2 |
+| D-07 | Formato de la salida del escritor | Prosa dentro del JSON (actual) / prosa con delimitadores + JSON de metadatos aparte | Mantener JSON; reconsiderar solo si `tasa_reparacion` del escritor > 15 % con salida estructurada nativa. | Reparaciones frecuentes = coste y latencia; cambiar de formato toca escritor, validación y numeración. | Fase 1, al medir la tasa | §9.6, §18.7 |
+| D-08 | Índice vectorial del dossier | Solo FTS5 / FTS5 + embeddings | Solo FTS5. | Datos relevantes fuera del contexto → el escritor los inventa aunque existan (métrica en §16.3). | Fase 3 | §3.14 |
+| D-09 | Compresión de snapshots | Copia íntegra siempre / `zip` de versiones antiguas | Copia íntegra. | Disco: ≈ 100 MB por libro de 30 capítulos; irrelevante para un usuario local. | Fase 3 | §10.3, §10.8 |
+| D-10 | Comportamiento al exceder presupuesto | Parar y escalar (decidido por el usuario en Fase 0) / degradar a modelo más barato | Parar. | Degradar cambiaría la voz del escritor a mitad de libro. | Cerrada salvo que el usuario la reabra | §11.4 |
+| D-11 | Exportación de telemetría | Solo ficheros JSON Lines / exportador a sistema externo | Solo ficheros. | Ninguno funcional. | Fase 3 | §12.5 |
+| D-12 | Qué hacer con los retoques del editor global | Opción A (informe) / Opción B (runs de retoque) | A en fases 1–2; B en fase 3 si pertinencia ≥ 70 %. B exige añadir `retoque_editorial` al catálogo de §7.4 y el estado `retocando` a §4.3. | B prematura: reabrir capítulos buenos por retoques malos. A permanente: trabajo manual al final. | Fase 3 | §8.4 |
+| D-13 | Paralelismo entre capítulos | Secuencial estricto (RUN-5) / paralelo con fusión de canon | Secuencial. | Paralelo: fusión de canon y contradicciones cruzadas; secuencial: tiempo de pared ≈ 10–15 min × N. | Cerrada para esta versión | §4.3, §18.10 |
+| D-14 | Narración lineal por defecto (ESC-5, EVT-7, CAP-8) | Lineal con flashbacks marcados / estructura temporal libre | Lineal con flashbacks marcados por `modo` de escena y beat `transicion`. | Una novela con estructura no lineal generaría incidencias deterministas falsas; se resolvería relajando ESC-5/D-08 por configuración. | Cuando aparezca un brief no lineal | §3.7, §7.3 |
+| D-15 | Temperatura del revisor de lógica y ritmo | 0,2 / 0,1 | 0,2; bajar si la estabilidad de notas en §15.6 supera 1 punto de rango. | Notas inestables → reintentos aleatorios. | Fase 2 | §5.6, §15.6 |
+| D-16 | `modo_tolerante` del gate | `false` / `true` | `false`. Es una decisión del usuario, no del diseño. | `true`: capítulos aprobados por debajo del umbral sin que nadie los mire. `false`: más escaladas. | El usuario, en configuración | §7.5 |
+| D-17 | Umbrales del gate (7 / 7 / 6) y `max_mayores` (4) | Cualquier valor en [1, 10] | Los indicados, hasta calibrar con §15.6. | Umbrales altos: escaladas y coste; bajos: contradicciones que entran al canon. | Fase 2 | §7.5, §15.6 |
+| D-18 | Tabla de precios | La rellena el usuario con la tarifa vigente | Rellenar antes del primer run real; el harness se niega a arrancar con precios a cero (§13.4). | Sin precios no hay presupuesto ni métricas de coste. | Antes del primer run real | §13.3 |
+
+### §17.2 Riesgos
+
+| Id | Riesgo | Probabilidad | Impacto | Mitigación en el spec | Indicador de que se materializa |
+|---|---|---|---|---|---|
+| R-01 | El investigador cita obras o páginas que no existen ("verificado" falso). | Alta sin web | Anacronismos con apariencia de rigor; el revisor de anacronismos los da por buenos porque están en el dossier. | DAT-3 acota `fiabilidad` a `media` para memoria del modelo; D-05 activa web en fase 2; §15.6 muestrea 20 fuentes. | Muestreo de §15.6 < 90 % de referencias existentes. |
+| R-02 | Inyección de instrucciones desde páginas web (con `web: true`). | Media | Dossier contaminado. | Texto plano truncado, etiquetas de delimitación, regla de "material, no instrucciones" en todos los prompts (§5.0). | Datos del dossier con contenido fuera de tema o imperativo. |
+| R-03 | Un anacronismo real que el dossier no cubre pasa el gate porque REV-5 rebaja a `menor` las incidencias sin evidencia. | Media | Error de época en el libro. | El revisor lo señala como `menor` con sugerencia de añadir el dato; el usuario puede promoverlo al dossier (§10.6); D-03. | Incidencias `menor` de anacronismos con `evidencia_canon.tipo = ninguna` recurrentes. |
+| R-04 | Falsos bloqueantes de los revisores → reintentos inútiles y escaladas. | Media | Coste ×2–3 por capítulo; frustración. | REV-4/REV-5, restricciones de severidad por categoría (§7.4), `comprobado` obligatorio, `disputada` visible en escalada, D-17. | `tasa_aprobacion_primera` < 50 % con notas de continuidad altas en intentos posteriores sin cambios de fondo. |
+| R-05 | El escritor no devuelve JSON válido con prosa larga. | Media sin salida estructurada nativa | Reparaciones, coste, intentos abortados. | §9.3, salida estructurada nativa, D-07. | `tasa_reparacion` del escritor > 15 %. |
+| R-06 | Metadatos infieles que pasan el gate envenenan el canon (un evento que no ocurrió en la prosa). | Media | Contradicciones en capítulos posteriores difíciles de rastrear. | Categoría `metadatos_infieles` bloqueante en continuidad; D-13 (RES-2) y D-14; `novela canon diff` para auditar. | Incidencias de continuidad en el capítulo N+1 cuya evidencia es un evento del N que no aparece en su prosa. |
+| R-07 | Tamaños reales (S-01, S-02) muy distintos de los supuestos → presupuestos de contexto mal dimensionados. | Media | `contexto_excede_presupuesto` o contexto pobre. | Todo es configurable (§13); `novela context` muestra tamaños por bloque. | Eventos `contexto_resumen_global_recortado` frecuentes; pasos de recorte ≥ 5 habituales. |
+| R-08 | Modelos sin salida estructurada ni contador de tokens exacto (proveedores locales). | Media si se usa `local` | Más reparaciones; estimación de tokens imprecisa. | §9.2 paso 1b; margen del 10 % (§6.5); `error_estimacion_tokens` en §12.4. | `error_estimacion_tokens` p95 > 15 %. |
+| R-09 | Renombrado de directorios en Windows bloqueado por antivirus, indexador o un editor con el fichero abierto → commit atómico falla a medias. | Media en Windows | Estado intermedio del canon. | Diario de commit y recuperación de §10.4; reintento del renombrado con espera corta antes de fallar. | Errores `disco` en el paso 6 de §10.4. |
+| R-10 | Coste total del libro por encima de lo tolerable. | Media | Proyecto abandonado a mitad. | Límites de §11.4 y `coste_estimado_libro` visible en `status` desde el primer capítulo. | `coste_estimado_libro` > `por_libro_usd` tras 3 capítulos. |
+| R-11 | Ficheros del canon editados a mano con errores sutiles (ids, fechas). | Baja | `canon_corrupto` o contradicciones. | `novela canon validate` obligatorio antes de `commit` manual (§10.6); GLB-1..8. | Fallos de validación tras ediciones manuales. |
+| R-12 | El editor global "inventa" hechos no presentes en los resúmenes. | Baja–media | Retoques que piden cambiar algo que no existe. | Prompt explícito; discrepancias marcadas; A antes que B (D-12). | Pertinencia < 70 % en §15.6. |
+
+### §17.3 Supuestos (copia de §1.6, con estado)
+
+| Id | Supuesto | Estado | Cómo se verifica |
+|---|---|---|---|
+| S-01 | Capítulos de 1.500–6.000 palabras, 3.000 por defecto. | Sin verificar; el usuario no fijó tamaño. | Primer libro real; ajustar `capitulo.longitud_objetivo_palabras`. |
+| S-02 | Libros de 8–40 capítulos. | Sin verificar. | Ídem. |
+| S-03 | Canon de pocos MB. | Derivado de S-01/S-02; muy probable. | Tamaño de `canon/` tras un libro completo. |
+| S-04 | Modelos con salida estructurada y ≥ 128k de contexto. | Cierto para los modelos de ejemplo de §5.0; no garantizado para `local`. | Test de contrato de proveedor (§15.1). |
+| S-05 | Precios tabulables en configuración. | Cierto; requiere mantenimiento del usuario (D-18). | §13.4 rechaza precios a cero. |
+| S-06 | Un capítulo se genera en una sola llamada. | Decisión de diseño; verificar que la calidad no cae en capítulos largos. | §15.6 con `longitud_objetivo_palabras = 5.000`. |
+| S-07 | Datos inventados sin marca en la prosa, registrados en metadatos. | Decidido por el usuario (por defecto de Fase 0). | — |
+| S-08 | Web del investigador desactivada en fase 1. | Decidido. | D-05. |
+
+### §17.4 Cosas que este spec no decide a propósito
+
+- Plazos y esfuerzo por fase (§16 usa unidades relativas).
+- Nombres comerciales de librerías auxiliares (CLI, validación de schemas, cliente HTTP): cualquier opción madura sirve y no afecta a los contratos.
+- Estilo literario: no hay guía de estilo más allá del `tono` del brief; añadir una sería una ampliación de §3.3 y §5.3.
 
 ## §18 Decisiones de arquitectura (ADRs)
 
