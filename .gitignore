@@ -1,0 +1,7 @@
+node_modules/
+canon.db
+canon.db-journal
+canon.db-wal
+canon.db-shm
+capitulos/*.md
+retoques.md
