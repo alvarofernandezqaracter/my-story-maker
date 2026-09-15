@@ -3188,7 +3188,105 @@ Un segundo Ctrl+C durante el paso 1 mata el proceso de inmediato: el estado sigu
 
 ## §12 Observabilidad y costes
 
-> Estado: pendiente
+> Estado: completa
+
+### §12.1 Registro por llamada LLM
+
+Cada llamada a un proveedor produce exactamente una línea en `proyectos/<id>/logs/llamadas.jsonl` (`LlamadaLLM`, schema `llamada_llm.schema.json`). Se escribe al terminar la llamada, con éxito o error; los reintentos técnicos son líneas distintas.
+
+| Campo | Tipo | Contenido |
+|---|---|---|
+| id | string | `llm_<ULID>` |
+| ts | string | ISO 8601 UTC de inicio |
+| proyecto_id, run_id, capitulo_id | string | `capitulo_id` nulo fuera del loop |
+| intento | int\|null | Intento del loop |
+| agente | enum | `investigador`, `arquitecto`, `escritor`, `continuidad`, `anacronismos`, `logica_ritmo`, `editor_global` |
+| subtarea | string\|null | Grupo del investigador, lote del arquitecto |
+| tipo | enum | `principal`, `reparacion`, `reintento_tecnico` |
+| llamada_original | string\|null | Id de la llamada que se repara o reintenta |
+| proveedor, modelo, modelo_efectivo | string | |
+| temperatura, max_tokens_salida | float, int | |
+| tokens_entrada, tokens_salida | int | Reales del proveedor |
+| tokens_estimados_entrada | int | Estimación previa del generador de contexto (§6.5) |
+| coste_usd | float | Según tabla de precios (§13) |
+| latencia_ms | int | |
+| motivo_parada | enum | `fin`, `max_tokens`, `herramienta`, `filtro`, `error` |
+| resultado | enum | `ok`, `invalida`, `error` |
+| error_tipo | string\|null | De §11.2 |
+| validacion | objeto | `{errores_schema: int, errores_semanticos: int, sanitizaciones: lista<string>}` |
+| hash_prompt | string | Clave de idempotencia (§11.3) |
+| hash_contexto | string\|null | `PaqueteContexto.hash` |
+| llamadas_herramienta | int | Solo investigador |
+| gate | objeto\|null | Solo en la última llamada de un intento: `{veredicto, notas, bloqueantes}` copiado del run, para consultas sin cruzar ficheros |
+
+No se registra el contenido de prompts ni respuestas en el log: ya están en `runs/<run_id>/llamadas/<hash>.json` (§11.3) y en staging. Motivo: el log debe ser pequeño y consultable con herramientas de línea; el contenido es auditable por separado.
+
+### §12.2 Registro de eventos
+
+`logs/eventos.jsonl`: una línea por transición de estado o suceso relevante del harness, sin LLM.
+
+| Evento | Cuándo |
+|---|---|
+| `proyecto_creado`, `estado_cambiado` | `novela init`, cada transición de §4.3 |
+| `run_creado`, `run_terminado` | Con `tipo`, `estado`, `coste_usd`, duración |
+| `intento_iniciado`, `intento_abortado`, `gate_evaluado` | Loop §7 |
+| `contexto_generado` | Con `destinatario`, `tokens_estimados`, número de registros incluidos y omitidos, pasos de recorte aplicados |
+| `contexto_resumen_global_recortado` | §6.3 |
+| `comprobaciones_deterministas` | Con número de incidencias por severidad |
+| `revision_normalizada` | Cada vez que REV-2..REV-6 o §7.4 modifican una revisión, con el detalle |
+| `commit_canon`, `snapshot_creado`, `rollback`, `commit_manual` | §10 |
+| `presupuesto_aviso`, `presupuesto_excedido` | §11.4 |
+| `config_cambiada` | §11.5 |
+| `interrumpido`, `reanudado` | §11.7, §11.5 |
+| `escalada` | §7.7 |
+
+Cada evento lleva `ts`, `proyecto_id`, `run_id`, `capitulo_id`, `evento` y `datos` (objeto libre documentado por evento en `schemas/eventos.md`).
+
+### §12.3 Consola
+
+Durante `novela run` la consola muestra una línea por paso con hora, capítulo, intento, agente, duración y coste acumulado del run, y al terminar cada intento la tabla de notas y el veredicto. Nivel de detalle con `--verbose` (añade registros del contexto incluidos/omitidos y las incidencias) y `--quiet` (solo veredictos y errores). Nada se imprime que no esté también en los logs.
+
+### §12.4 Métricas
+
+`novela stats` calcula a partir de `llamadas.jsonl`, `eventos.jsonl` y `runs/` (nunca del canon) y muestra por proyecto:
+
+| Métrica | Definición | Objetivo (§1.4) |
+|---|---|---|
+| `capitulos_aprobados / total` | | |
+| `tasa_aprobacion_primera` | Capítulos con `gate.veredicto = aprobado` en el intento 1 / capítulos aprobados | ≥ 60 % |
+| `reintentos_medios` | Σ (intentos − 1) / capítulos aprobados | ≤ 0,8 |
+| `distribucion_intentos` | Histograma 1/2/3/4 | |
+| `capitulos_escalados`, `aprobados_manual`, `aprobados_tolerante` | Conteos | ≤ 1 escalado por 20 |
+| `notas_medias_por_revisor` | Media de `nota` en intentos aprobados y en todos | |
+| `incidencias_por_severidad_y_revisor` | Conteos, y las 10 categorías más frecuentes | |
+| `tasa_localizacion_verificada` | Incidencias con `localizacion_verificada` / total, por revisor | ≥ 90 % |
+| `tasa_coherencia_forzada` | Revisiones con `coherencia_forzada` / total | Informativa; > 20 % sugiere cambiar el prompt o el modelo |
+| `incidencias_persistentes`, `disputadas` | §7.6 | |
+| `tasa_reparacion` | Llamadas `reparacion` / llamadas `principal`, por agente | ≤ 15 % |
+| `tasa_error_tecnico` | Llamadas con `resultado = error` / total, por proveedor | |
+| `coste_por_capitulo` | Media, mediana, máximo, incluidos reintentos y reparaciones | ≤ límite (3 USD) |
+| `coste_por_agente` | Σ coste por agente | |
+| `coste_preparacion` | Investigación + arquitectura | |
+| `coste_total` | Todo el proyecto | |
+| `coste_estimado_libro` | `coste_preparacion + coste_por_capitulo_medio × num_capitulos + coste_editor_estimado` | Se recalcula tras cada capítulo; se muestra en `novela status` |
+| `tokens_por_capitulo` | Entrada y salida, por agente | |
+| `error_estimacion_tokens` | `(tokens_estimados_entrada − tokens_entrada) / tokens_entrada`, media y p95 | \|error\| ≤ 10 % |
+| `latencia_por_agente` | Mediana y p95 | |
+| `duracion_por_capitulo` | Tiempo de pared | |
+| `promesas_abiertas`, `arcos_sin_cerrar` | Calculado desde el canon (única excepción a "nunca del canon", porque es la parte determinista del editor global, §8.1) | |
+
+Salida en tabla de consola por defecto y en JSON con `--json`, para que el set de evaluación de §15.6 pueda comparar ejecuciones.
+
+### §12.5 Dónde se guarda y cuánto ocupa
+
+| Fichero | Formato | Retención | Tamaño (30 capítulos) |
+|---|---|---|---|
+| `logs/llamadas.jsonl` | JSON Lines | Siempre | ≈ 300 llamadas × 1 KB ≈ 300 KB |
+| `logs/eventos.jsonl` | JSON Lines | Siempre | < 1 MB |
+| `runs/<run_id>/llamadas/<hash>.json` | JSON con prompt y respuesta | Siempre (auditoría e idempotencia) | ≈ 100–200 KB por llamada; ≈ 50 MB |
+| `runs/<run_id>/run.json` | JSON | Siempre | < 50 KB |
+
+No hay exportación a sistemas externos de telemetría en esta versión; los ficheros JSON Lines son importables por cualquier herramienta. Queda en §17 como extensión.
 
 ## §13 Configuración
 
