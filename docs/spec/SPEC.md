@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.3.0
+version: 0.4.0
 estado: borrador
 actualizado: 2026-09-15
 ---
@@ -483,6 +483,26 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.4.0] — 2026-09-15
+
+Pasada de precisión sobre el documento entero: nada nuevo de diseño salvo los dos campos de §3, que hacían falta para que §7 pudiera implementarse.
+
+**Añadido**
+- §3. `fecha` y `etiquetas` en la ficha de capítulo. §7 selecciona época por coincidencia de etiquetas y cronología por ventana de fechas, y la ficha no tenía ninguno de los dos campos: el generador no podía ser determinista porque no había contra qué cruzar.
+
+**Cambiado**
+- §2, §4, §8. El tope de intentos deja de estar escrito como tres y pasa a ser `gate.max_intentos` en todas partes, que es lo que §12 exige de cualquier número.
+- §8. El pseudocódigo calculaba `texto_previo` contra un 2 literal; ahora el escritor recibe su propio texto en todos los intentos menos el último, sea cual sea el tope.
+- §8. El pseudocódigo separa los dos escalones que 0.3.0 le dio a VD-08 sin tocar el loop: los bloqueantes saltan la llamada al validador, los avisos se acumulan en las incidencias del reintento.
+- §8. El cierre del loop marca `escrito` y `editado`, los dos estados de §4 a los que el pseudocódigo no llegaba nunca.
+- §4. `escribiendo` se definía por el primer capítulo aprobado, así que el proyecto se quedaba sin estado mientras se escribía el capítulo 1.
+- §5. El investigador buscaba en la web en presente, cuando §12 ignora `busqueda_web` hasta F6 y §14 lo mete en F1 sin búsqueda.
+- §6. Referencia muerta a §13 para el registro de los cambios a mano sobre la parte inmutable del canon; §13 solo habla de caídas y reanudación.
+- §7. Memoria reciente y enganche nombran sus claves de §12 en lugar de repetir el tres y el 400.
+- §9. VD-04 pasa de «fin de preparación» a antes de habilitar al arquitecto: validaba el dossier cuando el arquitecto ya había trabajado sobre él.
+- §13. Reanudar no desbloquea: sobre un proyecto en `bloqueado` el comando vuelve a parar en el mismo capítulo.
+- §3. `creado` deja de declarar un tipo `fecha` que ninguna otra tabla usa.
 
 ### [0.3.0] — 2026-09-15
 
