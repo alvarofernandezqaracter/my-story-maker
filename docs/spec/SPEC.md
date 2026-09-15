@@ -139,7 +139,71 @@ Estos principios se citan por número en el resto del documento.
 
 ## §2 Glosario
 
-> Estado: pendiente
+> Estado: completa
+
+Un término tiene una sola definición y un solo nombre en el código. Convención de nombres en código: identificadores en español, sin tildes ni eñes, `snake_case` para funciones, variables, campos JSON y ficheros; `PascalCase` para clases y tipos. Los prefijos de identificador (`per_`, `evt_`, ...) se definen en §3.1.2.
+
+### §2.1 Términos del dominio narrativo
+
+| Término | Definición | Nombre en código |
+|---|---|---|
+| Brief | Entrada del usuario que arranca un proyecto: época, premisa, tono, idioma y número de capítulos. Es inmutable una vez creado el proyecto. | `Brief` / `brief.json` |
+| Proyecto | Un libro en producción: brief, canon, runs, estado y configuración. Vive en un directorio propio. | `Proyecto` / `proyecto_id` |
+| Canon | Base de datos del libro. Única fuente de verdad: personajes, línea de tiempo, dossier histórico, escaleta, resúmenes y capítulos aprobados. Se lee antes de escribir y se escribe solo al aprobar (P-02, P-03). | `Canon` |
+| Dossier histórico | Colección de datos históricos de la época del libro, cada uno con fuente y estado. Parte del canon; buscable (§3.14). | `Dossier` / `canon/dossier/` |
+| Dato histórico | Unidad del dossier: un hecho concreto de época (vestimenta, política, comida, lenguaje, ...), con fuente y estado ∈ {verificado, inventado}. | `DatoHistorico` |
+| Ficha | Registro estructurado de una entidad del canon. Hay fichas de personaje, de capítulo y de dato histórico. "Ficha" a solas no se usa en código; siempre se especializa. | `Personaje`, `FichaCapitulo`, `DatoHistorico` |
+| Personaje | Ficha de un actor de la novela: voz, motivación, arco, dónde está y qué sabe. | `Personaje` |
+| Línea de tiempo | Lista ordenada de eventos de la trama cruzados con hechos históricos reales. | `Timeline` / `canon/timeline.json` |
+| Evento | Elemento de la línea de tiempo. Tipo `trama` (ocurre en la novela) o `historico` (ocurrió en la realidad y ancla la trama). | `Evento` |
+| Escaleta | Plan del libro producido por el arquitecto: arco en tres actos, promesas narrativas y una ficha por capítulo. | `Escaleta` / `canon/escaleta/` |
+| Arco | Estructura global del libro en tres actos, con la función de cada acto y los puntos de giro. | `Arco` / `canon/escaleta/arco.json` |
+| Acto | Cada una de las tres partes del arco. Un capítulo pertenece exactamente a un acto. | `acto` ∈ {1, 2, 3} |
+| Ficha de capítulo | Plan de un capítulo dentro de la escaleta: qué pasa, quién sale, dónde, cuándo y qué beats lo componen. Existe antes de escribir el capítulo. | `FichaCapitulo` |
+| Capítulo | Unidad de generación y aprobación del libro. Tiene una ficha (plan), cero o más borradores (intentos) y, al aprobarse, un texto y un resumen en el canon. | `Capitulo` / `capitulo_id` |
+| Capítulo redactado | Salida del escritor para un intento: la prosa dividida en escenas más sus metadatos. Solo entra al canon si el gate aprueba. | `CapituloRedactado` |
+| Escena | Subdivisión del capítulo redactado con unidad de lugar, tiempo y personajes. Es la unidad de localización de las incidencias. | `Escena` |
+| Beat | Unidad mínima de la ficha de capítulo: un suceso o giro que el capítulo debe contener. Un beat se realiza en una o varias escenas. | `Beat` |
+| Promesa | Compromiso narrativo con el lector (setup) que debe pagarse más adelante (payoff). Se registra en el arco y se sigue capítulo a capítulo. | `Promesa` |
+| Resumen de capítulo | Un párrafo por capítulo aprobado, más los hechos clave y el estado final de personajes. Fuente principal del contexto para capítulos posteriores y del editor global. | `Resumen` / `canon/resumenes/` |
+| Resumen global | Composición determinista de los hechos clave de todos los capítulos aprobados, usada como memoria comprimida del libro (§6.3). | `ResumenGlobal` |
+| Retoque | Elemento de la lista que devuelve el editor global: un problema estructural con capítulos afectados y acción sugerida. | `Retoque` |
+
+### §2.2 Términos del harness y del flujo
+
+| Término | Definición | Nombre en código |
+|---|---|---|
+| Harness | El código determinista que orquesta agentes, canon, gate y persistencia (P-01). | paquete `harness/` |
+| Agente | Componente que hace una llamada LLM con un prompt fijo y devuelve JSON validado. Dos clases: generador (produce contenido) y revisor (evalúa contenido). | `Agente`, `AgenteGenerador`, `AgenteRevisor` |
+| Revisor | Agente que evalúa un capítulo redactado y devuelve una nota y una lista de incidencias. Hay tres: continuidad, anacronismos, lógica y ritmo. | `RevisorContinuidad`, `RevisorAnacronismos`, `RevisorLogicaRitmo` |
+| Generador de contexto | Módulo del harness que lee el canon y construye el paquete de contexto de un capítulo bajo un presupuesto de tokens (§6). No es un agente. | `GeneradorContexto` |
+| Paquete de contexto | Salida del generador de contexto: los fragmentos del canon seleccionados para un capítulo, ya serializados, con su recuento de tokens. | `PaqueteContexto` |
+| Run | Una ejecución de una etapa del flujo sobre un proyecto: investigación, arquitectura, un capítulo o el editor global. Identificado por `run_id`. Un run de capítulo contiene de 1 a `max_reintentos` intentos. | `Run` / `run_id` |
+| Intento | Una iteración del loop de capítulo dentro de un run: una llamada al escritor, tres revisiones y una evaluación del gate. Numerado desde 1. | `Intento` / `intento` |
+| Reintento | Todo intento con número mayor que 1. El límite `max_reintentos` cuenta reintentos, no intentos: con `max_reintentos = 3` hay como máximo 4 intentos (1 inicial + 3 reintentos). | `max_reintentos` |
+| Nota | Puntuación entera de 1 a 10 que un revisor asigna al capítulo en su dimensión. Es la única escala usada en el spec (§7.4). | `nota` |
+| Incidencia | Problema concreto detectado por un revisor: severidad, localización en el texto, descripción, evidencia en el canon y sugerencia. | `Incidencia` |
+| Severidad | Gravedad de una incidencia ∈ {bloqueante, mayor, menor, sugerencia}. `bloqueante` impide la aprobación por sí sola (§7.5). | `severidad` |
+| Revisión | Salida completa de un revisor sobre un intento: nota, incidencias y resumen. | `Revision` |
+| Gate | Función determinista del harness que, a partir de las tres revisiones, decide aprobar, reintentar o escalar (§7.5). | `GateCalidad` / `evaluar_gate()` |
+| Veredicto del gate | Resultado del gate ∈ {aprobado, reintentar, escalado}. | `VeredictoGate` |
+| Escalada | Parada del flujo con entrega de artefactos al usuario, porque un capítulo agotó los reintentos o hubo un fallo irrecuperable (§7.7, §11). | `Escalada` |
+| Staging | Área de trabajo donde un run escribe sus salidas antes de que el gate las apruebe. Nunca se lee como canon. | `staging/` |
+| Commit del canon | Aplicación atómica de las salidas en staging al canon tras la aprobación del gate (§10.4). No confundir con un commit de git. | `commit_canon()` |
+| Snapshot | Copia íntegra del canon tomada justo después de cada commit del canon, que permite volver al estado tras el capítulo N (§10.3). | `Snapshot` / `snapshots/` |
+| Estado del proyecto | Fichero que registra en qué etapa está el proyecto, qué capítulos están aprobados y qué run está en curso. Es lo que lee la reanudación (§11.5). | `EstadoProyecto` / `estado.json` |
+| Proveedor | Implementación concreta de la interfaz de llamada a un LLM (Anthropic, OpenAI, local, mock). El harness solo conoce la interfaz. | `ProveedorLLM` |
+| Llamada LLM | Una petición a un proveedor y su respuesta, con tokens, coste y latencia registrados (§12.1). | `LlamadaLLM` |
+| Comprobación determinista | Verificación en código sobre el capítulo redactado que se ejecuta antes de los revisores (personaje muerto que aparece, dato no registrado, etc.) (§7.3). | `ComprobacionDeterminista` |
+| Presupuesto de tokens | Máximo de tokens de entrada que el generador de contexto puede gastar en un paquete; se reparte por bloques con prioridades de recorte (§6.4). | `presupuesto_tokens` |
+
+### §2.3 Términos de versionado
+
+| Término | Definición | Dónde |
+|---|---|---|
+| Versión del spec | SemVer de este documento, en la cabecera YAML. Independiente del versionado del canon. | Cabecera, §20 |
+| Versión del canon | Número entero que se incrementa con cada commit del canon; identifica un snapshot. | §10.2 |
+| ADR | Registro de una decisión de arquitectura, con contexto, opciones, decisión, consecuencias y estado. | §18 |
 
 ## §3 Modelo de datos del canon
 
