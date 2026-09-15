@@ -2380,7 +2380,286 @@ def generar_contexto(canon, capitulo, destinatario, config, proveedor, modelo, r
 
 ## §7 Loop de capítulo y gate de calidad
 
-> Estado: pendiente
+> Estado: completa
+
+### §7.1 Visión del loop y contabilidad de intentos
+
+Un run de tipo `capitulo` ejecuta de 1 a `1 + max_reintentos` intentos (§2.2). Con el valor por defecto `max_reintentos = 3` hay como máximo 4 intentos: el inicial y tres reescrituras, que es la lectura literal de "máx. 3 reintentos" del diagrama. Cada intento consta de:
+
+1. Generar contexto (§6) para el escritor.
+2. Llamar al escritor (§5.3) y validar la salida (§9). El resultado se guarda en `staging/<run_id>/intento_<n>/capitulo.json`.
+3. Ejecutar las comprobaciones deterministas (§7.3) sobre el capítulo redactado.
+4. Preparar el texto numerado (§7.2) y los paquetes de contexto de los tres revisores.
+5. Lanzar los tres revisores en paralelo (§5.4–§5.6) y validar sus salidas.
+6. Evaluar el gate (§7.5) con las incidencias deterministas y las tres revisiones.
+7. Según el veredicto: commit del canon (§10.4) y fin del run; o reintento con el material de §7.6; o escalada (§7.7).
+
+**Qué consume un reintento y qué no.** Solo consume un intento la ejecución completa de los pasos 2–6 con veredicto `reintentar`. No consumen intento: las llamadas de reparación por JSON inválido (§9.3), los reintentos técnicos de red (§11.3) ni un intento abortado por fallo técnico de un revisor (`revisor_no_disponible`), que se marca `abortado` y se relanza con el mismo número de intento reutilizando el texto del escritor ya guardado (§11.5). Motivo: los reintentos del gate miden la calidad del texto; los fallos técnicos no dicen nada de ella.
+
+### §7.2 Preparación del texto para los revisores
+
+El harness transforma `escenas[].texto` en un texto numerado para que las incidencias tengan localización verificable:
+
+- Cada escena se encabeza con `[E<orden>] <titulo o "sin título"> · <lugar> · <fecha.texto> · personajes: <nombres> · modo: <modo>`.
+- Cada párrafo (bloque separado por línea en blanco) se prefija con `[E<orden>.P<índice>]`, índice desde 1.
+- Los metadatos que cada revisor recibe se serializan compactos según §5.4–§5.6.
+
+La numeración es la única referencia válida en `Localizacion.parrafo`; el harness la usa para REV-4 y para señalar al escritor en el reintento qué párrafo cambiar. El texto original no se modifica: la numeración existe solo en la vista para revisores y en B8.
+
+### §7.3 Comprobaciones deterministas
+
+Se ejecutan antes de los revisores, en código, sobre el capítulo redactado validado. Producen `Incidencia`s con el mismo formato que las de los revisores (§3.11.2), con `revisor = harness` en el log, y entran en el gate igual que ellas. Motivo: son gratis, exactas y liberan a los revisores para lo que un programa no puede ver; además garantizan que ciertas contradicciones nunca dependen de que un modelo las detecte (criterio de éxito "contradicciones detectables por código = 0", §1.4).
+
+| Id | Comprobación | Invariante | Categoría | Severidad |
+|---|---|---|---|---|
+| D-01 | Personaje con `condicion = muerto` o `desaparecido` en `escenas[].personajes` de una escena `modo = presente` posterior a su `ultimo_capitulo`. | PER-3 | `personaje_muerto_activo` | bloqueante |
+| D-02 | Id de personaje en escenas o `cambios_personajes` que no existe ni está en `personajes_nuevos`. | CAP-3 | `personaje_inexistente` | bloqueante |
+| D-03 | `dato_id` en `datos_historicos_usados` que no existe. | CAP-4 | `dato_inexistente` | mayor |
+| D-04 | Promesa `cumplida` que no está `planteada` en el canon ni en `promesas.planteadas` de este mismo capítulo; o id de promesa inexistente. | CAP-5 | `promesa_incoherente` | mayor |
+| D-05 | Beat de la ficha ausente de `beats_cubiertos`. | CAP-6 | `beat_omitido` | mayor (→ `sugerencia` si el revisor de lógica acepta la justificación, §5.6) |
+| D-06 | `palabras_total` fuera de `[0,7×, 1,3×]` del objetivo. | CAP-2 | `longitud` | mayor; fuera de `[0,5×, 1,6×]` bloqueante |
+| D-07 | Fechas de escenas `presente` decrecientes dentro del capítulo. | CAP-8 | `cronologia_interna` | mayor |
+| D-08 | Primera escena `presente` con fecha anterior al último evento de trama del capítulo N-1. | EVT-7 | `cronologia_retrocede` | bloqueante |
+| D-09 | Evento nuevo con fecha fuera de `[epoca.fecha_inicio, epoca.fecha_fin]` sin `es_antecedente`. | EVT-5 | `fecha_fuera_de_epoca` | mayor |
+| D-10 | Personaje presente según la ficha que no aparece en ninguna escena. | — | `personaje_previsto_ausente` | menor (el revisor de lógica decide si importa) |
+| D-11 | Personaje en escenas que no está en `personajes_presentes` de la ficha ni en `personajes_nuevos` (existe en el canon, pero no estaba previsto). | — | `personaje_no_previsto` | menor |
+| D-12 | `personajes_nuevos` con nombre o alias ya existente. | CAP-9 | `personaje_duplicado` | menor (se resuelve al existente) |
+| D-13 | `resumen_propuesto.estado_final_personajes` con ids que no aparecen en ninguna escena, o personajes presentes sin entrada. | RES-2 | `resumen_incompleto` | mayor |
+| D-14 | `cambios_personajes[].conocimiento_nuevo` vacío para un personaje presente en una escena con beat de tipo `revelacion` que lo incluye. | — | `conocimiento_no_registrado` | menor |
+| D-15 | Escena con `texto` < 100 palabras. | §3.9 | `escena_vacia` | menor |
+| D-16 | Más de 4 `personajes_nuevos` o más de 8 `eventos_nuevos`. | §3.9 | `metadatos_excesivos` | mayor |
+
+Las incidencias deterministas llevan `localizacion` con la escena afectada y `cita` = primera frase de la escena (o cadena vacía con `localizacion_verificada = false` cuando no aplica), `evidencia_canon` con el registro implicado y `sugerencia` generada por plantilla ("Elimina a {nombre} de la escena {n} o cambia su modo a flashback").
+
+Si hay alguna determinista `bloqueante`, el harness **igualmente lanza los revisores**. Motivo: el reintento necesita todas las incidencias de una vez para que el escritor corrija en una pasada (P-07); saltarse los revisores ahorraría una llamada y costaría un intento. Configurable con `gate.saltar_revisores_si_bloqueante_determinista` (por defecto `false`).
+
+### §7.4 Rúbrica de los revisores y catálogo de categorías
+
+**Escala única.** `nota` es un entero de 1 a 10 para los tres revisores, con esta interpretación común (cada revisor la particulariza en su prompt, §5.4–§5.6):
+
+| Nota | Significado |
+|---|---|
+| 10 | Sin incidencias en su dimensión. |
+| 8–9 | Solo incidencias `menor` o `sugerencia`. |
+| 6–7 | Alguna incidencia `mayor`, ninguna `bloqueante`. |
+| 4–5 | Una `bloqueante`, o varias `mayor` que juntas comprometen el capítulo. |
+| 1–3 | Varias `bloqueante`, o el capítulo no cumple su ficha. |
+
+REV-2 obliga a `nota ≤ 5` con cualquier bloqueante; el harness lo fuerza si el revisor no lo hace.
+
+**Severidades.**
+
+| Severidad | Definición operativa | Efecto en el gate |
+|---|---|---|
+| `bloqueante` | Si se aprobara, el canon quedaría contradicho, la época violada de forma evidente, una restricción del autor incumplida o la trama sin causa. | Impide la aprobación por sí sola. |
+| `mayor` | Un lector atento lo notaría, o la ficha del capítulo no se cumple. | Cuentan en conjunto: más de `gate.max_mayores` impide la aprobación. |
+| `menor` | Detalle corregible sin tocar la estructura. | No afecta al veredicto; se pasa al escritor si hay presupuesto. |
+| `sugerencia` | Mejora opcional. | No afecta; se pasa solo si sobra presupuesto. |
+
+**Catálogo de categorías por revisor.** Cerrado: una categoría fuera del catálogo del revisor se convierte en `otro` con severidad `sugerencia` (REV-6, §5.4).
+
+| Revisor | Categorías |
+|---|---|
+| `harness` (deterministas) | Las de la tabla de §7.3. |
+| `continuidad` | `ubicacion_incoherente`, `conocimiento_imposible`, `personaje_muerto_activo`, `relacion_incoherente`, `cronologia_incoherente`, `hecho_clave_contradicho`, `metadatos_infieles`, `ficha_incumplida`, `detalle_fisico`, `objeto_incoherente`, `otro` |
+| `anacronismos` | `anacronismo_material` (objetos, alimentos, tecnología), `anacronismo_lexico`, `anacronismo_ideologico`, `anacronismo_institucional`, `hecho_historico_contradicho`, `personaje_historico_desvirtuado`, `dato_no_declarado`, `plausibilidad_dudosa`, `dossier_mal_usado`, `otro` |
+| `logica_ritmo` | `causa_ausente`, `decision_inmotivada`, `coincidencia_resolutiva`, `funcion_incumplida`, `beat_omitido`, `promesa_no_atendida`, `ritmo_lento`, `ritmo_atropellado`, `escena_sin_aporte`, `voz_inconsistente`, `pov_roto`, `restriccion_violada`, `claridad`, `otro` |
+
+**Restricciones de severidad por categoría** (las aplica el harness al validar; una violación rebaja la severidad y se registra):
+
+| Regla | Motivo |
+|---|---|
+| `bloqueante` solo en: continuidad `{conocimiento_imposible, personaje_muerto_activo, cronologia_incoherente, hecho_clave_contradicho, metadatos_infieles, ubicacion_incoherente}`; anacronismos `{anacronismo_material, anacronismo_ideologico, anacronismo_institucional, hecho_historico_contradicho, personaje_historico_desvirtuado}`; lógica `{causa_ausente, decision_inmotivada, funcion_incumplida, restriccion_violada}`. | Acota qué puede bloquear un capítulo a lo que de verdad daña el canon, la época o la trama. |
+| `menor` como máximo en: `detalle_fisico`, `plausibilidad_dudosa`, `anacronismo_lexico` sin evidencia, `claridad`, `ritmo_*`. | Son juicios de grado, no contradicciones. |
+| `otro` es siempre `sugerencia`. | Si no encaja en el catálogo, no puede decidir el gate. |
+
+### §7.5 Fórmula del gate
+
+El gate es una función pura del harness (P-01). Ver ADR-0004 (§18.4).
+
+```python
+def evaluar_gate(deterministas: list[Incidencia], revisiones: dict[str, Revision],
+                 intento: int, config: ConfigGate) -> VeredictoGate:
+    incidencias = deterministas + [i for r in revisiones.values() for i in r.incidencias]
+    bloqueantes = [i for i in incidencias if i.severidad == "bloqueante"]
+    mayores     = [i for i in incidencias if i.severidad == "mayor"]
+    notas = {nombre: r.nota for nombre, r in revisiones.items()}
+
+    motivos = []
+    if bloqueantes:
+        motivos.append(f"{len(bloqueantes)} incidencia(s) bloqueante(s)")
+    for nombre, nota in notas.items():
+        if nota < config.umbral[nombre]:
+            motivos.append(f"nota {nombre} {nota} < {config.umbral[nombre]}")
+    if len(mayores) > config.max_mayores:
+        motivos.append(f"{len(mayores)} mayores > {config.max_mayores}")
+
+    if not motivos:
+        return VeredictoGate("aprobado", "todas las notas ≥ umbral, 0 bloqueantes, mayores ≤ máximo", notas, len(bloqueantes))
+
+    ultimo = intento >= 1 + config.max_reintentos
+    if ultimo and config.modo_tolerante and not bloqueantes \
+       and all(notas[n] >= config.umbral[n] - 1 for n in notas):
+        return VeredictoGate("aprobado_tolerante", "último intento sin bloqueantes; notas a ≤ 1 punto del umbral", notas, 0)
+    if ultimo:
+        return VeredictoGate("escalado", "; ".join(motivos), notas, len(bloqueantes))
+    return VeredictoGate("reintentar", "; ".join(motivos), notas, len(bloqueantes))
+```
+
+Parámetros por defecto (configurables en §13):
+
+| Parámetro | Valor | Justificación |
+|---|---|---|
+| `umbral.continuidad` | 7 | Una contradicción con el canon envenena todos los capítulos siguientes; se exige "ninguna mayor sin resolver". |
+| `umbral.anacronismos` | 7 | Ídem para la época. |
+| `umbral.logica_ritmo` | 6 | Es el juicio más subjetivo; se tolera una `mayor` de ritmo. |
+| `max_mayores` | 4 | Sumadas entre los tres revisores y las deterministas. Más de cuatro indica un capítulo que necesita reescritura aunque ninguna sea bloqueante por sí sola. |
+| `max_reintentos` | 3 | Del diagrama. |
+| `modo_tolerante` | `false` | Sin aprobación humana, aprobar por debajo del umbral en el último intento es una decisión del usuario, no del diseño. Si lo activa, los capítulos así aprobados quedan marcados `aprobado_tolerante` en el run y en `novela status`. |
+
+Por qué **umbral por revisor y no agregado**: una media de 7,3 puede esconder un 4 en continuidad compensado por un 9 en ritmo, y precisamente la continuidad es lo que no se puede compensar. Por qué **además una cota de mayores**: tres revisores con nota 7 pueden acumular seis incidencias mayores que, juntas, describen un capítulo flojo que ninguno bloqueó. El agregado solo se calcula como métrica (§12.4).
+
+El veredicto se guarda en `run.intentos[n].gate` (§3.10) y se emite un evento `gate_evaluado` en el log (§12.2).
+
+### §7.6 Qué recibe el escritor en un reintento
+
+El reintento es incremental (P-07): el escritor recibe su texto anterior íntegro y las incidencias, nunca la orden de empezar de cero.
+
+| Elemento | Contenido | Fuente |
+|---|---|---|
+| Contexto del canon | El mismo `PaqueteContexto` del intento 1 (misma versión del canon, mismo hash); no se regenera salvo que la configuración haya cambiado. | §6 |
+| Texto anterior | `CapituloRedactado` completo del intento anterior, con la prosa numerada como en §7.2 y los metadatos. | `staging/<run_id>/intento_<n-1>/capitulo.json` |
+| Incidencias | Todas las `bloqueante` y `mayor` (deterministas y de revisores) y las `menor` hasta `contexto.incidencias_menores_max`; `sugerencia` solo si sobra presupuesto (§6.4). Ordenadas por severidad, luego por escena y párrafo. Cada una serializada como: `[severidad] [revisor] [E.P] "cita" — descripción. Evidencia: tipo id "extracto". Sugerencia: ...`. Las de localización no verificada llevan la marca `(localización no verificada)`. | Revisiones del intento anterior |
+| Notas de los revisores | El campo `resumen` de cada revisión (≤ 80 palabras × 3). | Revisiones |
+| Instrucciones extra | Plantillas por patrón: longitud (con cifras y escenas a ampliar o recortar), beats omitidos (lista), personaje muerto (nombre y alternativa), reescritura desde cero detectada en el intento anterior ("conserva las escenas 1 y 3 tal cual"), incidencia persistente entre intentos ("la incidencia X se señaló también en el intento anterior y no se resolvió; resuélvela de forma explícita o explica en notas_escritor por qué no procede"). | Harness |
+| Temperatura | 0,6 en vez de 0,9 (§5.3). | Config |
+
+Lo que **no** recibe: las revisiones completas en JSON (ruido), las incidencias ya resueltas en intentos anteriores (se comparan por categoría + escena + cita normalizada; si una incidencia del intento n-2 no reaparece en n-1, no se envía), ni instrucciones de estilo nuevas. Motivo: cada elemento extra compite por atención con la corrección concreta.
+
+**Incidencias persistentes y disputadas.** El harness cruza las incidencias de intentos consecutivos por `(revisor, categoria, escena, cita normalizada)`. Una incidencia que aparece en dos intentos seguidos se marca `persistente`; si además el escritor la rebatió en `notas_escritor` (mención de la escena y la categoría), se marca `disputada`. Ambas marcas van al log y a los artefactos de escalada (§7.7). El harness no arbitra (P-01).
+
+### §7.7 Agotamiento de reintentos: parada y escalada
+
+Cuando el gate devuelve `escalado`:
+
+1. El run pasa a `estado = escalado` con `error = {tipo: "reintentos_agotados", mensaje: <motivos del último gate>, en_intento: n}` (RUN-6).
+2. La ficha del capítulo pasa a `estado = escalado` (ESC-6) y `estado.json` a `escalado` (§4.3).
+3. El harness escribe el **paquete de escalada** en `runs/<run_id>/escalada/` y detiene el proceso con código de salida 3.
+
+Contenido del paquete de escalada:
+
+| Fichero | Contenido |
+|---|---|
+| `RESUMEN.md` | Una página: capítulo, número de intentos, tabla de notas por intento y revisor, lista de incidencias bloqueantes del último intento, incidencias `persistentes` y `disputadas` con su historial, coste del run, y los comandos disponibles para continuar. |
+| `intento_<n>/capitulo.md` | Render legible de cada intento (mismo formato que `canon/capitulos/cap_NNN.md`). |
+| `intento_<n>/revisiones.md` | Las tres revisiones de cada intento en formato legible, incidencias con localización. |
+| `diff_intentos.md` | Diff textual entre intentos consecutivos por escena, para ver qué cambió el escritor en cada reescritura. |
+| `contexto_escritor.md` | Paquete de contexto del escritor con su tabla de registros incluidos y omitidos (§6.6), para detectar si el fallo viene de contexto insuficiente. |
+| `run.json` | Copia del `Run`. |
+
+Opciones del usuario (se listan en `RESUMEN.md`):
+
+| Acción | Comando | Efecto al reanudar |
+|---|---|---|
+| Aceptar un intento tal cual | `novela accept --run <run_id> --intento <n>` | Commit del intento como si el gate hubiera aprobado, con `veredicto = aprobado_manual` (§4.5). |
+| Corregir la ficha del capítulo | Editar `canon/escaleta/cap_NNN.json` y `novela canon commit -m "..."` (§10.6) | `novela resume` abre un run nuevo para el mismo capítulo con la ficha corregida. |
+| Corregir el canon (un personaje, un dato) | Editar y `novela canon commit` | Ídem. |
+| Relajar umbrales o cambiar modelo para este capítulo | Editar `config.yaml` (§13) | `novela resume` abre un run nuevo; el cambio de `config_hash` queda registrado. |
+| Dar más reintentos | `novela resume --reintentos-extra 2` | Continúa el mismo run desde el intento n+1 con el material del último intento, hasta 2 intentos más. |
+| Retroceder | `novela canon rollback --to v<k>` (§10.7) | Vuelve a un capítulo anterior; el escalado se descarta. |
+
+El proceso **nunca** reanuda solo tras una escalada: hace falta un `novela resume` explícito. Motivo: sin aprobación humana en el flujo, la escalada es el único punto en que el usuario debe mirar, y relanzar sin cambios repetiría el fallo y el gasto.
+
+### §7.8 Pseudocódigo completo del loop
+
+```python
+async def ejecutar_capitulo(proyecto, numero, config, registro) -> Run:
+    canon = proyecto.canon.abrir(version=proyecto.canon.version_actual())
+    ficha = canon.ficha(numero)
+    assert canon.ultimo_capitulo_aprobado == numero - 1                      # RUN-5
+
+    run = proyecto.runs.abrir_o_crear(tipo="capitulo", capitulo_id=ficha.id,  # idempotencia §11.3
+                                      canon_version_base=canon.version, config_hash=config.hash)
+    proyecto.estado.marcar(capitulo_actual=numero, run_id=run.id)             # §11.5
+    ficha.estado = "en_curso"
+
+    reintento = None
+    intento = run.siguiente_intento()                                         # 1, o el abortado si se reanuda
+    while True:
+        it = run.intento(intento)
+        staging = proyecto.staging(run.id, intento)
+
+        # --- escritor -------------------------------------------------------
+        if not staging.tiene("capitulo.json"):                                # reanudación: no repetir
+            ctx = generar_contexto(canon, ficha, "escritor", config.contexto, proveedor_de("escritor"), modelo_de("escritor"), reintento)
+            staging.guardar("contexto_escritor.json", ctx.sin_texto())
+            salida = await agentes.escritor.ejecutar(ctx, temperatura=config.escritor.temperatura(intento))  # incluye validación §9
+            capitulo = harness.completar_calc(salida, run.id, intento)       # palabras, ids provisionales
+            staging.guardar("capitulo.json", capitulo)
+        capitulo = staging.cargar("capitulo.json")
+
+        # --- comprobaciones deterministas -----------------------------------
+        deterministas = comprobaciones_deterministas(capitulo, ficha, canon, config)   # §7.3
+        it.comprobaciones_deterministas = deterministas
+        texto_numerado = numerar(capitulo)                                    # §7.2
+
+        # --- revisores en paralelo ------------------------------------------
+        async def revisar(nombre):
+            rev_id = f"rev_{run.id}_{intento}_{nombre}"
+            if staging.tiene(f"revision_{nombre}.json"): return staging.cargar(f"revision_{nombre}.json")   # REV-1
+            ctx = generar_contexto(canon, ficha, nombre, config.contexto, proveedor_de(nombre), modelo_de(nombre),
+                                   reintento=DatosRevision(capitulo, texto_numerado, deterministas))
+            rev = await agentes.revisor(nombre).ejecutar(ctx)
+            rev = harness.normalizar_revision(rev, capitulo, rev_id)         # REV-2..REV-6, §7.4 restricciones
+            staging.guardar(f"revision_{nombre}.json", rev)
+            return rev
+        try:
+            revisiones = dict(zip(REVISORES, await asyncio.gather(*(revisar(n) for n in REVISORES))))
+        except ErrorProveedorFinal as e:
+            it.estado = "abortado"; registro.evento("intento_abortado", e)   # no consume intento §7.1
+            raise ReintentableTecnico(e)                                      # §11 decide si relanza o marca fallido
+        deterministas = ajustar_por_revisores(deterministas, revisiones)      # beat_omitido aceptado -> sugerencia
+
+        # --- gate -----------------------------------------------------------
+        veredicto = evaluar_gate(deterministas, revisiones, intento, config.gate)    # §7.5
+        it.gate = veredicto; it.estado = "completado"; registro.evento("gate_evaluado", veredicto)
+        proyecto.presupuesto.comprobar(run)                                   # §11.4: puede lanzar PresupuestoExcedido
+
+        if veredicto.resultado in ("aprobado", "aprobado_tolerante"):
+            proyecto.canon.commit(run, capitulo, staging)                     # §10.4: staging -> canon, snapshot, índice
+            run.estado = "aprobado"; ficha.estado = "aprobado"
+            proyecto.estado.marcar(capitulo_actual=numero + 1, run_id=None)
+            return run
+
+        if veredicto.resultado == "escalado":
+            escribir_paquete_escalada(run, staging, revisiones)               # §7.7
+            run.estado = "escalado"; run.error = error_reintentos_agotados(veredicto, intento)
+            ficha.estado = "escalado"; proyecto.estado.marcar_escalado(run.id)
+            raise Escalada(run)
+
+        # --- reintentar -----------------------------------------------------
+        reintento = preparar_reintento(capitulo, texto_numerado, deterministas, revisiones,
+                                       anteriores=run.intentos[:intento-1], config)   # §7.6
+        intento += 1
+```
+
+Puntos de guardado (todo lo que se escribe en `staging/` y `run.json` antes de cada llamada LLM) son los que permiten la reanudación de §11.5 sin repetir trabajo.
+
+### §7.9 Aprobación y escritura en el canon
+
+La flecha "aprobado: escribe en el canon" del diagrama se materializa en `RepositorioCanon.commit(run, capitulo, staging)`, especificada en §10.4. En resumen, a partir del `CapituloRedactado` aprobado el harness:
+
+| Metadato del capítulo | Efecto en el canon |
+|---|---|
+| `escenas`, `titulo`, `metadatos` | `canon/capitulos/cap_NNN.json` y render `cap_NNN.md`. |
+| `resumen_propuesto` + campos calc | `canon/resumenes/cap_NNN.json`; regeneración de `global.json`. |
+| `eventos_nuevos` | Nuevos `Evento` de tipo `trama` con ids `evt_`; timeline reordenada (EVT-4). |
+| `cambios_personajes` | Actualización de `estado_actual`, `conocimiento`, `relaciones`, `arco.estado`, `capitulos_aparece`, `version` de cada personaje. |
+| `personajes_nuevos` | Nuevos `Personaje` con `rol = terciario`. |
+| `datos_nuevos_inventados` | Nuevos `DatoHistorico` con `estado = inventado`, `fuente.tipo = invencion`. |
+| `datos_historicos_usados` | `uso` de cada dato. |
+| `promesas` | `estado` y `capitulo_cumplida` de cada promesa del arco. |
+| — | `ficha.estado = aprobado`; `version.json` +1; snapshot; índice del dossier reconstruido si hubo datos nuevos. |
 
 ## §8 Editor global
 
