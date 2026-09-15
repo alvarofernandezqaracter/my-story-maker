@@ -230,3 +230,31 @@ flowchart TD
 2. **Retoques finales.** El editor global entrega una lista y tú decides qué aplicar. Aplicarlos es manual y fuera del sistema en 0.1.0.
 
 La preparación no tiene parada: el dossier y la escaleta entran en el canon sin tu visto bueno. Si salen mal, se ve en los primeros capítulos y se corrige editando el canon a mano.
+
+## §5 Agentes
+
+Siete agentes. Ninguno escribe en el canon: todos devuelven una propuesta estructurada que valida y persiste el harness. El modelo sugerido es una primera apuesta de la familia Claude, revisable sin tocar el diseño (§11, DA-02).
+
+| Agente | Entrada | Salida | Modelo sugerido |
+|---|---|---|---|
+| Investigador | Brief | Lista de datos históricos | Opus 5 + herramienta de búsqueda |
+| Arquitecto | Brief + dossier | Escaleta y fichas de personaje | Opus 5 |
+| Escritor | Paquete de contexto (§6) | Capítulo redactado en Markdown | Opus 5 |
+| Revisor de continuidad | Capítulo + extracto de canon | Nota 1-5 + incidencias | Sonnet 5 |
+| Revisor de anacronismos | Capítulo + dossier relevante | Nota 1-5 + incidencias | Sonnet 5 |
+| Revisor de lógica y ritmo | Capítulo + ficha de capítulo | Nota 1-5 + incidencias | Sonnet 5 |
+| Editor global | Resúmenes + escaleta + personajes | Lista de retoques | Opus 5 |
+
+**Investigador.** Le pido fichas de época sobre vestimenta, política, comida y lenguaje para el lugar y las fechas del brief. Cada dato sale con su categoría, su fuente y su estado. Trabaja de memoria por defecto y busca en la web solo los datos que él mismo marca como dudosos; lo que no puede sostener lo declara `inventado` en vez de disimularlo. Modos de fallo: inventar fuentes con aspecto creíble, marcar `verificado` lo que solo recuerda, y desbordarse en cantidad de datos genéricos que luego nadie usa.
+
+**Arquitecto.** Le pido el arco en tres actos, una ficha por capítulo y una ficha por personaje, coherentes con el dossier ya cerrado. Reparte los hilos para que cada capítulo cierre algo y abra algo. Modos de fallo: escaletas planas donde el acto central no tiene giro, personajes con motivación decorativa que no mueve la trama, y capítulos que prometen más de lo que caben en las palabras objetivo.
+
+**Escritor.** Le paso el paquete de contexto y le pido el capítulo entero, en prosa, respetando la voz de cada personaje y sin introducir hechos que no estén en el canon. Si necesita un detalle de época que no le he dado, tiene que pedirlo en vez de inventarlo. Modos de fallo: resumir en lugar de dramatizar cuando se acerca al límite de palabras, homogeneizar las voces hacia un registro neutro, y colar objetos o ideas fuera de época por inercia narrativa.
+
+**Revisor de continuidad.** Le pido que compare el capítulo contra el extracto de canon y señale contradicciones: alguien en dos sitios, alguien que sabe lo que no debería, cronología imposible. Devuelve nota e incidencias con cita textual. Modos de fallo: confundir elipsis con hueco de continuidad, y penalizar información nueva que es legítima por no estar todavía en el canon.
+
+**Revisor de anacronismos.** Le pido que verifique objetos, costumbres, instituciones y léxico contra el dossier de la época. Distingue error de licencia: lo que contradice un dato `verificado` es incidencia grave, lo que solo choca con un dato `inventado` es aviso. Modos de fallo: falsos positivos con vocabulario moderno pero de uso válido, y no ver el anacronismo conceptual, que es el caro.
+
+**Revisor de lógica y ritmo.** Le pido causa y efecto, que el objetivo de la ficha de capítulo se cumpla y que la escena no se atasque. Devuelve nota e incidencias localizadas por párrafo. Modos de fallo: premiar densidad de acontecimientos y castigar escenas de respiro que la novela necesita.
+
+**Editor global.** Le paso los resúmenes de todos los capítulos, la escaleta y las fichas de personaje, nunca el texto completo. Le pido una lista corta y accionable: arcos que no cierran, promesas abiertas sin saldar, actos desequilibrados. Modos de fallo: generalidades no accionables del tipo «reforzar el tema», y proponer reescrituras masivas cuando el encargo es una lista de retoques.
