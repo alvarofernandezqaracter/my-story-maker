@@ -3945,27 +3945,134 @@ Cada fila es algo que el autor del spec no puede cerrar solo, o que depende de d
 
 ## §18 Decisiones de arquitectura (ADRs)
 
-> Estado: pendiente
+> Estado: completa
+
+Formato fijo de cada ADR: contexto, opciones consideradas, decisión, consecuencias, estado (propuesta / aceptada / sustituida por ADR-XXXX), fecha. Una ADR nunca se edita una vez aceptada: se sustituye por otra. Cambiar cualquier cosa marcada "fijo por diseño" en §13.2 exige una ADR nueva.
 
 ### §18.1 ADR-0001 — Formato del canon
 
-> Estado: pendiente
+**Contexto.** El canon debe ser la única fuente de verdad (P-02), legible y editable por el usuario, versionable con vuelta atrás (§10), validable contra schemas (P-04) y consultable por contenido para el dossier (§3.14). El tamaño esperado es de pocos MB por libro (S-03).
+
+**Opciones consideradas.** (1) Ficheros JSON por entidad con Markdown derivado para la prosa y un índice SQLite regenerable. (2) SQLite como fuente de verdad. (3) YAML. (4) Markdown con front-matter. Tabla comparativa en §3.2.
+
+**Decisión.** Opción 1. JSON canónico (claves ordenadas, 2 espacios, `\n` final), un fichero por personaje y por dato, un fichero para la línea de tiempo, `capitulos/cap_NNN.json` como fuente y `cap_NNN.md` como render. Índice FTS5 derivado, borrable.
+
+**Consecuencias.** Diffs y snapshots triviales (§10); edición manual con cualquier editor; no hay transacciones entre ficheros, lo que obliga al mecanismo de staging + renombrado + diario de §10.4; el índice debe reconstruirse cuando cambia el dossier; los schemas de `schemas/` deben mantenerse alineados con §3 (test de §15.7).
+
+**Estado.** Aceptada. **Fecha.** 2026-09-15.
 
 ### §18.2 ADR-0002 — Framework de orquestación
 
-> Estado: pendiente
+**Contexto.** El flujo de §4 es una máquina de estados lineal con un bucle acotado (reintentos) y un único punto de paralelismo (tres revisores). Debe ser reanudable desde `estado.json` (§11.5) y multiproveedor (§4.6). El usuario pidió que la elección de framework quedara abierta con pros y contras.
+
+**Opciones consideradas.** (a) Orquestador propio sobre `asyncio`. (b) Framework de grafos de agentes (LangGraph o similar). (c) SDK de agentes de un proveedor. Comparativa en §4.8.
+
+**Decisión.** Se **propone** (a). La (c) queda descartada por contradecir la decisión multiproveedor del usuario. La (b) sigue siendo viable: el spec está escrito para que todo salvo `harness/orquestador.py` y `harness/loop_capitulo.py` sea idéntico con cualquiera de las dos.
+
+**Consecuencias.** Con (a): persistencia de estado, reintentos y paralelismo escritos a mano (pocas funciones, §7.8, §11.5); sin dependencias de framework; depuración estándar. Si el usuario elige (b): el `estado.json` de §11.5 sigue siendo la fuente de verdad de la reanudación y el checkpointing del framework se usa solo como caché, para no duplicar estado.
+
+**Estado.** Propuesta (D-01). Pasa a aceptada cuando el usuario confirme antes de la fase 1. **Fecha.** 2026-09-15.
 
 ### §18.3 ADR-0003 — Revisores en paralelo vs. secuencial
 
-> Estado: pendiente
+**Contexto.** El diagrama muestra tres revisores que reciben el mismo capítulo y alimentan el gate. Cada revisión dura 1–3 minutos.
+
+**Opciones consideradas.** (1) Paralelo: los tres a la vez sobre el mismo texto, contextos disjuntos. (2) Secuencial: cada revisor ve las incidencias del anterior y evita repetirlas. (3) Secuencial con cortocircuito: si el primero bloquea, no se llama a los demás.
+
+**Decisión.** (1). Los revisores son independientes y reciben contextos distintos por diseño (§5.4–§5.6), lo que además hace sus juicios menos correlacionados. La deduplicación de incidencias entre revisores no es necesaria porque sus catálogos de categorías son disjuntos (§7.4). El cortocircuito de (3) se rechaza por P-07: el reintento necesita todas las incidencias de una vez; se deja como opción de configuración solo para las deterministas bloqueantes (`saltar_revisores_si_bloqueante_determinista`, por defecto `false`).
+
+**Consecuencias.** Latencia del intento = la del revisor más lento; coste igual que en secuencial; el fallo técnico de un revisor aborta el intento sin consumir reintento y se relanza reutilizando las revisiones guardadas (§7.1, §11.2).
+
+**Estado.** Aceptada. **Fecha.** 2026-09-15.
 
 ### §18.4 ADR-0004 — Criterio del gate
 
-> Estado: pendiente
+**Contexto.** El diagrama dice "umbral sobre las 3 notas · máx. 3 reintentos". Hay que definir escala, agregación y qué bloquea.
+
+**Opciones consideradas.** (1) Media de las tres notas ≥ umbral. (2) Umbral por revisor. (3) Umbral por revisor + cero bloqueantes + cota de mayores. (4) Un cuarto LLM que decide con las tres revisiones.
+
+**Decisión.** (3), con escala 1–10, umbrales 7/7/6, `max_mayores = 4`, `max_reintentos = 3`, función pura en código (§7.5). La (4) se rechaza por P-01. La (1) se rechaza porque una media compensa una contradicción de continuidad con una buena nota de ritmo, y la continuidad no es compensable. La (2) sola deja pasar capítulos con muchas incidencias mayores repartidas.
+
+**Consecuencias.** El gate depende de que las revisiones sean coherentes; por eso el harness fuerza REV-2 y aplica las restricciones de severidad por categoría (§7.4). Los umbrales son configurables (D-17) pero la forma de la fórmula es fija. `modo_tolerante` existe como opción del usuario, desactivada (D-16).
+
+**Estado.** Aceptada. **Fecha.** 2026-09-15.
 
 ### §18.5 ADR-0005 — Política de selección de contexto
 
-> Estado: pendiente
+**Contexto.** El generador de contexto debe dar al escritor lo necesario para el capítulo N sin que el prompt crezca con el libro, y debe ser auditable (§6).
+
+**Opciones consideradas.** (1) Selección por reglas fijas con bloques priorizados y recorte determinista. (2) Recuperación semántica (embeddings) sobre todo el canon. (3) Un agente LLM que elige qué contexto pasar. (4) Todo el canon siempre.
+
+**Decisión.** (1), con búsqueda FTS5 solo para el dossier (§3.14) y las tres capas de memoria de §6.3 (K resúmenes completos, hechos clave comprimidos, estado estructurado). La (3) se rechaza por P-01 y por coste; la (2) queda como extensión (D-08); la (4) no escala (§6.7).
+
+**Consecuencias.** Reproducibilidad total del contexto para una versión del canon (§6.1), trazabilidad por registro (§6.6), y la posibilidad de que un dato relevante quede fuera si ni la ficha lo sugiere ni la búsqueda lo encuentra; ese caso se mide en §16.3 y podría motivar D-08.
+
+**Estado.** Aceptada. **Fecha.** 2026-09-15.
+
+### §18.6 ADR-0006 — División de las llamadas de preparación (investigador por grupos, arquitecto en dos fases)
+
+**Contexto.** El diagrama muestra un agente investigador y un agente arquitecto. Un dossier de 100–400 datos y una escaleta de hasta 40 fichas no caben con calidad en una sola salida cada uno.
+
+**Opciones consideradas.** (1) Una llamada por agente. (2) Investigador: una llamada por grupo de categorías, en paralelo; arquitecto: fase 1 (arco + personajes + eventos históricos) y fase 2 (fichas por lotes). (3) Agentes adicionales (un "planificador de capítulos" separado del arquitecto).
+
+**Decisión.** (2). Sigue habiendo dos agentes con dos prompts; el harness los invoca varias veces y fusiona (§5.1, §5.2). La (3) añadiría nodos al diagrama.
+
+**Consecuencias.** Deduplicación de datos por título (DAT-4) y validación de la escaleta sobre el conjunto (ESC-1..7) en el harness; reintentos por grupo o lote sin repetir el resto; `grupos_categorias` y `capitulos_por_lote` configurables.
+
+**Estado.** Aceptada. **Fecha.** 2026-09-15.
+
+### §18.7 ADR-0007 — La prosa viaja dentro del JSON del escritor
+
+**Contexto.** P-04 exige salidas JSON validadas; la salida del escritor incluye 2.000–6.000 palabras de prosa.
+
+**Opciones consideradas.** (1) Un único JSON con `escenas[].texto` como cadenas. (2) Prosa con delimitadores propios y un bloque JSON de metadatos en la misma respuesta. (3) Dos llamadas: una para la prosa, otra para los metadatos.
+
+**Decisión.** (1). Con salida estructurada nativa del proveedor es fiable; permite localizar incidencias por escena y párrafo (§7.2) y validar todo con un schema. La (3) duplica coste y desacopla los metadatos de la prosa que describen (riesgo R-06). La (2) queda como alternativa si `tasa_reparacion` > 15 % (D-07).
+
+**Consecuencias.** Sanitización específica de la prosa (§9.5 S-2..S-5); límite de 60.000 caracteres por escena (§9.8); dependencia de que el proveedor soporte salida estructurada o de la extracción de §9.2.
+
+**Estado.** Aceptada. **Fecha.** 2026-09-15.
+
+### §18.8 ADR-0008 — El escritor propone las actualizaciones del canon; el resumen global es determinista
+
+**Contexto.** Al aprobar un capítulo hay que actualizar personajes, línea de tiempo, promesas, dossier y resúmenes. El diagrama no muestra ningún agente que lo haga.
+
+**Opciones consideradas.** (1) El escritor devuelve, junto a la prosa, metadatos estructurados con los cambios (eventos nuevos, cambios de personajes, resumen propuesto, datos inventados); el harness los aplica al aprobar. (2) Un agente "resumidor/actualizador" que lee el capítulo aprobado y produce los cambios. (3) El harness extrae los cambios con heurísticas de texto.
+
+**Decisión.** (1), con el resumen global compuesto deterministamente a partir de los `hechos_clave` (§3.8.2). La (2) añade una llamada y un agente fuera del diagrama; la (3) no es viable con calidad.
+
+**Consecuencias.** Los revisores deben verificar la fidelidad de los metadatos (categoría `metadatos_infieles`, bloqueante); el `CapituloRedactadoSalida` es más largo (≈ 2–4k tokens extra); el harness materializa registros a partir de los metadatos en el commit (§7.9); D-06 queda abierta para libros muy largos.
+
+**Estado.** Aceptada. **Fecha.** 2026-09-15.
+
+### §18.9 ADR-0009 — Búsqueda web del investigador: opcional y desactivada por defecto
+
+**Contexto.** El investigador debe producir datos con fuente. Sin herramientas, las fuentes salen de la memoria del modelo (R-01). Con web, hay coste, latencia y riesgo de inyección (R-02).
+
+**Opciones consideradas.** (1) Sin web nunca. (2) Web siempre. (3) Web opcional por configuración, desactivada en fase 1, con `fiabilidad` acotada cuando está desactivada.
+
+**Decisión.** (3). Permite construir y probar todo el harness sin la dependencia, mantiene la coherencia interna (los revisores comparan con el dossier), y deja medible el beneficio de activarla (§15.6 fuentes).
+
+**Consecuencias.** DAT-3 y DAT-6; herramientas `buscar_web` y `leer_url` en `agentes/herramientas/` para la fase 2; el usuario debe saber que un dossier sin web es coherente pero no verificado.
+
+**Estado.** Aceptada. **Fecha.** 2026-09-15.
+
+### §18.10 ADR-0010 — Los capítulos se aprueban en orden estricto
+
+**Contexto.** El loop del diagrama se repite "una vez por cada capítulo de la escaleta". Podrían generarse capítulos independientes en paralelo para reducir el tiempo de pared.
+
+**Opciones consideradas.** (1) Secuencial estricto: el capítulo N arranca con N-1 aprobado (RUN-5). (2) Paralelo por actos o por capítulos sin personajes compartidos, con fusión del canon.
+
+**Decisión.** (1). El contexto del capítulo N depende del estado del canon tras N-1 (resúmenes, conocimiento, promesas); la fusión de (2) reintroduciría exactamente las contradicciones que el sistema existe para evitar.
+
+**Consecuencias.** Tiempo de pared lineal en N; numeración de versiones del canon simple (§10.2); reanudación trivial (§11.5). D-13 recoge la posibilidad de revisarlo con evidencia.
+
+**Estado.** Aceptada. **Fecha.** 2026-09-15.
+
+
+
+
+
 
 ## §19 Trazabilidad diagrama → spec
 
