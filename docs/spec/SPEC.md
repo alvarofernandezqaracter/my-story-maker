@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.2.0
+version: 0.3.0
 estado: borrador
 actualizado: 2026-09-15
 ---
@@ -476,6 +476,17 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.3.0] — 2026-09-15
+
+**Añadido**
+- §12. La sección de configuración, que no existía: el documento saltaba de §11 a §13 mientras §4, §5, §7, §8, §9 y §10 citaban un §12 inexistente. Recoge la tabla que vivía al final de §13 y documenta el `config.json` del proyecto.
+- §12. `ejecucion.modo`, para que todas las llamadas a agentes pasen por una capa única que en modo `simulado` devuelve respuestas fijas del formato correcto sin tocar la API, y que los tests y las demostraciones no dependan de la red.
+- §12. `validador.modo`, los `margenes` de VD-07 y VD-08 y un valor para `tope_contexto`. §4, §5 y §9 los daban por configurables sin que existieran en ninguna tabla, y `tope_contexto` seguía «por definir con el stack».
+
+**Cambiado**
+- §9. VD-08 pasa de aviso a dos escalones, uno de aviso y otro de bloqueo. La tabla lo marcaba solo como aviso mientras el párrafo de orden de §9 y el pseudocódigo de §8 contaban con él para saltarse la llamada al validador; con un único umbral las dos cosas no podían ser ciertas a la vez.
+- §13. Pierde la tabla de configuración, que estaba ahí por el hueco de §12.
 
 ### [0.2.0] — 2026-09-15
 
