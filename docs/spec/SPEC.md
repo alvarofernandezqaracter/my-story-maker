@@ -3501,7 +3501,171 @@ Al arrancar, el harness valida la configuración efectiva contra `schemas/config
 
 ## §14 Estructura del repo
 
-> Estado: pendiente
+> Estado: completa
+
+Árbol propuesto para la implementación en Python (§1.3). Una línea por carpeta o fichero relevante. Los nombres de módulo coinciden con los nombres en código de §2 y §4.2.
+
+```
+my-story-maker/
+├── README.md
+├── pyproject.toml                  # paquete `novela`; dependencias mínimas: cliente(s) de proveedor, jsonschema, pyyaml, click o typer
+├── docs/
+│   ├── diagrama/sistema-novelas-historicas-v2.drawio   # fuente de verdad del flujo
+│   └── spec/SPEC.md                # este documento
+├── schemas/                        # JSON Schema draft 2020-12, uno por entidad (§9.1); se cargan en tiempo de ejecución
+│   ├── brief.schema.json
+│   ├── personaje.schema.json
+│   ├── evento.schema.json
+│   ├── dato_historico.schema.json
+│   ├── arco.schema.json
+│   ├── ficha_capitulo.schema.json
+│   ├── resumen.schema.json
+│   ├── resumen_global.schema.json
+│   ├── capitulo_redactado.schema.json
+│   ├── run.schema.json
+│   ├── revision.schema.json
+│   ├── informe_editor.schema.json
+│   ├── estado_proyecto.schema.json
+│   ├── paquete_contexto.schema.json
+│   ├── llamada_llm.schema.json
+│   ├── config.schema.json
+│   ├── salidas/                    # schemas de salida de agente (sin campos calc)
+│   │   ├── salida_investigador.schema.json
+│   │   ├── salida_arquitecto_fase1.schema.json
+│   │   ├── salida_arquitecto_fase2.schema.json
+│   │   ├── capitulo_redactado_salida.schema.json
+│   │   ├── revision_salida.schema.json
+│   │   └── informe_editor_salida.schema.json
+│   └── eventos.md                  # documentación de `datos` por evento (§12.2)
+├── prompts/                        # prompts de §5 como ficheros de texto con placeholders {{...}}; versionados con git
+│   ├── investigador.system.md
+│   ├── investigador.user.md
+│   ├── arquitecto_fase1.system.md
+│   ├── arquitecto_fase1.user.md
+│   ├── arquitecto_fase2.system.md
+│   ├── arquitecto_fase2.user.md
+│   ├── escritor.system.md
+│   ├── escritor.user.md
+│   ├── escritor.user_reintento.md
+│   ├── continuidad.system.md
+│   ├── continuidad.user.md
+│   ├── anacronismos.system.md
+│   ├── anacronismos.user.md
+│   ├── logica_ritmo.system.md
+│   ├── logica_ritmo.user.md
+│   ├── editor_global.system.md
+│   └── editor_global.user.md
+├── novela/                         # paquete Python instalable
+│   ├── __init__.py
+│   ├── cli/                        # comandos de §4.7; solo parseo de argumentos y presentación
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── run.py                  # run, resume, stop, accept
+│   │   ├── canon.py                # canon validate/commit/diff/rollback/discard
+│   │   ├── inspeccion.py           # status, stats, context, export
+│   │   └── presentacion.py         # tablas de consola, renders Markdown
+│   ├── config/                     # §13
+│   │   ├── __init__.py
+│   │   ├── defaults.yaml
+│   │   ├── carga.py                # capas, hash, validación
+│   │   └── modelos.py              # dataclasses de configuración tipada
+│   ├── dominio/                    # entidades de §3 como dataclasses/TypedDict + tipos comunes (FechaHistorica, Fuente, ...)
+│   │   ├── __init__.py
+│   │   ├── tipos_comunes.py
+│   │   ├── brief.py
+│   │   ├── personaje.py
+│   │   ├── evento.py
+│   │   ├── dato_historico.py
+│   │   ├── escaleta.py             # Arco, Promesa, FichaCapitulo, Beat
+│   │   ├── resumen.py
+│   │   ├── capitulo.py             # CapituloRedactado, Escena
+│   │   ├── run.py                  # Run, Intento
+│   │   ├── revision.py             # Revision, Incidencia, Localizacion
+│   │   ├── informe_editor.py
+│   │   ├── ids.py                  # prefijos, slugs, ULID (§3.1.2)
+│   │   └── invariantes.py          # PER-*, EVT-*, DAT-*, ESC-*, RES-*, CAP-*, RUN-*, REV-*, RET-*, GLB-*
+│   ├── canon/                      # §3.2, §3.14, §10
+│   │   ├── __init__.py
+│   │   ├── repositorio.py          # RepositorioCanon: lectura tipada, staging, commit atómico, diario
+│   │   ├── serializacion.py        # JSON canónico (claves ordenadas, 2 espacios, \n); render Markdown de capítulos
+│   │   ├── snapshots.py            # creación, hash de árbol, solo lectura, rollback
+│   │   ├── diff.py                 # diff semántico entre snapshots (§10.5)
+│   │   └── indice_dossier.py       # SQLite FTS5 (§3.14)
+│   ├── contexto/                   # §6
+│   │   ├── __init__.py
+│   │   ├── generador.py            # generar_contexto, construir_paquete, orden de recorte
+│   │   ├── bloques.py              # bloque_B0 ... bloque_B9
+│   │   ├── serializacion.py        # serializar_compacto por entidad
+│   │   └── numeracion.py           # texto numerado [E.P] (§7.2)
+│   ├── llm/                        # §4.6
+│   │   ├── __init__.py
+│   │   ├── interfaz.py             # ProveedorLLM, PeticionLLM, RespuestaLLM
+│   │   ├── anthropic.py
+│   │   ├── openai.py
+│   │   ├── compatible_openai.py
+│   │   ├── mock.py                 # ProveedorMock (§15.2)
+│   │   ├── reintentos.py           # backoff, rate limit, fallback (§11.3)
+│   │   ├── precios.py              # coste_usd desde la tabla de §13
+│   │   └── tokens.py               # contar_tokens exacto/estimado (§6.5)
+│   ├── agentes/                    # §5; cada módulo: construir_prompt, ejecutar, schema de salida
+│   │   ├── __init__.py
+│   │   ├── base.py                 # AgenteGenerador, AgenteRevisor, carga de prompts, sustitución de placeholders
+│   │   ├── investigador.py
+│   │   ├── arquitecto.py
+│   │   ├── escritor.py
+│   │   ├── revisor_continuidad.py
+│   │   ├── revisor_anacronismos.py
+│   │   ├── revisor_logica_ritmo.py
+│   │   ├── editor_global.py
+│   │   └── herramientas/           # solo para el investigador con web activa
+│   │       ├── __init__.py
+│   │       ├── buscar_web.py
+│   │       └── leer_url.py
+│   ├── validacion/                 # §9
+│   │   ├── __init__.py
+│   │   ├── pipeline.py             # pasos 1-6 de §9.2
+│   │   ├── extraccion_json.py      # paso 1b
+│   │   ├── semantica.py            # reglas de paso 3 por agente
+│   │   ├── sanitizacion.py         # S-1 ... S-10
+│   │   └── reparacion.py           # mensajes de reparación (§9.3)
+│   ├── harness/                    # orquestación (§4, §7, §8, §11)
+│   │   ├── __init__.py
+│   │   ├── orquestador.py          # máquina de estados §4.3, arranque §11.5
+│   │   ├── estado.py               # EstadoProyecto, escritura atómica, lock, señal STOP
+│   │   ├── preparacion.py          # EjecutorPreparacion: investigador + arquitecto
+│   │   ├── loop_capitulo.py        # LoopCapitulo (§7.8)
+│   │   ├── comprobaciones.py       # D-01 ... D-16 (§7.3)
+│   │   ├── gate.py                 # evaluar_gate (§7.5)
+│   │   ├── reintento.py            # preparar_reintento, persistentes/disputadas (§7.6)
+│   │   ├── escalada.py             # paquete de escalada (§7.7)
+│   │   ├── editor.py               # run del editor global (§8)
+│   │   ├── presupuesto.py          # límites de gasto (§11.4)
+│   │   └── errores.py              # taxonomía §11.2 como excepciones tipadas
+│   └── registro/                   # §12
+│       ├── __init__.py
+│       ├── llamadas.py             # llamadas.jsonl
+│       ├── eventos.py              # eventos.jsonl
+│       ├── metricas.py             # novela stats
+│       └── consola.py
+├── proyectos/                      # datos de los libros (§3.2); fuera del control de versiones salvo ejemplos
+│   └── .gitkeep
+├── tests/                          # §15
+│   ├── unit/                       # invariantes, gate, comprobaciones, generador de contexto, sanitización, diff, ids
+│   ├── integracion/                # loop completo con ProveedorMock, reanudación, commit/rollback, escalada
+│   ├── evaluacion/                 # set de evaluación con LLM real (§15.6); se ejecuta a mano
+│   └── fixtures/
+│       ├── mock/                   # respuestas fijas por agente y escenario (§15.2)
+│       └── proyectos/              # brief y canon de prueba (`comuneros-1521` reducido)
+└── scripts/
+    ├── validar_schemas.py          # comprueba que schemas/ y §3 coinciden (campos, enums)
+    └── regenerar_indice.py
+```
+
+Notas:
+
+- `prompts/` como ficheros y no como cadenas en código: permite revisar cambios de prompt en git con diff legible y ajustarlos sin tocar código. Cada agente carga su fichero y falla si queda un placeholder sin sustituir (§9.7).
+- `dominio/` no importa nada de `canon/`, `llm/` ni `harness/`: son datos puros. `agentes/` importa `dominio/`, `llm/`, `validacion/`; nunca `canon/` (§4.2).
+- `proyectos/` está en `.gitignore` salvo `tests/fixtures/proyectos/`. El versionado del contenido del libro es el de §10, no git.
 
 ## §15 Plan de evaluación y tests
 
