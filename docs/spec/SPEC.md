@@ -284,3 +284,58 @@ Código, no agente: mismo capítulo y mismo canon dan siempre el mismo paquete. 
 Dos reglas que no se negocian. El texto completo de capítulos anteriores no entra nunca, salvo el enganche: para eso están los resúmenes. Y en el paquete viaja el estado de cada dato histórico, porque el escritor necesita saber qué es firme y qué es relleno.
 
 El paquete tiene un tope de tokens configurable (§9). Si se pasa, se recorta en este orden: memoria larga, cronología, reparto de fondo, época. El encargo, los personajes y los hilos vivos no se recortan; si aun así no cabe, el capítulo se marca `bloqueado` en lugar de escribirse con el contexto mutilado.
+
+## §7 Loop de capítulo y gate
+
+Un capítulo se da por bueno cuando pasa el gate, no cuando el escritor termina. Todo lo de esta sección es código salvo las cuatro llamadas a agentes.
+
+```
+para cada capitulo de la escaleta con estado != aprobado:
+    marcar capitulo en_curso
+    paquete = generar_contexto(capitulo)                      # §6
+    incidencias = []
+    texto_previo = null
+
+    para intento en 1..3:
+        texto = escritor(paquete, texto_previo, incidencias)
+        guardar_intento(capitulo, intento, texto)             # estado propuesto
+
+        rev = en_paralelo(
+            revisor_continuidad(texto, paquete.personajes, paquete.hilos),
+            revisor_anacronismos(texto, paquete.epoca),
+            revisor_logica(texto, paquete.encargo))
+        guardar_revisiones(capitulo, intento, rev)
+
+        si gate(rev):
+            marcar intento aprobado y descartar los demas
+            cambios = cronista(texto, ficha, personajes)       # §5
+            validar_y_escribir(cambios)                        # unica escritura en canon
+            marcar capitulo aprobado
+            salir del bucle de intentos
+
+        incidencias = rev.incidencias
+        texto_previo = texto si intento < 2 sino null          # el 3.º va de cero
+
+    si capitulo != aprobado:
+        marcar capitulo bloqueado y proyecto bloqueado
+        parar y esperar mano humana                            # §9
+
+si todos los capitulos aprobados:
+    retoques = editor_global(resumenes, escaleta, personajes)  # §8
+```
+
+**Rúbrica.** Escala 1 a 5, entera, con anclas para que la nota no derive entre capítulos.
+
+| Revisor | Qué puntúa | Nota 1 | Nota 3 | Nota 5 |
+|---|---|---|---|---|
+| Continuidad | Coherencia con el canon: dónde está cada uno, qué sabe, cuándo pasa | Contradice un hecho del canon | Detalle menor sin respaldo | Todo cuadra y usa el canon con precisión |
+| Anacronismos | Objetos, costumbres, instituciones y léxico frente al dossier | Rompe un dato `verificado` | Choca con un `sin_verificar` | Época sostenida sin adorno de folleto |
+| Lógica y ritmo | Causa y efecto, cumplimiento del objetivo del capítulo, tensión | La escena no lleva a ninguna parte | Avanza pero se atasca o se salta un paso | Cada escena empuja la siguiente |
+
+Cada incidencia lleva cita textual, severidad (`grave` o `aviso`) y una sugerencia de una línea. Grave es contradecir el canon o un dato `verificado`; el resto es aviso.
+
+**Fórmula del gate.** `aprueba = min(notas) >= 3 y media(notas) >= 3,7 y ninguna incidencia grave`. La incidencia grave veta por sí sola: un capítulo puede sacar tres cuatros y caer por una contradicción de canon, porque eso no se arregla puntuando más alto. Los tres números son configurables (§9) y están sin calibrar hasta que haya capítulos reales (§11, DA-06).
+
+**Qué recibe el escritor al reintentar.** El mismo paquete de contexto, las incidencias del intento anterior ordenadas por severidad y, solo en el intento 2, su propio texto: ahí se le pide arreglo quirúrgico, tocar lo señalado y no reescribir lo que ya funciona. El intento 3 va desde cero con las incidencias acumuladas de los dos anteriores, porque si dos pasadas quirúrgicas no han bastado el problema no está en las frases sino en el planteamiento de la escena.
+
+**Al agotar los tres intentos.** El capítulo queda `bloqueado`, el proyecto también, y el sistema para en vez de seguir con el siguiente: escribir sobre un canon con un agujero solo propaga el problema. Se conserva el intento con mejor media, en estado `propuesto`, y sus revisiones. Tienes tres salidas, todas manuales: editar el texto a mano y aprobarlo, retocar la ficha de capítulo y relanzar con el contador a cero, o bajar el umbral solo para ese capítulo dejando constancia.
