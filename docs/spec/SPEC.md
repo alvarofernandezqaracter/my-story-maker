@@ -382,3 +382,20 @@ Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo q
 | F4 Novela entera | Loop sobre toda la escaleta, bloqueo y reanudación | Una novela corta completa, con al menos un bloqueo resuelto a mano |
 | F5 Cierre | Editor global y `retoques.md` | La lista de retoques es accionable sin releer los capítulos |
 | F6 Rigor | Búsqueda web del investigador y estados de verificación reales | La mayoría de datos del dossier llevan fuente comprobable |
+
+## §11 Decisiones abiertas
+
+Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar la fase que se indica.
+
+| Id | Decisión pendiente | Por qué importa | Cuándo decidirla |
+|---|---|---|---|
+| DA-01 | Lenguaje y stack del harness | Fija cómo se consulta el canon y cómo se lanzan los tres revisores en paralelo | Antes de F0 |
+| DA-02 | Modelo definitivo de cada agente | Los revisores son la mayoría de llamadas; el reparto decide el coste del libro | Antes de F3 |
+| DA-03 | Parada humana al acabar la preparación | Es la revisión más barata y un fallo de escaleta contamina el libro entero | Antes de F4 |
+| DA-04 | Proveedor de búsqueda del investigador | Define qué significa exactamente `verificado` en el dossier | Antes de F6 |
+| DA-05 | Qué hacer con los `faltantes` del escritor | Hoy se registran y nadie los mira; podrían disparar una consulta al investigador | Antes de F4 |
+| DA-06 | Calibración de `nota_minima` y `media_minima` | Puestos a ojo: altos bloquean todo, bajos no filtran nada | Durante F3, con capítulos reales |
+| DA-07 | Vuelta del editor global | Si los retoques se aplican siempre a mano o disparan reescritura de capítulos | Después de F5 |
+| DA-08 | Quién valida lo que propone el cronista | El harness valida forma, no fondo; un resumen que miente envenena el canon entero | Antes de F4 |
+| DA-09 | Unidad de escritura: capítulo entero o escena a escena | Si la prosa se degrada en capítulos largos, el loop cambia de grano | Durante F2 |
+| DA-10 | Qué hacer si la escaleta se queda corta o larga a mitad de libro | Replanificar toca el canon en caliente; forzarla estropea el final | Durante F4 |
