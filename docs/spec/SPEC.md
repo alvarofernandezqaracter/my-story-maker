@@ -3002,7 +3002,189 @@ Ejemplo: con el libro en v12 (capítulo 10 aprobado), `rollback --to v009` produ
 
 ## §11 Errores, reintentos y reanudación
 
-> Estado: pendiente
+> Estado: completa
+
+### §11.1 Principios
+
+| Principio | Consecuencia |
+|---|---|
+| Dos familias de fallo, dos tratamientos. | Los fallos **de calidad** (el texto no pasa el gate) se tratan en §7 con reintentos del escritor. Los fallos **técnicos** (red, proveedor, JSON, disco, presupuesto) se tratan aquí y nunca consumen reintentos del gate (§7.1). |
+| Todo lo que cuesta dinero se guarda antes de gastar más. | Cada salida de LLM validada se escribe en `staging/` antes de la siguiente llamada; reanudar nunca repite una llamada cuya salida existe (§11.3). |
+| Fallar ruidosamente, reanudar explícitamente. | Un error irrecuperable deja el run en `fallido` con el tipo y mensaje, detiene el proceso con código de salida distinto de 0, y solo `novela resume` continúa. |
+| El estado del proyecto es un fichero, no memoria de proceso. | `estado.json` (§11.5) se actualiza en cada transición; matar el proceso en cualquier punto deja un estado consistente o recuperable por el diario de commit (§10.4). |
+
+### §11.2 Taxonomía de errores
+
+| Tipo (`Run.error.tipo`) | Origen | Recuperable automáticamente | Acción del harness |
+|---|---|---|---|
+| `timeout` | Llamada LLM excede `timeout_s` del agente | Sí | Reintento técnico con backoff (§11.3). |
+| `rate_limit` | HTTP 429 o equivalente del proveedor | Sí | Backoff respetando `Retry-After` si existe. |
+| `proveedor_5xx` | Error de servidor del proveedor | Sí | Backoff. |
+| `proveedor_4xx` | Petición inválida, modelo inexistente, clave rechazada | No | Run `fallido`. Suele ser configuración. |
+| `filtro_contenido` | El proveedor rechaza la petición o respuesta por política | Parcial | Un reintento con temperatura −0,2; si persiste, run `fallido` con el fragmento de contexto que lo provocó, para que el usuario ajuste el brief o el capítulo. |
+| `salida_invalida` | Agotadas las reparaciones de §9.3 | Parcial | Escritor/revisores: intento `abortado` y relanzado una vez; después `fallido`. Otros: §9.3. |
+| `salida_truncada` | `max_tokens` dos veces seguidas | Parcial | Como `salida_invalida`. |
+| `revisor_no_disponible` | Un revisor agotó sus reintentos técnicos | Sí | Intento `abortado`; el harness lo relanza reutilizando el texto del escritor y las revisiones ya guardadas; tras `max_relanzamientos_tecnicos` (2) → `fallido`. |
+| `presupuesto_excedido` | Límite de gasto de §11.4 alcanzado | No | Run `fallido`, proceso detenido; el usuario sube el límite o acepta el estado. |
+| `contexto_p0_excede` | Los bloques P0 no caben en el presupuesto (§6.4) | No | `fallido` con los tamaños por bloque. |
+| `contexto_excede_presupuesto` | Tras todos los recortes no cabe | No | Ídem. |
+| `canon_corrupto` | Invariantes de §3.13 o schemas fallan al arrancar | No | Proceso detenido; `novela canon validate` muestra el detalle; el usuario corrige o hace rollback. |
+| `canon_desactualizado` | `version.json` ≠ `canon_version_base` del run al hacer commit | No | Run `fallido`; indica edición manual o rollback durante el run. `novela resume` crea un run nuevo sobre la versión actual. |
+| `canon_modificado_sin_commit` | Hash de `canon/` ≠ último snapshot (§10.6) | No | Proceso detenido hasta `novela canon commit` o `discard`. |
+| `canon_invalido_tras_commit` | La validación del paso 4 de §10.4 falla | No | El canon real no se ha tocado. Run `fallido` con el detalle; suele ser un bug del harness o un metadato del escritor que pasó el gate pero rompe una invariante global. |
+| `lock_ocupado` | Otro proceso tiene `proyecto.lock` | No | Proceso detenido inmediatamente con el PID del otro proceso. |
+| `prompt_incompleto` | Placeholder sin sustituir (§9.7) | No | Error de programación; `fallido` antes de llamar. |
+| `reintentos_agotados` | Gate escala (§7.7) | No | Run `escalado` (no `fallido`). |
+| `disco` | Error de E/S al escribir staging, canon o logs | No | `fallido`; el diario de commit garantiza la recuperación (§10.4). |
+| `interrumpido` | SIGINT/Ctrl+C o `novela stop` | — | Parada limpia (§11.7); el run queda `en_curso` y se retoma con `resume`. |
+
+### §11.3 Reintentos técnicos, backoff e idempotencia
+
+**Reintentos técnicos** (en la capa de proveedores, §4.6), por llamada:
+
+| Parámetro | Valor por defecto | Nota |
+|---|---|---|
+| `max_reintentos_tecnicos` | 4 | Solo para `timeout`, `rate_limit`, `proveedor_5xx`. |
+| Backoff | Exponencial con base 2 s: 2, 4, 8, 16 s, más jitter uniforme ±25 % | `Retry-After` del proveedor tiene prioridad si es mayor. |
+| `timeout_s` por agente | Investigador 300; arquitecto 300; escritor 600; revisores 240; editor 300 | El escritor genera ≈ 12k tokens; a 50 tokens/s son 4 minutos. |
+| Timeout total por run de capítulo | 90 minutos | Si se excede → `fallido` con tipo `timeout`; protege de bucles de reintento con proveedor degradado. |
+| Proveedor de respaldo | Opcional por agente (`fallback: {proveedor, modelo}`) | Se usa solo tras agotar los reintentos técnicos del principal, y se registra `modelo_efectivo` distinto. Nunca se usa para el escritor en mitad de un run (cambiaría la voz entre intentos); sí para revisores y editor. |
+
+**Coste desbocado.** Además del presupuesto (§11.4), dos protecciones: un bucle de reparaciones (§9.3) está acotado a 2, y un intento del loop no puede hacer más de `1 (escritor) + 3 (revisores) + 8 (reparaciones) + 4×4 (reintentos técnicos) = 28` llamadas; el harness cuenta las llamadas por intento y aborta con `presupuesto_excedido` si supera 30 aunque el coste en dólares no lo haya alcanzado.
+
+**Idempotencia.** La clave de idempotencia de un run es `(proyecto_id, tipo, capitulo_id, canon_version_base)`:
+
+- `runs.abrir_o_crear(...)` busca un run `en_curso` con esa clave y lo reutiliza; si no existe, lo crea. Nunca hay dos runs `en_curso` (RUN-1).
+- Dentro del run, cada llamada LLM se identifica por `(run_id, intento, agente, hash_prompt)`, donde `hash_prompt` es el SHA-256 del system prompt + user prompt + schema + parámetros. Antes de llamar, el harness busca en `runs/<run_id>/llamadas/<hash>.json`; si existe una respuesta validada, la reutiliza sin llamar. Es lo que hace que relanzar sea gratis para lo ya hecho.
+- Los ids de revisión son deterministas (REV-1), y las salidas se guardan en `staging/<run_id>/intento_<n>/` con nombres fijos (`capitulo.json`, `revision_<revisor>.json`, `contexto_<destinatario>.json`), así que la reanudación solo comprueba qué ficheros existen (pseudocódigo de §7.8).
+- El paquete de contexto es determinista respecto a la versión del canon (§6.1), por lo que el `hash_prompt` de un relanzamiento coincide con el original salvo que haya cambiado la configuración; en ese caso `config_hash` difiere, el harness lo anota en el run y regenera desde el primer paso no guardado.
+
+### §11.4 Límites de gasto
+
+Configurables en §13; valores por defecto:
+
+| Límite | Por defecto | Al alcanzarlo |
+|---|---|---|
+| `presupuesto.por_run_usd` | 5 | El run pasa a `fallido` (`presupuesto_excedido`) tras la llamada que lo excede; no se inicia ninguna llamada nueva. |
+| `presupuesto.por_capitulo_usd` | 3 | Suma de todos los runs del mismo capítulo (incluidos los descartados por rollback). Misma acción. |
+| `presupuesto.por_libro_usd` | 60 | Suma de todos los runs del proyecto. Proceso detenido. |
+| `presupuesto.por_dia_usd` | 40 | Suma de llamadas del día UTC. Proceso detenido hasta el día siguiente o hasta que el usuario suba el límite. |
+| `presupuesto.aviso_pct` | 80 | Al superar el 80 % de cualquiera de los anteriores se emite un aviso en consola y en el log; no detiene. |
+
+El coste se calcula con la tabla de precios de §13 (S-05) y se acumula en `run.json` y en `estado.json.coste_acumulado_usd` tras cada llamada. La comprobación se hace **antes** de cada llamada con el coste estimado (`tokens_estimados × precio_entrada + max_tokens_salida × precio_salida`) y **después** con el real. El usuario decidió en la Fase 0 que al superar el límite se pare y escale, sin degradar a un modelo más barato; la degradación automática queda como opción no implementada en §17.
+
+### §11.5 Fichero de estado y reanudación
+
+`estado.json` es el único fichero que el orquestador lee para decidir qué hacer al arrancar. Lo escribe solo el orquestador, de forma atómica (escritura a `estado.json.tmp` + renombrado).
+
+```json
+{
+  "proyecto_id": "comuneros-1521",
+  "estado": "escribiendo",
+  "brief_hash": "3a7f...c9",
+  "canon_version": 13,
+  "ultimo_capitulo_aprobado": 11,
+  "capitulo_actual": 12,
+  "num_capitulos": 18,
+  "run_en_curso": {
+    "run_id": "run_01J9AB...",
+    "tipo": "capitulo",
+    "capitulo_id": "cap_012",
+    "intento_actual": 3,
+    "fase_intento": "revisando",
+    "iniciado_en": "2026-09-18T09:10:00Z"
+  },
+  "ultimo_run_terminado": { "run_id": "run_01J9A9...", "estado": "aprobado", "terminado_en": "2026-09-18T09:05:00Z" },
+  "coste_acumulado_usd": 21.40,
+  "coste_hoy_usd": 6.10,
+  "coste_hoy_fecha": "2026-09-18",
+  "config_hash": "9f2c...e1",
+  "actualizado_en": "2026-09-18T09:22:31Z",
+  "version_estado": 1
+}
+```
+
+| Campo | Significado |
+|---|---|
+| `estado` | Estado de la máquina de §4.3. |
+| `brief_hash` | BRF-2. |
+| `canon_version`, `ultimo_capitulo_aprobado` | Copia de `version.json` para no abrir el canon al decidir. |
+| `capitulo_actual` | Capítulo que toca escribir (o el que está en curso). |
+| `run_en_curso` | Nulo si no hay run abierto. `fase_intento` ∈ `contexto`, `escribiendo`, `comprobando`, `revisando`, `gate`, `commit`; es informativa: la reanudación real se decide por los ficheros de staging. |
+| `coste_*` | Para los límites de §11.4 sin recorrer todos los runs. |
+| `config_hash` | Para detectar cambios de configuración entre ejecuciones. |
+| `version_estado` | Versión del schema de este fichero, para migraciones futuras. |
+
+**Algoritmo de arranque (`novela run` / `novela resume`):**
+
+```
+arrancar(proyecto):
+    1. Adquirir proyecto.lock (§11.2 lock_ocupado si falla; el lock contiene PID y hora, y se considera
+       huérfano si el PID no existe).
+    2. Si existe commit.journal -> recuperación de §10.4.
+    3. Verificar brief_hash (BRF-2) y hash_canon vs último snapshot (§10.6).
+    4. Validar canon (schemas + §3.13) -> canon_corrupto si falla.
+    5. Cargar estado.json. Si config_hash actual != estado.config_hash: registrar evento config_cambiada
+       y actualizar; los runs en curso continúan pero las llamadas no guardadas usarán la nueva configuración.
+    6. Según estado.estado:
+         nuevo          -> lanzar investigación
+         investigando   -> abrir_o_crear run investigacion; reutilizar grupos ya guardados en staging; continuar
+         arquitectando  -> ídem con fase 1 / lotes de fase 2
+         escribiendo    -> si run_en_curso: retomar ese run (paso 7); si no: ejecutar_capitulo(capitulo_actual)
+         editando       -> abrir_o_crear run editor_global
+         escalado       -> exigir que el usuario haya hecho algo (config_hash, canon_version o --reintentos-extra
+                           distintos de los del run escalado); si no, detenerse con el RESUMEN.md de §7.7.
+                           Si sí: si canon_version cambió -> run nuevo para el capítulo; si solo config o
+                           reintentos-extra -> continuar el run escalado desde intento_actual + 1.
+         fallido        -> según error.tipo: si recuperable con cambio del usuario (clave, presupuesto),
+                           relanzar el run en curso; si canon_desactualizado -> run nuevo.
+         finalizado     -> nada que hacer; mostrar status.
+    7. Retomar un run de capítulo: ejecutar el pseudocódigo de §7.8 desde run.siguiente_intento():
+         - Un intento con gate registrado y veredicto reintentar -> el siguiente intento empieza desde cero
+           (contexto de reintento preparado a partir de los ficheros guardados).
+         - Un intento sin gate: se reutiliza capitulo.json si existe; se reutilizan las revision_*.json que
+           existan y se llaman solo los revisores que faltan; se evalúa el gate.
+         - Un intento con veredicto aprobado pero sin commit (corte entre gate y commit) -> commit directo.
+```
+
+### §11.6 Escenario de referencia: muerte del proceso en el capítulo 12 con 2 reintentos gastados
+
+Situación: el run del capítulo 12 está en el intento 3 (dos reintentos gastados). El escritor ya ha respondido y `staging/<run_id>/intento_3/capitulo.json` existe; los revisores de continuidad y anacronismos han terminado (`revision_continuidad.json`, `revision_anacronismos.json` existen); el de lógica y ritmo estaba en vuelo cuando el proceso muere.
+
+Al ejecutar `novela resume`:
+
+| Paso | Qué ocurre | Llamadas LLM |
+|---|---|---|
+| Lock | El lock antiguo tiene un PID inexistente → se considera huérfano y se reemplaza. | 0 |
+| Diario | No hay `commit.journal`. | 0 |
+| Integridad | `brief_hash` correcto; `hash_canon` coincide con `v013_cap_011`; canon válido. | 0 |
+| Estado | `escribiendo`, `run_en_curso` = run del capítulo 12, `intento_actual = 3`. | 0 |
+| Retomar | `run.siguiente_intento()` devuelve 3 (sin gate registrado). `capitulo.json` existe → no se llama al escritor. Comprobaciones deterministas se recalculan (son gratis y deterministas). Se cargan las dos revisiones guardadas; se llama solo al revisor de lógica y ritmo. | 1 |
+| Gate | Se evalúa con las tres revisiones. Si aprueba → commit → v014_cap_012. Si reintenta → intento 4 (el último, porque `max_reintentos = 3`). Si el intento 4 falla → escalado. | 0 |
+
+Coste del relanzamiento: una llamada de revisor. Nada aprobado se repite, ningún reintento del gate se pierde ni se regala. Si el proceso hubiera muerto durante la llamada al escritor (sin `capitulo.json`), se repetiría solo esa llamada, con el mismo `hash_prompt`.
+
+### §11.7 Parada limpia
+
+`novela stop` escribe `proyectos/<id>/STOP` (fichero de señal); Ctrl+C envía SIGINT. En ambos casos el harness:
+
+1. Marca `parada_solicitada` y deja terminar la llamada LLM en vuelo (una respuesta a medias no se puede reanudar y ya está pagada).
+2. Guarda su resultado en staging si valida.
+3. No inicia ninguna llamada nueva; actualiza `estado.json` con la `fase_intento` alcanzada; registra el evento `interrumpido`.
+4. Borra `STOP`, libera el lock y sale con código 130.
+
+Un segundo Ctrl+C durante el paso 1 mata el proceso de inmediato: el estado sigue siendo recuperable por §11.5 porque nada se ha escrito a medias fuera de un fichero temporal.
+
+### §11.8 Códigos de salida
+
+| Código | Significado |
+|---|---|
+| 0 | Terminado el trabajo pedido (`finalizado`, o `--hasta-capitulo` alcanzado). |
+| 1 | Error de uso de la CLI o de configuración antes de arrancar. |
+| 2 | Run `fallido` (ver `error.tipo`). |
+| 3 | Run `escalado` (§7.7). |
+| 4 | `lock_ocupado`, `canon_corrupto` o `canon_modificado_sin_commit`. |
+| 130 | Interrumpido limpiamente. |
 
 ## §12 Observabilidad y costes
 
