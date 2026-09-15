@@ -629,3 +629,34 @@ La tabla es una foto del momento de cerrar la versión y no incluye el commit qu
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short -- docs/spec/
 ```
+
+## §18 Estructura del repo y comandos
+
+**Stack.** Node 24 con `node:sqlite` y `node:test`, los dos de la biblioteca estándar. Cierra DA-01. La razón de peso es que el canon de §3 pide SQLite y el runtime ya lo trae, así que el modo `simulado` —que es el de por defecto y el que corren los tests— no necesita instalar nada. El modo `real` es la única parte con dependencia: el SDK oficial de Anthropic, importado solo cuando hace falta, de modo que un repo recién clonado escribe una novela entera sin red ni `npm install`.
+
+**Qué es código y qué es texto.** El reparto de §1 se ve en las carpetas: `src/` es todo lo determinista y no genera prosa; `agentes/` y `skills/` son texto que lee un modelo y no son fuente de verdad para nada.
+
+| Carpeta | Qué hay |
+|---|---|
+| `src/` | El harness: canon, generador de contexto, gate, validadores, capa de agentes y flujo |
+| `bin/` | La CLI, que no decide nada: carga config, abre el canon y llama al flujo |
+| `agentes/` | Un fichero por agente de §5, con su encargo y sus modos de fallo |
+| `skills/` | Las skills de §10, una carpeta por skill |
+| `capitulos/` | Un Markdown por intento, aprobado o no (§6) |
+| `test/` | Tests contra la capa simulada, sin red |
+
+`canon.db`, `capitulos/*.md` y `retoques.md` son salida y no se versionan.
+
+**Comandos.** Uno por tramo del flujo, más los de lectura y escritura a mano que pedía F0 y las salidas manuales del bloqueo de §8.
+
+| Comando | Qué hace |
+|---|---|
+| `init`, `brief` | Canon vacío y brief. Dejan el proyecto en `borrador` |
+| `preparar` | Investigador y arquitecto |
+| `escribir [--capitulo N]` | Loop de capítulo. Sin argumento, hasta el final o hasta el primer bloqueo |
+| `cerrar` | Editor global y `retoques.md` |
+| `reanudar` | Sin argumentos (§13) |
+| `estado`, `ver`, `poner` | Lectura del canon y escritura a mano |
+| `desbloquear --capitulo N` | Las tres salidas manuales de §8 |
+
+**Inyección de fallos.** Dos variables de entorno hacen que la capa simulada suspenda un intento concreto o devuelva un capítulo demasiado corto. Existen porque el camino interesante del sistema —rechazo, reintento, bloqueo— no se ve nunca si todas las respuestas simuladas son buenas. Solo tienen efecto en modo `simulado`.
