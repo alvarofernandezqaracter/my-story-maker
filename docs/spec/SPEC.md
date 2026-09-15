@@ -18,3 +18,24 @@ Sistema que escribe una novela histórica capítulo a capítulo a partir de un b
 **Fuera de alcance en 0.1.0.** Interfaz gráfica, exportación a EPUB, ilustraciones, varios proyectos a la vez, traducción y reescritura automática a partir del editor global.
 
 **Criterio de éxito.** Una novela completa sin contradicciones de canon detectables ni anacronismos groseros, con intervención humana solo en los dos puntos que fija §4.
+
+## §2 Glosario
+
+| Término | Significado en este sistema |
+|---|---|
+| Brief | Entrada del usuario: época, premisa, tono y nº de capítulos. Única cosa que se escribe a mano al arrancar. |
+| Canon | Base de datos del libro. Única fuente de verdad. Se lee antes de escribir y se actualiza solo al aprobar. |
+| Dossier | Conjunto de datos históricos del canon, cada uno con su fuente y su estado de verificación. |
+| Dato histórico | Unidad mínima del dossier: una afirmación sobre la época, con categoría, fuente y estado. |
+| Escaleta | Plan de la novela: arco en tres actos y una ficha por capítulo. |
+| Ficha de capítulo | Qué pasa en un capítulo y quién sale. Es el encargo que recibe el escritor. |
+| Capítulo redactado | Texto que produce el escritor en un intento concreto. Puede no llegar a aprobarse. |
+| Resumen | Un párrafo por capítulo aprobado, con hilos abiertos y cerrados. Es lo que lee el editor global. |
+| Generador de contexto | Código que selecciona del canon lo que hace falta para un capítulo y arma el paquete de contexto. |
+| Paquete de contexto | Salida del generador: el subconjunto del canon que ve el escritor. |
+| Revisor | Agente que puntúa un capítulo en una dimensión y devuelve incidencias. Hay tres. |
+| Nota | Puntuación de 1 a 5 que da un revisor en su dimensión. |
+| Gate | Código que decide, con las tres notas, si el capítulo se aprueba o se reescribe. |
+| Intento | Cada pasada del escritor sobre el mismo capítulo. Máximo tres. |
+| Editor global | Agente de pasada única al final, fuera del loop. Lee resúmenes, no texto. |
+| Harness | Todo el código determinista que orquesta el proceso. No genera prosa. |
