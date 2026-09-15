@@ -557,7 +557,7 @@ Pasada de precisión sobre el documento entero: nada nuevo de diseño salvo los 
 
 ## §17 Log de commits del spec
 
-Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por qué cambió algo; esta tabla dice cuándo y en qué commit. Los veintidós primeros son del borrador descartado, que vive en el tag `spec-v0-detallado`; `af2b993` es el reset que abrió esta versión del documento.
+Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por qué cambió algo; esta tabla dice cuándo y en qué commit. Los veintidós primeros son del borrador descartado, que vive en el tag `spec-v0-detallado`; `af2b993` es el reset que abrió esta versión del documento. Cada versión cerrada lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo.
 
 | Commit | Fecha | Mensaje |
 |---|---|---|
@@ -621,6 +621,9 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `f7e421d` | 2026-09-15 | docs(spec): §13 reanudar no desbloquea |
 | `bf7ea1d` | 2026-09-15 | docs(spec): §16 entrada 0.4.0 y version en cabecera |
 | `126f1ce` | 2026-09-15 | docs(spec): §8 el reintento por VD-08 parte de cero de verdad |
+| `22e736e` | 2026-09-15 | docs(spec): §17 tabla de commits regenerada para 0.4.0 |
+| `2c023e8` | 2026-09-15 | docs(spec): §5 el arquitecto emite fecha y etiquetas |
+| `61fd413` | 2026-09-15 | docs(spec): §16 entrada 0.4.1 y version en cabecera |
 
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
