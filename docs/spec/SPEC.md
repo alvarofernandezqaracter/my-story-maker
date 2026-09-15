@@ -1178,7 +1178,236 @@ Tamaños esperados por libro (para dimensionar §6 y §10; derivan de S-01 a S-0
 
 ## §4 Arquitectura del harness
 
-> Estado: pendiente
+> Estado: completa
+
+### §4.1 Diagrama del flujo
+
+Equivalente en Mermaid del drawio. Los ids de nodo coinciden con los del fichero `.drawio` (`brief`, `investigacion`, `arquitectura`, `outinv`, `outarq`, `canonbox`, `c1`–`c4`, `genctx`, `escritor`, `rev1`–`rev3`, `gate`, `editor`) para que §19 pueda cruzarlos. Leyenda: rectángulo redondeado = agente generador (LLM); rombo doble = agente revisor (LLM); cilindro = datos/memoria; rectángulo = código del harness.
+
+```mermaid
+flowchart TB
+    brief[/"Brief del usuario<br/>época, premisa, tono, idioma, nº capítulos"/]
+
+    subgraph prep["Fase de preparación (una sola vez)"]
+        investigacion(["Agente investigador (LLM)"])
+        outinv["Output: dossier histórico<br/>datos con fuente y estado verificado|inventado"]
+        arquitectura(["Agente arquitecto (LLM)"])
+        outarq["Output: escaleta y personajes<br/>arco en 3 actos, ficha por capítulo, ficha por personaje"]
+    end
+
+    subgraph canonbox["Canon del proyecto (datos / memoria)"]
+        c1[("Fichas de personajes")]
+        c2[("Línea de tiempo")]
+        c3[("Dossier histórico")]
+        c4[("Resúmenes de capítulos")]
+        c5[("Escaleta")]
+        c6[("Capítulos aprobados")]
+    end
+
+    subgraph loopbox["Loop por capítulo (una vez por ficha de la escaleta)"]
+        genctx["Generador de contexto (código)"]
+        escritor(["Agente escritor (LLM)"])
+        checks["Comprobaciones deterministas (código)"]
+        rev1{{"Revisor: Continuidad"}}
+        rev2{{"Revisor: Anacronismos"}}
+        rev3{{"Revisor: Lógica y ritmo"}}
+        gate["Gate de calidad (código)<br/>umbral sobre las 3 notas · máx. 3 reintentos"]
+        staging[("Staging del run")]
+    end
+
+    editor(["Editor global (LLM)<br/>pasada única al final"])
+    informe["Informe de retoques"]
+    escalada["Escalada al usuario"]
+
+    brief --> investigacion
+    investigacion --> outinv
+    investigacion -. "después" .-> arquitectura
+    arquitectura --> outarq
+    outinv -- "rellena el canon" --> canonbox
+    outarq -- "rellena el canon" --> canonbox
+    canonbox -- "lee" --> genctx
+    genctx --> escritor
+    escritor --> staging
+    staging --> checks
+    checks --> rev1
+    checks --> rev2
+    checks --> rev3
+    rev1 --> gate
+    rev2 --> gate
+    rev3 --> gate
+    gate -- "si falla, reescribe (máx. 3)" --> escritor
+    gate -- "aprobado: commit atómico en el canon" --> canonbox
+    gate -- "3 reintentos agotados" --> escalada
+    gate -- "cuando TODOS los capítulos están aprobados" --> editor
+    canonbox -- "lee resúmenes" --> editor
+    editor --> informe
+```
+
+Diferencias con el drawio, todas aditivas y justificadas: `checks` (comprobaciones deterministas, §7.3) y `staging` (§10.4) hacen explícito lo que en el diagrama va implícito en "Gate de calidad" y en "escribe en el canon"; `escalada` hace explícita la salida del loop cuando se agotan los reintentos; `c5` y `c6` muestran que la escaleta y los capítulos aprobados también viven en el canon (el diagrama los engloba en "Output: escaleta" y en "escribe en el canon"). Ningún nodo ni flecha del drawio se elimina (§19).
+
+### §4.2 Componentes del harness
+
+| Componente | Nombre en código | Responsabilidad | Tipo |
+|---|---|---|---|
+| CLI | `cli/` | Punto de entrada. Comandos de §4.7. Traduce argumentos a llamadas al orquestador. | Código |
+| Orquestador | `Orquestador` | Ejecuta la máquina de estados de §4.3. Decide qué run toca, lo crea, lo lanza y actualiza `estado.json`. Único componente que escribe en `estado.json`. | Código |
+| Ejecutor de preparación | `EjecutorPreparacion` | Lanza investigador y arquitecto en secuencia, valida sus salidas y hace commit del canon inicial. | Código |
+| Loop de capítulo | `LoopCapitulo` | Implementa §7: contexto, escritor, comprobaciones, revisores en paralelo, gate, reintentos, staging, commit. | Código |
+| Generador de contexto | `GeneradorContexto` | §6. Solo lectura del canon. | Código |
+| Comprobaciones deterministas | `ComprobacionesDeterministas` | §7.3. Genera incidencias sin LLM. | Código |
+| Gate | `GateCalidad` | §7.5. Función pura: `(comprobaciones, revisiones, config) → VeredictoGate`. | Código |
+| Repositorio del canon | `RepositorioCanon` | Lectura tipada del canon, staging, commit atómico, snapshots, rollback, validación de invariantes (§3.13, §10). | Código |
+| Índice del dossier | `IndiceDossier` | §3.14. Construcción y consulta FTS5. | Código |
+| Agentes | `agentes/*` | Un módulo por agente de §5. Cada uno: construir prompt, llamar al proveedor, validar salida contra schema, devolver entidad tipada. | LLM |
+| Capa de proveedores | `ProveedorLLM` + adaptadores | §4.6. Llamada uniforme, conteo de tokens, coste, reintentos técnicos. | Código |
+| Registro | `Registro` | §12. Escribe `llamadas.jsonl`, `eventos.jsonl` y métricas. | Código |
+| Configuración | `Config` | §13. Carga en capas y hash de configuración efectiva. | Código |
+
+Regla de dependencias: los agentes dependen de la capa de proveedores y de los schemas, nunca del repositorio del canon. Solo el harness lee y escribe el canon. Motivo: P-02 y P-03; un agente que leyera el canon por su cuenta rompería la trazabilidad del contexto (§6.6).
+
+### §4.3 Máquina de estados del proyecto
+
+El estado del proyecto vive en `estado.json` (§11.5). Las transiciones las ejecuta exclusivamente el orquestador.
+
+```mermaid
+stateDiagram-v2
+    [*] --> nuevo : novela init (brief válido)
+    nuevo --> investigando : novela run
+    investigando --> arquitectando : dossier validado y commit canon v1
+    arquitectando --> escribiendo : escaleta validada y commit canon v2
+    escribiendo --> escribiendo : capítulo n aprobado, commit canon v(n+2), n < N
+    escribiendo --> editando : capítulo N aprobado
+    editando --> finalizado : informe validado y guardado
+    investigando --> fallido : error irrecuperable
+    arquitectando --> fallido : error irrecuperable
+    escribiendo --> escalado : reintentos agotados en capítulo n
+    escribiendo --> fallido : error irrecuperable
+    editando --> fallido : error irrecuperable
+    escalado --> escribiendo : novela resume (tras intervención)
+    fallido --> investigando : novela resume (según etapa)
+    fallido --> arquitectando : novela resume (según etapa)
+    fallido --> escribiendo : novela resume (según etapa)
+    fallido --> editando : novela resume (según etapa)
+    escribiendo --> escribiendo : novela canon rollback --to v(k) (retrocede a capítulo k)
+    finalizado --> [*]
+```
+
+| Estado | Significado | Run en curso posible | Condición de salida |
+|---|---|---|---|
+| `nuevo` | Brief validado, canon vacío (versión 0). | Ninguno | `novela run` |
+| `investigando` | Run de tipo `investigacion` en curso o pendiente. | `investigacion` | Dossier validado (§5.1, §9) y commit → canon v1. |
+| `arquitectando` | Run de tipo `arquitectura`. | `arquitectura` | Escaleta y personajes validados y commit → canon v2. |
+| `escribiendo` | Loop de capítulos. `estado.json.capitulo_actual` indica cuál. | `capitulo` | Cada aprobación incrementa la versión del canon; tras aprobar el capítulo N pasa a `editando`. |
+| `editando` | Run de tipo `editor_global`. | `editor_global` | Informe validado y escrito en `canon/editor_global/informe.json`. No cambia la versión del canon (§10.2). |
+| `finalizado` | Libro completo con informe. | Ninguno | Terminal. `novela export` disponible. |
+| `escalado` | Un capítulo agotó los reintentos. El proceso se ha detenido y ha dejado los artefactos de §7.7. | Ninguno (el run queda en `escalado`) | El usuario actúa (§7.7) y ejecuta `novela resume`. |
+| `fallido` | Error irrecuperable (§11.2). | Ninguno (el run queda en `fallido`) | `novela resume` retoma en la etapa registrada. |
+
+Numeración de versiones del canon: v0 vacío, v1 tras la investigación, v2 tras la arquitectura, v(n+2) tras aprobar el capítulo n. Un libro de N capítulos termina en la versión N+2 (§10.2).
+
+Los capítulos se procesan **en orden estricto** (RUN-5). Motivo: el capítulo n necesita los resúmenes y el estado de personajes de 1..n-1; procesar capítulos en paralelo obligaría a fusionar canon y rompería P-02. Es una decisión de diseño, no una limitación técnica; se recoge en §17 por si en el futuro se quiere paralelizar capítulos independientes.
+
+### §4.4 Qué es síncrono y qué va en paralelo
+
+| Paso | Modo | Motivo |
+|---|---|---|
+| Investigador → arquitecto | Secuencial | El arquitecto necesita el dossier para anclar la escaleta en hechos reales (flecha "después" del diagrama). |
+| Llamadas internas del investigador (una por categoría, §5.1) | Paralelo, hasta `concurrencia.investigador` (por defecto 4) | Son independientes entre sí; el harness las fusiona y deduplica títulos (DAT-4). |
+| Llamadas internas del arquitecto (arco + personajes; después fichas por lotes, §5.2) | Arco y personajes primero, luego lotes de fichas en paralelo | Las fichas dependen del arco y de los ids de personaje. |
+| Generador de contexto → escritor → comprobaciones | Secuencial | Cada paso necesita la salida del anterior. |
+| Los tres revisores | **Paralelo** con `asyncio.gather`, los tres sobre el mismo texto | Son independientes; la latencia del intento pasa de 3× a 1× la de un revisor. Ver ADR-0003 (§18.3). |
+| Gate | Síncrono, tras los tres revisores | Necesita las tres revisiones. Si un revisor falla técnicamente tras sus reintentos, el intento se aborta y el error se trata en §11, no en el gate. |
+| Commit del canon | Síncrono, exclusivo | Un solo escritor del canon a la vez (RUN-1). |
+| Editor global | Secuencial, una vez | Pasada única según el diagrama. |
+
+El harness es un único proceso con un bucle de eventos. No hay colas, workers ni base de datos de tareas: para un usuario local que produce un libro a la vez, añadirlos sería complejidad sin beneficio. Si en el futuro se ejecutan varios proyectos a la vez, cada uno es un proceso independiente con su propio directorio y su propio lock (§11.5).
+
+### §4.5 Puntos de intervención humana
+
+Por decisión del usuario (Fase 0) no hay aprobaciones humanas en el flujo. Los únicos puntos de contacto son:
+
+| Punto | Cuándo | Qué puede hacer el usuario | Cómo se reanuda |
+|---|---|---|---|
+| Creación del brief | `novela init` | Escribir el brief a mano o mediante preguntas interactivas de la CLI. | `novela run` |
+| Escalada | Un capítulo agota `max_reintentos` | Leer los artefactos de §7.7; editar la ficha del capítulo, el canon (§10.6) o la configuración (umbrales, modelo); o aceptar a mano el último intento con `novela accept --run <run_id> --intento <n>`. | `novela resume` |
+| Fallo irrecuperable | Error de §11.2 no recuperable | Corregir la causa (clave de API, presupuesto, canon corrupto). | `novela resume` |
+| Parada voluntaria | En cualquier momento, Ctrl+C o `novela stop` | El proceso termina limpiamente al final del paso en curso (§11.5). Editar el canon a mano. | `novela resume` |
+| Retroceso | Con el proceso parado | `novela canon rollback --to v<k>` (§10.7). | `novela resume` |
+| Informe del editor | Estado `finalizado` | Leer `informe.md`; aplicar los retoques a mano o lanzar la opción B de §8 si está implementada. | — |
+
+`novela accept` existe porque, sin aprobación humana en el flujo, la escalada sería un callejón sin salida si el usuario está de acuerdo con el texto y en desacuerdo con los revisores. El comando hace commit del intento indicado exactamente igual que lo haría el gate, con `gate.veredicto = aprobado_manual` en el run y `origen.agente = usuario` en los registros afectados.
+
+### §4.6 Capa de proveedores LLM
+
+Decisión del usuario: abstracción multiproveedor desde la fase 1. Todos los agentes hablan con una única interfaz; un adaptador por proveedor la implementa.
+
+```python
+class PeticionLLM(TypedDict):
+    modelo: str                     # id del modelo tal como lo entiende el proveedor
+    system: str
+    mensajes: list[Mensaje]         # {rol: "user"|"assistant", contenido: str}
+    schema_salida: dict             # JSON Schema que la respuesta debe cumplir (§9)
+    temperatura: float
+    max_tokens_salida: int
+    herramientas: list[Herramienta] | None   # solo el investigador las usa (§5.1)
+    timeout_s: float
+    metadatos: dict                 # run_id, capitulo_id, agente, intento -> van al log, no al modelo
+
+class RespuestaLLM(TypedDict):
+    contenido_bruto: str            # texto tal como llegó
+    json: dict | None               # parseado si el proveedor devolvió salida estructurada
+    tokens_entrada: int
+    tokens_salida: int
+    latencia_ms: int
+    modelo_efectivo: str            # el proveedor puede resolver alias
+    motivo_parada: str              # fin | max_tokens | herramienta | filtro
+    llamadas_herramienta: list[LlamadaHerramienta]
+
+class ProveedorLLM(Protocol):
+    nombre: str
+    def completar(self, peticion: PeticionLLM) -> Awaitable[RespuestaLLM]: ...
+    def contar_tokens(self, texto: str, modelo: str) -> int: ...        # exacto si el proveedor lo ofrece; si no, estimación declarada (§6.5)
+    def coste_usd(self, modelo: str, tokens_entrada: int, tokens_salida: int) -> float: ...  # de la tabla de precios de §13
+    def soporta_salida_estructurada(self, modelo: str) -> bool: ...
+    def soporta_herramientas(self, modelo: str) -> bool: ...
+```
+
+Adaptadores previstos: `ProveedorAnthropic`, `ProveedorOpenAI`, `ProveedorCompatibleOpenAI` (cubre servidores locales que exponen la misma API) y `ProveedorMock` (§15.2). Cada agente tiene en la configuración un par `proveedor` + `modelo` (§13). La selección de proveedor por agente permite, por ejemplo, un modelo caro para el escritor y uno barato para los revisores.
+
+Salida estructurada: cuando `soporta_salida_estructurada` es verdadero, el adaptador usa el mecanismo nativo del proveedor (modo JSON con schema o llamada a herramienta forzada); cuando es falso, inyecta el schema en el prompt y el harness extrae y valida el JSON (§9.2). El resto del harness no distingue ambos casos.
+
+Reintentos técnicos (timeouts, límites de tasa, errores 5xx) viven en la capa de proveedores con la política de §11.3, de modo que los agentes solo ven éxito o un error final tipado.
+
+### §4.7 Interfaz de línea de comandos
+
+| Comando | Efecto | Estados en que es válido |
+|---|---|---|
+| `novela init <proyecto_id> [--brief brief.json]` | Crea `proyectos/<id>/`, valida el brief, escribe `estado.json` en `nuevo`. Sin `--brief`, hace preguntas interactivas. | — |
+| `novela run <proyecto_id> [--hasta-capitulo n] [--solo-preparacion]` | Ejecuta la máquina de estados desde el estado actual hasta `finalizado`, hasta el capítulo indicado o hasta una escalada/fallo. | `nuevo`, `investigando`, `arquitectando`, `escribiendo`, `editando` |
+| `novela resume <proyecto_id>` | Alias de `run` que exige que exista un run interrumpido, escalado o fallido y lo retoma según §11.5. | `escalado`, `fallido`, o `escribiendo` con run `en_curso` huérfano |
+| `novela status <proyecto_id>` | Muestra estado, capítulo actual, versión del canon, último run, coste acumulado, métricas de §12.4. | Todos |
+| `novela stop <proyecto_id>` | Pide parada limpia al proceso en curso (fichero de señal, §11.5). | Con proceso en curso |
+| `novela accept <proyecto_id> --run <run_id> --intento <n>` | Aprobación manual de un intento escalado (§4.5). | `escalado` |
+| `novela canon validate <proyecto_id>` | Ejecuta las invariantes de §3.13 y los schemas sobre el canon actual. | Todos |
+| `novela canon commit <proyecto_id> -m "<motivo>"` | Registra como nueva versión una edición manual del canon (§10.6). | Sin run en curso |
+| `novela canon diff <proyecto_id> v<a> v<b>` | Diff legible entre dos snapshots (§10.5). | Todos |
+| `novela canon rollback <proyecto_id> --to v<k>` | Vuelve al snapshot k (§10.7). | Sin run en curso |
+| `novela context <proyecto_id> --capitulo n` | Genera y muestra el paquete de contexto del capítulo n sin llamar a ningún LLM (§6.6). Útil para depurar la selección. | `escribiendo` |
+| `novela stats <proyecto_id>` | Métricas y costes (§12.4). | Todos |
+| `novela export <proyecto_id> [--formato md]` | Concatena los `cap_NNN.md` aprobados en un único fichero. | `escribiendo`, `editando`, `finalizado` |
+| `novela mock <proyecto_id> ...` | Cualquier comando anterior con `ProveedorMock` forzado (§15.2). | Todos |
+
+### §4.8 Decisión abierta: framework de orquestación
+
+Este spec describe el orquestador como código propio sobre `asyncio` porque el flujo es lineal con un único punto de paralelismo (los tres revisores) y un solo bucle con contador de reintentos. La alternativa es un framework de grafos de agentes. La decisión se documenta en ADR-0002 (§18.2) y se recoge en §17; los pros y contras resumidos:
+
+| Opción | A favor | En contra |
+|---|---|---|
+| Orquestador propio sobre `asyncio` (recomendada) | Cero dependencias de framework; la máquina de estados de §4.3 se implementa literalmente; el estado persistido es el `estado.json` de §11.5, que controlamos; depuración con el depurador de Python. | Hay que escribir a mano la persistencia de estado, los reintentos y el paralelismo (unas pocas funciones dado el tamaño del flujo). |
+| Framework de grafos (LangGraph o similar) | Checkpointing y reanudación integrados; visualización del grafo; ecosistema de integraciones. | Dependencia pesada que evoluciona rápido; su modelo de estado compite con el canon (P-02); la reanudación nativa guarda estado opaco que no es nuestro `estado.json`; curva de aprendizaje para depurar; los agentes ya hablan con `ProveedorLLM`, así que el framework aportaría solo el grafo. |
+| SDK de agentes de un proveedor | Herramientas y bucles agénticos resueltos. | Contradice la decisión multiproveedor del usuario. |
+
+Todo lo demás en este documento es independiente de la opción elegida: los contratos (§9), el canon (§3, §10), el gate (§7) y la observabilidad (§12) se implementan igual en cualquiera de las tres.
 
 ## §5 Catálogo de agentes
 
