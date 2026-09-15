@@ -549,7 +549,7 @@ Pasada de precisión sobre el documento entero: nada nuevo de diseño salvo los 
 
 ## §17 Log de commits del spec
 
-Registro literal de los commits que han tocado `docs/spec/`, desde el reset que abrió esta versión del documento. §16 dice por qué cambió algo; esta tabla dice cuándo y en qué commit. Los 23 commits anteriores pertenecen al borrador descartado y viven en el tag `spec-v0-detallado`.
+Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por qué cambió algo; esta tabla dice cuándo y en qué commit. Los veintidós primeros son del borrador descartado, que vive en el tag `spec-v0-detallado`; `af2b993` es el reset que abrió esta versión del documento.
 
 | Commit | Fecha | Mensaje |
 |---|---|---|
@@ -601,6 +601,18 @@ Registro literal de los commits que han tocado `docs/spec/`, desde el reset que 
 | `de869c8` | 2026-09-15 | docs(spec): §13 la tabla de configuracion se va a §12 |
 | `553fa6c` | 2026-09-15 | docs(spec): §9 VD-07 y VD-08 contra los margenes de §12 |
 | `a3aaa95` | 2026-09-15 | docs(spec): §16 entrada 0.3.0 con §12 y el arreglo de VD-08 |
+| `f7b8795` | 2026-09-15 | docs(spec): §17 tabla de commits regenerada para 0.3.0 |
+| `c8fae79` | 2026-09-15 | docs(spec): §2 el tope de intentos es configuracion |
+| `ec81d14` | 2026-09-15 | docs(spec): §3 fecha y etiquetas en la ficha de capitulo |
+| `abf2dcc` | 2026-09-15 | docs(spec): §4 estados escribiendo y bloqueado |
+| `316f0b6` | 2026-09-15 | docs(spec): §5 la busqueda web depende de config y de F6 |
+| `1fb7a02` | 2026-09-15 | docs(spec): §6 referencia muerta a §13 |
+| `4d2d801` | 2026-09-15 | docs(spec): §7 la seleccion de contexto contra §3 y §12 |
+| `83d2c1f` | 2026-09-15 | docs(spec): §8 el loop deja de dar por hecho tres intentos |
+| `5b8349b` | 2026-09-15 | docs(spec): §9 VD-04 corre antes del arquitecto |
+| `f7e421d` | 2026-09-15 | docs(spec): §13 reanudar no desbloquea |
+| `bf7ea1d` | 2026-09-15 | docs(spec): §16 entrada 0.4.0 y version en cabecera |
+| `126f1ce` | 2026-09-15 | docs(spec): §8 el reintento por VD-08 parte de cero de verdad |
 
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
