@@ -1,14 +1,14 @@
 ---
 doc: spec-sistema-novelas-historicas
 version: 0.1.0
-estado: borrador        # borrador | en revisión | aprobado
+estado: en revisión     # borrador | en revisión | aprobado
 actualizado: 2026-09-15
 basado_en: docs/diagrama/sistema-novelas-historicas-v2.drawio
 ---
 
 # Especificación del sistema multiagente de novelas históricas
 
-> Estado del documento: borrador en construcción. Cada sección lleva su propia marca de estado bajo el título hasta que se cierre.
+> Estado del documento: versión 0.1.0 completa, pendiente de revisión del autor. Cada sección lleva su marca de estado bajo el título; las marcadas "en revisión" tienen decisiones abiertas en §17.
 
 ## Tabla de contenidos
 
@@ -35,6 +35,11 @@ basado_en: docs/diagrama/sistema-novelas-historicas-v2.drawio
   - [§18.3 ADR-0003 — Revisores en paralelo vs. secuencial](#183-adr-0003--revisores-en-paralelo-vs-secuencial)
   - [§18.4 ADR-0004 — Criterio del gate](#184-adr-0004--criterio-del-gate)
   - [§18.5 ADR-0005 — Política de selección de contexto](#185-adr-0005--política-de-selección-de-contexto)
+  - [§18.6 ADR-0006 — División de las llamadas de preparación](#186-adr-0006--división-de-las-llamadas-de-preparación-investigador-por-grupos-arquitecto-en-dos-fases)
+  - [§18.7 ADR-0007 — La prosa viaja dentro del JSON del escritor](#187-adr-0007--la-prosa-viaja-dentro-del-json-del-escritor)
+  - [§18.8 ADR-0008 — El escritor propone las actualizaciones del canon](#188-adr-0008--el-escritor-propone-las-actualizaciones-del-canon-el-resumen-global-es-determinista)
+  - [§18.9 ADR-0009 — Búsqueda web del investigador](#189-adr-0009--búsqueda-web-del-investigador-opcional-y-desactivada-por-defecto)
+  - [§18.10 ADR-0010 — Los capítulos se aprueban en orden estricto](#1810-adr-0010--los-capítulos-se-aprueban-en-orden-estricto)
 - [§19 Trazabilidad diagrama → spec](#19-trazabilidad-diagrama--spec)
 - [§20 Historial de cambios del spec](#20-historial-de-cambios-del-spec)
 
@@ -88,9 +93,9 @@ Métricas de éxito medibles (los valores objetivo son iniciales y se recalibran
 | Tasa de aprobación a la primera | Capítulos aprobados en el intento 1 / capítulos totales | ≥ 60 % | §12.4 |
 | Reintentos medios por capítulo | Suma de intentos adicionales / capítulos | ≤ 0,8 | §12.4 |
 | Capítulos escalados | Capítulos que agotan `max_reintentos` | ≤ 1 por libro de 20 capítulos | §12.4 |
-| Contradicciones detectables por código | Fallos de las comprobaciones deterministas de §7.3 en capítulos aprobados | 0 | §15.3 |
+| Contradicciones detectables por código | Fallos de las comprobaciones deterministas de §7.3 en capítulos aprobados | 0 | §15.4 |
 | Coste por capítulo | Coste total de un run de capítulo, incluidos reintentos | Dentro del límite de §13 (por defecto 3 USD) | §12.4 |
-| Reanudación | Tras matar el proceso en cualquier punto, relanzar continúa sin repetir trabajo aprobado ni duplicar gasto | 100 % de los casos de §15.4 | §11.5 |
+| Reanudación | Tras matar el proceso en cualquier punto, relanzar continúa sin repetir trabajo aprobado ni duplicar gasto | 100 % de los casos de §15.5 | §11.5 |
 
 Lo que **no** es criterio de éxito de esta versión: la calidad literaria absoluta del texto. Se mide indirectamente a través de los revisores y del editor global, pero no hay juez humano en el bucle.
 
@@ -673,7 +678,7 @@ Invariantes de la escaleta:
 | ESC-3 | Todo id en `personajes_presentes`, `beats[].personajes` y `pov` existe en `canon/personajes/`. `beats[].personajes ⊆ personajes_presentes`. | Validación al commit |
 | ESC-4 | Toda promesa tiene `capitulo_planteamiento ≤ capitulo_pago_previsto ≤ N`, y aparece en `promesas_planteadas` de exactamente una ficha y en `promesas_pagadas` de exactamente una ficha. | Validación al commit |
 | ESC-5 | `escenario.fecha` de la ficha N ≥ la de la ficha N-1 en clave de orden, salvo que la ficha declare un beat de tipo `transicion` con la palabra clave `flashback` en la descripción. Supuesto de narración lineal por defecto (§17). | Validación al commit |
-| ESC-6 | Transiciones de `estado` permitidas: `pendiente → en_curso → aprobado`, `en_curso → escalado`, `escalado → en_curso` (tras intervención del usuario). Cualquier otra es un error del harness. | Máquina de estados §4.3 |
+| ESC-6 | Transiciones de `estado` permitidas: `pendiente → en_curso → aprobado`, `en_curso → escalado`, `escalado → en_curso` (tras intervención del usuario), `aprobado → pendiente` y `escalado → pendiente` (solo por rollback, §10.7). Cualquier otra es un error del harness. | Máquina de estados §4.3 |
 | ESC-7 | Todo id en `datos_dossier_sugeridos` y `eventos_historicos_ancla` existe. | Validación al commit |
 
 ### §3.8 Resumen de capítulo y resumen global
@@ -867,9 +872,9 @@ Registro de una ejecución de una etapa del flujo. Vive en `runs/<run_id>/run.js
 |---|---|---|---|
 | run_id | string | calc | `run_<ULID>`. |
 | proyecto_id | string | calc | |
-| tipo | enum | calc | `investigacion`, `arquitectura`, `capitulo`, `editor_global` |
+| tipo | enum | calc | `investigacion`, `arquitectura`, `capitulo`, `editor_global`, `manual` (edición manual registrada, §10.6). Con la opción B de §8: `retoque`. |
 | capitulo_id | string\|null | calc | Obligatorio si `tipo = capitulo`. |
-| estado | enum | calc | `en_curso`, `aprobado`, `fallido`, `escalado`, `cancelado` |
+| estado | enum | calc | `en_curso`, `aprobado`, `fallido`, `escalado`, `cancelado`, `descartado` (run cuyo capítulo fue deshecho por un rollback, §10.7) |
 | canon_version_base | int | calc | Versión del canon leída al iniciar el run. |
 | canon_version_resultado | int\|null | calc | Versión escrita al aprobar; nula en otro caso. |
 | config_hash | string | calc | SHA-256 de la configuración efectiva (§13) para detectar cambios entre relanzamientos. |
@@ -879,7 +884,7 @@ Registro de una ejecución de una etapa del flujo. Vive en `runs/<run_id>/run.js
 | intentos[].llamada_escritor | string\|null | calc | Id de la `LlamadaLLM` del escritor. |
 | intentos[].comprobaciones_deterministas | objeto | calc | `{ok: bool, incidencias: lista<Incidencia>}` (§7.3). |
 | intentos[].revisiones | lista<string> | calc | Ids de las 3 revisiones. Puede tener menos si el intento se abortó. |
-| intentos[].gate | objeto\|null | calc | `{veredicto: enum, motivo: string, notas: {continuidad: int, anacronismos: int, logica_ritmo: int}, bloqueantes: int}`. `veredicto` ∈ `aprobado`, `reintentar`, `escalado`. |
+| intentos[].gate | objeto\|null | calc | `{veredicto: enum, motivo: string, notas: {continuidad: int, anacronismos: int, logica_ritmo: int}, bloqueantes: int}`. `veredicto` ∈ `aprobado`, `aprobado_tolerante` (§7.5), `aprobado_manual` (§4.5), `reintentar`, `escalado`. |
 | intentos[].iniciado_en / terminado_en | string | calc | ISO 8601 UTC. |
 | llamadas | lista<string> | calc | Ids de todas las `LlamadaLLM` del run, incluidas las de validación repetida (§9.3). |
 | coste_usd | float | calc | Suma de las llamadas. |
@@ -1178,7 +1183,7 @@ Tamaños esperados por libro (para dimensionar §6 y §10; derivan de S-01 a S-0
 
 ## §4 Arquitectura del harness
 
-> Estado: completa
+> Estado: en revisión — ver §17 (DA-01 framework de orquestación)
 
 ### §4.1 Diagrama del flujo
 
@@ -1411,7 +1416,7 @@ Todo lo demás en este documento es independiente de la opción elegida: los con
 
 ## §5 Catálogo de agentes
 
-> Estado: completa
+> Estado: en revisión — ver §17 (DA-02, DA-03, DA-05, DA-15: modelos por nivel, nivel del revisor de anacronismos, web del investigador, temperatura del revisor de lógica)
 
 ### §5.0 Convenciones comunes a todos los agentes
 
@@ -2196,7 +2201,7 @@ Más las llamadas de reparación por JSON inválido (§9.3), acotadas a 2 por ll
 
 ## §6 Generador de contexto
 
-> Estado: completa
+> Estado: en revisión — ver §17 (DA-04 valor de K, DA-06 resumen global en libros largos)
 
 ### §6.1 Principio y firma
 
@@ -2380,7 +2385,7 @@ def generar_contexto(canon, capitulo, destinatario, config, proveedor, modelo, r
 
 ## §7 Loop de capítulo y gate de calidad
 
-> Estado: completa
+> Estado: en revisión — ver §17 (DA-16 modo tolerante, DA-17 umbrales del gate)
 
 ### §7.1 Visión del loop y contabilidad de intentos
 
@@ -2663,7 +2668,7 @@ La flecha "aprobado: escribe en el canon" del diagrama se materializa en `Reposi
 
 ## §8 Editor global
 
-> Estado: completa
+> Estado: en revisión — ver §17 (DA-12 opción A vs. B)
 
 ### §8.1 Disparador
 
@@ -3290,7 +3295,7 @@ No hay exportación a sistemas externos de telemetría en esta versión; los fic
 
 ## §13 Configuración
 
-> Estado: completa
+> Estado: en revisión — ver §17 (DA-18 tabla de precios por rellenar)
 
 ### §13.1 Capas de configuración
 
@@ -3888,41 +3893,41 @@ Cada fila es algo que el autor del spec no puede cerrar solo, o que depende de d
 
 | Id | Decisión | Opciones | Recomendación | Impacto si me equivoco | Cuándo | Secciones |
 |---|---|---|---|---|---|---|
-| D-01 | Framework de orquestación | (a) Orquestador propio sobre `asyncio`; (b) framework de grafos (LangGraph o similar); (c) SDK de agentes de un proveedor | (a). El flujo es lineal con un solo punto de paralelismo; el estado ya es nuestro `estado.json`. | Con (b): dependencia pesada y estado duplicado; migrar después cuesta reescribir `harness/`. Con (a) y un flujo que crezca mucho: reimplementar checkpointing que un framework ya trae. | Antes de empezar la fase 1 | §4.8, §18.2 |
-| D-02 | Proveedor y modelo concretos por nivel | Cualquier combinación de §13 `niveles` | Empezar con el proveedor del que el usuario tenga clave; nivel alto para investigador, arquitecto, escritor y editor; medio para revisores. | Coste por capítulo o calidad fuera de objetivo. Se corrige por configuración sin tocar código. | Fase 1 (uno), fase 2 (calibrar) | §5.0, §13 |
-| D-03 | Nivel del revisor de anacronismos | `medio` / `alto` | `medio` hasta que §15.6 mida recall; si < 4/5 en anacronismos plantados, `alto`. | Anacronismos reales que pasan el gate (medio) o coste ×3 en ese revisor (alto). | Fase 2, tras el set de evaluación | §5.5, §15.6 |
-| D-04 | Valor de K (resúmenes completos en contexto) | 1 / 3 / 5 | 3. | K bajo: pérdida de enlace entre capítulos; K alto: tokens y coste sin ganancia medida. | Fase 2, con la pasada de K de §15.6 | §6.3, §15.6 |
-| D-05 | Búsqueda web del investigador | Desactivada / activada con `buscar_web` + `leer_url` | Desactivada en fase 1; activar en fase 2 y medir fuentes reales en §15.6. | Desactivada: dossier con fuentes de memoria no verificables (R-01). Activada: coste, latencia, inyección (R-02). | Fase 2 | §5.1, §18.9 |
-| D-06 | Resumen global generado por LLM para libros largos | Mantener composición determinista / añadir compactación LLM cada M capítulos | Mantener determinista hasta ver fallos atribuibles a B5 recortado en libros > 40 capítulos. | Con LLM: un agente fuera del diagrama y coste extra. Sin él: pérdida de hechos antiguos en libros muy largos. | Fase 3, solo con evidencia | §6.7, §3.8.2 |
-| D-07 | Formato de la salida del escritor | Prosa dentro del JSON (actual) / prosa con delimitadores + JSON de metadatos aparte | Mantener JSON; reconsiderar solo si `tasa_reparacion` del escritor > 15 % con salida estructurada nativa. | Reparaciones frecuentes = coste y latencia; cambiar de formato toca escritor, validación y numeración. | Fase 1, al medir la tasa | §9.6, §18.7 |
-| D-08 | Índice vectorial del dossier | Solo FTS5 / FTS5 + embeddings | Solo FTS5. | Datos relevantes fuera del contexto → el escritor los inventa aunque existan (métrica en §16.3). | Fase 3 | §3.14 |
-| D-09 | Compresión de snapshots | Copia íntegra siempre / `zip` de versiones antiguas | Copia íntegra. | Disco: ≈ 100 MB por libro de 30 capítulos; irrelevante para un usuario local. | Fase 3 | §10.3, §10.8 |
-| D-10 | Comportamiento al exceder presupuesto | Parar y escalar (decidido por el usuario en Fase 0) / degradar a modelo más barato | Parar. | Degradar cambiaría la voz del escritor a mitad de libro. | Cerrada salvo que el usuario la reabra | §11.4 |
-| D-11 | Exportación de telemetría | Solo ficheros JSON Lines / exportador a sistema externo | Solo ficheros. | Ninguno funcional. | Fase 3 | §12.5 |
-| D-12 | Qué hacer con los retoques del editor global | Opción A (informe) / Opción B (runs de retoque) | A en fases 1–2; B en fase 3 si pertinencia ≥ 70 %. B exige añadir `retoque_editorial` al catálogo de §7.4 y el estado `retocando` a §4.3. | B prematura: reabrir capítulos buenos por retoques malos. A permanente: trabajo manual al final. | Fase 3 | §8.4 |
-| D-13 | Paralelismo entre capítulos | Secuencial estricto (RUN-5) / paralelo con fusión de canon | Secuencial. | Paralelo: fusión de canon y contradicciones cruzadas; secuencial: tiempo de pared ≈ 10–15 min × N. | Cerrada para esta versión | §4.3, §18.10 |
-| D-14 | Narración lineal por defecto (ESC-5, EVT-7, CAP-8) | Lineal con flashbacks marcados / estructura temporal libre | Lineal con flashbacks marcados por `modo` de escena y beat `transicion`. | Una novela con estructura no lineal generaría incidencias deterministas falsas; se resolvería relajando ESC-5/D-08 por configuración. | Cuando aparezca un brief no lineal | §3.7, §7.3 |
-| D-15 | Temperatura del revisor de lógica y ritmo | 0,2 / 0,1 | 0,2; bajar si la estabilidad de notas en §15.6 supera 1 punto de rango. | Notas inestables → reintentos aleatorios. | Fase 2 | §5.6, §15.6 |
-| D-16 | `modo_tolerante` del gate | `false` / `true` | `false`. Es una decisión del usuario, no del diseño. | `true`: capítulos aprobados por debajo del umbral sin que nadie los mire. `false`: más escaladas. | El usuario, en configuración | §7.5 |
-| D-17 | Umbrales del gate (7 / 7 / 6) y `max_mayores` (4) | Cualquier valor en [1, 10] | Los indicados, hasta calibrar con §15.6. | Umbrales altos: escaladas y coste; bajos: contradicciones que entran al canon. | Fase 2 | §7.5, §15.6 |
-| D-18 | Tabla de precios | La rellena el usuario con la tarifa vigente | Rellenar antes del primer run real; el harness se niega a arrancar con precios a cero (§13.4). | Sin precios no hay presupuesto ni métricas de coste. | Antes del primer run real | §13.3 |
+| DA-01 | Framework de orquestación | (a) Orquestador propio sobre `asyncio`; (b) framework de grafos (LangGraph o similar); (c) SDK de agentes de un proveedor | (a). El flujo es lineal con un solo punto de paralelismo; el estado ya es nuestro `estado.json`. | Con (b): dependencia pesada y estado duplicado; migrar después cuesta reescribir `harness/`. Con (a) y un flujo que crezca mucho: reimplementar checkpointing que un framework ya trae. | Antes de empezar la fase 1 | §4.8, §18.2 |
+| DA-02 | Proveedor y modelo concretos por nivel | Cualquier combinación de §13 `niveles` | Empezar con el proveedor del que el usuario tenga clave; nivel alto para investigador, arquitecto, escritor y editor; medio para revisores. | Coste por capítulo o calidad fuera de objetivo. Se corrige por configuración sin tocar código. | Fase 1 (uno), fase 2 (calibrar) | §5.0, §13 |
+| DA-03 | Nivel del revisor de anacronismos | `medio` / `alto` | `medio` hasta que §15.6 mida recall; si < 4/5 en anacronismos plantados, `alto`. | Anacronismos reales que pasan el gate (medio) o coste ×3 en ese revisor (alto). | Fase 2, tras el set de evaluación | §5.5, §15.6 |
+| DA-04 | Valor de K (resúmenes completos en contexto) | 1 / 3 / 5 | 3. | K bajo: pérdida de enlace entre capítulos; K alto: tokens y coste sin ganancia medida. | Fase 2, con la pasada de K de §15.6 | §6.3, §15.6 |
+| DA-05 | Búsqueda web del investigador | Desactivada / activada con `buscar_web` + `leer_url` | Desactivada en fase 1; activar en fase 2 y medir fuentes reales en §15.6. | Desactivada: dossier con fuentes de memoria no verificables (R-01). Activada: coste, latencia, inyección (R-02). | Fase 2 | §5.1, §18.9 |
+| DA-06 | Resumen global generado por LLM para libros largos | Mantener composición determinista / añadir compactación LLM cada M capítulos | Mantener determinista hasta ver fallos atribuibles a B5 recortado en libros > 40 capítulos. | Con LLM: un agente fuera del diagrama y coste extra. Sin él: pérdida de hechos antiguos en libros muy largos. | Fase 3, solo con evidencia | §6.7, §3.8.2 |
+| DA-07 | Formato de la salida del escritor | Prosa dentro del JSON (actual) / prosa con delimitadores + JSON de metadatos aparte | Mantener JSON; reconsiderar solo si `tasa_reparacion` del escritor > 15 % con salida estructurada nativa. | Reparaciones frecuentes = coste y latencia; cambiar de formato toca escritor, validación y numeración. | Fase 1, al medir la tasa | §9.6, §18.7 |
+| DA-08 | Índice vectorial del dossier | Solo FTS5 / FTS5 + embeddings | Solo FTS5. | Datos relevantes fuera del contexto → el escritor los inventa aunque existan (métrica en §16.3). | Fase 3 | §3.14 |
+| DA-09 | Compresión de snapshots | Copia íntegra siempre / `zip` de versiones antiguas | Copia íntegra. | Disco: ≈ 100 MB por libro de 30 capítulos; irrelevante para un usuario local. | Fase 3 | §10.3, §10.8 |
+| DA-10 | Comportamiento al exceder presupuesto | Parar y escalar (decidido por el usuario en Fase 0) / degradar a modelo más barato | Parar. | Degradar cambiaría la voz del escritor a mitad de libro. | Cerrada salvo que el usuario la reabra | §11.4 |
+| DA-11 | Exportación de telemetría | Solo ficheros JSON Lines / exportador a sistema externo | Solo ficheros. | Ninguno funcional. | Fase 3 | §12.5 |
+| DA-12 | Qué hacer con los retoques del editor global | Opción A (informe) / Opción B (runs de retoque) | A en fases 1–2; B en fase 3 si pertinencia ≥ 70 %. B exige añadir `retoque_editorial` al catálogo de §7.4 y el estado `retocando` a §4.3. | B prematura: reabrir capítulos buenos por retoques malos. A permanente: trabajo manual al final. | Fase 3 | §8.4 |
+| DA-13 | Paralelismo entre capítulos | Secuencial estricto (RUN-5) / paralelo con fusión de canon | Secuencial. | Paralelo: fusión de canon y contradicciones cruzadas; secuencial: tiempo de pared ≈ 10–15 min × N. | Cerrada para esta versión | §4.3, §18.10 |
+| DA-14 | Narración lineal por defecto (ESC-5, EVT-7, CAP-8) | Lineal con flashbacks marcados / estructura temporal libre | Lineal con flashbacks marcados por `modo` de escena y beat `transicion`. | Una novela con estructura no lineal generaría incidencias deterministas falsas; se resolvería relajando ESC-5/D-08 por configuración. | Cuando aparezca un brief no lineal | §3.7, §7.3 |
+| DA-15 | Temperatura del revisor de lógica y ritmo | 0,2 / 0,1 | 0,2; bajar si la estabilidad de notas en §15.6 supera 1 punto de rango. | Notas inestables → reintentos aleatorios. | Fase 2 | §5.6, §15.6 |
+| DA-16 | `modo_tolerante` del gate | `false` / `true` | `false`. Es una decisión del usuario, no del diseño. | `true`: capítulos aprobados por debajo del umbral sin que nadie los mire. `false`: más escaladas. | El usuario, en configuración | §7.5 |
+| DA-17 | Umbrales del gate (7 / 7 / 6) y `max_mayores` (4) | Cualquier valor en [1, 10] | Los indicados, hasta calibrar con §15.6. | Umbrales altos: escaladas y coste; bajos: contradicciones que entran al canon. | Fase 2 | §7.5, §15.6 |
+| DA-18 | Tabla de precios | La rellena el usuario con la tarifa vigente | Rellenar antes del primer run real; el harness se niega a arrancar con precios a cero (§13.4). | Sin precios no hay presupuesto ni métricas de coste. | Antes del primer run real | §13.3 |
 
 ### §17.2 Riesgos
 
 | Id | Riesgo | Probabilidad | Impacto | Mitigación en el spec | Indicador de que se materializa |
 |---|---|---|---|---|---|
-| R-01 | El investigador cita obras o páginas que no existen ("verificado" falso). | Alta sin web | Anacronismos con apariencia de rigor; el revisor de anacronismos los da por buenos porque están en el dossier. | DAT-3 acota `fiabilidad` a `media` para memoria del modelo; D-05 activa web en fase 2; §15.6 muestrea 20 fuentes. | Muestreo de §15.6 < 90 % de referencias existentes. |
+| R-01 | El investigador cita obras o páginas que no existen ("verificado" falso). | Alta sin web | Anacronismos con apariencia de rigor; el revisor de anacronismos los da por buenos porque están en el dossier. | DAT-3 acota `fiabilidad` a `media` para memoria del modelo; DA-05 activa web en fase 2; §15.6 muestrea 20 fuentes. | Muestreo de §15.6 < 90 % de referencias existentes. |
 | R-02 | Inyección de instrucciones desde páginas web (con `web: true`). | Media | Dossier contaminado. | Texto plano truncado, etiquetas de delimitación, regla de "material, no instrucciones" en todos los prompts (§5.0). | Datos del dossier con contenido fuera de tema o imperativo. |
-| R-03 | Un anacronismo real que el dossier no cubre pasa el gate porque REV-5 rebaja a `menor` las incidencias sin evidencia. | Media | Error de época en el libro. | El revisor lo señala como `menor` con sugerencia de añadir el dato; el usuario puede promoverlo al dossier (§10.6); D-03. | Incidencias `menor` de anacronismos con `evidencia_canon.tipo = ninguna` recurrentes. |
-| R-04 | Falsos bloqueantes de los revisores → reintentos inútiles y escaladas. | Media | Coste ×2–3 por capítulo; frustración. | REV-4/REV-5, restricciones de severidad por categoría (§7.4), `comprobado` obligatorio, `disputada` visible en escalada, D-17. | `tasa_aprobacion_primera` < 50 % con notas de continuidad altas en intentos posteriores sin cambios de fondo. |
-| R-05 | El escritor no devuelve JSON válido con prosa larga. | Media sin salida estructurada nativa | Reparaciones, coste, intentos abortados. | §9.3, salida estructurada nativa, D-07. | `tasa_reparacion` del escritor > 15 %. |
+| R-03 | Un anacronismo real que el dossier no cubre pasa el gate porque REV-5 rebaja a `menor` las incidencias sin evidencia. | Media | Error de época en el libro. | El revisor lo señala como `menor` con sugerencia de añadir el dato; el usuario puede promoverlo al dossier (§10.6); DA-03. | Incidencias `menor` de anacronismos con `evidencia_canon.tipo = ninguna` recurrentes. |
+| R-04 | Falsos bloqueantes de los revisores → reintentos inútiles y escaladas. | Media | Coste ×2–3 por capítulo; frustración. | REV-4/REV-5, restricciones de severidad por categoría (§7.4), `comprobado` obligatorio, `disputada` visible en escalada, DA-17. | `tasa_aprobacion_primera` < 50 % con notas de continuidad altas en intentos posteriores sin cambios de fondo. |
+| R-05 | El escritor no devuelve JSON válido con prosa larga. | Media sin salida estructurada nativa | Reparaciones, coste, intentos abortados. | §9.3, salida estructurada nativa, DA-07. | `tasa_reparacion` del escritor > 15 %. |
 | R-06 | Metadatos infieles que pasan el gate envenenan el canon (un evento que no ocurrió en la prosa). | Media | Contradicciones en capítulos posteriores difíciles de rastrear. | Categoría `metadatos_infieles` bloqueante en continuidad; D-13 (RES-2) y D-14; `novela canon diff` para auditar. | Incidencias de continuidad en el capítulo N+1 cuya evidencia es un evento del N que no aparece en su prosa. |
 | R-07 | Tamaños reales (S-01, S-02) muy distintos de los supuestos → presupuestos de contexto mal dimensionados. | Media | `contexto_excede_presupuesto` o contexto pobre. | Todo es configurable (§13); `novela context` muestra tamaños por bloque. | Eventos `contexto_resumen_global_recortado` frecuentes; pasos de recorte ≥ 5 habituales. |
 | R-08 | Modelos sin salida estructurada ni contador de tokens exacto (proveedores locales). | Media si se usa `local` | Más reparaciones; estimación de tokens imprecisa. | §9.2 paso 1b; margen del 10 % (§6.5); `error_estimacion_tokens` en §12.4. | `error_estimacion_tokens` p95 > 15 %. |
 | R-09 | Renombrado de directorios en Windows bloqueado por antivirus, indexador o un editor con el fichero abierto → commit atómico falla a medias. | Media en Windows | Estado intermedio del canon. | Diario de commit y recuperación de §10.4; reintento del renombrado con espera corta antes de fallar. | Errores `disco` en el paso 6 de §10.4. |
 | R-10 | Coste total del libro por encima de lo tolerable. | Media | Proyecto abandonado a mitad. | Límites de §11.4 y `coste_estimado_libro` visible en `status` desde el primer capítulo. | `coste_estimado_libro` > `por_libro_usd` tras 3 capítulos. |
 | R-11 | Ficheros del canon editados a mano con errores sutiles (ids, fechas). | Baja | `canon_corrupto` o contradicciones. | `novela canon validate` obligatorio antes de `commit` manual (§10.6); GLB-1..8. | Fallos de validación tras ediciones manuales. |
-| R-12 | El editor global "inventa" hechos no presentes en los resúmenes. | Baja–media | Retoques que piden cambiar algo que no existe. | Prompt explícito; discrepancias marcadas; A antes que B (D-12). | Pertinencia < 70 % en §15.6. |
+| R-12 | El editor global "inventa" hechos no presentes en los resúmenes. | Baja–media | Retoques que piden cambiar algo que no existe. | Prompt explícito; discrepancias marcadas; A antes que B (DA-12). | Pertinencia < 70 % en §15.6. |
 
 ### §17.3 Supuestos (copia de §1.6, con estado)
 
@@ -3932,10 +3937,10 @@ Cada fila es algo que el autor del spec no puede cerrar solo, o que depende de d
 | S-02 | Libros de 8–40 capítulos. | Sin verificar. | Ídem. |
 | S-03 | Canon de pocos MB. | Derivado de S-01/S-02; muy probable. | Tamaño de `canon/` tras un libro completo. |
 | S-04 | Modelos con salida estructurada y ≥ 128k de contexto. | Cierto para los modelos de ejemplo de §5.0; no garantizado para `local`. | Test de contrato de proveedor (§15.1). |
-| S-05 | Precios tabulables en configuración. | Cierto; requiere mantenimiento del usuario (D-18). | §13.4 rechaza precios a cero. |
+| S-05 | Precios tabulables en configuración. | Cierto; requiere mantenimiento del usuario (DA-18). | §13.4 rechaza precios a cero. |
 | S-06 | Un capítulo se genera en una sola llamada. | Decisión de diseño; verificar que la calidad no cae en capítulos largos. | §15.6 con `longitud_objetivo_palabras = 5.000`. |
 | S-07 | Datos inventados sin marca en la prosa, registrados en metadatos. | Decidido por el usuario (por defecto de Fase 0). | — |
-| S-08 | Web del investigador desactivada en fase 1. | Decidido. | D-05. |
+| S-08 | Web del investigador desactivada en fase 1. | Decidido. | DA-05. |
 
 ### §17.4 Cosas que este spec no decide a propósito
 
@@ -3971,7 +3976,7 @@ Formato fijo de cada ADR: contexto, opciones consideradas, decisión, consecuenc
 
 **Consecuencias.** Con (a): persistencia de estado, reintentos y paralelismo escritos a mano (pocas funciones, §7.8, §11.5); sin dependencias de framework; depuración estándar. Si el usuario elige (b): el `estado.json` de §11.5 sigue siendo la fuente de verdad de la reanudación y el checkpointing del framework se usa solo como caché, para no duplicar estado.
 
-**Estado.** Propuesta (D-01). Pasa a aceptada cuando el usuario confirme antes de la fase 1. **Fecha.** 2026-09-15.
+**Estado.** Propuesta (DA-01). Pasa a aceptada cuando el usuario confirme antes de la fase 1. **Fecha.** 2026-09-15.
 
 ### §18.3 ADR-0003 — Revisores en paralelo vs. secuencial
 
@@ -3993,7 +3998,7 @@ Formato fijo de cada ADR: contexto, opciones consideradas, decisión, consecuenc
 
 **Decisión.** (3), con escala 1–10, umbrales 7/7/6, `max_mayores = 4`, `max_reintentos = 3`, función pura en código (§7.5). La (4) se rechaza por P-01. La (1) se rechaza porque una media compensa una contradicción de continuidad con una buena nota de ritmo, y la continuidad no es compensable. La (2) sola deja pasar capítulos con muchas incidencias mayores repartidas.
 
-**Consecuencias.** El gate depende de que las revisiones sean coherentes; por eso el harness fuerza REV-2 y aplica las restricciones de severidad por categoría (§7.4). Los umbrales son configurables (D-17) pero la forma de la fórmula es fija. `modo_tolerante` existe como opción del usuario, desactivada (D-16).
+**Consecuencias.** El gate depende de que las revisiones sean coherentes; por eso el harness fuerza REV-2 y aplica las restricciones de severidad por categoría (§7.4). Los umbrales son configurables (DA-17) pero la forma de la fórmula es fija. `modo_tolerante` existe como opción del usuario, desactivada (DA-16).
 
 **Estado.** Aceptada. **Fecha.** 2026-09-15.
 
@@ -4003,9 +4008,9 @@ Formato fijo de cada ADR: contexto, opciones consideradas, decisión, consecuenc
 
 **Opciones consideradas.** (1) Selección por reglas fijas con bloques priorizados y recorte determinista. (2) Recuperación semántica (embeddings) sobre todo el canon. (3) Un agente LLM que elige qué contexto pasar. (4) Todo el canon siempre.
 
-**Decisión.** (1), con búsqueda FTS5 solo para el dossier (§3.14) y las tres capas de memoria de §6.3 (K resúmenes completos, hechos clave comprimidos, estado estructurado). La (3) se rechaza por P-01 y por coste; la (2) queda como extensión (D-08); la (4) no escala (§6.7).
+**Decisión.** (1), con búsqueda FTS5 solo para el dossier (§3.14) y las tres capas de memoria de §6.3 (K resúmenes completos, hechos clave comprimidos, estado estructurado). La (3) se rechaza por P-01 y por coste; la (2) queda como extensión (DA-08); la (4) no escala (§6.7).
 
-**Consecuencias.** Reproducibilidad total del contexto para una versión del canon (§6.1), trazabilidad por registro (§6.6), y la posibilidad de que un dato relevante quede fuera si ni la ficha lo sugiere ni la búsqueda lo encuentra; ese caso se mide en §16.3 y podría motivar D-08.
+**Consecuencias.** Reproducibilidad total del contexto para una versión del canon (§6.1), trazabilidad por registro (§6.6), y la posibilidad de que un dato relevante quede fuera si ni la ficha lo sugiere ni la búsqueda lo encuentra; ese caso se mide en §16.3 y podría motivar DA-08.
 
 **Estado.** Aceptada. **Fecha.** 2026-09-15.
 
@@ -4027,7 +4032,7 @@ Formato fijo de cada ADR: contexto, opciones consideradas, decisión, consecuenc
 
 **Opciones consideradas.** (1) Un único JSON con `escenas[].texto` como cadenas. (2) Prosa con delimitadores propios y un bloque JSON de metadatos en la misma respuesta. (3) Dos llamadas: una para la prosa, otra para los metadatos.
 
-**Decisión.** (1). Con salida estructurada nativa del proveedor es fiable; permite localizar incidencias por escena y párrafo (§7.2) y validar todo con un schema. La (3) duplica coste y desacopla los metadatos de la prosa que describen (riesgo R-06). La (2) queda como alternativa si `tasa_reparacion` > 15 % (D-07).
+**Decisión.** (1). Con salida estructurada nativa del proveedor es fiable; permite localizar incidencias por escena y párrafo (§7.2) y validar todo con un schema. La (3) duplica coste y desacopla los metadatos de la prosa que describen (riesgo R-06). La (2) queda como alternativa si `tasa_reparacion` > 15 % (DA-07).
 
 **Consecuencias.** Sanitización específica de la prosa (§9.5 S-2..S-5); límite de 60.000 caracteres por escena (§9.8); dependencia de que el proveedor soporte salida estructurada o de la extracción de §9.2.
 
@@ -4041,7 +4046,7 @@ Formato fijo de cada ADR: contexto, opciones consideradas, decisión, consecuenc
 
 **Decisión.** (1), con el resumen global compuesto deterministamente a partir de los `hechos_clave` (§3.8.2). La (2) añade una llamada y un agente fuera del diagrama; la (3) no es viable con calidad.
 
-**Consecuencias.** Los revisores deben verificar la fidelidad de los metadatos (categoría `metadatos_infieles`, bloqueante); el `CapituloRedactadoSalida` es más largo (≈ 2–4k tokens extra); el harness materializa registros a partir de los metadatos en el commit (§7.9); D-06 queda abierta para libros muy largos.
+**Consecuencias.** Los revisores deben verificar la fidelidad de los metadatos (categoría `metadatos_infieles`, bloqueante); el `CapituloRedactadoSalida` es más largo (≈ 2–4k tokens extra); el harness materializa registros a partir de los metadatos en el commit (§7.9); DA-06 queda abierta para libros muy largos.
 
 **Estado.** Aceptada. **Fecha.** 2026-09-15.
 
@@ -4065,7 +4070,7 @@ Formato fijo de cada ADR: contexto, opciones consideradas, decisión, consecuenc
 
 **Decisión.** (1). El contexto del capítulo N depende del estado del canon tras N-1 (resúmenes, conocimiento, promesas); la fusión de (2) reintroduciría exactamente las contradicciones que el sistema existe para evitar.
 
-**Consecuencias.** Tiempo de pared lineal en N; numeración de versiones del canon simple (§10.2); reanudación trivial (§11.5). D-13 recoge la posibilidad de revisarlo con evidencia.
+**Consecuencias.** Tiempo de pared lineal en N; numeración de versiones del canon simple (§10.2); reanudación trivial (§11.5). DA-13 recoge la posibilidad de revisarlo con evidencia.
 
 **Estado.** Aceptada. **Fecha.** 2026-09-15.
 
@@ -4141,7 +4146,7 @@ Flechas implícitas en el texto del diagrama y cubiertas: "lee los resúmenes de
 | Staging (§10.4) | Mecanismo interno de "escribe en el canon solo al aprobar". | §4.1, §10.4 |
 | Escalada (§7.7) | Consecuencia de "máx. 3 reintentos". | §4.1, §7.7 |
 | Proveedores LLM (§4.6), registro (§12), configuración (§13), CLI (§4.7) | Infraestructura del harness, no flujo. | §4.2 |
-| Opción B del editor (§8.4) | Extensión no incluida en el diagrama; propuesta como fase 3. | §8.4, D-12 |
+| Opción B del editor (§8.4) | Extensión no incluida en el diagrama; propuesta como fase 3. | §8.4, DA-12 |
 
 ## §20 Historial de cambios del spec
 
@@ -4172,7 +4177,7 @@ Primera versión completa del spec, escrita a partir del diagrama `docs/diagrama
 - §14 Estructura del repo.
 - §15 Evaluación: niveles, proveedor mock y escenarios, casos de gate, contradicción, reanudación, set de evaluación con LLM real, test de alineación §3 ↔ schemas.
 - §16 Roadmap en tres fases con criterio de hecho y riesgo principal.
-- §17 Decisiones abiertas D-01..D-18, riesgos R-01..R-12, supuestos con estado.
+- §17 Decisiones abiertas DA-01..DA-18, riesgos R-01..R-12, supuestos con estado. Motivo del prefijo `DA`: no colisionar con las comprobaciones deterministas `D-xx` de §7.3.
 - §18 ADR-0001 a ADR-0010. ADR-0002 (framework) en estado propuesta; el resto aceptadas.
 - §19 Trazabilidad: 22 nodos y 17 flechas del drawio con sus secciones, más comprobación inversa.
 - §20 Este historial y la regla permanente.
