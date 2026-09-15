@@ -638,6 +638,12 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `22e736e` | 2026-09-15 | docs(spec): §17 tabla de commits regenerada para 0.4.0 |
 | `2c023e8` | 2026-09-15 | docs(spec): §5 el arquitecto emite fecha y etiquetas |
 | `61fd413` | 2026-09-15 | docs(spec): §16 entrada 0.4.1 y version en cabecera |
+| `586d92f` | 2026-09-15 | docs(spec): §17 tabla regenerada para 0.4.1 y nota de tags |
+| `566052d` | 2026-09-15 | docs(spec): §3 los tipos logicos apuntan al stack ya decidido |
+| `7aad5eb` | 2026-09-15 | docs(spec): §12 la credencial del modo real va en el entorno |
+| `d303db9` | 2026-09-15 | docs(spec): §15 DA-01 se decide y sale de la tabla |
+| `b0a370a` | 2026-09-15 | docs(spec): §18 estructura del repo y comandos |
+| `e4844ec` | 2026-09-15 | docs(spec): §16 entrada 0.5.0 y version en cabecera |
 
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
