@@ -525,6 +525,29 @@ Registro literal de los commits que han tocado `docs/spec/`, desde el reset que 
 
 | Commit | Fecha | Mensaje |
 |---|---|---|
+| `fa0c206` | 2026-09-15 | docs(spec): esqueleto de SPEC.md con cabecera, índice y secciones §1-§20 |
+| `9bface4` | 2026-09-15 | docs(spec): §1 visión y alcance |
+| `889ff78` | 2026-09-15 | docs(spec): §2 glosario |
+| `0252d9a` | 2026-09-15 | docs(spec): §3 modelo de datos del canon |
+| `4c1e660` | 2026-09-15 | docs(spec): §4 arquitectura del harness |
+| `d8c02ec` | 2026-09-15 | docs(spec): §5 catálogo de agentes |
+| `18f8930` | 2026-09-15 | docs(spec): §6 generador de contexto |
+| `fcc8b2f` | 2026-09-15 | docs(spec): §7 loop de capítulo y gate de calidad |
+| `8dc9f91` | 2026-09-15 | docs(spec): §8 editor global |
+| `e1dc66f` | 2026-09-15 | docs(spec): §9 contratos de I/O y validación |
+| `a04c1bf` | 2026-09-15 | docs(spec): §10 persistencia y versionado del canon |
+| `2f6dff7` | 2026-09-15 | docs(spec): §11 errores, reintentos y reanudación |
+| `d11e862` | 2026-09-15 | docs(spec): §12 observabilidad y costes |
+| `dadf60d` | 2026-09-15 | docs(spec): §13 configuración |
+| `3b81884` | 2026-09-15 | docs(spec): §14 estructura del repo |
+| `2984e80` | 2026-09-15 | docs(spec): §15 plan de evaluación y tests |
+| `2c125b0` | 2026-09-15 | docs(spec): §16 roadmap por fases |
+| `168d081` | 2026-09-15 | docs(spec): §17 riesgos y decisiones abiertas |
+| `9f9ba15` | 2026-09-15 | docs(spec): §18 decisiones de arquitectura ADR-0001 a ADR-0010 |
+| `83daefa` | 2026-09-15 | docs(spec): §19 trazabilidad diagrama → spec |
+| `f650fb9` | 2026-09-15 | docs(spec): §20 historial de cambios y regla permanente |
+| `39b8ded` | 2026-09-15 | docs(spec): pasada de coherencia v0.1.0 (refs §1.4, enums §3.10, ESC-6, TOC, marcas de estado, ids DA-xx) |
+| `af2b993` | 2026-09-15 | docs(spec): reset para version intermedia |
 | `9c8500a` | 2026-09-15 | docs(spec): §1 visión y alcance |
 | `7ab736d` | 2026-09-15 | docs(spec): §2 glosario |
 | `8d8b1a3` | 2026-09-15 | docs(spec): §3 modelo de datos del canon |
@@ -537,6 +560,19 @@ Registro literal de los commits que han tocado `docs/spec/`, desde el reset que 
 | `5f9fb47` | 2026-09-15 | docs(spec): §11 decisiones abiertas |
 | `2793bf7` | 2026-09-15 | docs(spec): §12 historial de cambios |
 | `1aac96a` | 2026-09-15 | docs(spec): §13 log de commits del spec |
+| `abc023c` | 2026-09-15 | docs(spec): pasada de coherencia 0.1.0 (§1 cronista en el flujo, §2 término cronista y gate, §13 tabla regenerada) |
+| `2e574c4` | 2026-09-15 | docs(spec): validador único y renumeración §6-§17 |
+| `dec5d5c` | 2026-09-15 | docs(spec): §6 memoria de largo y corto plazo |
+| `aab40e6` | 2026-09-15 | docs(spec): §9 inventario de validadores |
+| `f52b08d` | 2026-09-15 | docs(spec): §10 inventario de skills |
+| `441c7cb` | 2026-09-15 | docs(spec): §16 entrada 0.2.0 con la renumeración y el validador único |
+| `28c784e` | 2026-09-15 | docs(spec): rastros del modelo de tres revisores en §13, §14 y §15 |
+| `dc37ca1` | 2026-09-15 | docs(spec): separa el alcance inicial del sistema de la versión del documento |
+| `719f359` | 2026-09-15 | docs(spec): última referencia de alcance en §4 |
+| `06e5b0d` | 2026-09-15 | docs(spec): §12 configuracion |
+| `de869c8` | 2026-09-15 | docs(spec): §13 la tabla de configuracion se va a §12 |
+| `553fa6c` | 2026-09-15 | docs(spec): §9 VD-07 y VD-08 contra los margenes de §12 |
+| `a3aaa95` | 2026-09-15 | docs(spec): §16 entrada 0.3.0 con §12 y el arreglo de VD-08 |
 
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
