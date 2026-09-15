@@ -264,3 +264,23 @@ Ocho agentes. Ninguno escribe en el canon: todos devuelven una propuesta estruct
 **Cronista.** Corre una sola vez por capítulo, después del gate y solo sobre el intento aprobado. Le paso el texto, la ficha de capítulo y las fichas de quien sale, y le pido cuatro cosas: el resumen de un párrafo, los hilos que abre y los que cierra, los cambios de `ubicacion` y `sabe` de cada personaje presente, y los eventos de trama nuevos para la línea de tiempo. Devuelve una propuesta que el harness valida antes de escribirla en el canon. Modos de fallo: resúmenes que cuentan lo que pasa pero no lo que cambia, dar por sabido a un personaje algo que ocurrió sin él delante, y callarse hilos abiertos, que es el fallo caro porque el editor global solo ve lo que el cronista escribió.
 
 **Editor global.** Le paso los resúmenes de todos los capítulos, la escaleta y las fichas de personaje, nunca el texto completo. Le pido una lista corta y accionable: arcos que no cierran, promesas abiertas sin saldar, actos desequilibrados. Modos de fallo: generalidades no accionables del tipo «reforzar el tema», y proponer reescrituras masivas cuando el encargo es una lista de retoques.
+
+## §6 Generador de contexto
+
+Código, no agente: mismo capítulo y mismo canon dan siempre el mismo paquete. Recibe un número de capítulo y devuelve el paquete de contexto que verá el escritor, que nunca consulta el canon por su cuenta.
+
+| Bloque | Qué entra | Criterio de selección |
+|---|---|---|
+| Encargo | Ficha del capítulo entera | Siempre |
+| Personajes | Fichas completas de quien sale | `personajes` de la ficha |
+| Reparto de fondo | Nombre y una línea de quien no sale pero se menciona | Aparece en la sinopsis |
+| Memoria reciente | Resúmenes de los tres capítulos anteriores | Ventana fija |
+| Memoria larga | Resúmenes del resto, recortados a una frase | Solo capítulos aprobados |
+| Hilos vivos | Hilos abiertos y aún no cerrados | Diferencia entre abiertos y cerrados |
+| Época | Datos históricos que casan con las etiquetas de la ficha | Coincidencia de etiquetas, `verificado` primero |
+| Cronología | Eventos de línea de tiempo en la ventana de fechas del capítulo | Rango de fechas |
+| Enganche | Últimas 400 palabras del capítulo anterior aprobado | Literal, para continuidad de tono |
+
+Dos reglas que no se negocian. El texto completo de capítulos anteriores no entra nunca, salvo el enganche: para eso están los resúmenes. Y en el paquete viaja el estado de cada dato histórico, porque el escritor necesita saber qué es firme y qué es relleno.
+
+El paquete tiene un tope de tokens configurable (§9). Si se pasa, se recorta en este orden: memoria larga, cronología, reparto de fondo, época. El encargo, los personajes y los hilos vivos no se recortan; si aun así no cabe, el capítulo se marca `bloqueado` en lugar de escribirse con el contexto mutilado.
