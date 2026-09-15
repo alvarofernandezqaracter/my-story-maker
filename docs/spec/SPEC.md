@@ -4145,4 +4145,63 @@ Flechas implícitas en el texto del diagrama y cubiertas: "lee los resúmenes de
 
 ## §20 Historial de cambios del spec
 
-> Estado: pendiente
+> Estado: completa
+
+Formato Keep a Changelog. Un bloque por versión; apartados Añadido / Cambiado / Eliminado / Corregido; cada línea referencia la sección por número y lleva motivo. Versionado SemVer del documento: patch = correcciones y redacción; minor = sección nueva o ampliada; major = cambio que invalida algo ya decidido.
+
+## 0.1.0 — 2026-09-15
+
+Primera versión completa del spec, escrita a partir del diagrama `docs/diagrama/sistema-novelas-historicas-v2.drawio` y de las respuestas del usuario en la Fase 0 (multiproveedor, Python, sin tamaño objetivo, sin aprobación humana, idioma en el brief, valores por defecto para canon, gasto y datos inventados).
+
+### Añadido
+
+- Cabecera YAML y tabla de contenidos. Motivo: control de versiones del propio documento dentro del fichero.
+- §1 Visión y alcance: problema, harness vs. solución agéntica, usuario local por CLI, criterios de éxito medibles, fuera de alcance, supuestos S-01..S-08 y principios P-01..P-08. Motivo: dar ids citables a supuestos y principios.
+- §2 Glosario con nombre en código por término. Motivo: un término, una definición, un identificador.
+- §3 Modelo de datos del canon: convenciones de ids y tipos comunes; decisión ficheros JSON + índice SQLite; esquemas, ejemplos e invariantes de Brief, Personaje, Evento, DatoHistorico, Arco/Promesa/FichaCapitulo, Resumen/ResumenGlobal, CapituloRedactado, Run, Revision/Incidencia, Retoque; invariantes globales; búsqueda del dossier; diagrama de entidades. Motivo: es el contrato que usan todas las demás secciones.
+- §4 Arquitectura: Mermaid equivalente al drawio, componentes, máquina de estados, paralelismo, puntos de intervención humana, capa de proveedores, CLI, decisión abierta de framework.
+- §5 Catálogo de agentes: siete agentes con propósito, entradas, salida, prompts borrador, nivel de modelo, temperatura, tokens, herramientas, criterios de calidad y modos de fallo. Motivo: criterio de aceptación (e).
+- §6 Generador de contexto: bloques B0–B9 con prioridades, ventana K + resumen global determinista, presupuestos y orden de recorte, conteo de tokens, trazabilidad, acotación del crecimiento, pseudocódigo.
+- §7 Loop y gate: contabilidad de intentos, numeración del texto, comprobaciones deterministas D-01..D-16, escala 1–10 y catálogo de categorías, fórmula del gate, contenido del reintento, paquete de escalada, pseudocódigo completo, efectos del commit.
+- §8 Editor global: disparador, entrada sin prosa, informe, opciones A y B con recomendación A.
+- §9 Contratos: schemas, pipeline de validación, política de reparación, campos no vacíos, sanitización S-1..S-10, separación prosa/metadatos, tamaños máximos.
+- §10 Persistencia: directorio de trabajo + snapshots, numeración de versiones, staging y commit atómico con diario, diffs, edición manual, rollback, retención.
+- §11 Errores: taxonomía, reintentos técnicos e idempotencia, límites de gasto, `estado.json` y algoritmo de arranque, escenario de referencia del capítulo 12, parada limpia, códigos de salida.
+- §12 Observabilidad: `LlamadaLLM`, eventos, consola, métricas, almacenamiento.
+- §13 Configuración: capas, fijo vs. configurable, fichero comentado completo, validación.
+- §14 Estructura del repo.
+- §15 Evaluación: niveles, proveedor mock y escenarios, casos de gate, contradicción, reanudación, set de evaluación con LLM real, test de alineación §3 ↔ schemas.
+- §16 Roadmap en tres fases con criterio de hecho y riesgo principal.
+- §17 Decisiones abiertas D-01..D-18, riesgos R-01..R-12, supuestos con estado.
+- §18 ADR-0001 a ADR-0010. ADR-0002 (framework) en estado propuesta; el resto aceptadas.
+- §19 Trazabilidad: 22 nodos y 17 flechas del drawio con sus secciones, más comprobación inversa.
+- §20 Este historial y la regla permanente.
+
+### Cambiado
+
+- §3.10: `Run.tipo` incorpora `manual` y `Run.estado` incorpora `descartado`; `intentos[].gate.veredicto` incorpora `aprobado_tolerante` y `aprobado_manual`. Motivo: §10.6, §10.7, §7.5 y §4.5 los introducen; la pasada de coherencia los consolida en el esquema.
+- §3.7 ESC-6: transiciones ampliadas con `aprobado → pendiente` (rollback, §10.7). Motivo: coherencia con §10.7.
+- §1.4: referencias a §15.4 y §15.5 corregidas tras numerar §15. Motivo: §15.3 son los casos del gate, §15.4 los de contradicción y §15.5 los de reanudación.
+
+### Eliminado
+
+- Nada.
+
+### Corregido
+
+- Nada (primera versión).
+
+---
+
+### Regla permanente de mantenimiento
+
+Todo cambio futuro de este documento obliga, en el mismo commit, a:
+
+1. Subir `version` en la cabecera YAML según SemVer (patch: correcciones y redacción; minor: sección nueva o ampliada; major: cambio que invalida algo ya decidido) y actualizar `actualizado`.
+2. Añadir una entrada en este §20, en un bloque `## <versión> — <fecha>`, bajo Añadido / Cambiado / Eliminado / Corregido, citando cada sección tocada por su número y el motivo del cambio.
+3. Si el cambio es estructural (afecta a algo marcado "fijo por diseño" en §13.2, a una entidad de §3, al flujo de §4 o al gate de §7), crear una ADR nueva en §18 con el formato fijo y, si sustituye a otra, marcar la antigua como "sustituida por ADR-XXXX".
+4. Mantener la numeración de secciones estable: una sección eliminada se marca `> Estado: obsoleta — ver §20 <versión>` y conserva su número; los números no se reutilizan.
+5. Actualizar la marca `> Estado:` de cada sección tocada y la tabla de contenidos si cambian los títulos.
+6. Confirmar con un commit `docs(spec): ...` en conventional commits y, en cada versión publicada, un tag `spec-v<versión>`.
+
+Nada se edita en silencio.
