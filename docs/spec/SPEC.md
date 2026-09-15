@@ -315,10 +315,13 @@ para cada capitulo de la escaleta con estado != aprobado:
     incidencias = []
     texto_previo = null
 
-    para intento en 1..3:
+    para intento en 1..gate.max_intentos:
         texto = escritor(paquete, texto_previo, incidencias)
         guardar_intento(capitulo, intento, texto)             # estado propuesto
-        si no comprobaciones_ok(texto): siguiente intento      # §9, sin llamar al validador
+        det = comprobaciones(texto)                           # §9
+        si det.bloqueantes:                                   # VD-08 en su escalon de bloqueo
+            incidencias = det.todas                           # el reintento va de cero
+            siguiente intento                                 # sin llamar al validador
 
         rev = validar(texto, paquete)          # 1 llamada; 3 en paralelo si modo separado
         si no comprobaciones_ok(rev): reintentar la llamada     # §9, sin gastar gate
@@ -331,15 +334,17 @@ para cada capitulo de la escaleta con estado != aprobado:
             marcar capitulo aprobado
             salir del bucle de intentos
 
-        incidencias = rev.incidencias
-        texto_previo = texto si intento < 2 sino null          # el 3.º va de cero
+        incidencias = rev.incidencias + det.avisos            # §9, VD-08 en su escalon de aviso
+        texto_previo = texto si intento + 1 < gate.max_intentos sino null   # el ultimo va de cero
 
     si capitulo != aprobado:
         marcar capitulo bloqueado y proyecto bloqueado
         parar y esperar mano humana                            # §13
 
 si todos los capitulos aprobados:
+    marcar proyecto escrito
     retoques = editor_global(resumenes, escaleta, personajes)  # §11
+    guardar retoques.md y marcar proyecto editado             # §11
 ```
 
 **Rúbrica.** Una por dimensión, escala 1 a 5 entera, con anclas para que la nota no derive entre capítulos. El validador aplica las tres por separado (§5) y el gate no sabe si vinieron de una llamada o de tres.
@@ -354,9 +359,9 @@ Cada incidencia lleva cita textual, severidad (`grave` o `aviso`) y una sugerenc
 
 **Fórmula del gate.** `aprueba = min(notas) >= 3 y media(notas) >= 3,7 y ninguna incidencia grave`. La incidencia grave veta por sí sola: un capítulo puede sacar tres cuatros y caer por una contradicción de canon, porque eso no se arregla puntuando más alto. Los tres números son configurables (§12) y están sin calibrar hasta que haya capítulos reales (§11, DA-06).
 
-**Qué recibe el escritor al reintentar.** El mismo paquete de contexto, las incidencias del intento anterior ordenadas por severidad y, solo en el intento 2, su propio texto: ahí se le pide arreglo quirúrgico, tocar lo señalado y no reescribir lo que ya funciona. El intento 3 va desde cero con las incidencias acumuladas de los dos anteriores, porque si dos pasadas quirúrgicas no han bastado el problema no está en las frases sino en el planteamiento de la escena.
+**Qué recibe el escritor al reintentar.** El mismo paquete de contexto, las incidencias del intento anterior ordenadas por severidad y, en todos los intentos menos el último, su propio texto: ahí se le pide arreglo quirúrgico, tocar lo señalado y no reescribir lo que ya funciona. El último —el tercero con los valores por defecto— va desde cero con las incidencias acumuladas, porque si las pasadas quirúrgicas no han bastado el problema no está en las frases sino en el planteamiento de la escena. El intento que ni siquiera llega al validador porque VD-08 lo bloquea va también de cero: no hay arreglo quirúrgico que valga en un texto al que le falta medio capítulo.
 
-**Al agotar los tres intentos.** El capítulo queda `bloqueado`, el proyecto también, y el sistema para en vez de seguir con el siguiente: escribir sobre un canon con un agujero solo propaga el problema. Se conserva el intento con mejor media, en estado `propuesto`, y sus revisiones. Tienes tres salidas, todas manuales: editar el texto a mano y aprobarlo, retocar la ficha de capítulo y relanzar con el contador a cero, o bajar el umbral solo para ese capítulo dejando constancia.
+**Al agotar los intentos.** El capítulo queda `bloqueado`, el proyecto también, y el sistema para en vez de seguir con el siguiente: escribir sobre un canon con un agujero solo propaga el problema. Se conserva el intento con mejor media, en estado `propuesto`, y sus revisiones. Tienes tres salidas, todas manuales: editar el texto a mano y aprobarlo, retocar la ficha de capítulo y relanzar con el contador a cero, o bajar el umbral solo para ese capítulo dejando constancia.
 
 ## §9 Inventario de validadores
 
