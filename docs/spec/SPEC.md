@@ -218,8 +218,8 @@ flowchart TD
 - `borrador` — existe el brief, no hay nada más. Transición al arrancar el investigador.
 - `investigado` — el dossier está en el canon. Habilita al arquitecto.
 - `estructurado` — escaleta y fichas de personaje en el canon. Habilita el loop.
-- `escribiendo` — hay al menos un capítulo aprobado y quedan pendientes.
-- `bloqueado` — un capítulo agotó los tres intentos. Requiere mano humana (§8).
+- `escribiendo` — el loop está en marcha: hay capítulos en curso o ya aprobados y quedan pendientes. Se entra al arrancar el primero, no al aprobarlo.
+- `bloqueado` — un capítulo agotó sus intentos (`gate.max_intentos`). Requiere mano humana (§8).
 - `escrito` — todas las fichas de capítulo en `aprobado`. Habilita el editor global.
 - `editado` — existe la lista de retoques. Estado final del sistema.
 
