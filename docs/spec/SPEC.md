@@ -135,3 +135,98 @@ El brief no tiene tabla propia: se guarda como fila única en `proyecto` con sus
   "actualizado_en": 7
 }
 ```
+
+## §4 Arquitectura y flujo
+
+El sistema tiene tres tramos: preparación (una vez), loop de capítulo (una vez por capítulo) y cierre (una vez). El canon está en medio de todos y es el único punto de contacto entre ellos: los agentes nunca se pasan datos entre sí por fuera del canon o del paquete de contexto.
+
+Diagrama completo, reproducido de [`docs/diagrama/sistema-novelas-historicas-v2.mermaid`](../diagrama/sistema-novelas-historicas-v2.mermaid). Los colores separan agentes, revisores, datos y harness.
+
+```mermaid
+flowchart TD
+
+    %% ---------- Fase de preparación (una sola vez) ----------
+    brief["<b>Brief del usuario</b><br/><small>Época, premisa, tono, nº capítulos</small>"]
+    inv["<b>Agente investigador</b>"]
+    arq["<b>Agente arquitecto</b>"]
+    outinv["<b>Output: dossier histórico</b><br/><small>Fichas de época (vestimenta, política,<br/>comida, lenguaje) · cada dato con su fuente<br/>· marcado verificado o inventado</small>"]
+    outarq["<b>Output: escaleta y personajes</b><br/><small>Arco en 3 actos · ficha por capítulo<br/>(qué pasa, quién sale) · ficha por personaje<br/>(voz, motivación, arco)</small>"]
+
+    brief --> inv
+    inv --> arq
+    inv --> outinv
+    arq --> outarq
+
+    %% ---------- Canon ----------
+    subgraph canon["<b>Canon del proyecto</b> — base de datos del libro. Única fuente de verdad: se lee antes de escribir, se actualiza solo al aprobar."]
+        direction LR
+        c1["<b>Fichas de personajes</b><br/><small>Voz, motivación, dónde está, qué sabe</small>"]
+        c2["<b>Línea de tiempo</b><br/><small>Sucesos de la trama cruzados con hechos reales</small>"]
+        c3["<b>Dossier histórico</b><br/><small>Datos de época + fuente, buscables</small>"]
+        c4["<b>Resúmenes de capítulos</b><br/><small>Un párrafo por capítulo ya aprobado</small>"]
+    end
+
+    outinv -- "rellena el canon" --> canon
+    outarq --> canon
+
+    %% ---------- Loop por capítulo ----------
+    subgraph loop["<b>Loop por capítulo</b> — se repite una vez por cada capítulo de la escaleta"]
+        direction TB
+        genctx["<b>Generador de contexto</b><br/><small>Selecciona del canon solo lo que<br/>hace falta para este capítulo</small>"]
+        escritor["<b>Agente escritor</b><br/><small>Output: el capítulo redactado</small>"]
+        rev1["<b>Continuidad</b><br/><small>¿Contradice el canon?</small>"]
+        rev2["<b>Anacronismos</b><br/><small>¿Encaja con la época?</small>"]
+        rev3["<b>Lógica y ritmo</b><br/><small>¿Hay causa y efecto?</small>"]
+        gate{"<b>Gate de calidad</b><br/><small>Umbral sobre las 3 notas<br/>máx. 3 reintentos</small>"}
+
+        genctx --> escritor
+        escritor --> rev1
+        escritor --> rev2
+        escritor --> rev3
+        rev1 --> gate
+        rev2 --> gate
+        rev3 --> gate
+        gate -. "si falla, reescribe (máx. 3)" .-> escritor
+    end
+
+    canon -- "lee" --> genctx
+    gate == "aprobado: escribe en el canon" ==> canon
+
+    %% ---------- Cierre ----------
+    editor["<b>Editor global — pasada única al final</b><br/><small>NO entra en el loop. Se ejecuta una sola vez, con todos los capítulos ya aprobados.<br/>Lee los resúmenes del canon (no el texto entero) y devuelve una lista corta de retoques:<br/>arcos que no cierran, promesas sin cumplir, ritmo desequilibrado.</small>"]
+
+    gate -- "cuando TODOS los capítulos están aprobados" --> editor
+
+    %% ---------- Estilos (leyenda del drawio) ----------
+    classDef agente fill:#EEEDFE,stroke:#534AB7,color:#26215C;
+    classDef revisor fill:#FAECE7,stroke:#993C1D,color:#4A1B0C;
+    classDef datos fill:#FFFFFF,stroke:#1D9E75,color:#04342C;
+    classDef harness fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
+
+    class inv,arq,escritor,editor agente;
+    class rev1,rev2,rev3 revisor;
+    class outinv,outarq,c1,c2,c3,c4 datos;
+    class brief,genctx,gate harness;
+
+    style canon fill:#E1F5EE,stroke:#0F6E56,color:#04342C;
+    style loop fill:none,stroke:#9C9A92,stroke-dasharray: 6 6,color:#3D3D3A;
+```
+
+**Máquina de estados del proyecto.** Un solo campo en `proyecto`, avanza en un sentido salvo `bloqueado`.
+
+- `borrador` — existe el brief, no hay nada más. Transición al arrancar el investigador.
+- `investigado` — el dossier está en el canon. Habilita al arquitecto.
+- `estructurado` — escaleta y fichas de personaje en el canon. Habilita el loop.
+- `escribiendo` — hay al menos un capítulo aprobado y quedan pendientes.
+- `bloqueado` — un capítulo agotó los tres intentos. Requiere mano humana (§7).
+- `escrito` — todas las fichas de capítulo en `aprobado`. Habilita el editor global.
+- `editado` — existe la lista de retoques. Estado final del sistema.
+
+**Qué corre en paralelo.** Solo los tres revisores, sobre el mismo capítulo, en tres llamadas simultáneas e independientes. Todo lo demás es secuencial: el arquitecto necesita el dossier cerrado, y cada capítulo necesita el canon actualizado por el anterior. No se escriben dos capítulos a la vez, aunque parezca tentador: el capítulo N+1 depende de lo que el N haya dejado en las fichas de personaje.
+
+**Dónde entra el humano.** Dos puntos, ninguno más:
+
+1. **Capítulo bloqueado.** Al fallar el tercer intento el sistema para y espera. Tú editas el texto a mano, relajas el umbral o retocas la ficha de capítulo, y lo desbloqueas (§7).
+2. **Retoques finales.** El editor global entrega una lista y tú decides qué aplicar. Aplicarlos es manual y fuera del sistema en 0.1.0.
+
+La preparación no tiene parada: el dossier y la escaleta entran en el canon sin tu visto bueno. Si salen mal, se ve en los primeros capítulos y se corrige editando el canon a mano.
