@@ -4076,7 +4076,72 @@ Formato fijo de cada ADR: contexto, opciones consideradas, decisión, consecuenc
 
 ## §19 Trazabilidad diagrama → spec
 
-> Estado: pendiente
+> Estado: completa
+
+Los ids de nodo son los del fichero `.drawio` (atributo `id` de cada `mxCell`). Toda flecha del diagrama tiene una fila; una flecha sin sección sería un bug del spec.
+
+### §19.1 Nodos
+
+| Id drawio | Etiqueta en el diagrama | Tipo | Secciones del spec |
+|---|---|---|---|
+| `brief` | Brief del usuario — época, premisa, tono, nº capítulos | Entrada | §3.3 (esquema), §4.3 (`nuevo`), §4.7 (`novela init`), §13 (longitud por defecto) |
+| `investigacion` | Agente investigador | Agente generador (LLM) | §5.1, §18.6, §18.9 |
+| `outinv` | Output: dossier histórico — fichas de datos de época, cada dato con su fuente, verificado o inventado | Salida de agente | §3.6 (`DatoHistorico`, `estado`, `Fuente`), §5.1 (`SalidaInvestigador`) |
+| `arquitectura` | Agente arquitecto | Agente generador (LLM) | §5.2, §18.6 |
+| `outarq` | Output: escaleta y personajes — arco en 3 actos, ficha por capítulo, ficha por personaje | Salida de agente | §3.4 (`Personaje`), §3.7 (`Arco`, `Promesa`, `FichaCapitulo`), §3.5 (eventos históricos de anclaje), §5.2 |
+| `canonbox` | Canon del proyecto — base de datos del libro; única fuente de verdad; se lee antes de escribir, se actualiza solo al aprobar | Datos / memoria | §3 (modelo), §3.2 (formato), §10 (persistencia), P-02, P-03 |
+| `c1` | Fichas de personajes — voz, motivación, dónde está, qué sabe | Datos / memoria | §3.4 (`voz`, `motivacion`, `estado_actual.ubicacion`, `conocimiento`) |
+| `c2` | Línea de tiempo — sucesos de la trama cruzados con hechos reales | Datos / memoria | §3.5 (`Evento` con `tipo ∈ {trama, historico}`, EVT-1..7) |
+| `c3` | Dossier histórico — datos de época + fuente, buscables | Datos / memoria | §3.6, §3.14 (índice FTS5, `buscar_dossier`) |
+| `c4` | Resúmenes de capítulos — un párrafo por capítulo ya aprobado | Datos / memoria | §3.8 (`Resumen`, `ResumenGlobal`), RES-1 |
+| `loopbox` | Loop por capítulo — se repite una vez por cada capítulo de la escaleta | Contenedor | §7 (loop completo), §4.3 (`escribiendo`), RUN-5, §18.10 |
+| `genctx` | Generador de contexto — selecciona del canon solo lo que hace falta para este capítulo | Código del harness | §6 (política, presupuesto, recorte, trazabilidad), §18.5 |
+| `escritor` | Agente escritor — output: el capítulo redactado | Agente generador (LLM) | §5.3, §3.9 (`CapituloRedactado`), §18.7, §18.8 |
+| `rev1` | Continuidad — ¿contradice el canon? | Agente revisor (LLM) | §5.4, §7.4 (catálogo), §3.11 |
+| `rev2` | Anacronismos — ¿encaja con la época? | Agente revisor (LLM) | §5.5, §7.4, §3.11 |
+| `rev3` | Lógica y ritmo — ¿hay causa y efecto? | Agente revisor (LLM) | §5.6, §7.4, §3.11 |
+| `gate` | Gate de calidad — umbral sobre las 3 notas · máx. 3 reintentos | Código del harness | §7.5 (fórmula), §7.1 (contabilidad de intentos), §7.3 (comprobaciones deterministas), §18.4 |
+| `editor` | Editor global — pasada única al final; no entra en el loop; lee los resúmenes del canon (no el texto entero) y devuelve una lista corta de retoques: arcos que no cierran, promesas sin cumplir, ritmo desequilibrado | Agente revisor (LLM) | §5.7, §8, §3.12 (`Retoque` con `tipo ∈ {arco_sin_cerrar, promesa_incumplida, ritmo_desequilibrado, ...}`) |
+| `lg1` | Leyenda: Agente generador (LLM) | Leyenda | §2.2 (`AgenteGenerador`), §4.2 |
+| `lg2` | Leyenda: Agente revisor (LLM) | Leyenda | §2.2 (`AgenteRevisor`), §4.2 |
+| `lg3` | Leyenda: Datos / memoria | Leyenda | §3, §10 |
+| `lg4` | Leyenda: Código del harness | Leyenda | §4.2, P-01 |
+
+Elementos del canon que el diagrama engloba sin nodo propio y que el spec hace explícitos: escaleta (`canon/escaleta/`, §3.7) y capítulos aprobados (`canon/capitulos/`, §3.9); aparecen como `c5` y `c6` en el Mermaid de §4.1.
+
+### §19.2 Flechas
+
+| # | Origen → destino (ids drawio) | Etiqueta | Qué significa en el spec | Secciones |
+|---|---|---|---|---|
+| 1 | `brief` → `investigacion` | — | El brief es la entrada del investigador. | §5.1 (entradas), §4.3 (`nuevo → investigando`) |
+| 2 | `investigacion` → `arquitectura` | — | El arquitecto se ejecuta después del investigador y recibe el dossier. | §4.4 (secuencial), §5.2 (entradas), §4.3 (`investigando → arquitectando`) |
+| 3 | `investigacion` → `outinv` | — | El investigador produce el dossier. | §5.1 (salida `SalidaInvestigador`), §9 (validación) |
+| 4 | `arquitectura` → `outarq` | — | El arquitecto produce escaleta y personajes. | §5.2 (salidas fase 1 y 2), §9 |
+| 5 | `outinv` → `canonbox` | rellena el canon | El dossier validado se escribe en el canon (versión 1). | §10.4 (commit), §10.2 (v1), DAT-1..7 |
+| 6 | `outarq` → `canonbox` | — | Escaleta, personajes y eventos históricos se escriben en el canon (versión 2). | §10.4, §10.2 (v2), ESC-1..7, PER-1..7 |
+| 7 | `canonbox` → `genctx` | lee | El generador de contexto lee el canon en la versión base del run. | §6.1, §6.2, P-02 |
+| 8 | `genctx` → `escritor` | — | El paquete de contexto es la entrada del escritor. | §6.6 (`PaqueteContexto`), §5.3 (entradas y user prompt) |
+| 9 | `escritor` → `rev1` | — | El capítulo redactado (numerado) va al revisor de continuidad. | §7.2, §5.4 (entradas), §7.8 |
+| 10 | `escritor` → `rev2` | — | Ídem al revisor de anacronismos. | §7.2, §5.5, §7.8 |
+| 11 | `escritor` → `rev3` | — | Ídem al revisor de lógica y ritmo. | §7.2, §5.6, §7.8 |
+| 12 | `rev1` → `gate` | — | La revisión de continuidad (nota + incidencias) entra al gate. | §3.11, §7.5 |
+| 13 | `rev2` → `gate` | — | Ídem anacronismos. | §3.11, §7.5 |
+| 14 | `rev3` → `gate` | — | Ídem lógica y ritmo. | §3.11, §7.5 |
+| 15 | `gate` → `escritor` | si falla, reescribe (máx. 3) | Veredicto `reintentar`: el escritor recibe su texto y las incidencias; máximo 3 reintentos; al agotarlos, escalada. | §7.5, §7.6, §7.7, §7.1 (contabilidad), P-07 |
+| 16 | `gate` → `canonbox` | aprobado: escribe en el canon | Veredicto `aprobado`: commit atómico de staging al canon, snapshot, versión +1. | §7.9, §10.4, §10.3, P-03 |
+| 17 | `gate` → `editor` | cuando TODOS los capítulos están aprobados | Con `ultimo_capitulo_aprobado = num_capitulos` el proyecto pasa a `editando` y se lanza el editor global una vez. | §8.1, §4.3 (`escribiendo → editando`) |
+
+Flechas implícitas en el texto del diagrama y cubiertas: "lee los resúmenes del canon" del editor global → §8.2 y §5.7 (entradas); los tres revisores "en paralelo" → §4.4 y §18.3; "escribe en el canon" abarca los cuatro almacenes `c1`–`c4` → tabla de §7.9.
+
+### §19.3 Comprobación inversa: nodos del spec sin nodo en el diagrama
+
+| Elemento del spec | Por qué no está en el diagrama | Dónde se justifica |
+|---|---|---|
+| Comprobaciones deterministas (§7.3) | Parte del "Gate de calidad" en el diagrama; el spec las separa porque se ejecutan antes de los revisores. | §4.1, §7.3 |
+| Staging (§10.4) | Mecanismo interno de "escribe en el canon solo al aprobar". | §4.1, §10.4 |
+| Escalada (§7.7) | Consecuencia de "máx. 3 reintentos". | §4.1, §7.7 |
+| Proveedores LLM (§4.6), registro (§12), configuración (§13), CLI (§4.7) | Infraestructura del harness, no flujo. | §4.2 |
+| Opción B del editor (§8.4) | Extensión no incluida en el diagrama; propuesta como fase 3. | §8.4, D-12 |
 
 ## §20 Historial de cambios del spec
 
