@@ -3290,7 +3290,214 @@ No hay exportación a sistemas externos de telemetría en esta versión; los fic
 
 ## §13 Configuración
 
-> Estado: pendiente
+> Estado: completa
+
+### §13.1 Capas de configuración
+
+La configuración efectiva se compone en este orden; cada capa sobrescribe a la anterior clave por clave.
+
+| Capa | Fichero | Contenido típico |
+|---|---|---|
+| 1. Valores por defecto | `harness/config/defaults.yaml` (en el paquete) | Todo lo de §13.3. |
+| 2. Usuario | `~/.novela/config.yaml` | Proveedores, modelos por nivel, precios, límites diarios. |
+| 3. Proyecto | `proyectos/<id>/config.yaml` | Umbrales, K, longitud, overrides por agente. |
+| 4. Línea de comandos | Flags `--set clave=valor`, `--reintentos-extra`, `--hasta-capitulo` | Puntuales. |
+| Secretos | Variables de entorno (`NOVELA_ANTHROPIC_API_KEY`, `NOVELA_OPENAI_API_KEY`, ...) o `~/.novela/.env` | Nunca en ficheros de configuración ni en el repo. El harness aborta si detecta una clave con formato de secreto dentro de un `config.yaml`. |
+
+El SHA-256 de la configuración efectiva (sin secretos) es `config_hash` (§3.10, §11.5). Cambiarla entre ejecuciones se registra; cambiarla en mitad de un run afecta solo a las llamadas no guardadas (§11.5).
+
+### §13.2 Configurable frente a fijo por diseño
+
+| Configurable | Fijo por diseño (cambiarlo exige ADR nueva, §18) |
+|---|---|
+| Proveedor y modelo por nivel y por agente; temperatura; `max_tokens_salida`; timeouts | Que haya exactamente tres revisores y cuáles son |
+| Umbrales del gate por revisor; `max_mayores`; `max_reintentos`; `modo_tolerante` | Que el gate sea determinista y por revisor con cota de mayores (ADR-0004) |
+| K, presupuestos de contexto, topes por bloque | El orden de prioridad de recorte de §6.4 |
+| Longitud objetivo, tolerancias de CAP-2 | La escala de notas 1–10 y las cuatro severidades |
+| Grupos de categorías del investigador, `datos_por_grupo`, `web` on/off | Que el canon solo se escribe al aprobar (P-03) |
+| `capitulos_por_lote` del arquitecto | El formato de ficheros del canon (ADR-0001) |
+| Límites de gasto y porcentaje de aviso | La secuencialidad estricta de capítulos (RUN-5) |
+| `editor.aplicar_retoques` (si opción B) | Que los agentes no inventan ids |
+| Rutas base (`proyectos_dir`) | La estructura de directorios dentro de un proyecto |
+| Tabla de precios | El pipeline de validación de §9.2 |
+
+### §13.3 Fichero de configuración comentado
+
+```yaml
+# ~/.novela/config.yaml o proyectos/<id>/config.yaml — todas las claves son opcionales; lo omitido toma el valor por defecto mostrado.
+
+rutas:
+  proyectos_dir: ./proyectos          # dónde viven los proyectos
+
+proveedores:                          # adaptadores disponibles (§4.6); las claves de API van en variables de entorno
+  anthropic:
+    tipo: anthropic
+    api_key_env: NOVELA_ANTHROPIC_API_KEY
+    base_url: null
+  openai:
+    tipo: openai
+    api_key_env: NOVELA_OPENAI_API_KEY
+    base_url: null
+  local:
+    tipo: compatible_openai
+    api_key_env: null
+    base_url: http://localhost:11434/v1
+  mock:
+    tipo: mock
+    fixtures_dir: tests/fixtures/mock   # §15.2
+
+niveles:                              # nivel -> proveedor + modelo (§5.0)
+  alto:  { proveedor: anthropic, modelo: claude-opus-5 }
+  medio: { proveedor: anthropic, modelo: claude-sonnet-5 }
+  bajo:  { proveedor: anthropic, modelo: claude-haiku-4-5-20251001 }
+
+precios_usd_por_millon_tokens:        # S-05; el usuario los mantiene al día; entrada / salida
+  claude-opus-5:              { entrada: 0.0, salida: 0.0 }   # RELLENAR con la tarifa vigente del proveedor
+  claude-sonnet-5:            { entrada: 0.0, salida: 0.0 }
+  claude-haiku-4-5-20251001:  { entrada: 0.0, salida: 0.0 }
+
+agentes:
+  investigador:
+    nivel: alto                       # o proveedor+modelo explícitos: { proveedor: ..., modelo: ... }
+    temperatura: 0.3
+    max_tokens_salida: 12000
+    timeout_s: 300
+    web: false                        # S-08
+    max_busquedas_por_llamada: 12
+    max_chars_por_url: 8000
+    datos_por_grupo: 25
+    datos_min_por_grupo: 5
+    datos_max_por_grupo: 60
+    grupos_categorias:                # §5.1
+      G1: [politica, evento_historico, militar, leyes_costumbres]
+      G2: [vestimenta, comida, vida_cotidiana]
+      G3: [lenguaje, religion]
+      G4: [economia, tecnologia, geografia]
+      G5: [personaje_historico]
+    fallback: null
+  arquitecto:
+    nivel: alto
+    temperatura: 0.7
+    max_tokens_salida_fase1: 16000
+    max_tokens_salida_fase2: 12000
+    timeout_s: 300
+    capitulos_por_lote: 6
+    fallback: null
+  escritor:
+    nivel: alto
+    temperatura_intento1: 0.9
+    temperatura_reintento: 0.6
+    max_tokens_salida: auto           # ceil(longitud × 1.3 × 2.2) + 4000 (§5.3); o un entero
+    timeout_s: 600
+    fallback: null                    # nunca se usa en mitad de un run (§11.3)
+  continuidad:
+    nivel: medio
+    temperatura: 0.1
+    max_tokens_salida: 6000
+    timeout_s: 240
+    fallback: null
+  anacronismos:
+    nivel: medio
+    temperatura: 0.1
+    max_tokens_salida: 6000
+    timeout_s: 240
+    fallback: null
+  logica_ritmo:
+    nivel: medio
+    temperatura: 0.2
+    max_tokens_salida: 6000
+    timeout_s: 240
+    fallback: null
+  editor_global:
+    nivel: alto
+    temperatura: 0.3
+    max_tokens_salida: 8000
+    timeout_s: 300
+    max_retoques: 15
+    aplicar_retoques: ninguno         # ninguno | alta | todos (solo si la opción B de §8 está implementada)
+    max_pasadas: 2
+
+capitulo:
+  longitud_objetivo_palabras: 3000    # S-01; el brief puede sobrescribirlo
+  tolerancia_mayor: [0.7, 1.3]        # CAP-2
+  tolerancia_bloqueante: [0.5, 1.6]
+  max_escenas: 12
+  max_personajes_nuevos: 4
+  max_eventos_nuevos: 8
+
+gate:                                 # §7.5
+  umbral:
+    continuidad: 7
+    anacronismos: 7
+    logica_ritmo: 6
+  max_mayores: 4
+  max_reintentos: 3
+  modo_tolerante: false
+  saltar_revisores_si_bloqueante_determinista: false
+
+contexto:                             # §6
+  k_resumenes: 3
+  presupuesto_tokens:
+    escritor: 60000
+    continuidad: 45000
+    anacronismos: 40000
+    logica_ritmo: 30000
+  presupuesto_reintento: 20000
+  margen_estimacion: 0.9
+  conocimiento_max: 20
+  mencionados_max: 12
+  eventos_historicos_max: 15
+  ventana_historica_dias: 60
+  eventos_trama_max: 25
+  dossier_busqueda_max: 20
+  dossier_max_revisor: 30
+  incidencias_menores_max: 10
+
+concurrencia:
+  investigador: 4                     # grupos en paralelo
+  arquitecto_lotes: 3
+  revisores: 3                        # fijo en la práctica: son tres
+
+reintentos_tecnicos:                  # §11.3
+  max: 4
+  backoff_base_s: 2
+  jitter: 0.25
+  timeout_run_capitulo_min: 90
+  max_relanzamientos_tecnicos: 2
+  max_llamadas_por_intento: 30
+
+validacion:                           # §9
+  max_reparaciones: 2
+  max_respuesta_bytes: 2000000
+
+presupuesto:                          # §11.4
+  por_run_usd: 5
+  por_capitulo_usd: 3
+  por_libro_usd: 60
+  por_dia_usd: 40
+  aviso_pct: 80
+
+tipografia:                           # §9.5 S-3, por idioma
+  es: { apertura: "«", cierre: "»", raya: "—" }
+  en: { apertura: "“", cierre: "”", raya: "—" }
+
+registro:                             # §12
+  nivel_consola: normal               # quiet | normal | verbose
+  guardar_prompts: true               # runs/<run_id>/llamadas/<hash>.json
+```
+
+### §13.4 Validación de la configuración
+
+Al arrancar, el harness valida la configuración efectiva contra `schemas/config.schema.json` y comprueba además:
+
+| Comprobación | Error |
+|---|---|
+| Todo `nivel` o `proveedor` referenciado existe. | `config_invalida` |
+| Todo modelo usado tiene fila en `precios_usd_por_millon_tokens` con valores > 0, salvo el proveedor `mock`. | `config_invalida` con aviso explícito: "sin precio no se puede aplicar el presupuesto" |
+| Las variables de entorno `api_key_env` de los proveedores usados existen. | `proveedor_4xx` anticipado |
+| `umbral.*` ∈ [1, 10]; `max_reintentos` ∈ [0, 10]; presupuestos > 0; `k_resumenes` ≥ 1. | `config_invalida` |
+| `presupuesto_tokens.escritor` ≥ tamaño estimado de los bloques P0 para el brief actual. | Aviso; el fallo real sería `contexto_p0_excede` (§11.2). |
+| Ningún valor de configuración tiene formato de secreto (prefijos habituales de claves de API). | `config_invalida` |
 
 ## §14 Estructura del repo
 
