@@ -95,7 +95,9 @@ El brief no tiene tabla propia: se guarda como fila única en `proyecto` con sus
 | titulo | texto | sí | |
 | acto | entero | sí | 1, 2 o 3 |
 | sinopsis | texto | sí | Qué pasa, en tres o cuatro frases |
+| fecha | texto | sí | ISO parcial, cuándo transcurre. Con la del capítulo anterior fija la ventana de cronología de §7 |
 | personajes | lista | sí | Ids de quien sale |
+| etiquetas | lista | sí | Términos de época con los que el generador busca en el dossier (§7) |
 | objetivo | texto | sí | Qué tiene que haber cambiado al acabar el capítulo |
 | palabras_objetivo | entero | sí | Heredado del brief salvo que la escaleta lo ajuste |
 | estado | enum | sí | `pendiente` \| `en_curso` \| `aprobado` \| `bloqueado` |
@@ -111,7 +113,7 @@ El brief no tiene tabla propia: se guarda como fila única en `proyecto` con sus
 | revisiones | lista | no | Tres bloques, uno por dimensión, con su nota y sus incidencias. Mismo formato venga de una llamada o de tres |
 | faltantes | lista | no | Datos de época que el escritor echó en falta al redactar (§5) |
 | estado | enum | sí | `propuesto` \| `aprobado` \| `descartado` |
-| creado | fecha | sí | |
+| creado | texto | sí | Marca de tiempo ISO 8601 |
 
 **Resumen de capítulo**
 
