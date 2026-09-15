@@ -2196,7 +2196,187 @@ Más las llamadas de reparación por JSON inválido (§9.3), acotadas a 2 por ll
 
 ## §6 Generador de contexto
 
-> Estado: pendiente
+> Estado: completa
+
+### §6.1 Principio y firma
+
+El generador de contexto es código del harness (P-01). Lee el canon en la versión base del run y construye, para el capítulo N y para cada destinatario (escritor o uno de los tres revisores), un `PaqueteContexto` que cabe en un presupuesto de tokens. No llama a ningún LLM, no resume nada, no parafrasea: **selecciona y recorta**. Todo lo que un agente sabe del libro pasa por aquí (P-02), y cada decisión de inclusión queda registrada con su motivo (§6.6). Ver ADR-0005 (§18.5).
+
+```python
+def generar_contexto(
+    canon: RepositorioCanon,          # abierto en canon_version_base del run
+    capitulo: FichaCapitulo,
+    destinatario: Literal["escritor", "continuidad", "anacronismos", "logica_ritmo"],
+    config: ConfigContexto,           # K, presupuestos, límites por bloque (§13)
+    proveedor: ProveedorLLM,          # para contar_tokens (§6.5)
+    modelo: str,
+    reintento: DatosReintento | None = None,   # texto anterior + incidencias (§7.6); solo escritor
+) -> PaqueteContexto: ...
+```
+
+Es una función pura respecto al canon: misma versión del canon, misma ficha, misma configuración y mismo destinatario producen el mismo paquete. Motivo: reproducibilidad de los intentos (§11.3) y del comando `novela context` (§4.7).
+
+### §6.2 Política de selección por bloques
+
+Cada paquete se compone de bloques numerados. La tabla indica qué entra, con qué regla, para qué destinatarios (E = escritor, C = continuidad, A = anacronismos, L = lógica y ritmo), y la prioridad de recorte (P0 nunca se recorta; P5 se recorta primero). El orden de los bloques en el prompt es el de la tabla: lo estable y general primero, lo específico del capítulo después, el texto a revisar al final.
+
+| Bloque | Contenido | Regla de selección | Dest. | Prioridad |
+|---|---|---|---|---|
+| B0 Brief | `titulo`, `epoca` (descripción, fechas en `texto`, lugares), `premisa`, `tono`, `idioma`, `restricciones`, `longitud_objetivo_palabras`. | Siempre completo. ≈ 300 tokens. | E C A L | P0 |
+| B1 Ficha del capítulo | `FichaCapitulo` completa (§3.7.3), sin `origen`. | Siempre completa. | E C L (A: solo `escenario`, `beats[].tipo`, `datos_dossier_sugeridos`) | P0 |
+| B2 Arco | Acto actual (`funcion`, `punto_giro`, rango), `tema`, número de capítulo dentro del acto, y las promesas con `estado ∈ {planteada}` o asignadas a este capítulo (`promesas_planteadas` ∪ `promesas_pagadas` de la ficha), cada una con `id`, `descripcion`, `estado`, `capitulo_planteamiento`, `capitulo_pago_previsto`. | Siempre. Las promesas `cumplidas` y `canceladas` no entran salvo que se pagaran en los últimos K capítulos (se listan en una línea). | E L (C: solo promesas) | P0 |
+| B3a Personajes presentes | `Personaje` completo (§3.4) de cada id en `ficha.personajes_presentes`, sin `origen`, `version`, `capitulos_aparece`. `conocimiento` completo. | Siempre todos. Si no cabe, se recorta `conocimiento` a los últimos `contexto.conocimiento_max` (20) elementos por personaje, más antiguos fuera. | E C (L: solo `nombre`, `rol`, `motivacion`, `arco`, `voz`; A: solo los `es_historico` con su dato) | P1 |
+| B3b Personajes mencionados | Personajes que no están presentes pero aparecen en `beats[].descripcion`, en `relaciones` de los presentes o en los `hechos_clave` de los K resúmenes: `id`, `nombre`, `alias`, `rol`, `estado_actual`, una línea de `motivacion`. | Hasta `contexto.mencionados_max` (12), ordenados por número de menciones. | E C | P4 |
+| B4 Resúmenes recientes | `Resumen` completo (§3.8.1) de los capítulos N-K..N-1. | K = `contexto.k_resumenes` (3). Si N-1 < K, todos los existentes. Recorte: K baja de uno en uno hasta 1. | E C L | P1 |
+| B5 Resumen global | `ResumenGlobal.bloques` (§3.8.2) de los capítulos 1..N-K-1: `capitulo_id · titulo · hechos_clave`. | Siempre que exista. Recorte: se eliminan bloques empezando por el más antiguo, **salvo** los capítulos que cierran acto (`arco.actos[].capitulo_fin`) y el capítulo 1, que se conservan siempre. | E C | P3 |
+| B6a Eventos históricos de anclaje | `Evento` con `tipo = historico` cuyo id está en `ficha.eventos_historicos_ancla`, más los históricos con fecha dentro de ±`contexto.ventana_historica_dias` (60) del `escenario.fecha` del capítulo. Formato: `id · fecha.texto · titulo · descripcion · lugar`. | Anclas siempre; los de ventana hasta `contexto.eventos_historicos_max` (15). | E C A | P2 (anclas) / P4 (ventana) |
+| B6b Eventos de trama | `Evento` con `tipo = trama` de los capítulos N-K..N-1 (todos) y, de capítulos anteriores, los que involucran (`personajes` ∪ `conocido_por`) a algún personaje presente, más recientes primero. Formato: `id · fecha.texto · capitulo_id · titulo · descripcion · personajes · conocido_por`. | Los de N-K..N-1 siempre; los antiguos hasta `contexto.eventos_trama_max` (25). Recorte: antiguos primero. | E C | P2 (recientes) / P4 (antiguos) |
+| B7a Dossier sugerido y de alta relevancia | `DatoHistorico` de `ficha.datos_dossier_sugeridos` y todos los de `relevancia = alta`. Formato: `id · categoria · estado · vigencia · titulo · contenido`. | Siempre. | E A | P2 |
+| B7b Dossier por búsqueda | `buscar_dossier(consulta, fecha=escenario.fecha, lugar=escenario.lugar)` (§3.14) con consulta = etiquetas derivadas de `escenario.lugar`, `beats[].descripcion` (sustantivos tras eliminar palabras vacías) y categorías según `beats[].tipo` (`dialogo` → `lenguaje`; `accion` → `militar`, `tecnologia`; siempre `vida_cotidiana`). | Hasta `contexto.dossier_busqueda_max` (20) para E, `contexto.dossier_max_revisor` (30) para A; se excluyen los ya incluidos en B7a. Recorte: por puntuación ascendente. | E A | P5 |
+| B7c Dossier usado en el texto | Datos de `metadatos.datos_historicos_usados` del capítulo redactado. | Solo revisores; siempre. | A | P1 |
+| B8 Material de reintento | `CapituloRedactado` del intento anterior con párrafos numerados (§7.2) e incidencias serializadas (§7.6). | Solo escritor en reintento. Bloqueantes y mayores siempre; menores hasta `contexto.incidencias_menores_max` (10); sugerencias solo si sobra presupuesto. | E | P0 (texto, bloqueantes, mayores) / P5 (menores, sugerencias) |
+| B9 Texto a revisar | Capítulo redactado numerado más los metadatos que corresponden a cada revisor (§5.4–§5.6) y las incidencias deterministas (§7.3). | Solo revisores; siempre completo. | C A L | P0 |
+
+Reglas transversales:
+
+- **Dedup**: un registro entra una sola vez aunque lo pidan varios bloques (un personaje presente no se repite en mencionados; un dato de B7a no se repite en B7b).
+- **Sin campos `calc` de trazabilidad**: `origen`, `version`, `uso`, `run_id` nunca se serializan. Ahorran tokens y no aportan al agente.
+- **Formato de serialización**: cada bloque lleva una cabecera `### <nombre del bloque>` y sus registros en formato compacto de una entidad por párrafo, con `clave: valor` por línea, no JSON. Motivo: el JSON con comillas y llaves cuesta un 30–40 % más de tokens que el mismo contenido en líneas `clave: valor`, y los agentes solo necesitan leerlo. Las funciones `serializar_compacto(entidad, campos)` viven en `harness/contexto/serializacion.py` y sus campos son exactamente los de esta tabla.
+- **Etiquetas de delimitación**: el paquete completo va dentro de `<contexto>` (§5.0); el texto a revisar dentro de `<texto>`.
+
+### §6.3 Resúmenes: la ventana K y el resumen global
+
+La memoria narrativa del sistema se estructura en tres capas para que no crezca con el libro:
+
+| Capa | Contenido | Tamaño | Crece con N |
+|---|---|---|---|
+| Inmediata | B4: K resúmenes completos (texto + hechos clave + estado final) | ≈ 350 tokens × K | No |
+| Comprimida | B5: hechos clave de los capítulos anteriores a la ventana | ≤ 5 hechos × 25 palabras × (N-K-1) ≈ 170 tokens por capítulo | Sí, linealmente pero con pendiente pequeña: 40 capítulos ≈ 6.500 tokens en el peor caso |
+| Estructural | B2 (promesas abiertas) y B3a (`conocimiento`, `estado_actual` de personajes) | Acotado por `conocimiento_max` y número de personajes | No (el conocimiento se recorta por antigüedad) |
+
+K = 3 por defecto. Justificación: el capítulo N necesita detalle de lo inmediatamente anterior para enlazar escenas y tono; a más distancia bastan los hechos clave, porque lo que no puede contradecirse ya está en el canon estructurado (personajes, eventos, promesas). K es configurable (§13) y su efecto se mide en §15.6.
+
+Cuando B5 no cabe, se recorta por antigüedad conservando los cierres de acto y el capítulo 1 (§6.2). Si aun así excede, el harness emite la advertencia `contexto_resumen_global_recortado` con los capítulos omitidos; no es un error, porque los hechos estructurales siguen en B2, B3 y B6.
+
+### §6.4 Presupuesto de tokens y orden de recorte
+
+Presupuestos por destinatario (configurables, §13). Se refieren al contenido del paquete; el system prompt, el schema y el user prompt fijo se cuentan aparte y suman ≈ 3.000–4.000 tokens.
+
+| Destinatario | `presupuesto_tokens` por defecto | Motivo |
+|---|---|---|
+| Escritor, intento 1 | 60.000 | Cabe en cualquier modelo de ≥ 128k (S-04) dejando margen para ≈ 13k de salida y el prompt fijo. |
+| Escritor, reintento | 60.000 + `presupuesto_reintento` 20.000 para B8 | El texto anterior (≈ 8–10k para 3.000 palabras) más incidencias no debe expulsar contexto del canon. |
+| Revisor de continuidad | 45.000 | Sin dossier; con texto (≈ 8–10k). |
+| Revisor de anacronismos | 40.000 | Dossier amplio, sin resúmenes ni timeline de trama. |
+| Revisor de lógica y ritmo | 30.000 | Ficha, arco, K resúmenes, texto. |
+
+Algoritmo de ensamblado y recorte:
+
+```
+construir_paquete(bloques_candidatos, presupuesto):
+    paquete = []
+    total = 0
+    # 1. Incluir todo lo P0; si solo P0 excede el presupuesto -> error contexto_p0_excede (§11.2), no se recorta
+    # 2. Añadir bloques por prioridad ascendente P1..P5 mientras quepan completos
+    # 3. Si un bloque no cabe completo, aplicar su regla de recorte interna (tabla §6.2) hasta que quepa
+    #    o hasta su mínimo; si ni el mínimo cabe, se omite entero y se anota
+    # 4. Registrar por cada registro incluido u omitido: bloque, id, tokens, motivo
+    return paquete
+```
+
+Orden de recorte cuando se excede el presupuesto (se aplica de arriba abajo hasta que cabe):
+
+| Paso | Acción | Mínimo |
+|---|---|---|
+| 1 | B8 sugerencias → fuera; B8 menores → hasta 0. | Bloqueantes y mayores completas. |
+| 2 | B7b dossier por búsqueda: eliminar por puntuación ascendente. | 0 |
+| 3 | B6b eventos de trama antiguos y B6a de ventana: eliminar los más antiguos / lejanos a la fecha. | Los de N-K..N-1 y las anclas. |
+| 4 | B3b mencionados: eliminar por menos menciones. | 0 |
+| 5 | B5 resumen global: eliminar bloques antiguos salvo cierres de acto y capítulo 1. | Cierres de acto + capítulo 1. |
+| 6 | B7a relevancia alta: eliminar los no sugeridos por la ficha, por `id` descendente. | Los sugeridos por la ficha. |
+| 7 | B3a `conocimiento`: recortar a `conocimiento_max`, luego a 10, luego a 5 por personaje. | 5 por personaje. |
+| 8 | B4: K → K-1 → ... → 1. | 1 resumen. |
+| 9 | Si sigue sin caber: error `contexto_excede_presupuesto` (§11.2). El run se marca `fallido` con el detalle de tamaños; el usuario ajusta presupuesto, K o modelo. | — |
+
+Justificación del orden: se sacrifica primero lo probabilístico (búsqueda, menciones indirectas), luego lo antiguo, y solo al final la memoria inmediata; lo que garantiza la continuidad estructural (ficha, arco, personajes presentes, texto a revisar) nunca se toca.
+
+### §6.5 Conteo de tokens
+
+`ProveedorLLM.contar_tokens(texto, modelo)` (§4.6) es la única fuente de recuento. Cuando el proveedor ofrece un contador exacto se usa; cuando no, el adaptador declara una estimación (`caracteres / 3,5` para español, redondeado hacia arriba) y el generador aplica un margen de seguridad del 10 % sobre el presupuesto (`presupuesto_efectivo = presupuesto × 0,9`). El paquete registra `tokens_estimados` y `metodo_conteo ∈ {exacto, estimado}`; tras la llamada, `LlamadaLLM.tokens_entrada` reales permiten calibrar la estimación (métrica `error_estimacion_tokens` en §12.4).
+
+### §6.6 Trazabilidad del paquete
+
+```yaml
+PaqueteContexto:
+  capitulo_id: string
+  destinatario: enum
+  canon_version: int
+  presupuesto_tokens: int
+  tokens_estimados: int
+  metodo_conteo: enum [exacto, estimado]
+  bloques: lista<BloqueContexto>
+    - nombre: string            # B0..B9
+      prioridad: enum [P0..P5]
+      tokens: int
+      registros: lista<RegistroContexto>
+        - tipo: enum [brief, ficha, arco, promesa, personaje, resumen, resumen_global_bloque, evento, dato, incidencia, texto]
+          id: string | null
+          tokens: int
+          incluido: bool
+          recortado: bool         # incluido parcialmente (p. ej. conocimiento truncado)
+          motivo: string          # "personaje presente en la ficha", "bm25 3.2 · coincide 'moneda' · relevancia alta", "eliminado en paso 3 de recorte"
+  texto_serializado: string     # lo que de verdad va al prompt
+  hash: string                  # SHA-256 de texto_serializado; se guarda en el run para idempotencia (§11.3)
+```
+
+El paquete se guarda en `runs/<run_id>/intento_<n>/contexto_<destinatario>.json` (sin `texto_serializado`, que se reconstruye; con `hash`). `novela context --capitulo n` (§4.7) genera el paquete del escritor sin llamar a ningún LLM y lo imprime con la tabla de registros incluidos y omitidos. Motivo: cuando un revisor señala una contradicción que el escritor "no podía saber", la primera pregunta es qué había en el contexto; esta traza la responde sin adivinar.
+
+### §6.7 Cómo se evita el crecimiento lineal con el libro
+
+| Fuente de crecimiento potencial | Mecanismo de acotación | Tamaño en el capítulo 40 (estimado) |
+|---|---|---|
+| Resúmenes de todos los capítulos anteriores | Ventana K completa + hechos clave comprimidos + recorte por antigüedad | ≤ 1.000 (K=3) + ≤ 6.500 tokens |
+| Línea de tiempo completa | Solo recientes, anclas y eventos de los personajes presentes, con tope | ≤ 3.500 tokens |
+| Todos los personajes | Solo presentes completos y mencionados compactos; conocimiento acotado | ≤ 8.000 tokens (10 presentes) |
+| Todo el dossier | Sugeridos + relevancia alta + búsqueda con tope | ≤ 9.000 tokens |
+| Texto de capítulos anteriores | Nunca entra; solo resúmenes | 0 |
+| Total escritor | | ≈ 30.000 tokens, la mitad del presupuesto |
+
+El único componente que crece con N es B5, con pendiente acotada (≈ 170 tokens por capítulo). Para libros de más de 40 capítulos (S-02) el recorte de B5 empieza a actuar; §17 recoge como decisión abierta si en ese caso conviene un resumen global generado por LLM cada M capítulos, lo que añadiría un agente no presente en el diagrama.
+
+### §6.8 Pseudocódigo del generador
+
+```python
+def generar_contexto(canon, capitulo, destinatario, config, proveedor, modelo, reintento=None):
+    N = capitulo.numero
+    K = config.k_resumenes
+    presupuesto = config.presupuesto[destinatario]
+    if reintento: presupuesto += config.presupuesto_reintento
+    if proveedor.metodo_conteo(modelo) == "estimado": presupuesto = int(presupuesto * 0.9)
+
+    candidatos = []
+    candidatos += bloque_B0(canon.brief)                                        # P0
+    candidatos += bloque_B1(capitulo, destinatario)                             # P0
+    candidatos += bloque_B2(canon.arco, capitulo, K, destinatario)              # P0
+    presentes = canon.personajes(capitulo.personajes_presentes)
+    candidatos += bloque_B3a(presentes, destinatario, config.conocimiento_max)  # P1
+    candidatos += bloque_B3b(canon, capitulo, presentes, canon.resumenes(N-K, N-1), config.mencionados_max)  # P4
+    candidatos += bloque_B4(canon.resumenes(N-K, N-1))                          # P1
+    candidatos += bloque_B5(canon.resumen_global, hasta=N-K-1, conservar=canon.arco.cierres_de_acto() | {1})  # P3
+    candidatos += bloque_B6a(canon.timeline, capitulo, config)                  # P2/P4
+    candidatos += bloque_B6b(canon.timeline, N, K, presentes, config)           # P2/P4
+    if destinatario in ("escritor", "anacronismos"):
+        candidatos += bloque_B7a(canon.dossier, capitulo)                       # P2
+        candidatos += bloque_B7b(canon.indice, consulta_desde(capitulo), capitulo.escenario, config, excluir=ids(B7a))  # P5
+    if destinatario != "escritor":
+        candidatos += bloque_B7c_y_B9(reintento_o_texto_actual, destinatario)   # P1/P0
+    if reintento and destinatario == "escritor":
+        candidatos += bloque_B8(reintento.capitulo_anterior, reintento.incidencias, config)  # P0/P5
+
+    paquete = construir_paquete(candidatos, presupuesto, contar=lambda t: proveedor.contar_tokens(t, modelo))
+    paquete.hash = sha256(paquete.texto_serializado)
+    return paquete
+```
 
 ## §7 Loop de capítulo y gate de calidad
 
