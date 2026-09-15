@@ -1,0 +1,34 @@
+{
+  "ejecucion": {
+    "modo": "simulado"
+  },
+  "gate": {
+    "nota_minima": 3,
+    "media_minima": 3.7,
+    "max_intentos": 3
+  },
+  "contexto": {
+    "tope_contexto": 40000,
+    "ventana_resumenes": 3,
+    "palabras_enganche": 400
+  },
+  "validador": {
+    "modo": "unico"
+  },
+  "margenes": {
+    "capitulos_min": 0.8,
+    "capitulos_max": 1.2,
+    "palabras_aviso": 0.15,
+    "palabras_bloqueo": 0.4,
+    "parrafos_min": 5
+  },
+  "modelo_por_rol": {
+    "investigador": "claude-opus-5",
+    "arquitecto": "claude-opus-5",
+    "escritor": "claude-opus-5",
+    "validador": "claude-sonnet-5",
+    "cronista": "claude-sonnet-5",
+    "editor_global": "claude-opus-5"
+  },
+  "busqueda_web": true
+}
