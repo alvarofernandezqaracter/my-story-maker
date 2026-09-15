@@ -38,7 +38,7 @@ Sistema que escribe una novela histórica capítulo a capítulo a partir de un b
 | Nota | Puntuación de 1 a 5 de una dimensión. Siempre hay tres notas; nota global no existe. |
 | Gate | Código que decide, con las tres notas y sus incidencias, si el capítulo se aprueba o se reescribe. |
 | Cronista | Agente que convierte el capítulo aprobado en resumen y en cambios de ficha. Única vía de escritura en el canon. |
-| Intento | Cada pasada del escritor sobre el mismo capítulo. Máximo tres. |
+| Intento | Cada pasada del escritor sobre el mismo capítulo. El tope lo fija `gate.max_intentos`, tres por defecto (§12). |
 | Editor global | Agente de pasada única al final, fuera del loop. Lee resúmenes, no texto. |
 | Harness | Todo el código determinista que orquesta el proceso. No genera prosa. |
 
