@@ -3794,7 +3794,89 @@ Los resultados se guardan en `tests/evaluacion/resultados/<fecha>_<descripcion>.
 
 ## §16 Roadmap por fases
 
-> Estado: pendiente
+> Estado: completa
+
+Cada fase termina con un criterio de "hecho" verificable y un tag de git en el repo de implementación (`impl-fase-1`, ...). Las fases no se solapan: la fase 2 no arranca hasta cumplir el criterio de la 1.
+
+### §16.1 Fase 1 — Mínimo ejecutable de extremo a extremo
+
+**Entra:**
+
+| Área | Alcance en fase 1 |
+|---|---|
+| Dominio y canon | Todas las entidades de §3 con schemas e invariantes; `RepositorioCanon` con staging, commit atómico, diario, snapshots y `validate`. Índice del dossier con FTS5. |
+| Proveedores | `ProveedorLLM`, `ProveedorMock` y **un** adaptador real (el que el usuario tenga clave; por defecto Anthropic). Salida estructurada nativa si el proveedor la ofrece; extracción de JSON si no. |
+| Agentes | Investigador sin web; arquitecto en dos fases; escritor; **un solo revisor**: continuidad. Editor global no. |
+| Loop y gate | Loop completo de §7 con un revisor (el gate opera sobre las revisiones disponibles y las deterministas D-01 a D-16). Reintentos, escalada y paquete de escalada. |
+| Contexto | Generador con todos los bloques y el orden de recorte. `novela context`. |
+| Errores | Taxonomía completa, reintentos técnicos, presupuesto, `estado.json`, reanudación, lock, parada limpia. |
+| Observabilidad | `llamadas.jsonl`, `eventos.jsonl`, `novela stats` con las métricas de coste y reintentos. |
+| CLI | `init`, `run`, `resume`, `status`, `stop`, `accept`, `canon validate/commit/diff/rollback`, `context`, `stats`, `export`. |
+| Tests | Unitarios e integración de §15.3–§15.5 (los que aplican con un revisor). |
+
+**Criterio de hecho:** con `ProveedorMock` y el escenario `feliz`, `novela run` lleva un proyecto de 4 capítulos de `nuevo` a `escribiendo` con los 4 aprobados, snapshots v000–v006 y `stats` correcto, en < 2 minutos y sin tokens; T-G-02, T-C-01..13 y T-R-01..12 pasan; con el proveedor real, un brief de 3 capítulos produce 3 capítulos aprobados o escalados de forma explicable, con coste registrado.
+
+**Riesgo principal:** que el escritor real no devuelva JSON válido con prosa larga de forma fiable (`tasa_reparacion` > 15 %). Mitigación: salida estructurada nativa; si no basta, ADR-0007 tiene la alternativa (§9.6, §17).
+
+### §16.2 Fase 2 — Los tres revisores, editor global, evaluación
+
+**Entra:**
+
+| Área | Alcance |
+|---|---|
+| Agentes | Revisores de anacronismos y de lógica y ritmo; los tres en paralelo. Editor global con informe (opción A de §8). Investigador con `web: true` opcional, con `buscar_web` y `leer_url`. |
+| Gate | Fórmula completa de §7.5 con umbrales por revisor y `max_mayores`. `ajustar_por_revisores` para `beat_omitido`. Detección de incidencias persistentes y disputadas. |
+| Proveedores | Segundo adaptador real (OpenAI o compatible) y `fallback` por agente. Contador de tokens exacto donde exista. |
+| Evaluación | Set de §15.6 completo, con los dos corpus. Calibración de umbrales, K y nivel del revisor de anacronismos; las decisiones de §17 que dependen de datos se cierran aquí. |
+| Observabilidad | Todas las métricas de §12.4; `stats --json`. |
+| Canon | `novela canon diff` a nivel de prosa. |
+
+**Criterio de hecho:** un libro completo de ≥ 12 capítulos generado con proveedor real de principio (`nuevo`) a `finalizado` sin intervención salvo escaladas; `tasa_aprobacion_primera` ≥ 50 % y `coste_por_capitulo` ≤ límite en ese libro; recall de contradicciones plantadas 3/3 y de anacronismos ≥ 4/5 en §15.6; los tres revisores y el editor con sus tests de §15.3 pasando en mock.
+
+**Riesgo principal:** falsos bloqueantes de los revisores que disparen reintentos inútiles y escaladas (coste y frustración). Mitigación: REV-4/REV-5 y las restricciones de severidad por categoría (§7.4) acotan qué puede bloquear; §15.6 mide falsos bloqueantes y guía el ajuste de prompts antes de dar la fase por hecha.
+
+### §16.3 Fase 3 — Endurecimiento y extensiones opcionales
+
+**Entra (cada punto es independiente y se decide por separado en §17):**
+
+| Extensión | Descripción | Condición para abordarla |
+|---|---|---|
+| Opción B del editor global | Runs de `retoque` con revisor de continuidad hacia delante (§8.4). | Pertinencia de retoques ≥ 70 % en §15.6. |
+| Resumen global generado por LLM | Solo si libros > 40 capítulos hacen que el recorte de B5 pierda información (§6.7). | Evidencia de fallos de continuidad atribuibles a B5 recortado. |
+| Índice vectorial del dossier | Si la búsqueda FTS deja fuera datos relevantes (§3.14). | Métrica: datos usados por el escritor que no estaban en el contexto (declarados como inventados pero existentes en el dossier). |
+| Compresión de snapshots | `novela canon compact` (§10.8). | Proyectos con > 50 versiones. |
+| Degradación de modelo por presupuesto | Alternativa a parar (§11.4). | Solo si el usuario cambia la decisión de Fase 0. |
+| Exportación de telemetría | A un sistema externo (§12.5). | Necesidad del usuario. |
+| Paralelismo entre capítulos independientes | Rompe RUN-5; exige fusión de canon (§4.3). | Solo con evidencia de que el tiempo de pared es el cuello de botella. |
+| Interfaz web de lectura del canon y de las escaladas | Fuera del alcance de §1.5 en esta versión. | Necesidad del usuario. |
+
+**Criterio de hecho:** cada extensión tiene su propia ADR aceptada en §18, sus tests en §15 y una entrada en §20.
+
+**Riesgo principal:** dispersión. Mitigación: ninguna extensión entra sin la condición de la tabla cumplida y medida.
+
+### §16.4 Dependencias entre fases
+
+```mermaid
+gantt
+    dateFormat  X
+    axisFormat  %s
+    section Fase 1
+    Dominio, canon, schemas           :f1a, 0, 3
+    Proveedores (mock + 1 real)       :f1b, 0, 2
+    Contexto                          :f1c, after f1a, 2
+    Agentes inv/arq/esc/continuidad   :f1d, after f1b, 3
+    Loop, gate, escalada, reanudación :f1e, after f1c, 3
+    CLI, registro, tests              :f1f, after f1e, 2
+    section Fase 2
+    Revisores 2 y 3, paralelo         :f2a, after f1f, 2
+    Editor global (opción A)          :f2b, after f2a, 1
+    Web del investigador, 2º proveedor:f2c, after f1f, 2
+    Set de evaluación y calibración   :f2d, after f2b, 3
+    section Fase 3
+    Extensiones según §17             :f3, after f2d, 4
+```
+
+Las unidades del eje son relativas (bloques de trabajo), no semanas: este documento no estima plazos.
 
 ## §17 Riesgos y decisiones abiertas
 
