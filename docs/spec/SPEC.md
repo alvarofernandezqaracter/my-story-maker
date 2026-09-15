@@ -2745,7 +2745,114 @@ Escribir el informe **no incrementa la versión del canon** (§10.2): no modific
 
 ## §9 Contratos de I/O y validación
 
-> Estado: pendiente
+> Estado: completa
+
+### §9.1 Principio: todo JSON, todo validado
+
+Toda salida de un agente es un único objeto JSON validado contra un JSON Schema (P-04). Los schemas viven en `schemas/` (§14), uno por fichero, nombrados como la entidad de §3 más el sufijo cuando son salidas de agente:
+
+| Fichero | Valida | Derivado de |
+|---|---|---|
+| `brief.schema.json` | `brief.json` | §3.3 |
+| `personaje.schema.json`, `evento.schema.json`, `dato_historico.schema.json`, `arco.schema.json`, `ficha_capitulo.schema.json`, `resumen.schema.json`, `resumen_global.schema.json`, `capitulo_redactado.schema.json`, `run.schema.json`, `revision.schema.json`, `informe_editor.schema.json`, `estado_proyecto.schema.json`, `paquete_contexto.schema.json`, `llamada_llm.schema.json` | Ficheros del canon, runs, estado y logs | §3, §6.6, §11.5, §12.1 |
+| `salida_investigador.schema.json`, `salida_arquitecto_fase1.schema.json`, `salida_arquitecto_fase2.schema.json`, `capitulo_redactado_salida.schema.json`, `revision_salida.schema.json`, `informe_editor_salida.schema.json` | Salidas de agentes (sin campos `calc`) | §5 |
+
+Reglas de los schemas:
+
+- Draft 2020-12, `additionalProperties: false` en todos los objetos. Motivo: un campo inesperado suele indicar que el modelo ha malinterpretado el contrato; mejor fallar que ignorarlo.
+- Todos los `enum` de §3 se expresan como `enum`; todas las longitudes en palabras se validan en la capa semántica (§9.2, paso 3), no en el schema, porque JSON Schema solo cuenta caracteres. Las cotas de caracteres del schema son un 8× de las de palabras como red de seguridad.
+- El schema que se envía al proveedor como salida estructurada es el mismo fichero, sin transformación. Si un proveedor no soporta alguna construcción (`$ref` anidados, `if/then`), el adaptador la aplana con una función determinista y registra la variante; la validación en el harness usa siempre el schema original.
+
+### §9.2 Pipeline de validación
+
+Cada llamada de agente pasa por la misma secuencia en `harness/validacion.py`:
+
+```
+1. Obtención del JSON
+   a. Si el proveedor devolvió salida estructurada nativa -> RespuestaLLM.json
+   b. Si no -> extraer de contenido_bruto: eliminar fences ```json ... ```, tomar el primer '{' y su '}' de cierre balanceado
+      (ignorando llaves dentro de cadenas), parsear con json.loads en modo estricto.
+2. Validación de schema (jsonschema, draft 2020-12) -> lista de errores con ruta JSON.
+3. Validación semántica -> invariantes de §3 aplicables a la salida (longitudes en palabras, referencias a ids
+   recibidos en el prompt, resolución de nombres a ids en el arquitecto, CAP-1, REV-2..REV-6, RET-1..RET-3, ...).
+   Cada regla devuelve (ruta, mensaje, accion ∈ {rechazar, corregir, anotar}).
+4. Sanitización (§9.5) -> se aplican las correcciones automáticas ("corregir") y se registran las anotaciones.
+5. Completado de campos calc (ids, palabras, origen) -> entidad tipada.
+6. Validación final contra el schema de la entidad completa (no el de salida) antes de escribir en staging.
+```
+
+Los pasos 2 y 3 acumulan todos los errores antes de decidir; el mensaje de reparación (§9.3) los incluye todos. Motivo: un reintento por error es más caro que un reintento con la lista completa.
+
+### §9.3 Política ante salida inválida
+
+| Situación | Acción | Máximo |
+|---|---|---|
+| Paso 1 falla (no hay JSON parseable) | Llamada de **reparación**: se reenvía la misma conversación añadiendo un mensaje `user` con: "Tu respuesta no es JSON válido: <error del parser, con posición>. Responde únicamente con el objeto JSON completo que cumple el esquema. No incluyas texto fuera del JSON." | 2 reparaciones (3 llamadas en total) |
+| Paso 2 falla (schema) | Reparación con la lista de errores: ruta, valor recibido (truncado a 200 caracteres), restricción violada. | Compartido: 2 reparaciones por llamada original |
+| Paso 3 falla con acción `rechazar` | Reparación con la lista de errores semánticos en lenguaje natural ("el personaje 'Diego de Ayala' no existe; los disponibles son: ..."). | Compartido |
+| `motivo_parada = max_tokens` | Se trata como paso 1 fallido, pero la reparación repite la petición original (no una corrección) con `max_tokens_salida × 1,25`, una sola vez. Si vuelve a truncarse, error final. | 1 |
+| Agotadas las reparaciones | Error `salida_invalida` con el último conjunto de errores. Efecto según el agente: escritor y revisores → intento del loop abortado (`abortado`, no consume reintento, §7.1) y el harness relanza el intento completo una vez; si vuelve a fallar, run `fallido` (§11.2). Investigador y arquitecto → se repite solo el grupo o lote afectado una vez; después run `fallido`. Editor → run `fallido`. | — |
+
+Las llamadas de reparación se registran como `LlamadaLLM` con `tipo = reparacion` y `llamada_original`, cuentan en el coste del run y en la métrica `tasa_reparacion` (§12.4). Si la tasa supera el 15 % para un agente, es señal de cambiar de proveedor o activar la salida estructurada nativa; se recoge en §17.
+
+La conversación de reparación conserva el system prompt y el user prompt originales y añade la respuesta inválida como mensaje `assistant` seguido del mensaje de corrección. Motivo: el modelo corrige mejor su propia salida que regenerando desde cero, y el coste de entrada extra es menor que el de una regeneración fallida.
+
+### §9.4 Campos que nunca pueden ir vacíos
+
+Además de `required` en el schema, estos campos deben tener contenido no trivial (cadena no vacía tras `strip`, lista con al menos el mínimo indicado). Un vacío aquí es error de paso 3 con acción `rechazar`.
+
+| Agente | Campos |
+|---|---|
+| Investigador | `datos` (≥ 5); en cada dato: `titulo`, `contenido` (≥ 10 palabras), `fuente.referencia`, `etiquetas` (≥ 1). |
+| Arquitecto fase 1 | `arco.actos` (= 3), `arco.promesas` (≥ 3), `personajes` (≥ 4); en cada personaje: `nombre`, `descripcion`, `motivacion`, `voz.rasgos` (≥ 2), los tres campos de `arco`, `estado_actual.ubicacion`. |
+| Arquitecto fase 2 | `fichas` (= tamaño del lote); en cada ficha: `sinopsis`, `funcion`, `personajes_presentes` (≥ 1), `beats` (≥ 2), `escenario.lugar`. |
+| Escritor | `escenas` (≥ 1); en cada escena: `texto` (≥ 100 palabras), `lugar`, `personajes` (≥ 1); `metadatos.eventos_nuevos` (≥ 1); `metadatos.resumen_propuesto.texto` (80–200 palabras), `.hechos_clave` (≥ 2), `.estado_final_personajes` (≥ 1); `metadatos.beats_cubiertos` (≥ 1). Las listas `datos_historicos_usados`, `datos_nuevos_inventados`, `personajes_nuevos`, `cambios_personajes`, `promesas.*` pueden estar vacías pero deben existir. |
+| Revisores | `nota`, `resumen`, `comprobado` (≥ 3). `incidencias` puede estar vacía solo si `nota ≥ 8`; con `nota ≤ 7` y sin incidencias es error (el revisor no ha explicado su nota). |
+| Editor global | `valoracion_global`, `arcos_revisados` (todos los protagonistas y antagonistas), `promesas_revisadas` (todas). `retoques` puede estar vacía. |
+
+### §9.5 Sanitización
+
+Correcciones automáticas (acción `corregir`), aplicadas siempre y registradas en `LlamadaLLM.sanitizaciones`:
+
+| Regla | Aplica a | Corrección |
+|---|---|---|
+| S-1 Espacios | Todas las cadenas | `strip`, colapso de espacios múltiples, normalización de saltos a `\n`. |
+| S-2 Markdown estructural en prosa | `escenas[].texto` | Eliminar líneas que empiezan por `#`, `-`, `*` (lista), `>`, `|`, ```` ``` ````, etiquetas HTML. Conservar `*cursiva*` inline y rayas de diálogo (`—`, `–`, `-` al inicio de párrafo seguido de espacio se normaliza a `—`). Registrar `sanitizado = true` (CAP-7). |
+| S-3 Comillas | `escenas[].texto` | Normalizar comillas rectas a las tipográficas del idioma (`«»` para `es`, según tabla por idioma en §13); dejar las de diálogo si el idioma las usa. |
+| S-4 Etiquetas de delimitación | Todas las cadenas | Eliminar cualquier aparición literal de `<canon>`, `<texto>`, `<contexto>`, `<incidencias>` y sus cierres. Motivo: un agente que las reprodujera podría romper el delimitado del prompt siguiente. |
+| S-5 Marcadores de párrafo | `escenas[].texto`, `incidencias[].cita` | Eliminar `[E<n>.P<m>]` si el escritor los copió del texto numerado. |
+| S-6 Ids | Todos los campos id | `strip`, minúsculas; si no coincide con el patrón de §3.1.2, error de paso 3. |
+| S-7 Enumeraciones | Campos `enum` | Minúsculas y sin tildes antes de comparar (`"Bloqueante"` → `bloqueante`); si no coincide tras normalizar, error de schema. |
+| S-8 Fiabilidad | `fuente.fiabilidad` | DAT-3. |
+| S-9 Coherencia nota/severidad | `Revision` | REV-2, REV-4, REV-5, restricciones de §7.4. |
+| S-10 Truncado de longitudes | Campos con cota "≤ N palabras" no críticos (`resumen` de revisión, `sugerencia`, `descripcion` de incidencia, `notas_escritor`) | Truncar a N palabras con `…` y anotar. Los campos críticos (`contenido` de dato, `texto` de resumen, `sinopsis`) no se truncan: error de paso 3. |
+
+Lo que **no** se sanitiza: la prosa no se corrige ortográfica ni estilísticamente, no se reordenan escenas ni se rellenan campos ausentes con valores por defecto. Un campo obligatorio ausente es un error, no un `null` silencioso.
+
+### §9.6 Separación entre prosa y metadatos en la salida del escritor
+
+La salida del escritor mezcla en un solo JSON la prosa (`escenas[].texto`) y los metadatos. Reglas para que no se contaminen:
+
+| Regla | Motivo |
+|---|---|
+| La prosa solo existe en `escenas[].texto`. Ningún otro campo puede contener más de 200 palabras seguidas; si `notas_escritor` o `resumen_propuesto.texto` exceden su cota, error. | Impide que el escritor "continúe la novela" en un campo de metadatos. |
+| Los metadatos no se muestran nunca al lector: `cap_NNN.md` se genera solo desde `titulo`, `escenas[].titulo` y `escenas[].texto`. | El render es la novela; los metadatos son del sistema. |
+| Los revisores reciben prosa y metadatos en bloques separados (`<texto>` y `<metadatos_escritor>`, §5.4–§5.6). | Permite al revisor de continuidad comparar ambos y detectar `metadatos_infieles`. |
+| El canon guarda el `CapituloRedactado` entero, pero las entidades derivadas (eventos, cambios de personajes, resumen) se materializan como registros propios al commit (§7.9). | Los capítulos posteriores leen registros estructurados, no metadatos de otro capítulo. |
+| Alternativa considerada y rechazada: prosa fuera del JSON con delimitadores propios y metadatos en JSON aparte, en una sola respuesta. | Dos formatos en una respuesta duplican los modos de fallo de parseo; con salida estructurada nativa el JSON con prosa larga es fiable. Se recoge en ADR-0007 (§18.7) y queda en §17 como opción si la `tasa_reparacion` del escritor supera el 15 %. |
+
+### §9.7 Contratos de entrada
+
+Los agentes también tienen contrato de entrada: el harness valida el `PaqueteContexto` contra `paquete_contexto.schema.json` antes de serializarlo, y comprueba que todos los placeholders del prompt (§5) han sido sustituidos (ningún `{{` residual). Un placeholder sin sustituir es error de programación (`prompt_incompleto`, §11.2), no de LLM, y aborta antes de gastar tokens.
+
+### §9.8 Tamaños máximos
+
+| Límite | Valor | Motivo |
+|---|---|---|
+| Respuesta bruta | 2 MB | Una respuesta mayor es un fallo del proveedor o un bucle del modelo. |
+| `escenas[].texto` | 60.000 caracteres | ≈ 10.000 palabras; muy por encima de cualquier escena razonable. |
+| Profundidad de anidamiento JSON | 8 | Los schemas de §3 no superan 5. |
+| Elementos en cualquier lista de salida | 200 | Cota de seguridad; las cotas reales son las de §3. |
 
 ## §10 Persistencia y versionado del canon
 
