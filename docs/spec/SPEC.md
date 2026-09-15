@@ -9,7 +9,7 @@ actualizado: 2026-09-15
 
 ## §1 Visión y alcance
 
-Sistema que escribe una novela histórica capítulo a capítulo a partir de un brief corto. Un agente investiga la época, otro diseña la estructura, un escritor redacta cada capítulo, tres revisores lo puntúan y un cronista lo vuelca en el canon. Al terminar, un editor global propone retoques sobre el conjunto.
+Sistema que escribe una novela histórica capítulo a capítulo a partir de un brief corto. Un agente investiga la época, otro diseña la estructura, un escritor redacta cada capítulo, un validador lo puntúa en tres dimensiones y un cronista lo vuelca en el canon. Al terminar, un editor global propone retoques sobre el conjunto.
 
 **Principio rector.** Lo determinista vive en código del harness: selección de contexto, cálculo del gate, control de reintentos, escritura en el canon y máquina de estados. Lo generativo vive en agentes: investigar, estructurar, redactar, revisar, resumir y editar. Ningún agente escribe en el canon; propone, y el harness decide.
 
@@ -33,8 +33,9 @@ Sistema que escribe una novela histórica capítulo a capítulo a partir de un b
 | Resumen | Un párrafo por capítulo aprobado, con hilos abiertos y cerrados. Es lo que lee el editor global. |
 | Generador de contexto | Código que selecciona del canon lo que hace falta para un capítulo y arma el paquete de contexto. |
 | Paquete de contexto | Salida del generador: el subconjunto del canon que ve el escritor. |
-| Revisor | Agente que puntúa un capítulo en una dimensión y devuelve incidencias. Hay tres. |
-| Nota | Puntuación de 1 a 5 que da un revisor en su dimensión. |
+| Validador | Agente que puntúa el capítulo. Hay uno solo y juzga las tres dimensiones en la misma llamada. |
+| Dimensión | Cada uno de los tres ejes que se juzgan por separado: continuidad, anacronismos, y lógica y ritmo. |
+| Nota | Puntuación de 1 a 5 de una dimensión. Siempre hay tres notas; nota global no existe. |
 | Gate | Código que decide, con las tres notas y sus incidencias, si el capítulo se aprueba o se reescribe. |
 | Cronista | Agente que convierte el capítulo aprobado en resumen y en cambios de ficha. Única vía de escritura en el canon. |
 | Intento | Cada pasada del escritor sobre el mismo capítulo. Máximo tres. |
@@ -45,7 +46,7 @@ Sistema que escribe una novela histórica capítulo a capítulo a partir de un b
 
 **Decisión de almacenamiento.** El canon es una base SQLite (`canon.db`) y, al lado, un fichero Markdown por intento de capítulo en `capitulos/`; SQLite porque el dossier y la línea de tiempo se consultan con filtros y búsqueda de texto, y el texto largo no gana nada viviendo dentro de la base.
 
-Los tipos son lógicos, no de un motor concreto, porque el stack sigue sin decidir (§11, DA-01). `lista` se serializa como JSON en una columna de texto. Todas las entidades llevan `id` de texto salvo donde el número de capítulo ya es clave.
+Los tipos son lógicos, no de un motor concreto, porque el stack sigue sin decidir (§15, DA-01). `lista` se serializa como JSON en una columna de texto. Todas las entidades llevan `id` de texto salvo donde el número de capítulo ya es clave.
 
 El brief no tiene tabla propia: se guarda como fila única en `proyecto` con sus cinco campos (época, premisa, tono, nº de capítulos y palabras por capítulo) más el estado de §4.
 
@@ -107,7 +108,7 @@ El brief no tiene tabla propia: se guarda como fila única en `proyecto` con sus
 | intento | entero | sí | 1, 2 o 3 |
 | ruta | texto | sí | Ruta al `.md`, p. ej. `capitulos/012-i2.md` |
 | palabras | entero | sí | |
-| revisiones | lista | no | Las tres notas con sus incidencias. Nulo antes de revisar |
+| revisiones | lista | no | Tres bloques, uno por dimensión, con su nota y sus incidencias. Mismo formato venga de una llamada o de tres |
 | faltantes | lista | no | Datos de época que el escritor echó en falta al redactar (§5) |
 | estado | enum | sí | `propuesto` \| `aprobado` \| `descartado` |
 | creado | fecha | sí | |
@@ -176,19 +177,13 @@ flowchart TD
         direction TB
         genctx["<b>Generador de contexto</b><br/><small>Selecciona del canon solo lo que<br/>hace falta para este capítulo</small>"]
         escritor["<b>Agente escritor</b><br/><small>Output: el capítulo redactado</small>"]
-        rev1["<b>Continuidad</b><br/><small>¿Contradice el canon?</small>"]
-        rev2["<b>Anacronismos</b><br/><small>¿Encaja con la época?</small>"]
-        rev3["<b>Lógica y ritmo</b><br/><small>¿Hay causa y efecto?</small>"]
+        val["<b>Agente validador</b><br/><small>Una llamada, tres bloques con nota e incidencias:<br/>continuidad · anacronismos · lógica y ritmo</small>"]
         gate{"<b>Gate de calidad</b><br/><small>Umbral sobre las 3 notas<br/>máx. 3 reintentos</small>"}
         cronista["<b>Agente cronista</b><br/><small>Solo sobre el capítulo aprobado: resumen,<br/>hilos abiertos y cerrados, cambios de ficha<br/>de personaje y eventos de línea de tiempo</small>"]
 
         genctx --> escritor
-        escritor --> rev1
-        escritor --> rev2
-        escritor --> rev3
-        rev1 --> gate
-        rev2 --> gate
-        rev3 --> gate
+        escritor --> val
+        val --> gate
         gate -. "si falla, reescribe (máx. 3)" .-> escritor
         gate == "aprobado" ==> cronista
     end
@@ -208,7 +203,7 @@ flowchart TD
     classDef harness fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
 
     class inv,arq,escritor,cronista,editor agente;
-    class rev1,rev2,rev3 revisor;
+    class val revisor;
     class outinv,outarq,c1,c2,c3,c4 datos;
     class brief,genctx,gate harness;
 
@@ -222,31 +217,29 @@ flowchart TD
 - `investigado` — el dossier está en el canon. Habilita al arquitecto.
 - `estructurado` — escaleta y fichas de personaje en el canon. Habilita el loop.
 - `escribiendo` — hay al menos un capítulo aprobado y quedan pendientes.
-- `bloqueado` — un capítulo agotó los tres intentos. Requiere mano humana (§7).
+- `bloqueado` — un capítulo agotó los tres intentos. Requiere mano humana (§8).
 - `escrito` — todas las fichas de capítulo en `aprobado`. Habilita el editor global.
 - `editado` — existe la lista de retoques. Estado final del sistema.
 
-**Qué corre en paralelo.** Solo los tres revisores, sobre el mismo capítulo, en tres llamadas simultáneas e independientes. Todo lo demás es secuencial: el arquitecto necesita el dossier cerrado, y cada capítulo necesita el canon actualizado por el anterior. No se escriben dos capítulos a la vez, aunque parezca tentador: el capítulo N+1 depende de lo que el N haya dejado en las fichas de personaje.
+**Qué corre en paralelo.** Nada, con la configuración por defecto: el validador único dejó el flujo entero en serie. Solo vuelve a haber paralelismo si se pone `validador.modo` en `separado` (§12), y entonces son tres llamadas simultáneas sobre el mismo capítulo. Lo demás es secuencial por dependencia real: el arquitecto necesita el dossier cerrado, y cada capítulo necesita el canon que dejó el anterior. No se escriben dos capítulos a la vez, aunque parezca tentador: el capítulo N+1 depende de lo que el N haya dejado en las fichas de personaje.
 
 **Dónde entra el humano.** Dos puntos fijos:
 
-1. **Capítulo bloqueado.** Al fallar el tercer intento el sistema para y espera. Tú editas el texto a mano, relajas el umbral o retocas la ficha de capítulo, y lo desbloqueas (§7).
+1. **Capítulo bloqueado.** Al fallar el tercer intento el sistema para y espera. Tú editas el texto a mano, relajas el umbral o retocas la ficha de capítulo, y lo desbloqueas (§8).
 2. **Retoques finales.** El editor global entrega una lista y tú decides qué aplicar. Aplicarlos es manual y fuera del sistema en 0.1.0.
 
-Queda por decidir un tercer punto: parar al acabar la preparación para que revises dossier y escaleta antes de arrancar el loop. Es la parada más barata del sistema y un fallo ahí contamina el libro entero, pero obliga a partir la ejecución en dos arranques. Sin cerrar, en §11 (DA-03). Mientras no se decida, la preparación no para y la escaleta se corrige editando el canon a mano.
+Queda por decidir un tercer punto: parar al acabar la preparación para que revises dossier y escaleta antes de arrancar el loop. Es la parada más barata del sistema y un fallo ahí contamina el libro entero, pero obliga a partir la ejecución en dos arranques. Sin cerrar, en §15 (DA-03). Mientras no se decida, la preparación no para y la escaleta se corrige editando el canon a mano.
 
 ## §5 Agentes
 
-Ocho agentes. Ninguno escribe en el canon: todos devuelven una propuesta estructurada que valida y persiste el harness. Actualizar el canon tras aprobar es trabajo de un agente propio, el cronista, y no del escritor, porque así corre una sola vez sobre el texto que se queda en lugar de tres veces sobre borradores que se descartan. El modelo sugerido es una primera apuesta de la familia Claude, revisable sin tocar el diseño (§11, DA-02).
+Seis agentes. Ninguno escribe en el canon: todos devuelven una propuesta estructurada que valida y persiste el harness. Actualizar el canon tras aprobar es trabajo de un agente propio, el cronista, y no del escritor, porque así corre una sola vez sobre el texto que se queda en lugar de tres veces sobre borradores que se descartan. El modelo sugerido es una primera apuesta de la familia Claude, revisable sin tocar el diseño (§15, DA-02).
 
 | Agente | Entrada | Salida | Modelo sugerido |
 |---|---|---|---|
 | Investigador | Brief | Lista de datos históricos | Opus 5 + herramienta de búsqueda |
 | Arquitecto | Brief + dossier | Escaleta y fichas de personaje | Opus 5 |
-| Escritor | Paquete de contexto (§6) | Capítulo en Markdown + lista de faltantes | Opus 5 |
-| Revisor de continuidad | Capítulo + extracto de canon | Nota 1-5 + incidencias | Sonnet 5 |
-| Revisor de anacronismos | Capítulo + dossier relevante | Nota 1-5 + incidencias | Sonnet 5 |
-| Revisor de lógica y ritmo | Capítulo + ficha de capítulo | Nota 1-5 + incidencias | Sonnet 5 |
+| Escritor | Paquete de contexto (§7) | Capítulo en Markdown + lista de faltantes | Opus 5 |
+| Validador | Capítulo + canon relevante, dossier y encargo | Tres bloques, cada uno con nota 1-5 e incidencias | Sonnet 5 |
 | Cronista | Capítulo aprobado + fichas de quien sale | Resumen, hilos, cambios de personaje y eventos | Sonnet 5 |
 | Editor global | Resúmenes + escaleta + personajes | Lista de retoques | Opus 5 |
 
@@ -256,17 +249,15 @@ Ocho agentes. Ninguno escribe en el canon: todos devuelven una propuesta estruct
 
 **Escritor.** Le paso el paquete de contexto y le pido el capítulo entero, en prosa, respetando la voz de cada personaje y sin introducir hechos que no estén en el canon. Si necesita un detalle de época que no le he dado, resuelve la escena sin él y lo anota en `faltantes`, lista que viaja con el capítulo y que el harness guarda: no hay canal de vuelta síncrono ni el escritor espera respuesta de nadie. Modos de fallo: resumir en lugar de dramatizar cuando se acerca al límite de palabras, homogeneizar las voces hacia un registro neutro, y colar objetos o ideas fuera de época por inercia narrativa.
 
-**Revisor de continuidad.** Le pido que compare el capítulo contra el extracto de canon y señale contradicciones: alguien en dos sitios, alguien que sabe lo que no debería, cronología imposible. Devuelve nota e incidencias con cita textual. Modos de fallo: confundir elipsis con hueco de continuidad, y penalizar información nueva que es legítima por no estar todavía en el canon.
+**Validador.** Una sola llamada que juzga tres dimensiones: continuidad contra el canon, anacronismos contra el dossier, y lógica y ritmo contra el encargo del capítulo. Su salida son tres bloques independientes, cada uno con su nota de 1 a 5 y sus incidencias, cada uno evaluado con su propia rúbrica (§8). No devuelve nota global y el gate sigue recibiendo tres números. El prompt le obliga a resolver las dimensiones en orden y a no releer lo ya juzgado, para que no arrastre una impresión general.
 
-**Revisor de anacronismos.** Le pido que verifique objetos, costumbres, instituciones y léxico contra el dossier de la época. Distingue error de licencia por el estado del dato: contradecir un `verificado` es incidencia grave, un `sin_verificar` es aviso, y chocar con un `inventado` no cuenta mientras el capítulo siga siendo coherente con él. Modos de fallo: falsos positivos con vocabulario moderno pero de uso válido, y no ver el anacronismo conceptual, que es el caro.
-
-**Revisor de lógica y ritmo.** Le pido causa y efecto, que el objetivo de la ficha de capítulo se cumpla y que la escena no se atasque. Devuelve nota e incidencias localizadas por párrafo. Modos de fallo: premiar densidad de acontecimientos y castigar escenas de respiro que la novela necesita.
+*Riesgo conocido de fundirlas.* Al juzgar en una sola pasada, las notas tienden a correlacionarse: el capítulo que gusta se lleva tres cincos y el que chirría tres doses, cuando la gracia del diseño es que un texto brillante pueda caer por continuidad. El segundo efecto es que el anacronismo conceptual, el caro, se diluye cuando la misma pasada ya va buscando contradicciones de canon: el léxico raro salta, la idea fuera de época no. Ambos se vigilan comparando la dispersión de las tres notas a lo largo del libro; si se confirman, `validador.modo: "separado"` (§12) devuelve las tres llamadas sin tocar el modelo de datos ni el gate. Otros modos de fallo: falsos positivos de léxico moderno pero válido, y confundir una elipsis con un hueco de continuidad.
 
 **Cronista.** Corre una sola vez por capítulo, después del gate y solo sobre el intento aprobado. Le paso el texto, la ficha de capítulo y las fichas de quien sale, y le pido cuatro cosas: el resumen de un párrafo, los hilos que abre y los que cierra, los cambios de `ubicacion` y `sabe` de cada personaje presente, y los eventos de trama nuevos para la línea de tiempo. Devuelve una propuesta que el harness valida antes de escribirla en el canon. Modos de fallo: resúmenes que cuentan lo que pasa pero no lo que cambia, dar por sabido a un personaje algo que ocurrió sin él delante, y callarse hilos abiertos, que es el fallo caro porque el editor global solo ve lo que el cronista escribió.
 
 **Editor global.** Le paso los resúmenes de todos los capítulos, la escaleta y las fichas de personaje, nunca el texto completo. Le pido una lista corta y accionable: arcos que no cierran, promesas abiertas sin saldar, actos desequilibrados. Modos de fallo: generalidades no accionables del tipo «reforzar el tema», y proponer reescrituras masivas cuando el encargo es una lista de retoques.
 
-## §6 Generador de contexto
+## §7 Generador de contexto
 
 Código, no agente: mismo capítulo y mismo canon dan siempre el mismo paquete. Recibe un número de capítulo y devuelve el paquete de contexto que verá el escritor, que nunca consulta el canon por su cuenta.
 
@@ -284,16 +275,16 @@ Código, no agente: mismo capítulo y mismo canon dan siempre el mismo paquete. 
 
 Dos reglas que no se negocian. El texto completo de capítulos anteriores no entra nunca, salvo el enganche: para eso están los resúmenes. Y en el paquete viaja el estado de cada dato histórico, porque el escritor necesita saber qué es firme y qué es relleno.
 
-El paquete tiene un tope de tokens configurable (§9). Si se pasa, se recorta en este orden: memoria larga, cronología, reparto de fondo, época. El encargo, los personajes y los hilos vivos no se recortan; si aun así no cabe, el capítulo se marca `bloqueado` en lugar de escribirse con el contexto mutilado.
+El paquete tiene un tope de tokens configurable (§12). Si se pasa, se recorta en este orden: memoria larga, cronología, reparto de fondo, época. El encargo, los personajes y los hilos vivos no se recortan; si aun así no cabe, el capítulo se marca `bloqueado` en lugar de escribirse con el contexto mutilado.
 
-## §7 Loop de capítulo y gate
+## §8 Loop de capítulo y gate
 
 Un capítulo se da por bueno cuando pasa el gate, no cuando el escritor termina. Todo lo de esta sección es código salvo las cuatro llamadas a agentes.
 
 ```
 para cada capitulo de la escaleta con estado != aprobado:
     marcar capitulo en_curso
-    paquete = generar_contexto(capitulo)                      # §6
+    paquete = generar_contexto(capitulo)                      # §7
     incidencias = []
     texto_previo = null
 
@@ -301,11 +292,9 @@ para cada capitulo de la escaleta con estado != aprobado:
         texto = escritor(paquete, texto_previo, incidencias)
         guardar_intento(capitulo, intento, texto)             # estado propuesto
 
-        rev = en_paralelo(
-            revisor_continuidad(texto, paquete.personajes, paquete.hilos),
-            revisor_anacronismos(texto, paquete.epoca),
-            revisor_logica(texto, paquete.encargo))
-        guardar_revisiones(capitulo, intento, rev)
+        rev = validar(texto, paquete)          # 1 llamada; 3 en paralelo si modo separado
+        si no comprobaciones_ok(rev): reintentar la llamada     # §9, sin gastar gate
+        guardar_revisiones(capitulo, intento, rev)              # siempre 3 bloques
 
         si gate(rev):
             marcar intento aprobado y descartar los demas
@@ -319,15 +308,15 @@ para cada capitulo de la escaleta con estado != aprobado:
 
     si capitulo != aprobado:
         marcar capitulo bloqueado y proyecto bloqueado
-        parar y esperar mano humana                            # §9
+        parar y esperar mano humana                            # §13
 
 si todos los capitulos aprobados:
-    retoques = editor_global(resumenes, escaleta, personajes)  # §8
+    retoques = editor_global(resumenes, escaleta, personajes)  # §11
 ```
 
-**Rúbrica.** Escala 1 a 5, entera, con anclas para que la nota no derive entre capítulos.
+**Rúbrica.** Una por dimensión, escala 1 a 5 entera, con anclas para que la nota no derive entre capítulos. El validador aplica las tres por separado (§5) y el gate no sabe si vinieron de una llamada o de tres.
 
-| Revisor | Qué puntúa | Nota 1 | Nota 3 | Nota 5 |
+| Dimensión | Qué puntúa | Nota 1 | Nota 3 | Nota 5 |
 |---|---|---|---|---|
 | Continuidad | Coherencia con el canon: dónde está cada uno, qué sabe, cuándo pasa | Contradice un hecho del canon | Detalle menor sin respaldo | Todo cuadra y usa el canon con precisión |
 | Anacronismos | Objetos, costumbres, instituciones y léxico frente al dossier | Rompe un dato `verificado` | Choca con un `sin_verificar` | Época sostenida sin adorno de folleto |
@@ -335,13 +324,13 @@ si todos los capitulos aprobados:
 
 Cada incidencia lleva cita textual, severidad (`grave` o `aviso`) y una sugerencia de una línea. Grave es contradecir el canon o un dato `verificado`; el resto es aviso.
 
-**Fórmula del gate.** `aprueba = min(notas) >= 3 y media(notas) >= 3,7 y ninguna incidencia grave`. La incidencia grave veta por sí sola: un capítulo puede sacar tres cuatros y caer por una contradicción de canon, porque eso no se arregla puntuando más alto. Los tres números son configurables (§9) y están sin calibrar hasta que haya capítulos reales (§11, DA-06).
+**Fórmula del gate.** `aprueba = min(notas) >= 3 y media(notas) >= 3,7 y ninguna incidencia grave`. La incidencia grave veta por sí sola: un capítulo puede sacar tres cuatros y caer por una contradicción de canon, porque eso no se arregla puntuando más alto. Los tres números son configurables (§12) y están sin calibrar hasta que haya capítulos reales (§11, DA-06).
 
 **Qué recibe el escritor al reintentar.** El mismo paquete de contexto, las incidencias del intento anterior ordenadas por severidad y, solo en el intento 2, su propio texto: ahí se le pide arreglo quirúrgico, tocar lo señalado y no reescribir lo que ya funciona. El intento 3 va desde cero con las incidencias acumuladas de los dos anteriores, porque si dos pasadas quirúrgicas no han bastado el problema no está en las frases sino en el planteamiento de la escena.
 
 **Al agotar los tres intentos.** El capítulo queda `bloqueado`, el proyecto también, y el sistema para en vez de seguir con el siguiente: escribir sobre un canon con un agujero solo propaga el problema. Se conserva el intento con mejor media, en estado `propuesto`, y sus revisiones. Tienes tres salidas, todas manuales: editar el texto a mano y aprobarlo, retocar la ficha de capítulo y relanzar con el contador a cero, o bajar el umbral solo para ese capítulo dejando constancia.
 
-## §8 Editor global
+## §11 Editor global
 
 Corre una sola vez, cuando el proyecto entra en `escrito`, y fuera del loop. Lee los resúmenes de todos los capítulos, los hilos que siguen abiertos al final, la escaleta y las fichas de personaje. No lee el texto: si algo no se ve en los resúmenes, es que el cronista no lo registró, y ese es un fallo que se arregla en §5, no leyendo 200.000 palabras.
 
@@ -349,9 +338,9 @@ Devuelve una lista corta de retoques. Cada retoque tiene id, tipo (`arco`, `prom
 
 La lista se guarda como `retoques.md` junto al canon, no dentro. El canon es la verdad de la novela escrita y esto es una lista de tareas para mí; mezclarlas haría que el canon dejara de ser lo que dice §2.
 
-El editor no aplica nada ni dispara reescrituras. En 0.1.0 el bucle se cierra a mano: yo decido qué retoques valen y los aplico editando capítulos. Automatizar esa vuelta es lo primero que queda fuera de alcance (§1) y está apuntado en §11 (DA-07).
+El editor no aplica nada ni dispara reescrituras. En 0.1.0 el bucle se cierra a mano: yo decido qué retoques valen y los aplico editando capítulos. Automatizar esa vuelta es lo primero que queda fuera de alcance (§1) y está apuntado en §15 (DA-07).
 
-## §9 Operación
+## §13 Operación: fallos y reanudación
 
 **Qué pasa cuando algo falla a mitad.** El estado vive en el canon, nunca en memoria del proceso, así que un corte de red, un error del proveedor o un Ctrl+C no pierden más que el intento en curso. Como el canon solo se toca después del gate y en una única escritura validada del cronista, no existe el estado a medias: o el capítulo entró entero o no entró. Lo peor que deja una caída es un Markdown huérfano en `capitulos/` con su fila en estado `propuesto`, que al relanzar se descarta. Ante un error del proveedor se reintenta la llamada una vez; si vuelve a fallar, el proceso para y deja el estado escrito en lugar de insistir. No hay política de backoff ni de reintentos finos en 0.1.0, y es deliberado: con un solo usuario, parar y mirar sale más barato que automatizar la recuperación.
 
@@ -370,7 +359,7 @@ El editor no aplica nada ni dispara reescrituras. En 0.1.0 el bucle se cierra a 
 | `modelo_por_rol` | ver §5 | Modelo de cada agente |
 | `busqueda_web` | activada | Permite al investigador verificar datos dudosos |
 
-## §10 Roadmap por fases
+## §14 Roadmap por fases
 
 Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo que tiene que pasar para empezar la siguiente, no una fecha.
 
@@ -384,7 +373,7 @@ Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo q
 | F5 Cierre | Editor global y `retoques.md` | La lista de retoques es accionable sin releer los capítulos |
 | F6 Rigor | Búsqueda web del investigador y estados de verificación reales | La mayoría de datos del dossier llevan fuente comprobable |
 
-## §11 Decisiones abiertas
+## §15 Decisiones abiertas
 
 Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar la fase que se indica.
 
@@ -401,14 +390,14 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 | DA-09 | Unidad de escritura: capítulo entero o escena a escena | Si la prosa se degrada en capítulos largos, el loop cambia de grano | Durante F2 |
 | DA-10 | Qué hacer si la escaleta se queda corta o larga a mitad de libro | Replanificar toca el canon en caliente; forzarla estropea el final | Durante F4 |
 
-## §12 Historial de cambios
+## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
 
 ### [0.1.0] — 2026-09-15
 
 **Añadido**
-- §1 a §13. Primera redacción del documento, escrita por secciones y en dos fases.
+- §1 a §17. Primera redacción del documento, escrita por secciones y en dos fases.
 - §5. Agente cronista, tras detectar que ningún agente producía los resúmenes ni los cambios de ficha que el canon necesita al aprobar un capítulo.
 - §5. Campo `faltantes` en la salida del escritor, porque se le pedía preguntar por datos de época sin que existiera canal de vuelta en el flujo.
 
@@ -424,9 +413,9 @@ Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección
 
 **Regla permanente.** Todo cambio futuro sube la versión de la cabecera y añade aquí su entrada, indicando sección tocada y motivo. Los números de sección son estables y no se reutilizan: si una sección desaparece, su número queda muerto.
 
-## §13 Log de commits del spec
+## §17 Log de commits del spec
 
-Registro literal de los commits que han tocado `docs/spec/`, desde el reset que abrió esta versión del documento. §12 dice por qué cambió algo; esta tabla dice cuándo y en qué commit. Los 23 commits anteriores pertenecen al borrador descartado y viven en el tag `spec-v0-detallado`.
+Registro literal de los commits que han tocado `docs/spec/`, desde el reset que abrió esta versión del documento. §16 dice por qué cambió algo; esta tabla dice cuándo y en qué commit. Los 23 commits anteriores pertenecen al borrador descartado y viven en el tag `spec-v0-detallado`.
 
 | Commit | Fecha | Mensaje |
 |---|---|---|

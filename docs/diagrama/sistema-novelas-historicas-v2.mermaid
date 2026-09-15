@@ -29,19 +29,13 @@ flowchart TD
         direction TB
         genctx["<b>Generador de contexto</b><br/><small>Selecciona del canon solo lo que<br/>hace falta para este capítulo</small>"]
         escritor["<b>Agente escritor</b><br/><small>Output: el capítulo redactado</small>"]
-        rev1["<b>Continuidad</b><br/><small>¿Contradice el canon?</small>"]
-        rev2["<b>Anacronismos</b><br/><small>¿Encaja con la época?</small>"]
-        rev3["<b>Lógica y ritmo</b><br/><small>¿Hay causa y efecto?</small>"]
+        val["<b>Agente validador</b><br/><small>Una llamada, tres bloques con nota e incidencias:<br/>continuidad · anacronismos · lógica y ritmo</small>"]
         gate{"<b>Gate de calidad</b><br/><small>Umbral sobre las 3 notas<br/>máx. 3 reintentos</small>"}
         cronista["<b>Agente cronista</b><br/><small>Solo sobre el capítulo aprobado: resumen,<br/>hilos abiertos y cerrados, cambios de ficha<br/>de personaje y eventos de línea de tiempo</small>"]
 
         genctx --> escritor
-        escritor --> rev1
-        escritor --> rev2
-        escritor --> rev3
-        rev1 --> gate
-        rev2 --> gate
-        rev3 --> gate
+        escritor --> val
+        val --> gate
         gate -. "si falla, reescribe (máx. 3)" .-> escritor
         gate == "aprobado" ==> cronista
     end
@@ -61,7 +55,7 @@ flowchart TD
     classDef harness fill:#F1EFE8,stroke:#5F5E5A,color:#2C2C2A;
 
     class inv,arq,escritor,cronista,editor agente;
-    class rev1,rev2,rev3 revisor;
+    class val revisor;
     class outinv,outarq,c1,c2,c3,c4 datos;
     class brief,genctx,gate harness;
 
