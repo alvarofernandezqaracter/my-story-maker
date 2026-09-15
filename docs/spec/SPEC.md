@@ -2663,7 +2663,85 @@ La flecha "aprobado: escribe en el canon" del diagrama se materializa en `Reposi
 
 ## §8 Editor global
 
-> Estado: pendiente
+> Estado: completa
+
+### §8.1 Disparador
+
+El editor global se ejecuta **una sola vez**, fuera del loop, cuando la máquina de estados pasa de `escribiendo` a `editando` (§4.3): es decir, cuando `canon/version.json.ultimo_capitulo_aprobado = brief.num_capitulos`. El orquestador crea un run de tipo `editor_global` con `canon_version_base = N + 2`. No hay disparador manual anticipado: ejecutar el editor con el libro a medias produciría retoques sobre promesas que aún no han tenido oportunidad de pagarse. Si el usuario quiere una lectura intermedia, `novela stats` muestra las promesas abiertas y los arcos sin cerrar calculados por código (§12.4), que es la parte determinista del mismo juicio.
+
+### §8.2 Entrada
+
+Exactamente la de §5.7: brief resumido, arco con promesas y su estado calculado, resúmenes de los N capítulos, personajes principales y métricas de ritmo calculadas por el harness. **No recibe la prosa**, por decisión del diagrama. El paquete lo construye el generador de contexto con el destinatario `editor_global`, sin presupuesto de recorte (si los N resúmenes no caben en la ventana del modelo configurado, el run falla con `contexto_p0_excede` y el usuario debe elegir un modelo con más contexto; con S-02 y S-04 esto no ocurre).
+
+Las métricas de ritmo por capítulo que el harness calcula y adjunta:
+
+| Métrica | Cálculo |
+|---|---|
+| `palabras` | `CapituloRedactado.palabras_total` |
+| `escenas` | `len(escenas)` |
+| `personajes_presentes` | `len(∪ escenas[].personajes)` |
+| `eventos_nuevos` | `len(Resumen.eventos)` |
+| `promesas_tocadas` | `len(planteadas) + len(cumplidas)` |
+| `dialogo_pct` | Porcentaje de párrafos que empiezan por raya de diálogo (heurística) |
+| `desviacion_longitud` | `(palabras - objetivo) / objetivo` |
+
+Y a nivel de libro: promesas con `estado ≠ cumplida` (con su capítulo de pago previsto), personajes con `rol ∈ {protagonista, antagonista}` y `arco.estado ≠ cerrado`, y personajes con `rol ∈ {protagonista, antagonista, secundario}` cuya última aparición está a más de `N/3` capítulos del final.
+
+### §8.3 Salida: la lista de retoques
+
+`InformeEditorGlobal` (§3.12), validado según §9 y con RET-1 a RET-3. El harness lo escribe en `canon/editor_global/informe.json` y genera un render `informe.md` con:
+
+1. Valoración global.
+2. Tabla de arcos: personaje, cerrado según el editor, cerrado según el canon (`arco.estado`), comentario. Las discrepancias se marcan.
+3. Tabla de promesas: id, descripción, estado según el canon, cumplida según el editor, comentario. Discrepancias marcadas.
+4. Retoques ordenados por prioridad, cada uno con capítulos afectados, descripción, acción sugerida y enlace relativo a los `cap_NNN.md` implicados.
+5. Métricas de ritmo por capítulo (la tabla de §8.2) para que el usuario vea en qué se basó el editor.
+
+Escribir el informe **no incrementa la versión del canon** (§10.2): no modifica ningún registro del libro, solo añade un fichero. Sí queda registrado como run con su coste.
+
+### §8.4 Qué se hace con la lista: dos opciones
+
+**Opción A — Informe.** El editor global termina el flujo. El usuario lee `informe.md` y decide qué hacer: aplicar retoques a mano editando los capítulos (y haciendo `novela canon commit`), o ignorarlos. El sistema no reabre ningún capítulo.
+
+| A favor | En contra |
+|---|---|
+| Es exactamente lo que dice el diagrama: "devuelve una lista corta de retoques". | Los retoques quedan sin aplicar salvo trabajo manual. |
+| Cero riesgo de degradar capítulos ya aprobados. | El usuario tiene que editar prosa a mano o relanzar capítulos con la ficha modificada, lo que reescribe el capítulo entero. |
+| Sin nuevos agentes ni nuevos estados. | |
+
+**Opción B — Tareas de revisión por capítulo.** El harness convierte cada retoque en una **tarea de retoque** sobre uno de sus capítulos afectados y reabre ese capítulo en un run de tipo `retoque`:
+
+1. Para cada retoque con `prioridad = alta` (o todos, según configuración), el harness elige el capítulo objetivo (el último de `capitulos_afectados`, porque los retoques de arco y promesa se resuelven normalmente al final) y crea una `TareaRetoque {retoque_id, capitulo_id, instruccion}`.
+2. El run de `retoque` ejecuta el loop de §7 sobre ese capítulo con dos diferencias: el escritor recibe el capítulo aprobado como "texto anterior" y la `instruccion` del retoque como única incidencia (`severidad = mayor`, `categoria = retoque_editorial`), en modo reescritura incremental; y el gate exige además que el revisor de continuidad confirme que el capítulo sigue siendo coherente con los capítulos **posteriores** (que ahora existen), para lo cual recibe también los resúmenes de N+1..N+K.
+3. Si el gate aprueba, el commit del canon reemplaza el capítulo (nueva versión del canon, snapshot) y actualiza resumen, eventos y estado de personajes. Los cambios de estado de personajes que contradigan capítulos posteriores se detectan por las comprobaciones deterministas (PER-3, EVT-7 aplicadas hacia delante) y bloquean.
+4. Tras aplicar todas las tareas, el editor global vuelve a ejecutarse una vez sobre los resúmenes actualizados y produce el informe final. No hay tercera pasada: `max_pasadas_editor = 2`.
+
+| A favor | En contra |
+|---|---|
+| Cierra el bucle: el libro sale con los retoques aplicados. | Reabrir un capítulo aprobado puede introducir contradicciones con los siguientes; el revisor de continuidad "hacia delante" mitiga pero no elimina el riesgo. |
+| Reutiliza el loop de §7 sin agentes nuevos. | Añade un tipo de run, un estado `retocando` en la máquina de §4.3, y complejidad en el generador de contexto (resúmenes posteriores). |
+| El coste es acotado: ≤ 15 retoques × 1 run. | El diagrama no lo contempla; sería una extensión. |
+
+**Recomendación: Opción A en la fase 1 y 2; Opción B como fase 3 opcional (§16), condicionada a que el set de evaluación de §15.6 muestre que los retoques del editor son pertinentes en ≥ 70 % de los casos.** Motivo: la opción B solo tiene sentido si los retoques son buenos; hasta medirlo, automatizar su aplicación arriesga capítulos aprobados por una lista que quizá no lo merezca. La opción A no cierra ninguna puerta: los artefactos que B necesita (informe estructurado con `capitulos_afectados` y `accion_sugerida`, loop incremental, snapshots) ya existen en A.
+
+### §8.5 Estados y comandos
+
+| Elemento | Opción A | Opción B (si se implementa) |
+|---|---|---|
+| Estados de §4.3 | `editando → finalizado` | `editando → retocando → editando → finalizado` |
+| Tipos de run | `editor_global` | + `retoque` |
+| Comandos | `novela run` llega hasta `finalizado`; `novela export` | + `novela retouch <proyecto_id> [--todos | --prioridad alta]` para lanzar las tareas bajo demanda en vez de automáticamente |
+| Configuración | `editor.max_retoques = 15` | + `editor.aplicar_retoques ∈ {ninguno, alta, todos}`, `editor.max_pasadas = 2` |
+| Versión del canon | Sin cambio | +1 por retoque aplicado |
+
+### §8.6 Modos de fallo específicos
+
+| Fallo | Reacción |
+|---|---|
+| El editor marca cumplida una promesa que el canon tiene abierta (o viceversa) | Se registra como `discrepancia` en el informe; el estado del canon no cambia (P-01: el editor no escribe en el canon). |
+| Informe con 0 retoques y valoración positiva en un libro con promesas abiertas según el canon | El harness añade al informe una sección "Detectado por código" con las promesas abiertas y arcos sin cerrar; el informe se guarda igual. Motivo: lo determinista no depende del juicio del editor. |
+| Salida inválida tras las reparaciones de §9.3 | Run `fallido`; `novela resume` lo relanza. El estado del proyecto queda en `editando` y el libro es utilizable con `novela export` aunque el informe no exista. |
+| Coste del run por encima del límite (§11.4) | Es una sola llamada; si el límite por run es menor que su coste estimado, el harness avisa antes de llamar y aborta con `presupuesto_excedido`. |
 
 ## §9 Contratos de I/O y validación
 
