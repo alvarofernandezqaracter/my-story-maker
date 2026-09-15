@@ -15,7 +15,7 @@ Sistema que escribe una novela histórica capítulo a capítulo a partir de un b
 
 **Qué produce.** Un canon consultable, un fichero por capítulo aprobado y una lista final de retoques. No maqueta el libro ni aplica esos retoques por sí mismo.
 
-**Fuera de alcance en 0.1.0.** Interfaz gráfica, exportación a EPUB, ilustraciones, varios proyectos a la vez, traducción y reescritura automática a partir del editor global.
+**Fuera de alcance en el alcance inicial.** Interfaz gráfica, exportación a EPUB, ilustraciones, varios proyectos a la vez, traducción y reescritura automática a partir del editor global.
 
 **Criterio de éxito.** Una novela completa sin contradicciones de canon detectables ni anacronismos groseros, con intervención humana solo en los dos puntos fijos que marca §4.
 
@@ -61,7 +61,7 @@ El brief no tiene tabla propia: se guarda como fila única en `proyecto` con sus
 | motivacion | texto | sí | Qué quiere y por qué |
 | arco | texto | sí | De dónde parte y adónde llega |
 | ubicacion | texto | sí | Dónde está ahora mismo en la trama |
-| sabe | lista | no | Qué conoce y qué ignora. Clave para la revisión de continuidad |
+| sabe | lista | no | Qué conoce y qué ignora. Clave para la dimensión de continuidad |
 | actualizado_en | entero | sí | Nº del último capítulo aprobado que tocó la ficha |
 
 **Evento de timeline**
@@ -407,11 +407,11 @@ Devuelve una lista corta de retoques. Cada retoque tiene id, tipo (`arco`, `prom
 
 La lista se guarda como `retoques.md` junto al canon, no dentro. El canon es la verdad de la novela escrita y esto es una lista de tareas para mí; mezclarlas haría que el canon dejara de ser lo que dice §2.
 
-El editor no aplica nada ni dispara reescrituras. En 0.1.0 el bucle se cierra a mano: yo decido qué retoques valen y los aplico editando capítulos. Automatizar esa vuelta es lo primero que queda fuera de alcance (§1) y está apuntado en §15 (DA-07).
+El editor no aplica nada ni dispara reescrituras. En el alcance inicial el bucle se cierra a mano: yo decido qué retoques valen y los aplico editando capítulos. Automatizar esa vuelta es lo primero que queda fuera de alcance (§1) y está apuntado en §15 (DA-07).
 
 ## §13 Operación: fallos y reanudación
 
-**Qué pasa cuando algo falla a mitad.** El estado vive en el canon, nunca en memoria del proceso, así que un corte de red, un error del proveedor o un Ctrl+C no pierden más que el intento en curso. Como el canon solo se toca después del gate y en una única escritura validada del cronista, no existe el estado a medias: o el capítulo entró entero o no entró. Lo peor que deja una caída es un Markdown huérfano en `capitulos/` con su fila en estado `propuesto`, que al relanzar se descarta. Ante un error del proveedor se reintenta la llamada una vez; si vuelve a fallar, el proceso para y deja el estado escrito en lugar de insistir. No hay política de backoff ni de reintentos finos en 0.1.0, y es deliberado: con un solo usuario, parar y mirar sale más barato que automatizar la recuperación.
+**Qué pasa cuando algo falla a mitad.** El estado vive en el canon, nunca en memoria del proceso, así que un corte de red, un error del proveedor o un Ctrl+C no pierden más que el intento en curso. Como el canon solo se toca después del gate y en una única escritura validada del cronista, no existe el estado a medias: o el capítulo entró entero o no entró. Lo peor que deja una caída es un Markdown huérfano en `capitulos/` con su fila en estado `propuesto`, que al relanzar se descarta. Ante un error del proveedor se reintenta la llamada una vez; si vuelve a fallar, el proceso para y deja el estado escrito en lugar de insistir. No hay política de backoff ni de reintentos finos en el alcance inicial, y es deliberado: con un solo usuario, parar y mirar sale más barato que automatizar la recuperación.
 
 **Reanudación.** Un único comando reanudar, sin argumentos: lee el estado del proyecto, localiza el primer capítulo no aprobado y sigue desde ahí. Relanzar con el proyecto ya `escrito` no reescribe nada, solo vuelve a ofrecer el editor global. El par capítulo e intento identifica cada fichero, así que repetir un intento sobrescribe en lugar de duplicar.
 
