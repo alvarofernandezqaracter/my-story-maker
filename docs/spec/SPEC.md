@@ -320,7 +320,8 @@ para cada capitulo de la escaleta con estado != aprobado:
         guardar_intento(capitulo, intento, texto)             # estado propuesto
         det = comprobaciones(texto)                           # §9
         si det.bloqueantes:                                   # VD-08 en su escalon de bloqueo
-            incidencias = det.todas                           # el reintento va de cero
+            incidencias = det.todas
+            texto_previo = null                               # el reintento va de cero
             siguiente intento                                 # sin llamar al validador
 
         rev = validar(texto, paquete)          # 1 llamada; 3 en paralelo si modo separado
