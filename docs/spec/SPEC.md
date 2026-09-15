@@ -466,11 +466,10 @@ Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo q
 
 ## §15 Decisiones abiertas
 
-Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar la fase que se indica.
+Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar la fase que se indica. Los ids no se reutilizan: DA-01 salió de la tabla al decidirse el stack (§18) y su número queda muerto.
 
 | Id | Decisión pendiente | Por qué importa | Cuándo decidirla |
 |---|---|---|---|
-| DA-01 | Lenguaje y stack del harness | Fija cómo se consulta el canon y cómo se orquestan las llamadas a agentes | Antes de F0 |
 | DA-02 | Modelo definitivo de cada agente | Validador y escritor se llevan casi todas las llamadas; el reparto decide el coste del libro | Antes de F3 |
 | DA-03 | Parada humana al acabar la preparación | Es la revisión más barata y un fallo de escaleta contamina el libro entero | Antes de F4 |
 | DA-04 | Proveedor de búsqueda del investigador | Define qué significa exactamente `verificado` en el dossier | Antes de F6 |
