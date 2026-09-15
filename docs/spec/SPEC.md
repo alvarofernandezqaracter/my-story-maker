@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.1.0
+version: 0.2.0
 estado: borrador
 actualizado: 2026-09-15
 ---
@@ -316,6 +316,7 @@ para cada capitulo de la escaleta con estado != aprobado:
     para intento en 1..3:
         texto = escritor(paquete, texto_previo, incidencias)
         guardar_intento(capitulo, intento, texto)             # estado propuesto
+        si no comprobaciones_ok(texto): siguiente intento      # §9, sin llamar al validador
 
         rev = validar(texto, paquete)          # 1 llamada; 3 en paralelo si modo separado
         si no comprobaciones_ok(rev): reintentar la llamada     # §9, sin gastar gate
@@ -461,6 +462,18 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.2.0] — 2026-09-15
+
+**Cambiado**
+- Renumeración de §6 en adelante para dar sitio a memoria, validadores, skills y configuración. El orden relativo de lo ya escrito se mantiene: generador de contexto pasa de §6 a §7, loop y gate de §7 a §8, editor global de §8 a §11, operación de §9 a §13, roadmap de §10 a §14, decisiones abiertas de §11 a §15, historial de §12 a §16 y log de commits de §13 a §17. Los números viejos quedan muertos y no se reutilizan.
+- §1, §2, §3, §4, §5, §8. Los tres revisores se funden en un único agente validador que juzga las tres dimensiones en una llamada, con `validador.modo` para volver a tres. El gate sigue operando sobre tres notas y el modelo de datos no cambia.
+- §4. El diagrama pasa de tres nodos de revisión a uno, y con ello desaparece el único paralelismo del flujo.
+
+**Añadido**
+- §6. Memoria a largo y corto plazo, para fijar qué persiste, qué asciende al aprobar y qué se reconstruye.
+- §9. Inventario de comprobaciones deterministas `VD-xx`, separadas del agente validador y previas al gate.
+- §10. Inventario de skills, con el conjunto mínimo y qué no debe serlo.
 
 ### [0.1.0] — 2026-09-15
 
