@@ -3669,7 +3669,128 @@ Notas:
 
 ## §15 Plan de evaluación y tests
 
-> Estado: pendiente
+> Estado: completa
+
+### §15.1 Niveles de prueba
+
+| Nivel | Qué prueba | LLM | Cuándo se ejecuta |
+|---|---|---|---|
+| Unitario | Funciones puras del harness: invariantes, gate, comprobaciones deterministas, selección y recorte de contexto, sanitización, extracción de JSON, diff, ids, precios. | Ninguno | En cada cambio (`pytest tests/unit`). |
+| Integración | Flujo completo brief → canon → capítulos → editor con `ProveedorMock`; reanudación; commit atómico y recuperación; rollback; escalada. | Mock | En cada cambio (`pytest tests/integracion`). Debe correr en < 2 minutos. |
+| Contrato de proveedor | Cada adaptador real contra una llamada mínima con schema, para verificar salida estructurada, conteo de tokens y errores. | Real, 1 llamada por adaptador con modelo `bajo` | A mano o en CI con secreto, antes de una release. |
+| Evaluación de calidad | Set de §15.6 con modelos reales. | Real | A mano, al cambiar prompts, modelos o umbrales. |
+
+Regla: **ninguna prueba automática gasta tokens**. Todo lo que necesita LLM real está en `tests/evaluacion/` y se lanza explícitamente.
+
+### §15.2 Proveedor mock
+
+`ProveedorMock` implementa `ProveedorLLM` (§4.6) sin red:
+
+- Recibe una `PeticionLLM`, identifica el agente por `metadatos.agente` y busca una respuesta en `tests/fixtures/mock/<escenario>/<agente>[_<subtarea>][_intento<n>].json`. El escenario activo se elige con `NOVELA_MOCK_ESCENARIO` o el flag `--escenario`.
+- Cada fixture es `{respuesta: <objeto JSON o cadena bruta>, tokens_entrada, tokens_salida, latencia_ms, motivo_parada, error: null | {tipo}}`. Una cadena bruta permite simular JSON inválido; `error` permite simular `timeout`, `rate_limit`, `proveedor_5xx`.
+- Soporta **secuencias**: un fixture puede ser una lista; la llamada k-ésima con el mismo `(agente, subtarea, intento)` devuelve el elemento k (para reparaciones y reintentos técnicos).
+- Soporta **plantillas**: una respuesta puede contener `{{capitulo_id}}`, `{{ids_personajes_presentes}}`, `{{dato_id_0}}`, que el mock sustituye con valores del prompt que recibe. Motivo: el escritor mock debe devolver ids que existen en el canon de prueba sin fijar el canon en el fixture.
+- `contar_tokens` estima por caracteres; `coste_usd` usa precios ficticios (1 USD por millón) para que los tests de presupuesto sean legibles.
+- Registra todas las peticiones recibidas en memoria para que los tests afirmen sobre qué se pidió (por ejemplo, que el reintento incluía la incidencia X en `<incidencias>`).
+
+Escenarios mínimos en `tests/fixtures/mock/`:
+
+| Escenario | Contenido |
+|---|---|
+| `feliz` | Investigador (5 grupos), arquitecto (fase 1 + 1 lote de 4 capítulos), escritor para 4 capítulos, tres revisores con nota 9 y 0 incidencias, editor con 1 retoque. |
+| `revisor_siempre_falla` | Como `feliz`, pero el revisor de continuidad devuelve siempre nota 3 y 1 bloqueante. |
+| `mejora_progresiva` | Escritor con 3 versiones por capítulo; revisores devuelven bloqueante en intento 1, mayor en 2, limpio en 3. |
+| `json_invalido` | Escritor devuelve texto no JSON en la primera llamada y JSON válido en la reparación; revisor devuelve JSON con campo extra. |
+| `contradiccion_canon` | Escritor incluye a un personaje muerto en escena `presente` y una fecha anterior al capítulo previo. |
+| `incoherencia_revisor` | Revisor devuelve nota 9 con una bloqueante, cita inexistente y bloqueante sin evidencia. |
+| `truncado` | Escritor con `motivo_parada = max_tokens` dos veces. |
+| `error_tecnico` | Revisor de lógica con `rate_limit` × 5 (agota reintentos técnicos). |
+| `presupuesto` | Precios altos para que el capítulo 2 exceda `por_capitulo_usd`. |
+
+### §15.3 Casos de prueba del gate y del loop
+
+| Id | Caso | Escenario mock | Resultado esperado |
+|---|---|---|---|
+| T-G-01 | Tres revisores ≥ umbral, 0 bloqueantes, ≤ 4 mayores | `feliz` | `aprobado` en intento 1; commit; versión +1; snapshot creado. |
+| T-G-02 | Revisor que falla siempre | `revisor_siempre_falla` | `reintentar` en intentos 1–3, `escalado` en el 4; run `escalado`; ficha `escalado`; paquete de escalada con `RESUMEN.md`, 4 `capitulo.md`, 4 `revisiones.md`, `diff_intentos.md`; estado del proyecto `escalado`; código de salida 3; exactamente 4 llamadas al escritor y 12 a revisores. |
+| T-G-03 | Mejora progresiva | `mejora_progresiva` | Aprobado en intento 3; el prompt del intento 2 contiene el texto del intento 1 y su bloqueante; el del intento 3 no contiene la bloqueante ya resuelta; temperatura 0,6 en reintentos. |
+| T-G-04 | Bloqueante con nota alta | `incoherencia_revisor` | Nota forzada a 5 (`coherencia_forzada = true`); veredicto `reintentar`. |
+| T-G-05 | Cita inexistente | `incoherencia_revisor` | `localizacion_verificada = false`; bloqueante rebajada a `mayor`. |
+| T-G-06 | Bloqueante sin evidencia (continuidad) | `incoherencia_revisor` | Rebajada a `menor`. |
+| T-G-07 | 5 mayores repartidas, todas las notas ≥ umbral | Fixture ad hoc | `reintentar` por `max_mayores`. |
+| T-G-08 | Nota de lógica 6 con umbral 6, resto 7 | Fixture ad hoc | `aprobado`. Con `umbral.logica_ritmo = 7` en config → `reintentar`. |
+| T-G-09 | `modo_tolerante = true`, último intento, notas a 1 del umbral, 0 bloqueantes | Fixture ad hoc | `aprobado_tolerante`; marcado en run y en `stats`. |
+| T-G-10 | Determinista bloqueante + revisores limpios | `contradiccion_canon` | `reintentar`; las incidencias D-01 y D-08 aparecen en el prompt del reintento; los revisores fueron llamados igualmente. |
+| T-G-11 | Revisor con error técnico agotado | `error_tecnico` | Intento `abortado`, no consume reintento; relanzamiento reutiliza `capitulo.json` y las dos revisiones guardadas; tras 2 relanzamientos → run `fallido` con `revisor_no_disponible`. |
+| T-G-12 | `--reintentos-extra 2` tras escalada | `revisor_siempre_falla` | El run escalado continúa en intento 5 y 6; después vuelve a escalar. |
+| T-G-13 | `novela accept` | `revisor_siempre_falla` | Commit del intento indicado; `veredicto = aprobado_manual`; `origen.agente = usuario` en registros nuevos. |
+
+### §15.4 Casos de contradicción deliberada con el canon
+
+Prueban las comprobaciones deterministas de §7.3 con un canon de prueba en `tests/fixtures/proyectos/comuneros-1521-mini/` (3 personajes, 20 datos, 4 fichas, capítulo 1 aprobado).
+
+| Id | Manipulación del fixture del escritor | Incidencia esperada |
+|---|---|---|
+| T-C-01 | Personaje con `condicion = muerto` en escena `presente` | D-01 bloqueante |
+| T-C-02 | Mismo personaje en escena `flashback` | Ninguna |
+| T-C-03 | Id de personaje inexistente | D-02 bloqueante |
+| T-C-04 | `dato_id` inexistente | D-03 mayor |
+| T-C-05 | Promesa `cumplida` que está `prevista` | D-04 mayor |
+| T-C-06 | `beats_cubiertos` sin el beat 3 | D-05 mayor; con revisor de lógica que lo acepta en `comprobado` → `sugerencia` |
+| T-C-07 | 1.900 palabras con objetivo 3.000 | D-06 mayor; con 1.400 → bloqueante |
+| T-C-08 | Escena 2 con fecha anterior a la escena 1, ambas `presente` | D-07 mayor |
+| T-C-09 | Primera escena anterior al último evento del capítulo 1 | D-08 bloqueante |
+| T-C-10 | Evento nuevo en 1530 (época termina en 1521) | D-09 mayor |
+| T-C-11 | `personajes_nuevos` con el nombre de un personaje existente | D-12 menor, resuelto al existente |
+| T-C-12 | `estado_final_personajes` sin un personaje presente | D-13 mayor |
+| T-C-13 | Commit con metadatos que rompen GLB-1 (referencia a `evt_9999` en `causas`) | `canon_invalido_tras_commit`; `canon/` intacto (hash igual al snapshot previo) |
+
+### §15.5 Casos de reanudación y persistencia
+
+| Id | Caso | Procedimiento | Resultado esperado |
+|---|---|---|---|
+| T-R-01 | Muerte tras el escritor, antes de revisores | Escenario `feliz`; el mock lanza `SystemExit` tras guardar `capitulo.json` del capítulo 2 | `resume`: 0 llamadas al escritor, 3 a revisores; capítulo 2 aprobado. |
+| T-R-02 | Muerte con 2 de 3 revisiones guardadas (escenario de §11.6) | Ídem con corte tras la segunda revisión | `resume`: exactamente 1 llamada (revisor faltante). |
+| T-R-03 | Muerte entre gate aprobado y commit | Corte tras escribir `gate` en `run.json` | `resume`: 0 llamadas; commit directo; versión +1. |
+| T-R-04 | Corte en cada fase del diario de commit (`preparado`, `intercambiado`, `snapshot`) | Inyectar fallo en cada paso de §10.4 | Recuperación según la tabla de §10.4; canon final idéntico al esperado; hash del snapshot correcto. |
+| T-R-05 | Reanudación con 2 reintentos gastados | Escenario `mejora_progresiva`, corte en intento 3 | El intento 3 se retoma; total de intentos = 3; ningún intento repetido. |
+| T-R-06 | Lock huérfano | Crear `proyecto.lock` con PID inexistente | Se reemplaza y arranca. Con PID vivo → `lock_ocupado`, código 4. |
+| T-R-07 | Edición manual sin commit | Modificar un personaje a mano y `run` | `canon_modificado_sin_commit`; tras `canon commit -m` → versión `manual` y arranque normal. |
+| T-R-08 | Rollback | 4 capítulos aprobados; `rollback --to v004` (capítulo 2) | Nueva versión con contenido de v004; fichas 3–4 `pendiente`; runs 3–4 `descartado`; `resume` reescribe el 3; snapshots v005–v006 conservados. |
+| T-R-09 | Idempotencia de llamadas | Mismo run relanzado con `guardar_prompts = true` | `hash_prompt` idéntico; respuesta servida desde `runs/<run_id>/llamadas/` sin llamar al mock (contador del mock = 0). |
+| T-R-10 | Cambio de configuración a mitad | Cambiar `umbral.continuidad` entre corte y `resume` | Evento `config_cambiada`; gate evaluado con el nuevo umbral; `config_hash` actualizado en el run. |
+| T-R-11 | Presupuesto | Escenario `presupuesto` | Capítulo 2 → `presupuesto_excedido`, run `fallido`, código 2; subir el límite y `resume` → continúa. |
+| T-R-12 | Parada limpia | Enviar SIGINT durante la llamada al escritor (mock con latencia) | La respuesta se guarda; código 130; `resume` no repite al escritor. |
+
+### §15.6 Set de evaluación de calidad (con LLM real)
+
+Objetivo: calibrar umbrales, K, niveles de modelo y prompts, y detectar regresiones al cambiarlos. Se ejecuta a mano con `pytest tests/evaluacion --escenario <nombre> --proveedor <p>` y produce un informe JSON comparable entre ejecuciones (`novela stats --json`).
+
+**Corpus**: el proyecto `comuneros-1521` de los ejemplos de §3 reducido a 5 capítulos (brief con `num_capitulos = 5`), más un segundo brief en otra época y lugar (por ejemplo Roma republicana, 44 a.C.) con 3 capítulos, para comprobar que nada está sobreajustado a una época. Coste estimado de una pasada completa: preparación ×2 + 8 capítulos × ≈ 1,5 USD ≈ 20 USD.
+
+**Qué se mide en cada capítulo de prueba**:
+
+| Medida | Cómo | Objetivo inicial |
+|---|---|---|
+| Recall de contradicciones plantadas | Tras aprobar el capítulo 2, se edita a mano el canon para introducir 3 contradicciones conocidas (personaje que cambia de ciudad, hecho clave alterado, promesa marcada como cumplida) y se relanza el capítulo 3 con el mismo texto del escritor vía fixture; se cuenta cuántas señala el revisor de continuidad. | 3/3 |
+| Recall de anacronismos plantados | Se inyectan en el texto del escritor (vía fixture) 5 anacronismos de distinta clase: material, léxico, ideológico, institucional, dato no declarado. | ≥ 4/5, el material y el institucional siempre |
+| Falsos bloqueantes | Revisión humana de cada bloqueante emitido en la pasada normal. | ≤ 1 por capítulo |
+| Estabilidad de notas | Cada revisor se ejecuta 3 veces sobre el mismo texto. | Rango ≤ 1 punto |
+| Fidelidad de metadatos | Revisión humana: ¿el `resumen_propuesto` y los `eventos_nuevos` describen lo que pasa en la prosa? | ≥ 90 % de afirmaciones correctas |
+| Fuentes del dossier | Muestreo de 20 datos `verificado`: ¿existe la obra citada? ¿dice eso? | ≥ 90 % existen; ≥ 75 % correctas |
+| Concreción del dossier | Proporción de datos que superan el criterio de concreción de §5.1 | ≥ 85 % |
+| Reescritura incremental | Similitud entre intentos consecutivos en escenas no señaladas | ≥ 0,7 |
+| Pertinencia de retoques del editor | Revisión humana de cada retoque | ≥ 70 % pertinentes |
+| Coste y latencia por capítulo | De `stats` | ≤ 3 USD; ≤ 15 min |
+| Tasa de reparación | De `stats` | ≤ 15 % por agente |
+| Efecto de K | Pasada con K = 1, 3, 5 sobre el mismo corpus; se compara recall de continuidad y coste. | Decide el valor por defecto (§17) |
+| Efecto del nivel del revisor de anacronismos | Pasada con `medio` y con `alto`. | Decide el nivel (§17) |
+
+Los resultados se guardan en `tests/evaluacion/resultados/<fecha>_<descripcion>.json` y se comparan con el anterior; una bajada de más de 10 puntos en cualquier recall bloquea el cambio de prompt o modelo que la causó.
+
+### §15.7 Pruebas de los schemas y del propio spec
+
+`scripts/validar_schemas.py` comprueba que cada tabla de campos de §3 y cada fichero de `schemas/` coinciden (nombres, tipos, enums, obligatoriedad) parseando las tablas Markdown de este documento. Motivo: §3 manda sobre los schemas (§3.1.1); un test lo hace cumplir. Se ejecuta en `tests/unit`.
 
 ## §16 Roadmap por fases
 
