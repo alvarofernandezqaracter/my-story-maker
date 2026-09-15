@@ -421,7 +421,7 @@ El editor no aplica nada ni dispara reescrituras. En el alcance inicial el bucle
 
 Un único `config.json` en la raíz del proyecto, junto al canon. Aquí vive todo lo que se toca sin tocar código, y no se duplica en ninguna skill (§10): si un número aparece escrito en el código sin pasar por este fichero, es un bug y no una decisión. El harness lo carga al arrancar, lo valida entero y para si falta una clave o un valor cae fuera de rango, porque una errata en un umbral sale más barata descubierta al arrancar que tres capítulos después.
 
-**Modo de ejecución.** `ejecucion.modo` es la única bifurcación del sistema: con `real` las llamadas a agentes van a la API y con `simulado` las resuelve una capa local que devuelve respuestas fijas con el formato correcto. Todas las llamadas pasan por esa capa, así que el resto del harness no sabe cuál está activo y los tests y las demostraciones corren sin red y sin coste por el mismo camino que la ejecución de verdad.
+**Modo de ejecución.** `ejecucion.modo` es la única bifurcación del sistema: con `real` las llamadas a agentes van a la API y con `simulado` las resuelve una capa local que devuelve respuestas fijas con el formato correcto. Todas las llamadas pasan por esa capa, así que el resto del harness no sabe cuál está activo y los tests y las demostraciones corren sin red y sin coste por el mismo camino que la ejecución de verdad. La credencial de la API no vive aquí: va en el entorno, porque este fichero se versiona y un secreto en él acaba en el repositorio.
 
 | Clave | Por defecto | Para qué |
 |---|---|---|
