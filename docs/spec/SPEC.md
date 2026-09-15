@@ -293,12 +293,12 @@ Código, no agente: mismo capítulo y mismo canon dan siempre el mismo paquete. 
 | Encargo | Ficha del capítulo entera | Siempre |
 | Personajes | Fichas completas de quien sale | `personajes` de la ficha |
 | Reparto de fondo | Nombre y una línea de quien no sale pero se menciona | Aparece en la sinopsis |
-| Memoria reciente | Resúmenes de los tres capítulos anteriores | Ventana fija |
+| Memoria reciente | Resúmenes completos de los `contexto.ventana_resumenes` capítulos anteriores | Ventana fija, configurable (§12) |
 | Memoria larga | Resúmenes del resto, recortados a una frase | Solo capítulos aprobados |
 | Hilos vivos | Hilos abiertos y aún no cerrados | Diferencia entre abiertos y cerrados |
-| Época | Datos históricos que casan con las etiquetas de la ficha | Coincidencia de etiquetas, `verificado` primero |
-| Cronología | Eventos de línea de tiempo en la ventana de fechas del capítulo | Rango de fechas |
-| Enganche | Últimas 400 palabras del capítulo anterior aprobado | Literal, para continuidad de tono |
+| Época | Datos históricos que casan con las `etiquetas` de la ficha de capítulo (§3) | Coincidencia de etiquetas, `verificado` primero |
+| Cronología | Eventos de línea de tiempo en la ventana del capítulo | Entre la `fecha` de la ficha anterior y la de esta (§3) |
+| Enganche | Últimas `contexto.palabras_enganche` palabras del capítulo anterior aprobado | Literal, para continuidad de tono |
 
 Dos reglas que no se negocian. El texto completo de capítulos anteriores no entra nunca, salvo el enganche: para eso están los resúmenes. Y en el paquete viaja el estado de cada dato histórico, porque el escritor necesita saber qué es firme y qué es relleno.
 
