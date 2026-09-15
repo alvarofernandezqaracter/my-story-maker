@@ -2856,7 +2856,149 @@ Los agentes también tienen contrato de entrada: el harness valida el `PaqueteCo
 
 ## §10 Persistencia y versionado del canon
 
-> Estado: pendiente
+> Estado: completa
+
+Esta sección versiona el **contenido del libro**. El versionado de este documento es otra cosa y está en §20.
+
+### §10.1 Modelo: directorio de trabajo mutable + snapshots inmutables
+
+| Opción | Descripción | Veredicto |
+|---|---|---|
+| Sobrescritura simple | `canon/` se edita en el sitio. | Rechazada: sin historial ni vuelta atrás. |
+| Append-only puro (log de eventos) | Cada cambio es un evento; el canon actual se reconstruye replegando el log. | Rechazada: el canon debe ser legible y editable a mano como ficheros (§3.2); reconstruirlo para leerlo lo complica, y los agentes nunca necesitan el historial. |
+| **Directorio de trabajo + snapshot por versión (elegida)** | `canon/` es el estado actual, legible y editable. Cada commit produce una copia íntegra e inmutable en `snapshots/v<NNN>_<etiqueta>/`. Los diffs se calculan entre snapshots. | Cumple: legibilidad, vuelta atrás a cualquier versión, diffs, y el tamaño lo permite (S-03: 1–3 MB por snapshot; 40 versiones ≈ 100 MB en el peor caso). |
+
+El registro de qué cambió y por qué (el "log") no está en el canon sino en `runs/` y `logs/eventos.jsonl` (§12.2): un snapshot es el *qué*, el run es el *por qué*.
+
+### §10.2 Numeración de versiones
+
+`canon/version.json`:
+
+```json
+{ "version": 6, "ultimo_capitulo_aprobado": 4, "etiqueta": "cap_004", "run_id": "run_01J8ZM5A...", "actualizado_en": "2026-09-16T08:40:00Z" }
+```
+
+| Versión | Estado del canon | Etiqueta del snapshot |
+|---|---|---|
+| 0 | Vacío, tras `novela init` | `v000_inicial` |
+| 1 | Dossier | `v001_investigacion` |
+| 2 | Dossier + escaleta + personajes + eventos históricos | `v002_arquitectura` |
+| n + 2 | Capítulo n aprobado | `v<n+2>_cap_<n>` |
+| cualquiera | Edición manual (§10.6) | `v<k>_manual` |
+| cualquiera | Retoque aplicado (opción B de §8, si existe) | `v<k>_retoque_cap_<n>` |
+
+La versión es un entero que solo crece (RUN-4, GLB-3). Un rollback (§10.7) no decrementa la versión: crea una versión nueva cuyo contenido es el del snapshot elegido, de modo que la historia nunca se reescribe. El informe del editor global no cambia la versión (§8.3).
+
+### §10.3 Snapshots
+
+- Se toma un snapshot **inmediatamente después** de cada commit (§10.4), copiando `canon/` íntegro a `snapshots/v<NNN>_<etiqueta>/canon/` más un `snapshot.json` con `{version, etiqueta, run_id, creado_en, hash_canon}`.
+- `hash_canon` es el SHA-256 del árbol (hash de los hashes de cada fichero ordenados por ruta). Sirve para verificar la integridad y para detectar ediciones manuales no registradas (§10.6).
+- Los snapshots son de solo lectura: el harness pone los ficheros en modo lectura tras copiarlos y nunca los modifica. En Windows esto es el atributo `ReadOnly`; en POSIX, `0444`.
+- No se usa deduplicación ni copia incremental. Motivo: simplicidad y S-03; si el tamaño se volviera un problema, `snapshots/` es un candidato natural a comprimir (`zip` por versión) sin cambiar nada más, decisión anotada en §17.
+- El índice SQLite (`indice/`) **no** forma parte del snapshot: es derivado y se reconstruye (§3.14).
+
+### §10.4 Staging y commit atómico
+
+El canon solo se escribe al aprobar (P-03). Mecanismo:
+
+**Durante el run.** Todo lo que produce un run va a `staging/<run_id>/`: paquetes de contexto, salidas de agentes por intento, revisiones. Nada de `staging/` se lee como canon.
+
+**Al aprobar.** `RepositorioCanon.commit(run, staging)`:
+
+```
+commit(run, staging):
+    1. Bloqueo: adquirir lock exclusivo del proyecto (fichero proyecto.lock, §11.5). Comprobar RUN-1 y que
+       canon/version.json.version == run.canon_version_base; si no, error canon_desactualizado (§11.2).
+    2. Preparar: copiar canon/ a canon.tmp/ (mismo volumen, para que el renombrado sea atómico).
+    3. Aplicar en canon.tmp/ los cambios derivados del artefacto aprobado (tabla de §7.9 para capítulos;
+       dossier para investigación; escaleta, personajes y eventos históricos para arquitectura), asignando
+       ids nuevos (§3.1.2) y campos calc (origen, version, palabras...). Reordenar timeline (EVT-4),
+       regenerar resumenes/global.json, regenerar capitulos/cap_NNN.md, actualizar version.json.
+    4. Validar canon.tmp/ completo: schemas (GLB-7) e invariantes globales (§3.13). Si falla, borrar
+       canon.tmp/ y abortar con error canon_invalido_tras_commit; el canon/ real no se ha tocado.
+    5. Escribir el diario: commit.journal = {run_id, version_nueva, etiqueta, fase: "preparado"}.
+    6. Intercambio:
+         a. renombrar canon/      -> canon.prev/
+         b. renombrar canon.tmp/  -> canon/
+         c. actualizar commit.journal.fase = "intercambiado"
+    7. Snapshot: copiar canon/ -> snapshots/v<NNN>_<etiqueta>/canon/ + snapshot.json; marcar solo lectura.
+       commit.journal.fase = "snapshot"
+    8. Limpieza: borrar canon.prev/; reconstruir indice/dossier.sqlite si cambió el dossier;
+       mover staging/<run_id>/ a runs/<run_id>/artefactos/ (se conserva para auditoría, §12);
+       actualizar run.json (estado, canon_version_resultado) y estado.json (§11.5);
+       borrar commit.journal.
+    9. Liberar el lock.
+```
+
+Recuperación tras un corte en mitad del commit (lo ejecuta el harness al arrancar si existe `commit.journal`):
+
+| `fase` en el diario | Situación | Acción |
+|---|---|---|
+| `preparado` | `canon.tmp/` puede existir; `canon/` intacto | Borrar `canon.tmp/`. El run vuelve a `en_curso` con el intento aprobado guardado en staging; al reanudar, se repite el commit sin llamar a ningún LLM. |
+| `intercambiado` | `canon/` es el nuevo; `canon.prev/` existe; sin snapshot | Continuar desde el paso 7. |
+| `snapshot` | Snapshot completo o parcial | Verificar `hash_canon` del snapshot contra `canon/`; si no coincide, borrar el snapshot y rehacer el paso 7; continuar desde el 8. |
+| Sin diario pero existe `canon.prev/` o `canon.tmp/` | Corte entre 6a y 6b, o residuo | Si `canon/` no existe y `canon.prev/` sí: renombrar `canon.prev/` → `canon/` (deshacer). Borrar `canon.tmp/`. |
+
+Los dos renombrados del paso 6 no son atómicos como par, pero cada uno lo es en el mismo volumen, y el diario hace que cualquier estado intermedio sea recuperable de forma determinista. Motivo de no usar SQLite con transacciones para esto: §3.2, ADR-0001.
+
+### §10.5 Diffs legibles
+
+`novela canon diff v<a> v<b>` compara dos snapshots y produce un informe en Markdown con tres niveles:
+
+1. **Ficheros**: añadidos, eliminados, modificados (por ruta relativa a `canon/`).
+2. **Registros**: para cada fichero JSON modificado, diff semántico por campo (`campo: valor_a → valor_b`), con listas comparadas por id cuando los elementos tienen id (eventos, conocimiento por `hecho`, relaciones por `personaje_id`) y como conjuntos en otro caso. La serialización canónica de §3.2 (claves ordenadas, 2 espacios, `\n` final) hace que el diff textual también sea estable si el usuario prefiere `git diff --no-index`.
+3. **Prosa**: para `capitulos/cap_NNN.json` modificados (solo ocurre con retoques o ediciones manuales), diff por párrafo dentro de cada escena.
+
+Ejemplo de salida (abreviado):
+
+```
+## v005_cap_003 → v006_cap_004
+Ficheros: +4  ~3  -0
++ capitulos/cap_004.json, capitulos/cap_004.md, resumenes/cap_004.json, dossier/dat_0187.json
+~ personajes/per_ines_de_ayala.json
+    estado_actual.ultimo_capitulo: 3 → 4
+    conocimiento: +1 ("Ordóñez tiene un interés impropio en los pliegos que van a Tordesillas", cap 4)
+    relaciones: +1 (per_capitan_ordonez · sospecha)
+    version: 4 → 5
+~ timeline.json: +2 eventos (evt_0017, evt_0018)
+~ escaleta/arco.json: promesas.prm_002.estado: prevista → planteada
+```
+
+### §10.6 Edición manual del canon
+
+El usuario puede editar cualquier fichero de `canon/` con el proceso parado (§4.5). Para que la edición quede registrada:
+
+1. `novela canon validate` comprueba schemas e invariantes (§3.13). Con errores, el harness se niega a continuar hasta que se corrijan; no intenta arreglarlos.
+2. `novela canon commit -m "<motivo>"` crea la versión `v<k>_manual` con el mecanismo de §10.4 a partir del `canon/` editado (pasos 4–9, sin `canon.tmp`, porque la edición ya está en `canon/`), registra un run sintético de tipo `manual` con `origen.agente = usuario` en los ficheros tocados y el motivo en `run.json`.
+3. Si el harness arranca y detecta que `hash_canon` de `canon/` no coincide con el del último snapshot y no hay `commit.journal`, hay una edición manual sin registrar: se detiene con `canon_modificado_sin_commit` y pide ejecutar los pasos 1–2 (o `novela canon discard` para volver al último snapshot). Motivo: un run que leyera un canon no versionado produciría un `canon_version_base` que no corresponde a ningún snapshot y rompería la reproducibilidad.
+
+Casos de uso previstos: corregir un dato erróneo del dossier (promover `inventado` → `verificado` añadiendo fuente, DAT-7), ajustar la ficha de un capítulo escalado (§7.7), matar o resucitar a un personaje, reescribir un resumen.
+
+Lo que no se puede editar a mano sin consecuencias: `version.json` (lo escribe el harness; una edición se detecta por hash y se rechaza), los ids (romperían GLB-1) y los capítulos ya aprobados si hay capítulos posteriores (permitido, pero el harness avisa de que los posteriores no se revisarán contra el cambio).
+
+### §10.7 Vuelta atrás
+
+`novela canon rollback --to v<k>`:
+
+1. Exige que no haya run `en_curso` y que exista `snapshots/v<k>_*/`.
+2. Crea una versión nueva `v<actual+1>_rollback_a_v<k>` cuyo `canon/` es copia del snapshot k (mecanismo de §10.4).
+3. Actualiza `estado.json`: `ultimo_capitulo_aprobado` pasa al del snapshot k; las fichas de capítulo posteriores vuelven a `estado = pendiente`; `capitulo_actual = k' + 1` donde k' es el último capítulo aprobado en k; el estado del proyecto vuelve a `escribiendo` (o al que corresponda si k < 2).
+4. Los runs de los capítulos descartados se marcan `estado = descartado` (nuevo valor terminal de `Run.estado`, que amplía la lista de §3.10 exclusivamente para este caso) y sus artefactos se conservan en `runs/` para auditoría y coste.
+5. Los snapshots posteriores a k **se conservan**: la versión es monótona y la historia no se borra. `novela canon diff` puede seguir comparándolos.
+
+Ejemplo: con el libro en v12 (capítulo 10 aprobado), `rollback --to v009` produce v13 con el contenido de v009 (capítulo 7 aprobado); `novela resume` reescribe el capítulo 8 con un run nuevo.
+
+### §10.8 Retención y tamaño
+
+| Elemento | Retención | Tamaño estimado (libro de 30 capítulos) |
+|---|---|---|
+| `canon/` | Siempre | 1–3 MB |
+| `snapshots/` | Todos, siempre | 32 versiones × ≤ 3 MB ≈ 100 MB máximo |
+| `runs/<run_id>/artefactos/` (staging promovido) | Siempre | ≈ 100–300 KB por intento; 30 capítulos × 1,8 intentos ≈ 15 MB |
+| `logs/` | Siempre | < 10 MB |
+| `indice/` | Derivado; borrable | < 5 MB |
+
+`novela canon compact` (opcional, fase 3) comprimiría snapshots antiguos a `zip`; no está en el alcance de la fase 1 (§16, §17).
 
 ## §11 Errores, reintentos y reanudación
 
