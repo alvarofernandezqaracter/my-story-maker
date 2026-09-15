@@ -42,7 +42,100 @@ basado_en: docs/diagrama/sistema-novelas-historicas-v2.drawio
 
 ## §1 Visión y alcance
 
-> Estado: pendiente
+> Estado: completa
+
+### §1.1 Problema que se resuelve
+
+Escribir una novela histórica larga con un LLM en una sola pasada falla por tres motivos que se refuerzan entre sí:
+
+| Problema | Síntoma en el texto | Causa raíz |
+|---|---|---|
+| Pérdida de continuidad | Un personaje muerto en el capítulo 4 habla en el 9; una carta que se quemó reaparece. | El modelo no tiene memoria fiable del libro; el contexto no cabe o se degrada. |
+| Anacronismos | Patatas en la Castilla de 1450, relojes de bolsillo en Roma. | El modelo mezcla épocas y no distingue lo que sabe de lo que rellena. |
+| Deriva narrativa | Arcos que no cierran, promesas al lector sin pago, ritmo plano. | Nadie sostiene la estructura global mientras se genera lo local. |
+
+El sistema descrito aquí ataca los tres problemas separando responsabilidades: una fase de preparación fija los hechos y la estructura antes de escribir; un **canon** persistente actúa como única fuente de verdad; cada capítulo pasa por tres revisores independientes y un gate determinista antes de entrar en el canon; y un editor global comprueba la estructura al final. El diagrama `docs/diagrama/sistema-novelas-historicas-v2.drawio` es la fuente de verdad del flujo; este documento lo hace implementable.
+
+### §1.2 Qué especifica este documento
+
+Este spec cubre dos cosas distintas que conviven en el mismo proceso:
+
+1. **El harness**: el código determinista que orquesta el flujo, genera el contexto, aplica el gate, persiste el canon, gestiona errores, reanuda ejecuciones y registra costes. Todo lo que puede decidirse con una regla se decide en el harness (§4, §6, §7, §9, §10, §11, §12, §13).
+2. **La solución agéntica**: los siete agentes LLM (investigador, arquitecto, escritor, tres revisores, editor global), con sus prompts, contratos de salida, modelos sugeridos y modos de fallo (§5, §8).
+
+La regla de separación es estricta y se repite en todo el documento: **lo determinista va en código, lo generativo va en agentes**. Un agente nunca decide si un capítulo se aprueba; un trozo de código nunca redacta prosa.
+
+### §1.3 Usuario y entorno de ejecución
+
+| Aspecto | Valor |
+|---|---|
+| Usuario | Una sola persona, autor del proyecto. No hay multiusuario ni permisos. |
+| Entorno | Máquina local (Windows 11 en el desarrollo actual; el diseño no depende del SO). |
+| Interfaz | Línea de comandos. Una interfaz web o de escritorio queda fuera de esta versión (§1.5). |
+| Lenguaje de implementación | Python 3.12 o superior. Motivo: ecosistema LLM maduro, `asyncio` para el paralelismo de revisores, y es la elección del autor. |
+| Proveedores LLM | Abstracción multiproveedor desde la fase 1 (§4.6, §13). El harness no depende de ningún proveedor concreto; cada agente puede apuntar a un modelo distinto. |
+| Conectividad | Se asume acceso a internet para las APIs de los proveedores. La búsqueda web del investigador es una herramienta opcional (§5.1). |
+| Intervención humana | Ninguna dentro del flujo normal. El proceso solo se detiene y escala al usuario cuando un capítulo agota los reintentos o ante un fallo irrecuperable (§7.7, §11). El usuario puede parar el proceso, editar el canon a mano y reanudar (§10.6, §11.5). |
+
+### §1.4 Criterios de éxito
+
+Éxito funcional: dado un brief válido, el sistema produce sin intervención humana un libro completo con todos los capítulos aprobados por el gate, el canon actualizado y el informe del editor global, o bien se detiene con una escalada clara y reanudable.
+
+Métricas de éxito medibles (los valores objetivo son iniciales y se recalibran con el set de evaluación de §15.6):
+
+| Métrica | Definición | Objetivo inicial | Dónde se mide |
+|---|---|---|---|
+| Tasa de aprobación a la primera | Capítulos aprobados en el intento 1 / capítulos totales | ≥ 60 % | §12.4 |
+| Reintentos medios por capítulo | Suma de intentos adicionales / capítulos | ≤ 0,8 | §12.4 |
+| Capítulos escalados | Capítulos que agotan `max_reintentos` | ≤ 1 por libro de 20 capítulos | §12.4 |
+| Contradicciones detectables por código | Fallos de las comprobaciones deterministas de §7.3 en capítulos aprobados | 0 | §15.3 |
+| Coste por capítulo | Coste total de un run de capítulo, incluidos reintentos | Dentro del límite de §13 (por defecto 3 USD) | §12.4 |
+| Reanudación | Tras matar el proceso en cualquier punto, relanzar continúa sin repetir trabajo aprobado ni duplicar gasto | 100 % de los casos de §15.4 | §11.5 |
+
+Lo que **no** es criterio de éxito de esta versión: la calidad literaria absoluta del texto. Se mide indirectamente a través de los revisores y del editor global, pero no hay juez humano en el bucle.
+
+### §1.5 Fuera de alcance
+
+| Fuera | Motivo |
+|---|---|
+| Interfaz web o gráfica | El usuario trabaja en local por CLI. Se retoma en una versión posterior si hace falta. |
+| Multiusuario, permisos, autenticación | Un solo usuario en su máquina. |
+| Generación de imágenes, portadas, maquetación editorial | No aparece en el diagrama. |
+| Traducción del libro terminado | El idioma se fija en el brief y todo se genera en él. |
+| Edición humana interactiva capítulo a capítulo | Decidido por el usuario en la Fase 0: sin aprobación humana en el flujo. |
+| Reescritura automática tras el editor global | El editor global devuelve una lista de retoques; ejecutarlos automáticamente queda como opción definida en §8 pero no implementada en la fase 1 (§16). |
+| Fine-tuning o entrenamiento de modelos | Solo se usan modelos vía API. |
+| Publicación o exportación a EPUB/PDF | Se entrega Markdown; la conversión es trivial con herramientas externas. |
+
+### §1.6 Supuestos explícitos
+
+Cada supuesto está marcado y recogido también en §17. Si alguno resulta falso, hay que revisar las secciones indicadas.
+
+| Id | Supuesto | Secciones afectadas si falla |
+|---|---|---|
+| S-01 | Un capítulo tiene entre 1.500 y 6.000 palabras, con 3.000 como valor por defecto. El usuario no ha fijado tamaño objetivo; estos valores son configurables (§13). | §5.3, §6 |
+| S-02 | Un libro tiene entre 8 y 40 capítulos. Por encima de 40 el presupuesto de contexto de §6 necesita recalibrarse. | §6, §12 |
+| S-03 | El canon completo de un libro cabe en pocos megabytes de texto. Esto justifica ficheros planos y snapshots por copia completa (§3.2, §10). | §3, §10 |
+| S-04 | Los modelos usados admiten salida estructurada en JSON y ventanas de contexto de al menos 128k tokens para el escritor. | §5, §6, §9 |
+| S-05 | El coste de tokens de los proveedores es conocido y se puede tabular en la configuración (§13) para calcular costes sin llamar a APIs de facturación. | §12 |
+| S-06 | Un capítulo se genera de una pieza en una sola llamada al escritor, dividido internamente en escenas. No se generan escenas en llamadas separadas. | §5.3, §7 |
+| S-07 | El usuario acepta que los datos marcados como inventados aparezcan en la novela sin marca en la prosa, siempre que queden registrados en los metadatos del capítulo. Decidido en Fase 0 con valores por defecto. | §3.6, §5.3, §5.5 |
+| S-08 | La búsqueda web del investigador es opcional y está desactivada por defecto en la fase 1. | §5.1, §16 |
+
+### §1.7 Principios de diseño
+
+Estos principios se citan por número en el resto del documento.
+
+| Id | Principio | Consecuencia práctica |
+|---|---|---|
+| P-01 | Determinista en código, generativo en agentes. | Gate, selección de contexto, persistencia, reintentos y métricas no llaman a ningún LLM. |
+| P-02 | El canon es la única fuente de verdad. | Ningún agente recibe información del libro que no venga del canon a través del generador de contexto (§6). |
+| P-03 | El canon solo se escribe al aprobar. | Todo lo que produce un run va a staging; solo el gate aprobado dispara un commit atómico (§10.4). |
+| P-04 | Toda salida de LLM es JSON validado contra schema. | Sin excepción, ni para la prosa del escritor (§9). |
+| P-05 | Todo run es idempotente y reanudable. | La clave es `run_id` + `capitulo_id`; relanzar nunca repite trabajo aprobado (§11). |
+| P-06 | Todo se mide. | Cada llamada LLM deja una fila de log con tokens, coste, latencia y resultado (§12). |
+| P-07 | Los reintentos son incrementales. | El escritor recibe su texto anterior y las incidencias, nunca una orden de empezar de cero (§7.6). |
+| P-08 | Nada se decide en silencio. | Cada decisión técnica lleva justificación; cada supuesto está en §17; cada cambio del spec, en §20. |
 
 ## §2 Glosario
 
