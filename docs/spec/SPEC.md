@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.4.0
+version: 0.4.1
 estado: borrador
 actualizado: 2026-09-15
 ---
@@ -484,6 +484,14 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.4.1] — 2026-09-15
+
+**Cambiado**
+- §5. El contrato de salida del arquitecto nombra `fecha` y `etiquetas`. 0.4.0 los añadió a la ficha de capítulo en §3 sin tocar al agente que la produce, así que sobre el papel el campo existía y nadie lo rellenaba.
+
+**Contexto**
+- Auditoría de §12 contra `config.json`: las quince claves del fichero están en la tabla y todas las que cita el texto existen con su valor por defecto. Sin cambios.
 
 ### [0.4.0] — 2026-09-15
 
