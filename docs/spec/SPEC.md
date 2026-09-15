@@ -46,7 +46,7 @@ Sistema que escribe una novela histórica capítulo a capítulo a partir de un b
 
 **Decisión de almacenamiento.** El canon es una base SQLite (`canon.db`) y, al lado, un fichero Markdown por intento de capítulo en `capitulos/`; SQLite porque el dossier y la línea de tiempo se consultan con filtros y búsqueda de texto, y el texto largo no gana nada viviendo dentro de la base.
 
-Los tipos son lógicos, no de un motor concreto, porque el stack sigue sin decidir (§15, DA-01). `lista` se serializa como JSON en una columna de texto. Todas las entidades llevan `id` de texto salvo donde el número de capítulo ya es clave.
+Los tipos son lógicos, no de un motor concreto (§18 fija el stack). `lista` se serializa como JSON en una columna de texto. Todas las entidades llevan `id` de texto salvo donde el número de capítulo ya es clave.
 
 El brief no tiene tabla propia: se guarda como fila única en `proyecto` con sus cinco campos (época, premisa, tono, nº de capítulos y palabras por capítulo) más el estado de §4.
 
