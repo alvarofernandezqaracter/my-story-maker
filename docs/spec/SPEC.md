@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.4.1
+version: 0.5.0
 estado: borrador
 actualizado: 2026-09-15
 ---
@@ -483,6 +483,21 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.5.0] — 2026-09-15
+
+Primera implementación del sistema. El documento deja de describir solo un diseño y pasa a describir algo que corre: F0 a F5 del roadmap funcionan de punta a punta en modo `simulado`, con los seis agentes, las cinco skills, los once validadores y el canon.
+
+**Añadido**
+- §18. Estructura del repo y comandos. El documento no tenía dónde decir en qué carpeta vive cada cosa ni con qué se arranca, y eso ya no es una decisión pendiente sino un hecho del repo.
+- §12. La credencial del modo `real` va en el entorno y no en `config.json`, que se versiona.
+
+**Cambiado**
+- §15. DA-01 se decide y sale de la tabla: Node 24 con `node:sqlite` y `node:test`, sin dependencias en modo `simulado`. Pesó que el canon de §3 pide SQLite y el runtime ya lo trae, así que los tests y las demostraciones corren sin instalar nada. El id queda muerto.
+- §3. La nota sobre tipos lógicos apuntaba a DA-01 para decir que el stack seguía sin decidir; ahora apunta a §18.
+
+**Contexto**
+- Nada del diseño ha cambiado al implementarlo, que era la prueba que le quedaba por pasar al documento. Las decisiones abiertas que tocaban al código se resolvieron como el spec ya mandaba: la preparación no para (DA-03), los `faltantes` se registran y nadie los mira (DA-05) y la unidad de escritura es el capítulo entero (DA-09).
 
 ### [0.4.1] — 2026-09-15
 
