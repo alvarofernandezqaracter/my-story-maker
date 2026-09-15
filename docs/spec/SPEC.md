@@ -409,6 +409,33 @@ La lista se guarda como `retoques.md` junto al canon, no dentro. El canon es la 
 
 El editor no aplica nada ni dispara reescrituras. En el alcance inicial el bucle se cierra a mano: yo decido qué retoques valen y los aplico editando capítulos. Automatizar esa vuelta es lo primero que queda fuera de alcance (§1) y está apuntado en §15 (DA-07).
 
+## §12 Configuración
+
+Un único `config.json` en la raíz del proyecto, junto al canon. Aquí vive todo lo que se toca sin tocar código, y no se duplica en ninguna skill (§10): si un número aparece escrito en el código sin pasar por este fichero, es un bug y no una decisión. El harness lo carga al arrancar, lo valida entero y para si falta una clave o un valor cae fuera de rango, porque una errata en un umbral sale más barata descubierta al arrancar que tres capítulos después.
+
+**Modo de ejecución.** `ejecucion.modo` es la única bifurcación del sistema: con `real` las llamadas a agentes van a la API y con `simulado` las resuelve una capa local que devuelve respuestas fijas con el formato correcto. Todas las llamadas pasan por esa capa, así que el resto del harness no sabe cuál está activo y los tests y las demostraciones corren sin red y sin coste por el mismo camino que la ejecución de verdad.
+
+| Clave | Por defecto | Para qué |
+|---|---|---|
+| `ejecucion.modo` | `simulado` | `simulado` \| `real`. Ver arriba |
+| `gate.nota_minima` | 3 | Suelo por dimensión en el gate (§8) |
+| `gate.media_minima` | 3,7 | Media exigida a las tres notas |
+| `gate.max_intentos` | 3 | Reintentos del escritor antes de bloquear |
+| `contexto.tope_contexto` | 40000 | Tope de tokens del paquete de contexto (§7) |
+| `contexto.ventana_resumenes` | 3 | Capítulos anteriores que van con resumen completo |
+| `contexto.palabras_enganche` | 400 | Cola literal del capítulo anterior |
+| `validador.modo` | `unico` | `unico` \| `separado`. Una llamada al validador o tres (§5) |
+| `margenes.capitulos_min` y `capitulos_max` | 0,8 y 1,2 | Desvío tolerado sobre el nº de capítulos del brief (VD-07) |
+| `margenes.palabras_aviso` | 0,15 | Desvío sobre `palabras_objetivo` que genera aviso (VD-08) |
+| `margenes.palabras_bloqueo` | 0,4 | Desvío que descarta el intento sin llamar al validador (VD-08) |
+| `margenes.parrafos_min` | 5 | Mínimo de párrafos de un capítulo redactado (VD-08) |
+| `modelo_por_rol` | ver §5 | Modelo de cada agente. Sigue abierto en DA-02 |
+| `busqueda_web` | `true` | Permite al investigador verificar datos dudosos |
+
+**Por qué dos márgenes de palabras.** VD-08 tiene que distinguir el capítulo que se queda corto del que no sirve. Dentro de `palabras_aviso` el texto vale y la desviación viaja como aviso al reintento; pasado `palabras_bloqueo` no se gasta la llamada al validador y se reintenta la generación. Con un solo umbral había que elegir entre no filtrar nada o tirar capítulos aprovechables.
+
+`busqueda_web` queda activada por herencia de la tabla anterior, pero la búsqueda real no entra hasta F6 (§14): hasta entonces el investigador la ignora y el parámetro está puesto para no tocar el esquema más tarde.
+
 ## §13 Operación: fallos y reanudación
 
 **Qué pasa cuando algo falla a mitad.** El estado vive en el canon, nunca en memoria del proceso, así que un corte de red, un error del proveedor o un Ctrl+C no pierden más que el intento en curso. Como el canon solo se toca después del gate y en una única escritura validada del cronista, no existe el estado a medias: o el capítulo entró entero o no entró. Lo peor que deja una caída es un Markdown huérfano en `capitulos/` con su fila en estado `propuesto`, que al relanzar se descarta. Ante un error del proveedor se reintenta la llamada una vez; si vuelve a fallar, el proceso para y deja el estado escrito en lugar de insistir. No hay política de backoff ni de reintentos finos en el alcance inicial, y es deliberado: con un solo usuario, parar y mirar sale más barato que automatizar la recuperación.
