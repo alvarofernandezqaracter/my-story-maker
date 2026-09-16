@@ -43,6 +43,8 @@ REGLAS = [
     ('contexto.ventana_resumenes', lambda v: _entero(v) and v >= 0, 'entero >= 0'),
     ('contexto.palabras_enganche', lambda v: _entero(v) and v >= 0, 'entero >= 0'),
     ('validador.modo', lambda v: v in ('unico', 'separado'), '"unico" o "separado"'),
+    ('interfaz.puerto', lambda v: _entero(v) and 1024 <= v <= 65535,
+     'entero entre 1024 y 65535'),
     ('margenes.capitulos_min', lambda v: _numero(v) and 0 < v <= 1, 'numero en (0, 1]'),
     ('margenes.capitulos_max', lambda v: _numero(v) and v >= 1, 'numero >= 1'),
     ('margenes.palabras_aviso', _fraccion, 'fraccion en (0, 1)'),

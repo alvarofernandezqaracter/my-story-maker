@@ -10,6 +10,7 @@ from .config import cargar_config, ErrorConfig
 from .contexto import generar_contexto
 from .flujo import preparar, escribir_capitulo, cerrar, reanudar, siguiente_capitulo
 from .gate import media, notas
+from .servidor import arrancar as arrancar_interfaz
 from .skills import listar_skills
 from .util import numero_corto
 
@@ -28,6 +29,7 @@ novela — sistema multiagente de novelas historicas
   novela poner <que> <fichero>     personaje | capitulo — escritura a mano en el canon
   novela desbloquear --capitulo N [--aprobar-intento K | --reiniciar]
   novela skills                    lista las skills que el harness carga
+  novela ui [--puerto N]           interfaz web del brief en el navegador (§19)
 
 Opciones globales: --config <ruta> (por defecto config.json)
                    --canon <ruta>  (por defecto canon.db)
@@ -260,6 +262,15 @@ def _ejecutar(comando, posicionales, opciones, canon, agentes, config, ruta_cano
             _log('capitulo {} desbloqueado, el contador de intentos parte de cero'.format(n))
         canon.marcar_estado('escribiendo')
         _log('proyecto: escribiendo')
+
+    elif comando == 'ui':
+        # La interfaz solo escribe el brief; el flujo sigue corriendo en la CLI.
+        arrancar_interfaz(
+            config, ruta_canon,
+            puerto=_entero(opciones['puerto'], 'ui --puerto necesita un numero')
+            if opciones.get('puerto') else None,
+            abrir=not opciones.get('sin-navegador'),
+            log=_log)
 
     elif comando == 'skills':
         for s in listar_skills():
