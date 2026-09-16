@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.7.0
+version: 0.8.0
 estado: borrador
 actualizado: 2026-09-16
 ---
@@ -490,6 +490,24 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.8.0] — 2026-09-16
+
+El sistema estrena interfaz. Hasta ahora, empezar una novela era escribir un JSON de cinco campos a mano y comprobarlo con un comando; ahora hay una página local donde escribirlo, con la escaleta del canon a la vista.
+
+**Añadido**
+- §19. Interfaz web del brief: `python -m novela ui` levanta un servidor local que sirve una página con los cinco campos de §3 y una escena three.js que dibuja un cuadernillo por capítulo. La sección existe sobre todo para fijar lo que la interfaz *no* hace: no lanza agentes, no arranca el flujo y no desbloquea. Eso no es una limitación temporal sino la consecuencia directa de §8 —nada corre en paralelo— y de §13 —el estado vive en el canon—; quién puede lanzar el flujo queda abierto en DA-11.
+- §12. `interfaz.puerto`, con 8787 por defecto. Es la clave dieciséis y entra por la misma regla que las quince anteriores: un número que se toca sin tocar código no vive en el código.
+- §14. F7 Interfaz en el roadmap, con su criterio de salida.
+- §18. `web/` y `novela/servidor.py` en la estructura, el comando `ui` en la tabla de comandos y los doce tests nuevos de la interfaz, que entran por la función que enruta y no por un socket.
+
+**Cambiado**
+- §1. La interfaz gráfica sale de «fuera de alcance», pero solo a medias, y la sección lo dice con esas palabras: hay página para escribir el brief y mirar el canon, y no la hay para gobernar el proceso.
+
+**Contexto**
+- La escena es la única pieza del repo que necesita red, y la necesita el navegador, no el harness: three.js viaja por CDN. Si no llega, el formulario funciona entero y la mesa se queda en su degradado, así que la promesa de §18 —un repo recién clonado escribe una novela sin red— sigue en pie, porque esa novela se escribe desde la CLI.
+- El brief se valida dos veces, en el navegador y en el servidor, y la que manda es la del servidor. No es duplicación por descuido: el harness no da nada por bueno porque venga de su propia página.
+- La página se compromete con un solo mundo visual oscuro, sin tema claro, porque comparte paleta y luz con la escena.
 
 ### [0.7.0] — 2026-09-16
 
