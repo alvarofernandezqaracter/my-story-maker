@@ -873,3 +873,27 @@ Cuando no hay capítulo en el loop, la tabla de intentos enseña el último cap�
 **Por qué three.js.** La escena dibuja un cuadernillo por capítulo: cuántos son lo dice el brief, el grosor las palabras por capítulo, el color el estado del canon y la luz el tono. Es la parte que no se lee bien en una tabla —seis capítulos de 1.800 palabras es un número; seis cuadernillos sobre la mesa es una novela corta—, y mientras el flujo corre se ve el capítulo en curso levantarse y los aprobados cambiar de color. El resto es HTML corriente: los cinco campos son `input` de verdad, no texto dibujado en 3D. La escena es lo único del repo que necesita red, porque three.js viaja por CDN; si no llega, la interfaz entera sigue funcionando y la mesa se queda en su degradado.
 
 **Identidad visual.** La paleta sale del logotipo de Qaracter —naranja `#FF7932` y azul pizarra `#233441`—, con los neutros sesgados hacia ese azul, y el logotipo va en la barra superior. La página se compromete con un solo mundo visual oscuro, sin tema claro: comparte paleta y luz con la escena, y mantener dos temas obligaría a pasarle la paleta al render en cada cambio para ganar poco.
+
+## §20 Observabilidad
+
+**Qué es.** El harness manda a [Langfuse](https://langfuse.com) lo que hace cada agente: qué se le pidió, qué contestó, con qué modelo, cuántos tokens gastó y cuánto costó. Es la respuesta a la única pregunta que ni el canon ni el diario contestan: **por qué el modelo contestó lo que contestó**. El canon guarda el resultado y el diario guarda el relato; las trazas guardan el contexto exacto que tenía el agente al decidir.
+
+**Nada de esto es fuente de verdad.** El estado sigue viviendo en el canon (§13) y el gate sigue decidiendo en código (§8). Las trazas solo observan, así que **ningún fallo de observabilidad puede parar una novela**: si falta el SDK, falta la credencial o Langfuse no responde, la capa se apaga, lo dice una vez y el libro se escribe igual. Es la regla de §13 al revés: allí se para porque el fallo afecta al libro; aquí no afecta, así que se sigue.
+
+**Dónde se instrumenta.** En un solo sitio, por la misma razón que el modo de ejecución: toda llamada pasa por la capa de agentes de §5, así que ahí nacen la observación del agente y la del modelo, y el resto del harness no sabe que existen. Las tres raíces las abre el flujo de §4.
+
+**Qué es una traza.** Una unidad de trabajo cerrada, no el libro entero: la preparación, **cada capítulo** y el cierre. Lo que las junta en una novela es la sesión, que se deriva del brief —el canon es fila única y no guarda ningún id de proyecto, y derivarla evita tocar el esquema de §3—. Un capítulo por traza mantiene el árbol legible y hace que la escaleta se lea como una lista de trazas comparables.
+
+| Observación | Tipo | Qué es |
+|---|---|---|
+| `preparar-novela`, `escribir-capitulo`, `cerrar-novela` | `span` | Las tres raíces. Una traza cada una |
+| `reunir-contexto` | `retriever` | El paquete de §7: lee el canon y no cambia nada |
+| `investigador`, `arquitecto`, `escritor`, `validador`, `cronista`, `editor_global` | `agent` | Un rol de §5 trabajando, con sus vueltas dentro |
+| `redactar-capitulo`, `revisar-capitulo`, … | `generation` | Una invocación del modelo. Una por invocación, **nunca una que englobe el bucle** |
+| `vd-08-extension`, `gate` | `evaluator` | Los dos puntos donde el harness decide sin preguntar a nadie |
+
+Los nombres se tratan como una API y no llevan números dentro: el capítulo y el intento van en metadatos, porque un nombre distinto por ejecución no se puede agrupar ni filtrar. Las dos vueltas de §9 y los dos envíos de §13 son bucles distintos y viajan por separado, para que se vea si un rol acertó a la primera o lo salvó el reintento.
+
+**Las notas del gate son puntuaciones.** Las tres dimensiones de §8, la media y el veredicto se mandan como *scores* sobre la observación del gate, y los intentos que costó el capítulo sobre su traza. Es lo que convierte la observabilidad en algo que sirve para decidir: DA-06 pedía calibrar `nota_minima` y `media_minima` con capítulos reales, y esto es de dónde salen esos datos.
+
+**Credenciales y coste.** Las claves van en un `.env` de la raíz que no se versiona, por la misma razón que la credencial de la API de §12. Lo que parece una credencial se tapa antes de salir, porque las instrucciones de §10 y el brief son texto libre. El modo `simulado` traza igual, con el modelo `simulado` y sin gasto: sirve para probar la instrumentación sin pagarla.
