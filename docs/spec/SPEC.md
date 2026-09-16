@@ -652,6 +652,9 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `d303db9` | 2026-09-15 | docs(spec): §15 DA-01 se decide y sale de la tabla |
 | `b0a370a` | 2026-09-15 | docs(spec): §18 estructura del repo y comandos |
 | `e4844ec` | 2026-09-15 | docs(spec): §16 entrada 0.5.0 y version en cabecera |
+| `7c91034` | 2026-09-15 | docs(spec): §17 tabla de commits regenerada para 0.5.0 |
+| `bf18f88` | 2026-09-16 | docs(spec): §12 parrafos_min baja de 5 a 3 |
+| `23cc700` | 2026-09-16 | docs(spec): §16 entrada 0.5.1 y version en cabecera |
 
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
