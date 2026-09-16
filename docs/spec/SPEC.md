@@ -472,7 +472,7 @@ Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo q
 
 ## §15 Decisiones abiertas
 
-Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar la fase que se indica. Los ids no se reutilizan: DA-01 salió de la tabla al decidirse el stack (§18) y su número queda muerto.
+Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar la fase que se indica. Los ids no se reutilizan: DA-01 salió de la tabla al decidirse el stack (§18) y DA-11 al decidirse que la interfaz sí lanza el flujo (§19), con un hilo único que conserva el invariante de §8. Los dos números quedan muertos.
 
 | Id | Decisión pendiente | Por qué importa | Cuándo decidirla |
 |---|---|---|---|
@@ -485,7 +485,6 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 | DA-08 | Quién valida lo que propone el cronista | El harness valida forma, no fondo; un resumen que miente envenena el canon entero | Antes de F4 |
 | DA-09 | Unidad de escritura: capítulo entero o escena a escena | Si la prosa se degrada en capítulos largos, el loop cambia de grano | Durante F2 |
 | DA-10 | Qué hacer si la escaleta se queda corta o larga a mitad de libro | Replanificar toca el canon en caliente; forzarla estropea el final | Durante F4 |
-| DA-11 | Si la interfaz puede lanzar el flujo, y no solo escribir el brief | Un botón de «escribir» en el navegador permite dos flujos sobre el mismo canon, que es justo lo que §8 prohíbe | Después de F7 |
 
 ## §16 Historial de cambios
 
