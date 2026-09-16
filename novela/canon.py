@@ -109,6 +109,9 @@ class Canon:
         self.db = sqlite3.connect(ruta, isolation_level=None)
         self.db.row_factory = sqlite3.Row
         self.db.execute('PRAGMA foreign_keys = ON')
+        # La interfaz de §19 lee el canon mientras el flujo lo escribe desde
+        # otro hilo. Son escrituras cortas: esperar vale mas que fallar.
+        self.db.execute('PRAGMA busy_timeout = 4000')
         self.db.executescript(ESQUEMA)
 
     def cerrar(self):

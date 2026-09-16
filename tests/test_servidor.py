@@ -10,7 +10,7 @@ from pathlib import Path
 
 from novela.canon import Canon
 from novela.config import cargar_config
-from novela.servidor import RAIZ_WEB, responder
+from novela.servidor import RAIZ_WEB, Motor, responder
 
 BRIEF = {
     'epoca': 'Sevilla, 1587',
@@ -27,6 +27,7 @@ class EntornoDeInterfaz(unittest.TestCase):
         self.config = cargar_config(str(self.raiz / 'config.json'))
         self.dir = tempfile.mkdtemp(prefix='novela-ui-')
         self.canon = Canon(str(Path(self.dir) / 'canon.db'))
+        self.motor = Motor(self.config, str(Path(self.dir) / 'canon.db'))
 
     def tearDown(self):
         self.canon.cerrar()
@@ -35,7 +36,7 @@ class EntornoDeInterfaz(unittest.TestCase):
     def pedir(self, metodo, camino, cuerpo=None):
         datos = json.dumps(cuerpo).encode('utf-8') if cuerpo is not None else b''
         codigo, tipo, salida = responder(
-            metodo, camino, datos, self.canon, self.config, RAIZ_WEB)
+            metodo, camino, datos, self.canon, self.config, self.motor, RAIZ_WEB)
         return codigo, tipo, salida
 
 
@@ -110,7 +111,8 @@ class TestBrief(EntornoDeInterfaz):
 
     def test_el_cuerpo_que_no_es_json_se_rechaza(self):
         codigo, _, salida = responder(
-            'POST', '/api/brief', b'no soy json', self.canon, self.config, RAIZ_WEB)
+            'POST', '/api/brief', b'no soy json', self.canon, self.config,
+            self.motor, RAIZ_WEB)
         self.assertEqual(codigo, 400)
         self.assertIn('JSON', json.loads(salida)['error'])
 
@@ -120,7 +122,7 @@ class TestEstatico(EntornoDeInterfaz):
         codigo, tipo, salida = self.pedir('GET', '/')
         self.assertEqual(codigo, 200)
         self.assertIn('text/html', tipo)
-        self.assertIn(b'<title>Legajo en blanco</title>', salida)
+        self.assertIn(b'<title>Taller de novelas</title>', salida)
 
     def test_no_se_sale_de_web(self):
         for camino in ('/../config.json', '/../../etc/hosts', '/..%2fconfig.json'):
@@ -132,6 +134,83 @@ class TestEstatico(EntornoDeInterfaz):
 
     def test_la_interfaz_no_acepta_otros_metodos(self):
         self.assertEqual(self.pedir('DELETE', '/estilo.css')[0], 405)
+
+
+class TestFlujo(unittest.TestCase):
+    """El motor de §19 contra la capa simulada, en su propio directorio: el
+    flujo escribe capitulos/ en el cwd.
+    """
+
+    def setUp(self):
+        self.cwd = os.getcwd()
+        self.config = cargar_config(str(Path(self.cwd) / 'config.json'))
+        self.dir = tempfile.mkdtemp(prefix='novela-motor-')
+        os.chdir(self.dir)
+        self.ruta = str(Path(self.dir) / 'canon.db')
+        self.canon = Canon(self.ruta)
+        self.motor = Motor(self.config, self.ruta)
+
+    def tearDown(self):
+        self.canon.cerrar()
+        os.chdir(self.cwd)
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def correr(self, accion='todo'):
+        self.motor.arrancar(accion)
+        self.motor._hilo.join(timeout=120)
+        self.assertFalse(self.motor.corriendo, 'el motor no termino')
+
+    def pedir(self, metodo, camino, cuerpo=None):
+        datos = json.dumps(cuerpo).encode('utf-8') if cuerpo is not None else b''
+        return responder(metodo, camino, datos, self.canon, self.config,
+                         self.motor, RAIZ_WEB)
+
+    def test_una_novela_entera_desde_la_interfaz(self):
+        self.canon.guardar_brief(BRIEF)
+        self.correr('todo')
+        self.assertIsNone(self.motor.error)
+        self.assertEqual(self.canon.estado(), 'editado')
+        self.assertTrue(all(f['estado'] == 'aprobado' for f in self.canon.fichas()))
+
+    def test_el_diario_cuenta_quien_trabaja_y_por_donde_va(self):
+        self.canon.guardar_brief(BRIEF)
+        self.correr('preparar')
+        tipos = {e['tipo'] for e in self.motor.diario}
+        self.assertIn('agente', tipos)
+        roles = [e['rol'] for e in self.motor.diario if e['tipo'] == 'agente']
+        self.assertEqual(roles[:2], ['investigador', 'arquitecto'])
+
+    def test_sin_brief_el_motor_para_y_lo_cuenta(self):
+        self.correr('preparar')
+        self.assertIn('no hay brief', self.motor.error)
+        self.assertFalse(self.motor.corriendo)
+
+    def test_una_accion_que_no_existe_se_rechaza(self):
+        codigo, _, salida = self.pedir('POST', '/api/flujo', {'accion': 'inventada'})
+        self.assertEqual(codigo, 400)
+        self.assertIn('accion desconocida', json.loads(salida)['error'])
+
+    def test_el_capitulo_no_se_lee_hasta_que_esta_aprobado(self):
+        self.canon.guardar_brief(BRIEF)
+        self.correr('preparar')
+        self.assertEqual(self.pedir('GET', '/api/capitulo/1')[0], 409)
+        self.correr('escribir')
+        codigo, _, salida = self.pedir('GET', '/api/capitulo/1')
+        self.assertEqual(codigo, 200)
+        capitulo = json.loads(salida)
+        self.assertTrue(capitulo['texto'].startswith('#'))
+        self.assertEqual(len(capitulo['notas']), 3)
+        self.assertEqual(self.pedir('GET', '/api/capitulo/99')[0], 404)
+
+    def test_desbloquear_devuelve_el_capitulo_a_pendiente(self):
+        self.canon.guardar_brief(BRIEF)
+        self.correr('preparar')
+        self.canon.marcar_ficha(1, 'bloqueado')
+        codigo, _, _ = self.pedir('POST', '/api/desbloquear',
+                                  {'capitulo': 1, 'modo': 'reintentar'})
+        self.assertEqual(codigo, 200)
+        self.assertEqual(self.canon.ficha(1)['estado'], 'pendiente')
+        self.assertEqual(self.canon.estado(), 'escribiendo')
 
 
 if __name__ == '__main__':

@@ -23,6 +23,10 @@ class Agentes:
         self.config = config
         self.raices = dict(raices) if raices else {}
         self.registro = []
+        # Gancho opcional: se llama justo antes de cada llamada a un agente.
+        # Lo usa la interfaz de §19 para contar en vivo quien esta trabajando;
+        # sin nadie escuchando no cambia nada de lo que hace esta clase.
+        self.observador = None
 
     @property
     def modo(self):
@@ -64,6 +68,8 @@ class Agentes:
         """
         ultimo = None
         for vuelta in (1, 2):
+            if self.observador:
+                self.observador(rol, vuelta)
             salida = self._llamar(rol, entrada)
             forma = comprobar_salida_de_agente(rol, salida)
 

@@ -1,13 +1,22 @@
-# §19 Interfaz web del brief. Servidor local de la biblioteca estandar: sirve
-# web/ y expone una API minuscula sobre el canon. No decide nada del sistema,
-# igual que la CLI (§18): valida la forma del brief, llama al canon y devuelve
-# JSON. Ningun endpoint lanza agentes ni escribe fuera de la fila de proyecto.
+# §19 Interfaz web. Servidor local de la biblioteca estandar: sirve web/ y
+# expone una API pequena sobre el canon y sobre el flujo. No decide nada del
+# sistema, igual que la CLI (§18): valida la forma de lo que entra, llama al
+# flujo o al canon y devuelve JSON.
+#
+# El flujo corre en un unico hilo de trabajo y nunca dos a la vez (§8). El
+# servidor atiende peticiones mientras tanto para que la pagina pueda contar lo
+# que esta pasando, pero eso es HTTP, no dos novelas en paralelo.
 import json
+import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs
 
+from .agentes import Agentes, ParadaDelProceso
 from .canon import Canon
+from .flujo import preparar, escribir_capitulo, cerrar, reanudar, siguiente_capitulo
 from .gate import media, notas
 from .util import redondear
 
@@ -28,9 +37,10 @@ TIPOS = {
 CAMPOS_BRIEF = ('epoca', 'premisa', 'tono', 'capitulos', 'palabras_por_capitulo')
 
 # El brief se crea sobre un proyecto en blanco. Pisar el de un libro en marcha
-# dejaria el canon hablando de otra novela, asi que la interfaz no lo permite y
-# remite a la CLI, que si deja hacerlo a sabiendas.
+# dejaria el canon hablando de otra novela.
 ESTADOS_QUE_ACEPTAN_BRIEF = (None, 'borrador')
+
+ACCIONES = ('preparar', 'escribir', 'cerrar', 'reanudar', 'todo')
 
 
 class RespuestaError(Exception):
@@ -58,6 +68,13 @@ def _entero(valor, campo):
     return valor
 
 
+def _cuerpo_json(cuerpo):
+    try:
+        return json.loads(cuerpo.decode('utf-8')) if cuerpo else {}
+    except (ValueError, UnicodeDecodeError):
+        raise RespuestaError(400, 'el cuerpo no es JSON valido') from None
+
+
 def comprobar_brief(bruto):
     """Las mismas cinco claves de §3 que exige la CLI, con la forma minima que el
     canon puede guardar. Los margenes de §12 no se aplican aqui: los vigila VD-07
@@ -78,37 +95,230 @@ def comprobar_brief(bruto):
     }
 
 
+# --------------------------------------------------------------------- motor
+
+class Motor:
+    """El flujo, en un hilo y de uno en uno.
+
+    Guarda el diario que van llenando las funciones de flujo.py —el mismo que
+    imprime la CLI— y lo sirve por trozos, para que la pagina cuente lo que
+    pasa segun pasa. El estado de verdad sigue viviendo en el canon (§13): si
+    el servidor se muere a mitad, esto se pierde y el canon no.
+    """
+
+    def __init__(self, config, ruta_canon):
+        self.config = config
+        self.ruta_canon = ruta_canon
+        self.diario = []
+        self.accion = None
+        self.error = None
+        self.detalles = []
+        self.arrancado_en = None
+        self.terminado_en = None
+        self._hilo = None
+        self._cerrojo = threading.Lock()
+
+    @property
+    def corriendo(self):
+        return self._hilo is not None and self._hilo.is_alive()
+
+    def estado(self, desde=0):
+        desde = max(0, min(desde, len(self.diario)))
+        return {
+            'corriendo': self.corriendo,
+            'accion': self.accion,
+            'error': self.error,
+            'detalles': self.detalles,
+            'desde': desde,
+            'total': len(self.diario),
+            'diario': self.diario[desde:],
+            'arrancado_en': self.arrancado_en,
+            'terminado_en': self.terminado_en,
+        }
+
+    def arrancar(self, accion):
+        if accion not in ACCIONES:
+            raise RespuestaError(400, 'accion desconocida: {}'.format(accion))
+        with self._cerrojo:
+            if self.corriendo:
+                raise RespuestaError(
+                    409, 'ya hay un flujo en marcha ({}); nunca dos a la vez sobre el'
+                         ' mismo canon'.format(self.accion))
+            self.diario = []
+            self.error = None
+            self.detalles = []
+            self.accion = accion
+            self.arrancado_en = time.time()
+            self.terminado_en = None
+            self._hilo = threading.Thread(target=self._correr, args=(accion,), daemon=True)
+            self._hilo.start()
+
+    def _anotar(self, rol, vuelta):
+        """Lo que cuenta el gancho de Agentes: quien esta trabajando ahora mismo.
+
+        Es el unico evento del diario que no viene de flujo.py, y existe porque
+        el resto se anota cuando algo ya ha terminado.
+        """
+        self.diario.append({'tipo': 'agente', 'rol': rol, 'vuelta': vuelta})
+
+    def _correr(self, accion):
+        canon = Canon(self.ruta_canon)
+        agentes = Agentes(self.config)
+        agentes.observador = self._anotar
+        try:
+            if accion in ('preparar', 'todo'):
+                preparar(canon, agentes, self.config, self.diario)
+            if accion in ('escribir', 'todo'):
+                self._escribir_hasta_el_final(canon, agentes)
+            if accion == 'reanudar':
+                reanudar(canon, agentes, self.config, self.diario)
+            if accion in ('cerrar', 'todo') and canon.estado() == 'escrito':
+                cerrar(canon, agentes, diario=self.diario)
+            elif accion == 'cerrar':
+                raise ParadaDelProceso(
+                    'el editor global corre con el proyecto en escrito, y esta en'
+                    ' {}'.format(canon.estado()))
+        except ParadaDelProceso as e:
+            self.error = e.mensaje
+            self.detalles = list(e.detalles)
+        except Exception as e:  # el hilo no puede morir en silencio
+            self.error = str(e)
+        finally:
+            canon.cerrar()
+            self.terminado_en = time.time()
+
+    def _escribir_hasta_el_final(self, canon, agentes):
+        """El mismo bucle que el comando escribir: capitulo a capitulo hasta el
+        final o hasta el primer bloqueo. Nunca dos capitulos a la vez, porque el
+        N+1 depende del canon que dejo el N (§8).
+        """
+        siguiente = siguiente_capitulo(canon)
+        while siguiente:
+            resultado = escribir_capitulo(
+                canon, agentes, self.config, siguiente['numero'], self.diario)
+            if not resultado['aprobado']:
+                return
+            siguiente = siguiente_capitulo(canon)
+        if not siguiente_capitulo(canon):
+            canon.marcar_estado('escrito')
+
+
+# ------------------------------------------------------------------ lecturas
+
 def _capitulos(canon):
-    """La escaleta tal y como la pinta la escena: un capitulo, su estado y, si ya
-    paso el gate, sus tres notas.
+    """La escaleta tal y como la pintan la escena y las tarjetas: un capitulo,
+    su estado y, si ya paso el gate, sus tres notas.
     """
     salida = []
+    resumenes = {r['capitulo']: r for r in canon.resumenes()}
     for f in canon.fichas():
-        aprobado = canon.intento_aprobado(f['numero'])
+        intentos = canon.intentos(f['numero'])
+        aprobado = next((i for i in intentos if i['estado'] == 'aprobado'), None)
         ns = notas(aprobado['revisiones']) if aprobado and aprobado['revisiones'] else None
+        resumen = resumenes.get(f['numero'])
         salida.append({
             'numero': f['numero'],
             'titulo': f['titulo'],
+            'acto': f['acto'],
+            'sinopsis': f['sinopsis'],
             'estado': f['estado'],
             'palabras_objetivo': f['palabras_objetivo'],
-            'intentos': len(canon.intentos(f['numero'])),
+            'palabras': aprobado['palabras'] if aprobado else None,
+            'intentos': len(intentos),
             'notas': ns,
             'media': redondear(media(ns), 2) if ns else None,
+            'legible': bool(aprobado),
+            'resumen': resumen['resumen'] if resumen else None,
         })
     return salida
 
 
-def _proyecto(canon, config):
+def _proyecto(canon, config, motor=None):
     proyecto = canon.proyecto()
     estado = proyecto['estado'] if proyecto else None
+    retoques = Path('retoques.md')
     return {
         'modo': config['ejecucion']['modo'],
         'estado': estado,
         'brief': {c: proyecto[c] for c in CAMPOS_BRIEF} if proyecto else None,
         'editable': estado in ESTADOS_QUE_ACEPTAN_BRIEF,
         'capitulos': _capitulos(canon) if proyecto else [],
+        'gate': config['gate'],
+        'corriendo': bool(motor and motor.corriendo),
+        'retoques': retoques.is_file(),
     }
 
+
+def _capitulo(canon, numero):
+    """El texto de un capitulo aprobado, con lo que el canon sabe de el.
+
+    Solo aprobados: un intento descartado sigue en capitulos/ como rastro (§6),
+    pero no es la novela y no se lee desde aqui.
+    """
+    ficha = canon.ficha(numero)
+    if not ficha:
+        raise RespuestaError(404, 'no hay capitulo {}'.format(numero))
+    aprobado = canon.intento_aprobado(numero)
+    if not aprobado:
+        raise RespuestaError(409, 'el capitulo {} todavia no esta aprobado'.format(numero))
+    ruta = Path(aprobado['ruta'])
+    if not ruta.is_file():
+        raise RespuestaError(
+            404, 'el canon apunta a {} y ese fichero no esta'.format(aprobado['ruta']))
+    resumen = next((r for r in canon.resumenes() if r['capitulo'] == numero), None)
+    ns = notas(aprobado['revisiones']) if aprobado['revisiones'] else None
+    return {
+        'numero': numero,
+        'titulo': ficha['titulo'],
+        'acto': ficha['acto'],
+        'fecha': ficha['fecha'],
+        'texto': ruta.read_text(encoding='utf-8'),
+        'palabras': aprobado['palabras'],
+        'intento': aprobado['intento'],
+        'notas': ns,
+        'media': redondear(media(ns), 2) if ns else None,
+        'revisiones': aprobado['revisiones'],
+        'resumen': resumen['resumen'] if resumen else None,
+        'hilos_abiertos': resumen['hilos_abiertos'] if resumen else [],
+        'hilos_cerrados': resumen['hilos_cerrados'] if resumen else [],
+    }
+
+
+def _desbloquear(canon, datos):
+    """Las tres salidas manuales de §8, las mismas que ofrece la CLI."""
+    numero = datos.get('capitulo')
+    if isinstance(numero, bool) or not isinstance(numero, int):
+        raise RespuestaError(400, 'hace falta el numero de capitulo')
+    ficha = canon.ficha(numero)
+    if not ficha:
+        raise RespuestaError(404, 'no hay capitulo {}'.format(numero))
+    modo = datos.get('modo') or 'reintentar'
+
+    if modo == 'aprobar':
+        intento = datos.get('intento')
+        if not any(i['intento'] == intento for i in canon.intentos(numero)):
+            raise RespuestaError(
+                400, 'el capitulo {} no tiene intento {}'.format(numero, intento))
+        canon.fijar_intento_aprobado(numero, intento)
+        canon.marcar_ficha(numero, 'aprobado')
+        aviso = ('intento {} aprobado a mano: el cronista no ha corrido, asi que el canon'
+                 ' no tiene su resumen'.format(intento))
+    elif modo == 'reiniciar':
+        for i in canon.intentos(numero):
+            canon.marcar_intento(numero, i['intento'], 'descartado')
+        canon.marcar_ficha(numero, 'pendiente')
+        aviso = 'capitulo {} a cero; los intentos quedan como rastro'.format(numero)
+    elif modo == 'reintentar':
+        canon.marcar_ficha(numero, 'pendiente')
+        aviso = 'capitulo {} desbloqueado, el contador de intentos parte de cero'.format(numero)
+    else:
+        raise RespuestaError(400, 'modo desconocido: {}'.format(modo))
+
+    canon.marcar_estado('escribiendo')
+    return {'aviso': aviso}
+
+
+# ----------------------------------------------------------------- enrutado
 
 def _estatico(camino, raiz_web):
     raiz = Path(raiz_web).resolve()
@@ -124,14 +334,16 @@ def _estatico(camino, raiz_web):
         destino.read_bytes()
 
 
-def responder(metodo, camino, cuerpo, canon, config, raiz_web=RAIZ_WEB):
+def responder(metodo, camino, cuerpo, canon, config, motor=None, raiz_web=RAIZ_WEB):
     """Enrutado entero, sin socket de por medio: el manejador HTTP solo traduce.
 
     Devuelve (codigo, tipo de contenido, bytes).
     """
+    camino, _, consulta = camino.partition('?')
+    parametros = parse_qs(consulta)
     try:
         if camino == '/api/proyecto' and metodo == 'GET':
-            return 200, TIPOS['.json'], _json(_proyecto(canon, config))
+            return 200, TIPOS['.json'], _json(_proyecto(canon, config, motor))
 
         if camino == '/api/brief' and metodo == 'POST':
             estado = canon.estado()
@@ -140,12 +352,31 @@ def responder(metodo, camino, cuerpo, canon, config, raiz_web=RAIZ_WEB):
                     409, 'el proyecto esta en "{}" y la interfaz no pisa un libro en'
                          ' marcha; para rehacer el brief usa "python -m novela'
                          ' brief"'.format(estado))
-            try:
-                bruto = json.loads(cuerpo.decode('utf-8')) if cuerpo else None
-            except (ValueError, UnicodeDecodeError):
-                raise RespuestaError(400, 'el cuerpo no es JSON valido') from None
-            canon.guardar_brief(comprobar_brief(bruto))
-            return 200, TIPOS['.json'], _json(_proyecto(canon, config))
+            canon.guardar_brief(comprobar_brief(_cuerpo_json(cuerpo)))
+            return 200, TIPOS['.json'], _json(_proyecto(canon, config, motor))
+
+        if camino == '/api/flujo':
+            if not motor:
+                raise RespuestaError(503, 'esta interfaz no tiene motor de flujo')
+            if metodo == 'GET':
+                desde = parametros.get('desde', ['0'])[0]
+                return 200, TIPOS['.json'], _json(
+                    motor.estado(int(desde) if desde.isdigit() else 0))
+            if metodo == 'POST':
+                motor.arrancar((_cuerpo_json(cuerpo) or {}).get('accion'))
+                return 202, TIPOS['.json'], _json(motor.estado())
+
+        if camino == '/api/desbloquear' and metodo == 'POST':
+            if motor and motor.corriendo:
+                raise RespuestaError(
+                    409, 'hay un flujo en marcha; para y vuelve a intentarlo')
+            return 200, TIPOS['.json'], _json(_desbloquear(canon, _cuerpo_json(cuerpo)))
+
+        if camino.startswith('/api/capitulo/') and metodo == 'GET':
+            resto = camino[len('/api/capitulo/'):]
+            if not resto.isdigit():
+                raise RespuestaError(400, 'el capitulo se pide por numero')
+            return 200, TIPOS['.json'], _json(_capitulo(canon, int(resto)))
 
         if camino.startswith('/api/'):
             raise RespuestaError(404, 'no existe {} {}'.format(metodo, camino))
@@ -164,17 +395,17 @@ class Manejador(BaseHTTPRequestHandler):
     config = None
     ruta_canon = 'canon.db'
     raiz_web = RAIZ_WEB
+    motor = None
 
     def _servir(self, metodo):
-        camino = self.path.split('?')[0]
         longitud = int(self.headers.get('Content-Length') or 0)
         cuerpo = self.rfile.read(longitud) if longitud else b''
-        # Un canon por peticion: el flujo puede estar corriendo en otra consola
-        # sobre el mismo fichero, y la interfaz solo lee lo que ya esta escrito.
+        # Un canon por peticion: el flujo escribe desde el hilo del motor y la
+        # interfaz solo lee lo que ya esta escrito.
         canon = Canon(self.ruta_canon)
         try:
             codigo, tipo, datos = responder(
-                metodo, camino, cuerpo, canon, self.config, self.raiz_web)
+                metodo, self.path, cuerpo, canon, self.config, self.motor, self.raiz_web)
         finally:
             canon.cerrar()
         self.send_response(codigo)
@@ -199,10 +430,11 @@ def crear_servidor(config, ruta_canon, puerto=None, raiz_web=RAIZ_WEB):
         'config': config,
         'ruta_canon': ruta_canon,
         'raiz_web': Path(raiz_web),
+        'motor': Motor(config, ruta_canon),
     })
     # Solo 127.0.0.1: la interfaz es local, de un solo usuario y sin nada que
-    # autenticar. Un servidor de un hilo basta y ademas respeta el invariante de
-    # §8: dentro del harness no corre nada en paralelo.
+    # autenticar. Un hilo para las peticiones y otro para el flujo, y nunca dos
+    # flujos a la vez, que es lo que pide §8.
     puerto = puerto if puerto is not None else config['interfaz']['puerto']
     return HTTPServer(('127.0.0.1', puerto), clase)
 
@@ -212,8 +444,7 @@ def arrancar(config, ruta_canon, puerto=None, abrir=True, log=print):
     url = 'http://127.0.0.1:{}/'.format(servidor.server_address[1])
     log('interfaz en {}   (canon: {}, modo: {})'.format(
         url, ruta_canon, config['ejecucion']['modo']))
-    log('La interfaz escribe el brief y nada mas: el flujo sigue en la CLI con')
-    log('"python -m novela preparar". Ctrl+C para parar.')
+    log('Desde ahi se escribe el brief y se lanza el flujo. Ctrl+C para parar.')
     if abrir:
         webbrowser.open(url)
     try:
