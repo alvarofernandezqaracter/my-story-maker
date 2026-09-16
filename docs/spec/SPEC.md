@@ -743,6 +743,13 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `54e4718` | 2026-09-16 | docs(spec): §15 DA-11 quien puede lanzar el flujo |
 | `278afb7` | 2026-09-16 | docs(spec): §18 web/, servidor.py y el comando ui |
 | `bc437c3` | 2026-09-16 | docs(spec): §16 entrada 0.8.0 y version en cabecera |
+| `9d69220` | 2026-09-16 | docs(spec): §17 tabla de commits regenerada para 0.8.0 |
+| `b6a5ff8` | 2026-09-16 | docs(spec): §19 la interfaz lanza el flujo y lee los capitulos |
+| `2ce452d` | 2026-09-16 | docs(spec): §1 la interfaz grafica sale entera de fuera de alcance |
+| `e836865` | 2026-09-16 | docs(spec): §14 F7 cubre el ciclo entero desde el navegador |
+| `30dcf57` | 2026-09-16 | docs(spec): §15 DA-11 decidida, la interfaz lanza el flujo |
+| `a790117` | 2026-09-16 | docs(spec): §18 el servidor lleva el hilo del flujo y hay 57 tests |
+| `6eb18cf` | 2026-09-16 | docs(spec): §16 entrada 0.9.0 y version en cabecera |
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
 ```
