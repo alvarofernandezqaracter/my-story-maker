@@ -742,11 +742,11 @@ La interfaz de §19 tampoco añade paquete: el servidor es `http.server` de la b
 |---|---|
 | `novela/` | El harness: canon, generador de contexto, gate, validadores, capa de agentes y flujo |
 | `novela/__main__.py` | La CLI, que no decide nada: carga config, abre el canon y llama al flujo |
-| `novela/servidor.py` | El servidor local de §19: sirve `web/` y la API del brief |
+| `novela/servidor.py` | El servidor local de §19: sirve `web/`, la API y el hilo del flujo |
 | `agentes/` | Un fichero por agente de §5, con su encargo y sus modos de fallo |
 | `skills/` | Las skills de §10, una carpeta por skill |
 | `capitulos/` | Un Markdown por intento, aprobado o no (§6) |
-| `web/` | La página del brief de §19: el formulario y la escena three.js |
+| `web/` | La página de §19: las tres salas, la escena three.js y el logotipo |
 | `tests/` | Tests contra la capa simulada, sin red |
 
 `canon.db`, `capitulos/*.md` y `retoques.md` son salida y no se versionan.
@@ -764,7 +764,7 @@ La interfaz de §19 tampoco añade paquete: el servidor es `http.server` de la b
 | `desbloquear --capitulo N` | Las tres salidas manuales de §8 |
 | `ui [--puerto N]` | Abre la interfaz del brief en el navegador (§19) |
 
-Los tests se lanzan con `python -m unittest discover -s tests -t .`: cincuenta y uno, en tres ficheros y sin red. Los de la interfaz entran por la función que enruta, no por un socket, que es donde esa pieza decide algo.
+Los tests se lanzan con `python -m unittest discover -s tests -t .`: cincuenta y siete, en tres ficheros y sin red. Los de la interfaz entran por la función que enruta, no por un socket, que es donde esa pieza decide algo; uno de ellos escribe una novela entera por el motor de §19 para comprobar que el camino del navegador acaba donde el de la CLI.
 
 **Inyección de fallos.** Dos variables de entorno hacen que la capa simulada suspenda un intento concreto o devuelva un capítulo demasiado corto. Existen porque el camino interesante del sistema —rechazo, reintento, bloqueo— no se ve nunca si todas las respuestas simuladas son buenas. Solo tienen efecto en modo `simulado`.
 
