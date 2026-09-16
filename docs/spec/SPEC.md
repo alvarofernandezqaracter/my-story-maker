@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.10.0
+version: 0.10.1
 estado: borrador
 actualizado: 2026-09-16
 ---
@@ -491,6 +491,14 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.10.1] — 2026-09-16
+
+**Añadido**
+- §18. `ui.bat`, un lanzador de Windows que busca el intérprete de Python en vez de fiarse del `PATH`. El motivo es concreto: en Windows una consola hereda el entorno de quien la abrió, y una ventana abierta antes de instalar Python no ve su carpeta aunque el registro la tenga; lo que sí encuentra es el stub de la Microsoft Store, que está en el `PATH`, existe y no ejecuta nada. El fichero prueba que el intérprete arranca antes de usarlo.
+
+**Contexto**
+- Va en CRLF, con su regla en `.gitattributes`. Un `.bat` con finales de línea de Unix se parsea mal en `cmd`: se come el primer carácter de la línea siguiente, y el síntoma —un `'em' is not recognized`— no señala a la causa.
 
 ### [0.10.0] — 2026-09-16
 
