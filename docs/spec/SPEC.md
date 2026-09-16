@@ -475,6 +475,7 @@ Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo q
 | F5 Cierre | Editor global y `retoques.md` | La lista de retoques es accionable sin releer los capítulos |
 | F6 Rigor | Búsqueda web del investigador y estados de verificación reales | La mayoría de datos del dossier llevan fuente comprobable |
 | F7 Interfaz | Página local: brief, lanzamiento del flujo, seguimiento y lectura (§19) | Una novela entera se escribe y se lee desde el navegador, sin tocar la consola |
+| F8 Observabilidad | Trazas de cada llamada, notas del gate como puntuaciones y coste por capítulo (§20) | Un capítulo rechazado se explica mirando su traza, sin volver a ejecutarlo |
 
 ## §15 Decisiones abiertas
 
