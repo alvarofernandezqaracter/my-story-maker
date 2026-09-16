@@ -668,6 +668,9 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `7c91034` | 2026-09-15 | docs(spec): §17 tabla de commits regenerada para 0.5.0 |
 | `bf18f88` | 2026-09-16 | docs(spec): §12 parrafos_min baja de 5 a 3 |
 | `23cc700` | 2026-09-16 | docs(spec): §16 entrada 0.5.1 y version en cabecera |
+| `bb9253c` | 2026-09-16 | docs(spec): §17 tabla de commits regenerada para 0.5.1 |
+| `bb183ed` | 2026-09-16 | docs(spec): §18 el stack pasa a python y cambia la estructura del repo |
+| `0b11071` | 2026-09-16 | docs(spec): §16 entrada 0.6.0 y version en cabecera |
 
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
