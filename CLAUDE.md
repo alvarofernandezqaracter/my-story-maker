@@ -1,8 +1,8 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 0.7.0, F0–F5 del roadmap funcionando de punta
-a punta en modo `simulado`.
+de un brief de cinco campos. Versión 0.8.0, F0–F5 del roadmap funcionando de punta
+a punta en modo `simulado`, más F7 (la interfaz del brief).
 
 ## Regla número uno: el spec manda
 
@@ -49,7 +49,8 @@ python -m novela brief brief.ejemplo.json
 python -m novela preparar     # investigador y arquitecto
 python -m novela escribir     # loop: escritor, VD-08, validador, gate, cronista
 python -m novela cerrar       # editor global y retoques.md
-python -m unittest discover -s tests -t .    # 38 tests, sin red
+python -m novela ui           # interfaz del brief en el navegador (§19)
+python -m unittest discover -s tests -t .    # 51 tests, sin red
 ```
 
 Otros comandos: `reanudar`, `estado`,
@@ -86,6 +87,7 @@ por fuera del canon o del paquete de contexto.
 | [novela/simulado.py](novela/simulado.py) | Respuestas fijas con el formato correcto + inyección de fallos | §12 |
 | [novela/flujo.py](novela/flujo.py) | `preparar`, `escribir_capitulo`, `cerrar`, `reanudar` | §4, §8, §11 |
 | [novela/util.py](novela/util.py) | Redondeo y formato de números, compartidos por gate, VD-08 y CLI | — |
+| [novela/servidor.py](novela/servidor.py) | Interfaz web: sirve `web/` y la API del brief. Tampoco decide nada | §19 |
 | [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada**: carga config, abre el canon y llama al flujo | §18 |
 
 `canon.db`, `capitulos/*.md` y `retoques.md` son salida y no se versionan.
@@ -161,8 +163,8 @@ Un único `config.json` en la raíz, validado entero al arrancar. **Si un númer
 aparece escrito en el código sin pasar por este fichero, es un bug.** La credencial
 de la API no vive aquí: va en el entorno, porque el fichero se versiona.
 
-Quince claves: `ejecucion.modo` (`simulado`, `real` o `claude_code`), `gate.{nota_minima,media_minima,max_intentos}`,
-`contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`, `validador.modo`,
+Dieciséis claves: `ejecucion.modo` (`simulado`, `real` o `claude_code`), `gate.{nota_minima,media_minima,max_intentos}`,
+`contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`, `validador.modo`, `interfaz.puerto`,
 `margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`,
 `modelo_por_rol`, `busqueda_web`. Reglas cruzadas: `palabras_bloqueo > palabras_aviso`
 y `capitulos_max >= capitulos_min`.
@@ -184,12 +186,33 @@ NOVELA_SIM_CORTOS="3:1"  # el escritor devuelve un capitulo que VD-08 bloquea
 Existen porque el camino interesante —rechazo, reintento, bloqueo— no se ve nunca si
 todas las respuestas simuladas son buenas.
 
+## La interfaz web (§19)
+
+`python -m novela ui` levanta un servidor local de la biblioteca estándar que
+sirve [web/](web/) y dos rutas de API: `GET /api/proyecto` y `POST /api/brief`.
+El puerto sale de `interfaz.puerto`.
+
+**La interfaz no lanza agentes, no arranca el flujo y no desbloquea.** No es una
+carencia por rellenar: un botón de «escribir» en el navegador permite dos flujos
+sobre el mismo canon, que es justo lo que prohíbe el invariante 8. Lo único que
+escribe es la fila de proyecto, y solo con el proyecto en `borrador` o vacío;
+con una novela en marcha devuelve 409 y remite a `novela brief`. Si esto cambia
+alguna vez, se decide en DA-11 y se escribe primero en el spec.
+
+El brief se valida en el navegador y otra vez en el servidor, y la que manda es
+la del servidor. La escena de [web/legajo.js](web/legajo.js) baja three.js de un
+CDN —lo único del repo que necesita red— y degrada: si no llega, el formulario
+sigue entero. La página es de un solo tema, oscuro, porque comparte paleta con
+la escena.
+
 ## Tests
 
-`python -m unittest discover -s tests -t .` corre 38 tests en dos ficheros, sin red y
+`python -m unittest discover -s tests -t .` corre 51 tests en tres ficheros, sin red y
 sin coste: [tests/test_deterministas.py](tests/test_deterministas.py) para config, gate
-y validadores, y [tests/test_flujo.py](tests/test_flujo.py) para el canon, el generador
-de contexto y el flujo entero contra la capa simulada. Cada test del flujo corre en su
+y validadores, [tests/test_flujo.py](tests/test_flujo.py) para el canon, el generador
+de contexto y el flujo entero contra la capa simulada, y
+[tests/test_servidor.py](tests/test_servidor.py) para el enrutado y la validación de la
+interfaz, que entran por `responder()` y no abren ningún puerto. Cada test del flujo corre en su
 propio directorio temporal porque el harness escribe en el `cwd`.
 
 ## Estado actual y cosas abiertas
