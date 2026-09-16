@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.9.0
+version: 0.10.0
 estado: borrador
 actualizado: 2026-09-16
 ---
@@ -491,6 +491,20 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.10.0] — 2026-09-16
+
+La interfaz se llena de instrumentos. La novedad no es que haga más cosas —lanzar el flujo ya lo hacía— sino que ahora se ve por dónde va: qué estado, qué agente, qué intento, con qué regla y con qué ficheros.
+
+**Añadido**
+- §19. Pipeline con los seis estados de §4, tarjetas por agente con su tarea, línea de estado, tabla de intentos del capítulo en curso con los umbrales del gate encima, ledger de pistas del dossier, últimos archivos de trabajo y panel de deuda narrativa. La tabla recalcula la regla que decidió cada intento con el gate de §8 en lugar de guardarla: el dato derivado no se duplica en el canon.
+- §19. Sala de lectura con índice lateral —lomo coloreado por estado, igual que los cuadernillos de la mesa—, metadatos del capítulo, ficha, leyenda de controles y marca de fin.
+- §12 y §19. La interfaz llama **perfil** a cada `config*.json` de la raíz y deja elegir con cuál se lanza una pasada. No es un concepto nuevo, es el fichero de §12.
+
+**Contexto**
+- Cuatro de los componentes pedidos no tienen dato en este canon: la cuota diaria, las escenas, el focalizador y el gancho final. Se pintan con «sin datos todavía». La alternativa era inventarlos, y un número inventado esconde justo lo que un hueco visible enseña: dónde falta modelo de datos. Las escenas dependen de DA-09, que sigue abierta.
+- El identificador de ejecución y las carpetas por run se dejaron fuera a propósito. §1 ya dice que varios proyectos a la vez está fuera de alcance, y el panel de ejecuciones enseña el canon que hay.
+- La escena no se tocó. Los lomos ya iban coloreados por estado y el clic en un cuadernillo ya saltaba al capítulo; lo único que cambió es un `opacity` por CSS en el taller, que ahora lleva mucho panel delante.
 
 ### [0.9.0] — 2026-09-16
 
