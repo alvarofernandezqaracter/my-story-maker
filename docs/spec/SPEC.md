@@ -436,6 +436,8 @@ Un único `config.json` en la raíz del proyecto, junto al canon. Aquí vive tod
 | `contexto.palabras_enganche` | 400 | Cola literal del capítulo anterior |
 | `validador.modo` | `unico` | `unico` \| `separado`. Una llamada al validador o tres (§5) |
 | `interfaz.puerto` | 8787 | Puerto local de la interfaz del brief (§19) |
+| `trazas.activas` | `true` | Manda las trazas de §20 a Langfuse |
+| `trazas.entorno` | `desarrollo` | Separa las pasadas de prueba de las que escriben libros de verdad |
 | `margenes.capitulos_min` y `capitulos_max` | 0,8 y 1,2 | Desvío tolerado sobre el nº de capítulos del brief (VD-07) |
 | `margenes.palabras_aviso` | 0,15 | Desvío sobre `palabras_objetivo` que genera aviso (VD-08) |
 | `margenes.palabras_bloqueo` | 0,4 | Desvío que descarta el intento sin llamar al validador (VD-08) |
@@ -450,6 +452,8 @@ La interfaz de §19 llama **perfil** a cada `config*.json` de la raíz y deja el
 **Por qué dos márgenes de palabras.** VD-08 tiene que distinguir el capítulo que se queda corto del que no sirve. Dentro de `palabras_aviso` el texto vale y la desviación viaja como aviso al reintento; pasado `palabras_bloqueo` no se gasta la llamada al validador y se reintenta la generación. Con un solo umbral había que elegir entre no filtrar nada o tirar capítulos aprovechables.
 
 `busqueda_web` queda activada, como estaba, pero la búsqueda real no entra hasta F6 (§14): hasta entonces el investigador la ignora y el parámetro está puesto para no tocar el esquema más tarde.
+
+**Las credenciales, todas fuera de aquí.** Ni la de la API ni las de Langfuse (§20) caben en este fichero, porque se versiona. Van en un `.env` de la raíz, ignorado por git, que el harness lee al arrancar y vuelca en el entorno **sin pisar lo que ya haya**: quien exporta una variable a mano lo hace para esa ejecución y el fichero no tiene por qué contradecirle. El lector es propio y minúsculo a propósito, para no estrenar dependencia por veinte líneas. `trazas.entorno` sí vive aquí porque no es un secreto sino una etiqueta, y se valida al arrancar con las reglas de Langfuse: un entorno mal escrito no falla, que sería barato, sino que manda las trazas a otro sitio.
 
 ## §13 Operación: fallos y reanudación
 
