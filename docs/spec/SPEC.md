@@ -806,6 +806,13 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `383f637` | 2026-09-16 | docs(spec): §17 tabla de commits regenerada para 0.10.0 |
 | `c90768a` | 2026-09-16 | docs(spec): §18 ui.bat, el lanzador que no depende del PATH |
 | `7d8a299` | 2026-09-16 | docs(spec): §16 entrada 0.10.1 y version en cabecera |
+| `9f6d148` | 2026-09-16 | docs(spec): §17 tabla de commits regenerada para 0.10.1 |
+| `a30de3d` | 2026-09-16 | docs(spec): §20 observabilidad, las trazas de Langfuse |
+| `49e3900` | 2026-09-16 | docs(spec): §12 las dos claves de trazas y el .env de las credenciales |
+| `730f623` | 2026-09-16 | docs(spec): §14 F8 observabilidad |
+| `ecf463f` | 2026-09-16 | docs(spec): §15 DA-12 que hacer con el coste, y DA-06 deja de estar a ciegas |
+| `9cd3ace` | 2026-09-16 | docs(spec): §18 la capa de trazas, el lector de .env y 74 tests |
+| `a0b3bec` | 2026-09-16 | docs(spec): §16 entrada 0.11.0 y version en cabecera |
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
 ```
