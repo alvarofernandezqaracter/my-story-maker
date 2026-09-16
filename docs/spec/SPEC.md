@@ -766,6 +766,10 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `30dcf57` | 2026-09-16 | docs(spec): §15 DA-11 decidida, la interfaz lanza el flujo |
 | `a790117` | 2026-09-16 | docs(spec): §18 el servidor lleva el hilo del flujo y hay 57 tests |
 | `6eb18cf` | 2026-09-16 | docs(spec): §16 entrada 0.9.0 y version en cabecera |
+| `09b75d2` | 2026-09-16 | docs(spec): §17 tabla de commits regenerada para 0.9.0 |
+| `d878f5d` | 2026-09-16 | docs(spec): §12 la interfaz llama perfil a cada config de la raiz |
+| `99b5e37` | 2026-09-16 | docs(spec): §19 que ensena cada componente y que no puede ensenar |
+| `709c36c` | 2026-09-16 | docs(spec): §16 entrada 0.10.0 y version en cabecera |
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
 ```
