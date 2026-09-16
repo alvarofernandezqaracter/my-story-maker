@@ -5,4 +5,4 @@ Ningun agente escribe en el canon: todos devuelven una propuesta que el harness
 valida (§9) y persiste.
 """
 
-__version__ = '0.6.0'
+__version__ = '0.8.0'
