@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.5.1
+version: 0.6.0
 estado: borrador
 actualizado: 2026-09-16
 ---
@@ -483,6 +483,19 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.6.0] — 2026-09-16
+
+El sistema cambia de lenguaje. Nada del diseño se mueve: los seis agentes, los once validadores, el gate, el canon y la máquina de estados son los mismos, y la salida del harness es idéntica byte a byte a la de la versión anterior en los dos caminos que importan, el feliz y el de rechazo, bloqueo y desbloqueo.
+
+**Cambiado**
+- §18. El stack pasa de Node 24 a Python 3.13, con `sqlite3` y `unittest` en lugar de `node:sqlite` y `node:test`. El requisito que cerró DA-01 se cumple igual: el modo `simulado` sigue sin necesitar nada instalado. El motivo del cambio no es técnico sino de mantenimiento, y la sección lo dice así de claro.
+- §18. La estructura de carpetas: `src/` y `bin/` se funden en `novela/`, con la CLI en `novela/__main__.py`, y `test/` pasa a `tests/`. La CLI se invoca con `python -m novela`.
+
+**Contexto**
+- La traducción fue directa porque cada pieza de Node que usaba el harness tiene equivalente en la biblioteca estándar de Python. El código quedó además más corto de lo que era: los `await` del original venían del SDK asíncrono, y el invariante de §8 —nada corre en paralelo salvo el modo `separado` del validador— los hacía innecesarios. Ese único paralelismo se resuelve ahora con tres hilos sobre las tres dimensiones.
+- Los 36 tests son los mismos 36, traducidos uno a uno. No se añadió ni se relajó ninguno: un test nuevo habría escondido si la traducción perdía algo por el camino.
+- DA-01 ya estaba cerrada y sigue cerrada; su número continúa muerto. Este cambio no la reabre, porque lo que decidió DA-01 fue *no meter dependencias para el canon*, y eso se mantiene.
 
 ### [0.5.1] — 2026-09-16
 
