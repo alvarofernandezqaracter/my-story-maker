@@ -1,6 +1,6 @@
 [project]
 name = "my-story-maker"
-version = "0.9.0"
+version = "0.10.0"
 description = "Sistema multiagente de novelas historicas"
 requires-python = ">=3.11"
 

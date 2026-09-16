@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 0.9.0, F0–F5 del roadmap funcionando de punta
+de un brief de cinco campos. Versión 0.10.0, F0–F5 del roadmap funcionando de punta
 a punta en modo `simulado`, más F7: la interfaz web hace el ciclo entero.
 
 ## Regla número uno: el spec manda
@@ -197,12 +197,24 @@ debajo; son **dos caminos completos** sobre el mismo canon.
 
 | Sala | Fichero | Qué hace |
 |---|---|---|
-| Brief | [web/brief.js](web/brief.js) | Los cinco campos de §3 |
-| Taller | [web/taller.js](web/taller.js) | Lanza el flujo, pinta el diario y las tarjetas de capítulo |
-| Lectura | [web/lectura.js](web/lectura.js) | Los capítulos aprobados, con notas, resumen e hilos |
+| Brief | [web/brief.js](web/brief.js) | Los cinco campos, el selector de perfil y las ejecuciones |
+| Taller | [web/taller.js](web/taller.js) | Lanza el flujo; pipeline, agentes, intentos, pistas y archivos |
+| Lectura | [web/lectura.js](web/lectura.js) | Capítulos aprobados, índice, ficha, deuda y controles |
 
 [web/app.js](web/app.js) guarda el estado y reparte; [web/legajo.js](web/legajo.js)
-es la escena; [web/api.js](web/api.js) es la capa de `fetch`.
+es la escena; [web/api.js](web/api.js) es la capa de `fetch`. Los tokens y la
+estructura viven en [web/estilo.css](web/estilo.css) y los componentes añadidos
+después en [web/componentes.css](web/componentes.css).
+
+**Ningún dato de la pantalla es propio de la interfaz**: o se lee del canon o se
+recalcula con las reglas del harness (la regla de cada intento sale del gate de
+§8, la deuda son los hilos vivos de §7, las pistas son el dossier con su estado
+de VD-04). Lo que el canon no guarda —cuota diaria, escenas, focalizador y
+gancho final— se pinta «sin datos todavía» y **no se rellena**: el hueco enseña
+dónde falta modelo de datos y un valor inventado lo escondería.
+
+Un **perfil** es un `config*.json` de la raíz, nada más (§12): eso es lo que
+elige el selector, y con eso se lanza la pasada.
 
 **El motor no admite dos flujos.** `Motor` de [novela/servidor.py](novela/servidor.py)
 tiene un hilo y un cerrojo: arrancar otro mientras hay uno vivo devuelve 409. Eso es
@@ -226,7 +238,7 @@ entera sigue funcionando.
 
 ## Tests
 
-`python -m unittest discover -s tests -t .` corre 57 tests en tres ficheros, sin red y
+`python -m unittest discover -s tests -t .` corre 61 tests en tres ficheros, sin red y
 sin coste: [tests/test_deterministas.py](tests/test_deterministas.py) para config, gate
 y validadores, [tests/test_flujo.py](tests/test_flujo.py) para el canon, el generador
 de contexto y el flujo entero contra la capa simulada, y

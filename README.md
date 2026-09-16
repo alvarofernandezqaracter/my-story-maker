@@ -82,12 +82,19 @@ instalar— y abre el navegador. Desde ahí se hace el ciclo entero, en tres sal
   capítulo: el grosor son las palabras, el color el estado en el canon y la luz
   la pone el tono.
 - **Taller.** Un botón lanza a los agentes. Mientras corren se ve quién trabaja,
-  el diario del harness evento a evento —el mismo que imprime `escribir`— y una
-  tarjeta por capítulo con sus tres notas. Un capítulo bloqueado se desbloquea
-  desde su propia tarjeta.
-- **Lectura.** Los capítulos aprobados, con las notas del validador, el resumen
-  del cronista y los hilos que abrió o cerró. `←` y `→` cambian de capítulo y
-  `f` entra en modo inmersión.
+  el pipeline de estados, una tarjeta por agente con su tarea, la tabla de
+  intentos del capítulo en curso con los umbrales del gate encima, el ledger de
+  pistas del dossier, los últimos ficheros escritos y los eventos uno a uno —los
+  mismos que imprime `escribir`—. Un capítulo bloqueado se desbloquea desde su
+  propia tarjeta.
+- **Lectura.** Los capítulos aprobados, con índice lateral, las notas del
+  validador, el resumen del cronista, los hilos que abrió o cerró y la deuda
+  narrativa que queda viva. `←` y `→` cambian de capítulo y `f` entra en modo
+  inmersión.
+
+Lo que el canon no guarda —la cuota diaria, las escenas, el focalizador y el
+gancho final— aparece como «sin datos todavía». Es aposta: preferimos el hueco
+a un número inventado.
 
 El puerto sale de `interfaz.puerto`. **Nunca corren dos flujos a la vez**: el
 servidor tiene un solo hilo de trabajo y rechaza el segundo, que es lo que
