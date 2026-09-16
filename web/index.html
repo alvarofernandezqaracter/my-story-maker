@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap">
 <link rel="stylesheet" href="/estilo.css">
+<link rel="stylesheet" href="/componentes.css">
 <script type="importmap">
 {
   "imports": {
@@ -32,8 +33,14 @@
     <button type="button" class="sala" data-sala="lectura" disabled>Lectura</button>
   </nav>
   <div class="barra__estado">
+    <span class="dato barra__run" id="barra-run" title="Canon activo">sin run</span>
     <span class="pastilla" id="pastilla-estado">sin brief</span>
+    <span class="dato" id="dato-perfil">perfil —</span>
     <span class="dato" id="dato-modo">modo —</span>
+    <span class="cuota cuota--chip" id="cuota-chip">
+      <span class="cuota__etiqueta">cuota</span>
+      <span class="cuota__cifra" id="cuota-cifra">sin datos todavía</span>
+    </span>
   </div>
 </header>
 
@@ -89,10 +96,17 @@
       </div>
     </div>
 
+    <div class="campo">
+      <label for="perfil">Perfil de ejecución</label>
+      <select id="perfil" name="perfil"></select>
+      <p class="pista">Cada perfil es un <code>config*.json</code> de la raíz: lo que cambia es el modo y los modelos.</p>
+    </div>
+
     <p class="aviso" id="aviso-brief" role="status" hidden></p>
 
     <div class="acciones">
-      <button class="boton" type="submit" id="guardar">Guardar el brief</button>
+      <button class="boton" type="submit" id="crear-y-lanzar">Crear y lanzar agentes</button>
+      <button class="enlace" type="button" id="guardar">Solo crear</button>
       <button class="enlace" type="button" id="vaciar">Vaciar</button>
     </div>
 
@@ -100,6 +114,11 @@
       Va precargado un ejemplo para que la mesa no arranque vacía. Cámbialo.
     </p>
   </form>
+
+  <section class="ejecuciones" id="ejecuciones">
+    <h2 class="titulo-panel">Ejecuciones en este repositorio</h2>
+    <div id="ejecuciones-lista"></div>
+  </section>
 </main>
 
 <!-- ============================================================ taller -->
@@ -115,9 +134,12 @@
       </p>
     </header>
 
+    <p class="linea-estado" id="linea-estado">sin datos todavía</p>
+
     <div class="acciones acciones--columna">
-      <button class="boton boton--grande" type="button" id="arrancar">Escribir la novela</button>
+      <button class="boton boton--grande" type="button" id="arrancar">Lanzar agentes</button>
       <div class="acciones">
+        <button class="enlace" type="button" id="que-toca">¿Qué toca ahora?</button>
         <button class="enlace" type="button" id="solo-preparar">solo preparar</button>
         <button class="enlace" type="button" id="reanudar">reanudar</button>
         <button class="enlace" type="button" id="cerrar">cerrar</button>
@@ -132,14 +154,60 @@
       <span class="ahora__que" id="ahora-que"></span>
     </div>
 
-    <div class="relevo" id="relevo" aria-label="Agentes del proceso"></div>
+    <div class="cuota" id="cuota-panel">
+      <div class="cuota__alto">
+        <span class="eyebrow">Cuota del día</span>
+        <span class="dato" id="cuota-panel-cifra">sin datos todavía</span>
+      </div>
+      <div class="barra-progreso" aria-hidden="true"><span style="width:0"></span></div>
+      <p class="pista">El harness no contabiliza llamadas ni tiene límite configurado.</p>
+    </div>
   </section>
 
-  <section class="tarjetas" id="tarjetas" aria-label="Capítulos"></section>
+  <div class="columna-taller">
+    <section class="panel" aria-label="Máquina de estados">
+      <h2 class="titulo-panel">Pipeline</h2>
+      <ol class="pipeline" id="pipeline"></ol>
+    </section>
+
+    <section class="panel" aria-label="Agentes">
+      <h2 class="titulo-panel">Agentes</h2>
+      <div class="agentes" id="agentes"></div>
+    </section>
+
+    <section class="tarjetas" id="tarjetas" aria-label="Capítulos"></section>
+
+    <section class="panel" aria-label="Intentos del capítulo en curso">
+      <h2 class="titulo-panel">Intentos del capítulo en curso</h2>
+      <p class="umbrales" id="umbrales">sin datos todavía</p>
+      <div class="tabla-caja">
+        <table class="tabla" id="tabla-intentos">
+          <thead>
+            <tr>
+              <th>Iteración</th><th>Archivo</th><th>Media</th><th>Regla aplicada</th><th>Veredicto</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpo-intentos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="Ledger de pistas">
+      <h2 class="titulo-panel">Ledger de pistas</h2>
+      <p class="pista">Los datos del dossier, con su estado de verificación.</p>
+      <div class="chips" id="ledger"></div>
+    </section>
+
+    <section class="panel" aria-label="Últimos archivos de trabajo">
+      <h2 class="titulo-panel">Últimos archivos de trabajo</h2>
+      <ol class="archivos" id="archivos"></ol>
+    </section>
+  </div>
 
   <section class="diario" id="diario-caja">
     <header class="diario__cabecera">
-      <span class="eyebrow">Diario del harness</span>
+      <span class="eyebrow">Eventos</span>
+      <span class="dato" id="origen-eventos"></span>
       <button class="enlace" type="button" id="plegar-diario">plegar</button>
     </header>
     <ol class="diario__lista" id="diario"></ol>
@@ -150,19 +218,46 @@
 <main class="sala-panel" id="sala-lectura" hidden>
   <div class="progreso" id="progreso" aria-hidden="true"></div>
 
+  <nav class="indice" id="indice" aria-label="Índice de capítulos"></nav>
+
   <article class="lector" id="lector">
     <header class="lector__cabecera">
       <p class="eyebrow" id="lector-eyebrow">Capítulo</p>
       <h1 id="lector-titulo">—</h1>
+      <dl class="metadatos" id="metadatos"></dl>
       <div class="lector__notas" id="lector-notas"></div>
     </header>
     <div class="lector__texto" id="lector-texto"></div>
+    <p class="marca-fin" id="marca-fin" hidden>fin del capítulo</p>
     <footer class="lector__pie" id="lector-pie"></footer>
   </article>
 
   <aside class="ficha-lateral" id="ficha-lateral">
-    <h3>Lo que dejó en el canon</h3>
-    <div id="ficha-resumen"></div>
+    <section>
+      <h3>Ficha del capítulo</h3>
+      <dl class="ficha-datos" id="ficha-datos"></dl>
+    </section>
+
+    <section>
+      <h3>Lo que dejó en el canon</h3>
+      <div id="ficha-resumen"></div>
+    </section>
+
+    <section>
+      <h3>Deuda narrativa</h3>
+      <div id="deuda"></div>
+    </section>
+
+    <section>
+      <h3>Controles de la mesa</h3>
+      <ul class="controles">
+        <li><b>Arrastrar</b> — orbitar alrededor del legajo</li>
+        <li><b>Rueda</b> — acercar y alejar</li>
+        <li><b>← →</b> — capítulo anterior y siguiente</li>
+        <li><b>Clic en un cuadernillo</b> — saltar a ese capítulo</li>
+        <li><b>f</b> — modo inmersión · <b>Esc</b> — volver al taller</li>
+      </ul>
+    </section>
   </aside>
 
   <nav class="mandos-lectura" aria-label="Navegación de capítulos">

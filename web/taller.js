@@ -21,7 +21,34 @@ const QUE_HACE = {
   editor_global: 'leyendo los resúmenes para los retoques',
 };
 
+// La maquina de estados de §4, en su orden. `bloqueado` no ocupa puesto: es
+// salida lateral, y se marca sobre el paso donde el proyecto se quedo.
+const PASOS = ['borrador', 'investigado', 'estructurado', 'escribiendo', 'escrito', 'editado'];
+
+const QUE_TOCA = {
+  borrador: 'Toca «preparar»: el investigador levanta el dossier y el arquitecto la escaleta.',
+  investigado: 'Hay dossier pero no escaleta. Vuelve a «preparar» para que el arquitecto acabe.',
+  estructurado: 'Hay escaleta. Toca «escribir»: el primer capítulo pendiente entra en el loop.',
+  escribiendo: 'A mitad del libro. «escribir» sigue por el primer capítulo no aprobado.',
+  escrito: 'Todos los capítulos aprobados. Toca «cerrar»: el editor global y retoques.md.',
+  editado: 'Terminado. Los retoques están en retoques.md y se aplican a mano.',
+  bloqueado: 'Hay un capítulo bloqueado. Desbloquéalo desde su tarjeta y luego «reanudar».',
+};
+
 const $ = (id) => document.getElementById(id);
+
+function vacio(texto) {
+  const p = document.createElement('p');
+  p.className = 'vacio';
+  p.textContent = texto;
+  return p;
+}
+
+function hora(marca) {
+  return new Date(marca * 1000).toLocaleTimeString('es-ES', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+}
 
 // Cada evento del diario, a una linea. El texto sigue al de la CLI a proposito:
 // quien mire las dos cosas tiene que reconocer lo mismo.
@@ -65,14 +92,31 @@ export function crearTaller(ctx) {
   const lista = $('diario');
   const caja = $('diario-caja');
   const tarjetas = $('tarjetas');
-  const relevo = $('relevo');
+  const agentes = $('agentes');
   const aviso = $('aviso-flujo');
   const arrancar = $('arrancar');
   let ultimoRolVisto = null;
   const rolesVistos = new Set();
 
-  relevo.innerHTML = ROLES.map(
-    (r) => `<span class="relevo__rol" data-rol="${r}">${NOMBRE_ROL[r]}</span>`).join('');
+  // Una tarjeta por agente de §5, en el orden en que trabajan.
+  for (const rol of ROLES) {
+    const tarjeta = document.createElement('div');
+    tarjeta.className = 'agente';
+    tarjeta.dataset.rol = rol;
+    const alto = document.createElement('div');
+    alto.className = 'agente__alto';
+    const luz = document.createElement('span');
+    luz.className = 'agente__luz';
+    const nombre = document.createElement('span');
+    nombre.className = 'agente__nombre';
+    nombre.textContent = NOMBRE_ROL[rol];
+    alto.append(luz, nombre);
+    const tarea = document.createElement('p');
+    tarea.className = 'agente__tarea';
+    tarea.textContent = 'en reposo';
+    tarjeta.append(alto, tarea);
+    agentes.append(tarjeta);
+  }
 
   $('plegar-diario').addEventListener('click', () => {
     const plegado = caja.dataset.plegado === 'si';
@@ -89,7 +133,7 @@ export function crearTaller(ctx) {
   async function lanzar(accion) {
     decir('');
     try {
-      await ctx.api.arrancar(accion);
+      await ctx.api.arrancar(accion, ctx.perfilElegido());
       lista.textContent = '';
       rolesVistos.clear();
       ultimoRolVisto = null;
@@ -100,6 +144,10 @@ export function crearTaller(ctx) {
   }
 
   arrancar.addEventListener('click', () => lanzar(siguienteAccion()));
+  $('que-toca').addEventListener('click', () => {
+    const estado = ctx.estado.proyecto?.estado;
+    decir(QUE_TOCA[estado] || 'Todavía no hay brief: empieza por ahí.', 'bien');
+  });
   $('solo-preparar').addEventListener('click', () => lanzar('preparar'));
   $('reanudar').addEventListener('click', () => lanzar('reanudar'));
   $('cerrar').addEventListener('click', () => lanzar('cerrar'));
@@ -116,7 +164,7 @@ export function crearTaller(ctx) {
   }
 
   const ETIQUETA_ACCION = {
-    todo: 'Escribir la novela',
+    todo: 'Lanzar agentes',
     reanudar: 'Reanudar donde se quedó',
     cerrar: 'Cerrar con el editor global',
   };
@@ -144,10 +192,163 @@ export function crearTaller(ctx) {
       $('ahora-rol').textContent = NOMBRE_ROL[ultimoRolVisto] || ultimoRolVisto;
       $('ahora-que').textContent = QUE_HACE[ultimoRolVisto] || '';
     }
-    for (const nodo of relevo.children) {
-      const activo = flujo.corriendo && nodo.dataset.rol === ultimoRolVisto;
+    for (const nodo of agentes.children) {
+      const rol = nodo.dataset.rol;
+      const activo = flujo.corriendo && rol === ultimoRolVisto;
       nodo.dataset.activo = activo ? 'si' : 'no';
-      nodo.dataset.visto = rolesVistos.has(nodo.dataset.rol) ? 'si' : 'no';
+      nodo.dataset.visto = rolesVistos.has(rol) ? 'si' : 'no';
+      nodo.querySelector('.agente__tarea').textContent = activo
+        ? QUE_HACE[rol]
+        : (rolesVistos.has(rol) ? 'ha trabajado en esta pasada' : 'en reposo');
+    }
+  }
+
+  // ------------------------------------------------------- componentes
+
+  function pintarPipeline(proyecto) {
+    const caja = $('pipeline');
+    caja.textContent = '';
+    const estado = proyecto.estado;
+    const bloqueado = estado === 'bloqueado';
+    // Con el proyecto bloqueado, el paso que se marca es aquel en el que se
+    // quedo, que es `escribiendo`: es el unico desde el que se bloquea.
+    const actual = bloqueado ? 'escribiendo' : estado;
+    const alcanzado = PASOS.indexOf(actual);
+    PASOS.forEach((paso, i) => {
+      const li = document.createElement('li');
+      li.className = 'paso';
+      li.dataset.orden = String(i + 1).padStart(2, '0');
+      li.textContent = paso;
+      if (alcanzado >= 0 && i < alcanzado) li.dataset.hecho = 'si';
+      if (i === alcanzado) {
+        if (bloqueado) li.dataset.bloqueado = 'si'; else li.dataset.actual = 'si';
+      }
+      caja.append(li);
+    });
+    if (bloqueado) {
+      const li = document.createElement('li');
+      li.className = 'paso';
+      li.dataset.orden = '!';
+      li.dataset.bloqueado = 'si';
+      li.textContent = 'bloqueado';
+      caja.append(li);
+    }
+  }
+
+  function pintarLineaEstado(proyecto) {
+    const caja = $('linea-estado');
+    caja.textContent = '';
+    if (!proyecto.brief) {
+      caja.textContent = 'sin datos todavía: no hay brief.';
+      return;
+    }
+    const enCurso = proyecto.en_curso;
+    const premisa = document.createElement('b');
+    premisa.textContent = proyecto.brief.premisa;
+    caja.append(premisa, document.createElement('br'));
+    if (enCurso && enCurso.activo) {
+      caja.append(`capítulo ${enCurso.numero} · ${enCurso.titulo} · iteración`
+        + ` ${enCurso.intentos.length} de ${proyecto.gate.max_intentos}`);
+    } else {
+      const aprobados = proyecto.capitulos.filter((c) => c.estado === 'aprobado').length;
+      caja.append(proyecto.capitulos.length
+        ? `${aprobados} de ${proyecto.capitulos.length} capítulos aprobados · ningún capítulo en curso`
+        : 'sin escaleta todavía');
+    }
+  }
+
+  function pintarIntentos(proyecto) {
+    const cuerpo = $('cuerpo-intentos');
+    const umbrales = $('umbrales');
+    cuerpo.textContent = '';
+    const g = proyecto.gate;
+    umbrales.textContent = g
+      ? `umbrales activos — nota mínima ${g.nota_minima} · media mínima ${g.media_minima}`
+        + ` · ${g.max_intentos} intentos · una incidencia grave veta`
+      : 'sin datos todavía';
+
+    const enCurso = proyecto.en_curso;
+    if (enCurso && !enCurso.activo) {
+      umbrales.textContent += ` — ningún capítulo en curso ahora mismo; se muestra`
+        + ` el último trabajado, el ${enCurso.numero}`;
+    }
+    if (!enCurso || !enCurso.intentos.length) {
+      const fila = document.createElement('tr');
+      const celda = document.createElement('td');
+      celda.colSpan = 5;
+      celda.append(vacio('sin datos todavía: no hay ningún capítulo en curso.'));
+      fila.append(celda);
+      cuerpo.append(fila);
+      return;
+    }
+    for (const i of enCurso.intentos) {
+      const fila = document.createElement('tr');
+      const celdas = [
+        String(i.intento),
+        i.ruta,
+        i.media !== null ? `${i.media} (${i.notas.join('/')})` : '—',
+        i.regla,
+      ].map((texto) => {
+        const td = document.createElement('td');
+        td.textContent = texto;
+        return td;
+      });
+      const veredicto = document.createElement('td');
+      const chip = document.createElement('span');
+      chip.className = 'veredicto';
+      chip.dataset.estado = i.estado;
+      chip.textContent = i.estado;
+      veredicto.append(chip);
+      fila.append(...celdas, veredicto);
+      cuerpo.append(fila);
+    }
+  }
+
+  function pintarLedger(proyecto) {
+    const caja = $('ledger');
+    caja.textContent = '';
+    if (!proyecto.dossier.length) {
+      caja.append(vacio('sin datos todavía: el investigador aún no ha pasado.'));
+      return;
+    }
+    for (const dato of proyecto.dossier) {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.dataset.estado = dato.estado;
+      chip.textContent = dato.id;
+      chip.title = `${dato.categoria} · ${dato.estado}`;
+      caja.append(chip);
+    }
+  }
+
+  function pintarArchivos(proyecto) {
+    const caja = $('archivos');
+    caja.textContent = '';
+    if (!proyecto.archivos.length) {
+      caja.append(vacio('sin datos todavía: el harness no ha escrito ningún fichero.'));
+      return;
+    }
+    for (const archivo of proyecto.archivos) {
+      const li = document.createElement('li');
+      const cuando = document.createElement('time');
+      cuando.textContent = hora(archivo.cuando);
+      const ruta = document.createElement('span');
+      ruta.textContent = archivo.ruta;
+      li.append(cuando, ruta);
+      caja.append(li);
+    }
+  }
+
+  function pintarOrigen(proyecto, flujo) {
+    const caja = $('origen-eventos');
+    if (flujo.corriendo) {
+      caja.textContent = `flujo en marcha: ${flujo.accion}`;
+    } else if (proyecto.en_curso && !flujo.total) {
+      // El canon dice que hay un capitulo a medias pero esta interfaz no lo
+      // lanzo: no hay stream que ensenar y conviene decirlo.
+      caja.textContent = 'hay un capítulo en curso lanzado fuera de esta interfaz: aquí no hay stream';
+    } else {
+      caja.textContent = flujo.total ? 'última pasada' : 'sin eventos todavía';
     }
   }
 
@@ -236,9 +437,15 @@ export function crearTaller(ctx) {
   return {
     pintar(proyecto, flujo) {
       pintarTarjetas(proyecto);
+      pintarPipeline(proyecto);
+      pintarLineaEstado(proyecto);
+      pintarIntentos(proyecto);
+      pintarLedger(proyecto);
+      pintarArchivos(proyecto);
+      pintarOrigen(proyecto, flujo);
 
       const accion = siguienteAccion();
-      arrancar.textContent = ETIQUETA_ACCION[accion] || 'Escribir la novela';
+      arrancar.textContent = ETIQUETA_ACCION[accion] || 'Lanzar agentes';
       const sinBrief = !proyecto.brief;
       arrancar.disabled = flujo.corriendo || sinBrief;
       for (const id of ['solo-preparar', 'reanudar', 'cerrar']) {

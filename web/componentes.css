@@ -1,0 +1,512 @@
+/* Componentes anadidos sobre la interfaz de §19.
+
+   Van en su propia hoja para no tocar estilo.css, que es donde viven los tokens
+   y la estructura de las tres salas. Todo lo de aqui reutiliza esos tokens: la
+   paleta de Qaracter, las tipografias y los estados. Ninguno toca la escena.
+
+   Lo que el canon no sabe se pinta en estado vacio (`data-vacio`), nunca
+   relleno con un valor inventado. */
+
+.titulo-panel {
+  margin: 0 0 .6rem;
+  font-family: var(--dato);
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--qa-naranja);
+}
+
+.panel {
+  padding: 1rem;
+  background: color-mix(in srgb, var(--superficie) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+}
+
+.vacio {
+  margin: 0;
+  font-size: .8rem;
+  font-style: italic;
+  color: var(--texto-tenue);
+}
+
+.columna-taller {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* ================================================================ cabecera */
+
+.barra__run {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--texto);
+}
+
+.cuota { display: flex; flex-direction: column; gap: .35rem; }
+
+.cuota--chip {
+  flex-direction: row;
+  align-items: center;
+  gap: .4rem;
+  font-family: var(--dato);
+  font-size: .72rem;
+  color: var(--texto-tenue);
+}
+
+.cuota__etiqueta { text-transform: uppercase; letter-spacing: .08em; }
+
+.cuota__alto {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .5rem;
+}
+
+.barra-progreso {
+  height: 4px;
+  background: var(--linea);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.barra-progreso > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--qa-naranja);
+  transition: width .3s ease;
+}
+
+.barra-progreso[data-tono="ok"] > span { background: var(--ok); }
+
+/* ======================================================= brief: ejecuciones */
+
+.ejecuciones {
+  width: min(27rem, 100%);
+  margin-top: 1rem;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--superficie) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+}
+
+.ejecucion {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  width: 100%;
+  padding: .75rem;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.ejecucion:hover, .ejecucion[data-activa="si"] { border-color: var(--qa-naranja); }
+
+.ejecucion__alto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+
+.ejecucion__premisa { font-size: .85rem; line-height: 1.45; }
+
+.ejecucion__ruta, .ejecucion__cuenta {
+  font-family: var(--dato);
+  font-size: .7rem;
+  color: var(--texto-tenue);
+}
+
+select {
+  width: 100%;
+  padding: .6rem .7rem;
+  color: var(--texto);
+  background: var(--fondo);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  font-family: var(--texto-ui);
+  font-size: .95rem;
+}
+
+select:focus { border-color: var(--qa-naranja); }
+
+code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
+
+/* ========================================================= taller: estado */
+
+.linea-estado {
+  margin: 0;
+  font-family: var(--dato);
+  font-size: .75rem;
+  line-height: 1.6;
+  color: var(--texto-tenue);
+}
+
+.linea-estado b { color: var(--texto); font-weight: 500; }
+
+/* La maquina de estados de §4 en fila: es una secuencia y por eso va numerada.
+   `bloqueado` no ocupa un puesto porque es salida lateral, no un paso mas: se
+   marca sobre el paso en el que el proyecto se quedo. */
+.pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paso {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .25rem .55rem;
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  font-family: var(--dato);
+  font-size: .7rem;
+  color: var(--texto-tenue);
+}
+
+.paso::before { content: attr(data-orden); font-size: .64rem; opacity: .6; }
+
+.paso[data-hecho="si"] { color: var(--texto); border-color: var(--texto-tenue); }
+
+.paso[data-actual="si"] {
+  color: var(--qa-naranja);
+  border-color: var(--qa-naranja);
+  background: color-mix(in srgb, var(--qa-naranja) 14%, transparent);
+}
+
+.paso[data-bloqueado="si"] {
+  color: var(--fallo);
+  border-color: var(--fallo);
+  background: color-mix(in srgb, var(--fallo) 14%, transparent);
+}
+
+/* ======================================================== taller: agentes */
+
+.agentes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: .5rem;
+}
+
+.agente {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  padding: .55rem .65rem;
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+}
+
+.agente__alto { display: flex; align-items: center; gap: .4rem; }
+
+.agente__luz {
+  width: .45rem;
+  height: .45rem;
+  flex: 0 0 auto;
+  background: var(--linea);
+  border-radius: 999px;
+}
+
+.agente__nombre {
+  font-family: var(--dato);
+  font-size: .7rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.agente__tarea { font-size: .72rem; line-height: 1.4; color: var(--texto-tenue); }
+
+.agente[data-visto="si"] .agente__luz { background: var(--texto-tenue); }
+.agente[data-visto="si"] .agente__nombre { color: var(--texto); }
+
+.agente[data-activo="si"] { border-color: var(--qa-naranja); }
+.agente[data-activo="si"] .agente__nombre { color: var(--qa-naranja); }
+.agente[data-activo="si"] .agente__tarea { color: var(--texto); }
+
+.agente[data-activo="si"] .agente__luz {
+  background: var(--qa-naranja);
+  animation: latido 1.4s ease-in-out infinite;
+}
+
+/* ======================================================= taller: intentos */
+
+.umbrales {
+  margin: 0 0 .6rem;
+  font-family: var(--dato);
+  font-size: .7rem;
+  color: var(--texto-tenue);
+}
+
+.tabla-caja { overflow-x: auto; }
+
+.tabla { width: 100%; border-collapse: collapse; font-size: .75rem; }
+
+.tabla th, .tabla td {
+  padding: .4rem .5rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--linea);
+}
+
+.tabla th {
+  font-family: var(--dato);
+  font-size: .66rem;
+  font-weight: 500;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--texto-tenue);
+}
+
+.tabla td:nth-child(1), .tabla td:nth-child(3) {
+  font-family: var(--dato);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla td:nth-child(2) {
+  font-family: var(--dato);
+  font-size: .7rem;
+  color: var(--texto-tenue);
+}
+
+.tabla td:nth-child(4) { color: var(--texto-tenue); }
+
+.veredicto {
+  padding: .1rem .4rem;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  font-family: var(--dato);
+  font-size: .66rem;
+  white-space: nowrap;
+}
+
+.veredicto[data-estado="aprobado"] { border-color: var(--ok); color: var(--ok); }
+.veredicto[data-estado="descartado"] { border-color: var(--fallo); color: var(--fallo); }
+.veredicto[data-estado="propuesto"] { border-color: var(--qa-naranja); color: var(--qa-naranja); }
+
+/* ========================================================= taller: ledger */
+
+.chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .5rem;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  font-family: var(--dato);
+  font-size: .68rem;
+  color: var(--texto-tenue);
+}
+
+.chip::before {
+  content: "";
+  width: .4rem;
+  height: .4rem;
+  border-radius: 999px;
+  background: var(--texto-tenue);
+}
+
+.chip[data-estado="verificado"] { color: var(--texto); border-color: var(--ok); }
+.chip[data-estado="verificado"]::before { background: var(--ok); }
+.chip[data-estado="sin_verificar"]::before { background: var(--aviso); }
+
+/* ======================================================= taller: archivos */
+
+.archivos {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--dato);
+  font-size: .72rem;
+}
+
+.archivos li { display: flex; align-items: baseline; gap: .6rem; }
+
+.archivos time {
+  flex: 0 0 auto;
+  color: var(--qa-naranja);
+  font-variant-numeric: tabular-nums;
+}
+
+.archivos span { overflow: hidden; text-overflow: ellipsis; color: var(--texto-tenue); }
+
+.diario__cabecera .dato { margin-left: auto; }
+
+/* ======================================================== lectura: indice */
+
+.indice {
+  position: fixed;
+  left: 16px;
+  top: calc(var(--barra-alto) + 2rem);
+  z-index: 2;
+  width: 14rem;
+  max-height: 64vh;
+  overflow-y: auto;
+  padding: .8rem;
+  background: color-mix(in srgb, var(--superficie) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  transition: opacity .35s ease;
+}
+
+body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
+
+.indice__entrada {
+  display: grid;
+  grid-template-columns: 3px 1fr;
+  gap: .55rem;
+  width: 100%;
+  padding: .4rem 0;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--linea);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.indice__entrada:last-child { border-bottom: 0; }
+.indice__entrada:hover .indice__titulo,
+.indice__entrada[data-actual="si"] .indice__titulo { color: var(--qa-naranja); }
+
+/* El lomo lleva el mismo codigo de color que los cuadernillos de la mesa. */
+.indice__lomo { background: var(--linea); border-radius: 1px; }
+.indice__entrada[data-estado="aprobado"] .indice__lomo { background: var(--ok); }
+.indice__entrada[data-estado="en_curso"] .indice__lomo { background: var(--qa-naranja); }
+.indice__entrada[data-estado="bloqueado"] .indice__lomo { background: var(--fallo); }
+
+.indice__titulo { font-size: .8rem; line-height: 1.3; }
+
+.indice__datos {
+  font-family: var(--dato);
+  font-size: .64rem;
+  color: var(--texto-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===================================================== lectura: metadatos */
+
+.metadatos, .ficha-datos {
+  display: grid;
+  gap: .15rem .7rem;
+  margin: 0;
+  font-family: var(--dato);
+  font-size: .7rem;
+}
+
+.metadatos {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, auto);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.ficha-datos {
+  grid-template-columns: 1fr;
+  gap: 0;
+  font-size: .72rem;
+  margin-bottom: .5rem;
+}
+
+.ficha-datos dt { margin-top: .5rem; }
+.ficha-datos dt:first-child { margin-top: 0; }
+
+.metadatos dt, .ficha-datos dt {
+  color: var(--texto-tenue);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.metadatos dd, .ficha-datos dd { margin: 0; color: var(--texto); }
+
+.metadatos dd[data-vacio="si"],
+.ficha-datos dd[data-vacio="si"] { color: var(--texto-tenue); font-style: italic; }
+
+.separador-escena {
+  margin: 2.2em 0;
+  text-align: center;
+  letter-spacing: .5em;
+  color: var(--qa-naranja);
+}
+
+.marca-fin {
+  margin: 2rem 0 0;
+  font-family: var(--dato);
+  font-size: .68rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--texto-tenue);
+}
+
+.marca-fin::before, .marca-fin::after { content: "—"; margin: 0 .6rem; }
+
+.ficha-lateral section + section {
+  margin-top: 1.2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--linea);
+}
+
+.controles { margin: 0; padding-left: 1.1rem; font-size: .75rem; }
+.controles li { margin-bottom: .25rem; }
+.controles b { color: var(--texto); font-weight: 500; }
+
+/* ================================================================ estrecho */
+
+@media (min-width: 1240px) {
+  body[data-sala="lectura"] .lector { margin-left: 15rem; margin-right: 15rem; }
+}
+
+@media (max-width: 1239px) {
+  .indice {
+    position: static;
+    width: auto;
+    max-width: 40rem;
+    max-height: none;
+    margin: 0 auto 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .barra__run, #dato-perfil, .cuota--chip { display: none; }
+}
+
+/* El taller se ha llenado de paneles y la mesa queda detras de todos ellos:
+   se atenua para que el texto gane, sin tocar nada de la escena. */
+body[data-sala="taller"] #escena { opacity: .5; }
+
+body[data-sala="taller"] .panel,
+body[data-sala="taller"] .tarjeta,
+body[data-sala="taller"] .mando,
+body[data-sala="taller"] .diario {
+  background: color-mix(in srgb, var(--superficie) 96%, transparent);
+}
+
+body[data-sala="taller"] .diario {
+  background: color-mix(in srgb, var(--fondo) 96%, transparent);
+}

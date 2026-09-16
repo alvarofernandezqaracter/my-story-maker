@@ -44,6 +44,7 @@ const ctx = {
   elegirCapitulo,
   inmersion,
   previsualizar,
+  perfilElegido: () => brief.perfil(),
 };
 
 const brief = crearBrief(ctx);
@@ -149,6 +150,12 @@ function pintarRail() {
   pastilla.textContent = p?.estado || 'sin brief';
   pastilla.dataset.estado = p?.estado || '';
   $('dato-modo').textContent = `modo ${p?.modo || '—'}`;
+  $('dato-perfil').textContent = `perfil ${estado.flujo?.perfil || p?.perfil || '—'}`;
+  $('barra-run').textContent = p?.canon || 'sin run';
+  // La cuota del dia no tiene fuente en el harness: ni contabilidad de llamadas
+  // ni limite configurado. Se queda vacia en vez de ensenar un numero inventado.
+  $('cuota-cifra').textContent = p?.cuota
+    ? `${p.cuota.usadas} / ${p.cuota.limite}` : 'sin datos todavía';
   $('siguiente-comando').textContent = COMANDO[p?.estado] || 'python -m novela estado';
 
   const tramos = $('rail-capitulos');

@@ -32,7 +32,7 @@ export const api = {
   proyecto: () => pedir('/api/proyecto'),
   guardarBrief: (brief) => enviar('/api/brief', brief),
   flujo: (desde = 0) => pedir(`/api/flujo?desde=${desde}`),
-  arrancar: (accion) => enviar('/api/flujo', { accion }),
+  arrancar: (accion, perfil) => enviar('/api/flujo', { accion, perfil }),
   capitulo: (numero) => pedir(`/api/capitulo/${numero}`),
   desbloquear: (datos) => enviar('/api/desbloquear', datos),
 };
