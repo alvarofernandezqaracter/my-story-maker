@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
-real = ["anthropic>=0.69"]
+real = ["anthropic>=1.6,<2"]
 
 [project.scripts]
 novela = "novela.__main__:main"
