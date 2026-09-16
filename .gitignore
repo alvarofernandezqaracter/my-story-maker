@@ -1,4 +1,6 @@
-node_modules/
+__pycache__/
+*.py[cod]
+.venv/
 canon.db
 canon.db-journal
 canon.db-wal

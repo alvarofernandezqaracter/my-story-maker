@@ -1,0 +1,23 @@
+[project]
+name = "my-story-maker"
+version = "0.6.0"
+description = "Sistema multiagente de novelas historicas"
+requires-python = ">=3.11"
+
+# El modo simulado, que es el de por defecto, no necesita instalar nada: todo
+# sale de la biblioteca estandar (sqlite3, unittest, pathlib). La unica
+# dependencia es el SDK oficial, y solo hace falta en modo real (§12).
+dependencies = []
+
+[project.optional-dependencies]
+real = ["anthropic>=0.69"]
+
+[project.scripts]
+novela = "novela.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["novela"]
