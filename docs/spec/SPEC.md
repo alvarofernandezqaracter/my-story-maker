@@ -1,8 +1,8 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.5.0
+version: 0.5.1
 estado: borrador
-actualizado: 2026-09-15
+actualizado: 2026-09-16
 ---
 
 # Spec — Sistema multiagente de novelas históricas
@@ -483,6 +483,14 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.5.1] — 2026-09-16
+
+**Cambiado**
+- §12. `margenes.parrafos_min` baja de 5 a 3. Cinco párrafos era un mínimo pensado para capítulos largos, y VD-08 descartaba por él capítulos cortos legítimos antes de llegar al validador, que es justo el gasto que el escalón de bloqueo pretende evitar. El umbral de palabras sigue haciendo el trabajo de detectar al capítulo al que le falta medio texto.
+
+**Contexto**
+- El número solo vivía en `config.json`, en la tabla de §12 y en la copia del test; `src/` lo lee de configuración y no lo tiene escrito en ningún sitio, que es lo que §12 exige. Los cuatro casos del test de VD-08 siguen valiendo sin tocarlos: el que bloquea por párrafos usa dos.
 
 ### [0.5.0] — 2026-09-15
 
