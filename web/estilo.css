@@ -1,0 +1,335 @@
+/* Interfaz del brief (§19). Un solo mundo visual, deliberadamente oscuro: la
+   mesa de un archivo de noche, con la escena WebGL haciendo de tablero. No hay
+   tema claro porque la escena y la pagina comparten paleta y luz; por eso cada
+   color se declara aqui y ninguno se hereda del navegador. */
+
+:root {
+  /* Paleta: tinta ferrogalica sobre mesa oscura, cardenillo de instrumento. */
+  --tinta-honda: #090e11;
+  --tinta: #111a1f;
+  --tinta-alta: #17232a;
+  --linea: #24333b;
+  --cal: #e9e5db;
+  --cal-tenue: #8fa0a6;
+  --cardenillo: #4fb3a3;
+  --bermellon: #d9553b;
+
+  --display: "Bodoni Moda", "Didot", Georgia, serif;
+  --texto: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --dato: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+
+  --rail-alto: 4.25rem;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--tinta-honda);
+  color: var(--cal);
+  font-family: var(--texto);
+  font-size: 15px;
+  line-height: 1.55;
+  overflow: hidden;
+}
+
+#escena {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* Mientras la escena no arranca (o si three.js no llega), el degradado de
+     abajo ya da el suelo: la pagina nunca se ve sobre un rectangulo negro. */
+  background:
+    radial-gradient(120% 90% at 72% 18%, #1b2a31 0%, #0d1417 55%, var(--tinta-honda) 100%);
+}
+
+.tablero {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: clamp(1.5rem, 4vh, 3rem) 16px calc(var(--rail-alto) + 2rem);
+  display: flex;
+  align-items: flex-start;
+}
+
+/* ---------------------------------------------------------------- papeleta */
+
+.papeleta {
+  width: min(27rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: clamp(1.4rem, 3vw, 1.9rem);
+  background: color-mix(in srgb, var(--tinta) 88%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--linea);
+  /* Ni tarjeta ni esquinas blandas: una papeleta de archivo, con la esquina
+     superior izquierda marcada por el filo de cardenillo. */
+  border-left: 2px solid var(--cardenillo);
+  border-radius: 2px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+}
+
+.papeleta__cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--dato);
+  font-size: .68rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--cardenillo);
+}
+
+h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(2rem, 5vw, 2.7rem);
+  line-height: 1.05;
+  letter-spacing: -.01em;
+  text-wrap: balance;
+}
+
+.entradilla {
+  margin: 0;
+  max-width: 34em;
+  color: var(--cal-tenue);
+  font-size: .9rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.campo--par {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.campo--par > div {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  min-width: 0;
+}
+
+label {
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--cal-tenue);
+}
+
+input, textarea {
+  width: 100%;
+  padding: .6rem .7rem;
+  color: var(--cal);
+  background: var(--tinta-honda);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  font-family: var(--texto);
+  font-size: .95rem;
+  line-height: 1.5;
+}
+
+input[type="number"] {
+  font-family: var(--dato);
+  font-variant-numeric: tabular-nums;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+}
+
+input::placeholder, textarea::placeholder { color: #55666d; }
+
+input:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 2px solid var(--cardenillo);
+  outline-offset: 2px;
+}
+
+input:focus, textarea:focus {
+  border-color: var(--cardenillo);
+}
+
+.pista {
+  margin: 0;
+  font-size: .78rem;
+  color: var(--cal-tenue);
+}
+
+.aviso {
+  margin: 0;
+  padding: .55rem .7rem;
+  border-left: 2px solid var(--bermellon);
+  background: color-mix(in srgb, var(--bermellon) 12%, transparent);
+  font-size: .85rem;
+}
+
+.aviso[data-tono="bien"] {
+  border-left-color: var(--cardenillo);
+  background: color-mix(in srgb, var(--cardenillo) 12%, transparent);
+}
+
+.acciones {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.boton {
+  padding: .65rem 1.4rem;
+  font-family: var(--texto);
+  font-size: .9rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--tinta-honda);
+  background: var(--cardenillo);
+  border: 1px solid var(--cardenillo);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background .18s ease, transform .18s ease;
+}
+
+.boton:hover { background: #63c6b6; }
+.boton:active { transform: translateY(1px); }
+
+.boton[disabled] {
+  background: transparent;
+  color: var(--cal-tenue);
+  border-color: var(--linea);
+  cursor: not-allowed;
+}
+
+.enlace {
+  padding: 0;
+  color: var(--cal-tenue);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--linea);
+  font-family: var(--texto);
+  font-size: .85rem;
+  cursor: pointer;
+}
+
+.enlace:hover { color: var(--cal); border-bottom-color: var(--cardenillo); }
+
+.nota-ejemplo {
+  margin: 0;
+  font-size: .78rem;
+  color: var(--cal-tenue);
+}
+
+/* -------------------------------------------------------------------- rail */
+
+.rail {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: .7rem 16px calc(.7rem + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--tinta-honda) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--linea);
+  font-family: var(--dato);
+  font-size: .75rem;
+  color: var(--cal-tenue);
+  overflow-x: auto;
+}
+
+.rail__estado, .rail__siguiente {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex: 0 0 auto;
+}
+
+.rail__siguiente { margin-left: auto; }
+
+.rail__dato { white-space: nowrap; }
+
+.rail__siguiente code {
+  padding: .2rem .45rem;
+  background: var(--tinta-alta);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  color: var(--cal);
+  white-space: nowrap;
+}
+
+.pastilla {
+  padding: .15rem .5rem;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  color: var(--cal);
+  white-space: nowrap;
+}
+
+.pastilla[data-estado="escribiendo"],
+.pastilla[data-estado="escrito"],
+.pastilla[data-estado="editado"] {
+  border-color: var(--cardenillo);
+  color: var(--cardenillo);
+}
+
+.pastilla[data-estado="bloqueado"] {
+  border-color: var(--bermellon);
+  color: var(--bermellon);
+}
+
+/* Los capitulos del canon: un tramo por capitulo, el color dice su estado. */
+.rail__capitulos {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.tramo {
+  width: 14px;
+  height: 10px;
+  background: var(--linea);
+  border-radius: 1px;
+}
+
+.tramo[data-estado="aprobado"] { background: var(--cardenillo); }
+.tramo[data-estado="bloqueado"] { background: var(--bermellon); }
+.tramo[data-estado="en_curso"] { background: var(--cal-tenue); }
+.tramo[data-foco="si"] { outline: 1px solid var(--cal); outline-offset: 1px; }
+
+@media (max-width: 720px) {
+  :root { --rail-alto: 6.5rem; }
+  .tablero { align-items: stretch; }
+  .papeleta { width: 100%; }
+  .rail { flex-wrap: wrap; gap: .6rem 1rem; }
+  .rail__siguiente { margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

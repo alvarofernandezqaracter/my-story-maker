@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Legajo en blanco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/estilo.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.169.0/build/three.module.min.js",
+    "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<canvas id="escena"></canvas>
+
+<main class="tablero">
+  <form class="papeleta" id="papeleta" novalidate>
+    <header class="papeleta__cabecera">
+      <p class="eyebrow">Brief — los cinco campos del §3</p>
+      <h1>Legajo en blanco</h1>
+      <p class="entradilla">
+        Esto es todo lo que se escribe a mano. Con estos cinco campos el
+        investigador arma el dossier y el arquitecto la escaleta; el resto lo
+        levanta el harness capítulo a capítulo.
+      </p>
+    </header>
+
+    <div class="campo">
+      <label for="epoca">Época y lugar</label>
+      <input id="epoca" name="epoca" type="text" autocomplete="off"
+             placeholder="Ciudad, año y el rincón concreto donde pasa">
+      <p class="pista">Cuanto más estrecho, mejor investiga: un barrio y una institución, no un siglo.</p>
+    </div>
+
+    <div class="campo">
+      <label for="premisa">Premisa</label>
+      <textarea id="premisa" name="premisa" rows="3"
+                placeholder="Quién quiere qué y qué se lo impide"></textarea>
+    </div>
+
+    <div class="campo">
+      <label for="tono">Tono</label>
+      <input id="tono" name="tono" type="text" list="tonos" autocomplete="off"
+             placeholder="seco">
+      <datalist id="tonos">
+        <option value="seco"></option>
+        <option value="lírico"></option>
+        <option value="sombrío"></option>
+        <option value="épico"></option>
+        <option value="irónico"></option>
+        <option value="contenido"></option>
+      </datalist>
+      <p class="pista">El tono viaja a la skill de prosa y también enciende la luz de esta mesa.</p>
+    </div>
+
+    <div class="campo campo--par">
+      <div>
+        <label for="capitulos">Capítulos</label>
+        <input id="capitulos" name="capitulos" type="number" min="1" step="1" inputmode="numeric">
+      </div>
+      <div>
+        <label for="palabras_por_capitulo">Palabras por capítulo</label>
+        <input id="palabras_por_capitulo" name="palabras_por_capitulo" type="number"
+               min="1" step="50" inputmode="numeric">
+      </div>
+    </div>
+
+    <p class="aviso" id="aviso" role="status" hidden></p>
+
+    <div class="acciones">
+      <button class="boton" type="submit" id="guardar">Guardar el brief</button>
+      <button class="enlace" type="button" id="vaciar">Vaciar</button>
+    </div>
+
+    <p class="nota-ejemplo" id="nota-ejemplo">
+      Va precargado un ejemplo para que la mesa no arranque vacía. Cámbialo.
+    </p>
+  </form>
+</main>
+
+<footer class="rail" id="rail">
+  <div class="rail__estado">
+    <span class="pastilla" id="pastilla-estado">sin canon</span>
+    <span class="rail__dato" id="rail-modo">modo —</span>
+    <span class="rail__dato" id="rail-foco">el legajo está en blanco</span>
+  </div>
+  <div class="rail__capitulos" id="rail-capitulos"></div>
+  <div class="rail__siguiente">
+    <span class="rail__dato">siguiente</span>
+    <code id="siguiente-comando">python -m novela preparar</code>
+    <button class="enlace" type="button" id="copiar">copiar</button>
+  </div>
+</footer>
+
+<script type="module" src="/papeleta.js"></script>
+</body>
+</html>
