@@ -33,10 +33,31 @@ function aHtml(markdown) {
       if (!t) return '';
       // El titulo del capitulo ya va en la cabecera del lector.
       if (t.startsWith('# ')) return '';
+      // Separador de escena, si el escritor lo puso: el harness no obliga a
+      // ninguno porque la unidad de escritura es el capitulo entero (DA-09).
+      if (/^(\*\s*){3,}$|^-{3,}$|^_{3,}$/.test(t)) {
+        return '<p class="separador-escena">* * *</p>';
+      }
       if (/^#{2,6} /.test(t)) return `<h3>${escapar(t.replace(/^#+\s*/, ''))}</h3>`;
       return `<p>${escapar(t).replace(/\n/g, '<br>')}</p>`;
     })
     .join('');
+}
+
+// Lo que el canon no sabe se dice, no se rellena. Escenas, focalizador y
+// gancho final no existen en el modelo de datos: la unidad de escritura sigue
+// siendo el capitulo entero (DA-09) y la ficha no guarda punto de vista.
+function dato(nombre, valor) {
+  const dt = document.createElement('dt');
+  dt.textContent = nombre;
+  const dd = document.createElement('dd');
+  if (valor === null || valor === undefined || valor === '') {
+    dd.textContent = 'sin datos todavía';
+    dd.dataset.vacio = 'si';
+  } else {
+    dd.textContent = String(valor);
+  }
+  return [dt, dd];
 }
 
 export function crearLectura(ctx) {
@@ -108,6 +129,91 @@ export function crearLectura(ctx) {
     }
   }
 
+  function pintarIndice(numero) {
+    const caja = $('indice');
+    caja.textContent = '';
+    const capitulos = ctx.estado.proyecto?.capitulos || [];
+    if (!capitulos.length) {
+      const p = document.createElement('p');
+      p.className = 'vacio';
+      p.textContent = 'sin datos todavía: no hay escaleta.';
+      caja.append(p);
+      return;
+    }
+    for (const c of capitulos) {
+      const entrada = document.createElement('button');
+      entrada.type = 'button';
+      entrada.className = 'indice__entrada';
+      entrada.dataset.estado = c.estado;
+      if (c.numero === numero) entrada.dataset.actual = 'si';
+      entrada.disabled = !c.legible;
+
+      const lomo = document.createElement('span');
+      lomo.className = 'indice__lomo';
+
+      const cuerpo = document.createElement('span');
+      const titulo = document.createElement('span');
+      titulo.className = 'indice__titulo';
+      titulo.textContent = `${String(c.numero).padStart(2, '0')} · ${c.titulo}`;
+      const datos = document.createElement('span');
+      datos.className = 'indice__datos';
+      // Escenas no existen en el canon; se dice, no se rellena.
+      datos.textContent = [
+        c.media !== null ? `media ${c.media}` : 'sin nota',
+        'escenas —',
+        c.palabras ? `${c.palabras} pal.` : `${c.palabras_objetivo} pal. objetivo`,
+      ].join(' · ');
+      cuerpo.append(titulo, document.createElement('br'), datos);
+
+      entrada.append(lomo, cuerpo);
+      entrada.addEventListener('click', () => ctx.abrirLectura(c.numero));
+      caja.append(entrada);
+    }
+  }
+
+  function pintarMetadatos(datos) {
+    const caja = $('metadatos');
+    caja.textContent = '';
+    caja.append(
+      ...dato('focalizador', null),
+      ...dato('día de ficción', datos.fecha),
+      ...dato('acto', datos.acto),
+      ...dato('palabras', datos.palabras),
+    );
+  }
+
+  function pintarFichaDatos(datos) {
+    const caja = $('ficha-datos');
+    caja.textContent = '';
+    caja.append(
+      ...dato('focalizador por escena', null),
+      ...dato('media', datos.media),
+      ...dato('escenas', null),
+      ...dato('palabras', datos.palabras),
+      ...dato('gancho final', null),
+    );
+  }
+
+  // Deuda narrativa: los hilos que un capitulo abrio y ninguno posterior cerro.
+  function pintarDeuda() {
+    const caja = $('deuda');
+    caja.textContent = '';
+    const deuda = ctx.estado.proyecto?.deuda || [];
+    if (!deuda.length) {
+      const p = document.createElement('p');
+      p.textContent = 'Ninguna: todos los hilos abiertos se cerraron.';
+      caja.append(p);
+      return;
+    }
+    const ul = document.createElement('ul');
+    for (const d of deuda) {
+      const li = document.createElement('li');
+      li.textContent = `cap. ${d.capitulo}: ${d.hilo}`;
+      ul.append(li);
+    }
+    caja.append(ul);
+  }
+
   async function abrir(numero) {
     try {
       capitulo = await ctx.api.capitulo(numero);
@@ -120,7 +226,12 @@ export function crearLectura(ctx) {
     $('lector-titulo').textContent = capitulo.titulo;
     texto.innerHTML = aHtml(capitulo.texto);
     pintarNotas(capitulo);
+    pintarMetadatos(capitulo);
+    pintarFichaDatos(capitulo);
     pintarFicha(capitulo);
+    pintarDeuda();
+    pintarIndice(numero);
+    $('marca-fin').hidden = false;
 
     const legibles = numerosLegibles();
     const i = legibles.indexOf(numero);
