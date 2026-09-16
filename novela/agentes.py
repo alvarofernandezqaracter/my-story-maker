@@ -81,7 +81,7 @@ class Agentes:
     def modelo_de(self, rol):
         return self.config['modelo_por_rol'][rol]
 
-    def _generar(self, rol, entrada, vuelta, envio):
+    def _generar(self, rol, entrada, vuelta, envio, marcas=None):
         """Una invocacion del modelo, observada como `generation` de §20.
 
         Una por invocacion y nunca una que englobe el bucle: lo que interesa ver
@@ -90,7 +90,7 @@ class Agentes:
         transporte de §13; son dos bucles distintos y conviene distinguirlos.
         """
         nombre = GENERACIONES.get(rol, 'llamar-agente')
-        marcas = {'vuelta': vuelta, 'envio': envio, 'transporte': self.modo}
+        marcas = dict(marcas or {}, vuelta=vuelta, envio=envio, transporte=self.modo)
 
         if self.modo == 'simulado':
             fn = AGENTES_SIMULADOS.get(rol)
@@ -122,22 +122,22 @@ class Agentes:
                            usage_details=reparto_de_tokens(respuesta.get('uso')))
         return respuesta['salida']
 
-    def _llamar(self, rol, entrada, vuelta):
+    def _llamar(self, rol, entrada, vuelta, marcas=None):
         """Una llamada cruda, sin validar. Reintenta una vez ante error de proveedor."""
         if self.modo == 'simulado':
-            return self._generar(rol, entrada, vuelta, 1)
+            return self._generar(rol, entrada, vuelta, 1, marcas)
         try:
-            return self._generar(rol, entrada, vuelta, 1)
+            return self._generar(rol, entrada, vuelta, 1, marcas)
         except Exception as primera:
             try:
-                return self._generar(rol, entrada, vuelta, 2)
+                return self._generar(rol, entrada, vuelta, 2, marcas)
             except Exception as segunda:
                 raise ParadaDelProceso(
                     'el proveedor fallo dos veces en el rol {}'.format(rol),
                     [str(primera), str(segunda)],
                 ) from segunda
 
-    def pedir(self, rol, entrada, comprobaciones_extra=None):
+    def pedir(self, rol, entrada, comprobaciones_extra=None, marcas=None):
         """Llamada con las comprobaciones de forma de §9 (VD-01 y VD-02) y las extra
         que pase quien llama.
 
@@ -146,16 +146,20 @@ class Agentes:
 
         En la traza es una observacion `agent` (§20) con dentro una `generation`
         por vuelta: asi se ve si un rol acerto a la primera o si lo salvo el
-        reintento.
+        reintento. `marcas` son los metadatos que solo conoce quien llama -de que
+        capitulo y de que intento es esta llamada- y viajan a las dos: sin ellas,
+        en un capitulo de tres intentos no se sabe cual es cual.
         """
+        marcas = dict(marcas or {})
         with self.trazas.paso(rol, 'agent', entrada=entrada,
-                              metadata={'modelo': self.config['modelo_por_rol'].get(rol),
-                                        'modo': self.modo}) as agente:
+                              metadata=dict(marcas,
+                                            modelo=self.config['modelo_por_rol'].get(rol),
+                                            modo=self.modo)) as agente:
             ultimo = None
             for vuelta in (1, 2):
                 if self.observador:
                     self.observador(rol, vuelta)
-                salida = self._llamar(rol, entrada, vuelta)
+                salida = self._llamar(rol, entrada, vuelta, marcas)
                 forma = comprobar_salida_de_agente(rol, salida)
 
                 extra = []

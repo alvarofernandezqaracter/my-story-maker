@@ -174,6 +174,9 @@ def _escribir_capitulo(canon, agentes, config, numero, diario, observacion):
 
     for intento in range(1, config['gate']['max_intentos'] + 1):
         es_ultimo = intento == config['gate']['max_intentos']
+        # De que capitulo y de que intento es cada llamada. El harness lo sabe y
+        # los agentes no, asi que se lo pone quien llama (§20).
+        marcas = {'capitulo': numero, 'intento': intento}
 
         # ---- Escritor
         redaccion = agentes.pedir('escritor', {
@@ -183,7 +186,7 @@ def _escribir_capitulo(canon, agentes, config, numero, diario, observacion):
             'texto_previo': texto_previo,
             'incidencias': incidencias,
             'intento': intento,
-        })['salida']
+        }, marcas=marcas)['salida']
 
         ruta = ruta_de_intento(numero, intento)
         _escribir(ruta, redaccion['texto'])
@@ -196,7 +199,13 @@ def _escribir_capitulo(canon, agentes, config, numero, diario, observacion):
                 metadata={'capitulo': numero, 'intento': intento}) as control:
             det = comprobar_capitulo_redactado(
                 redaccion['texto'], ficha['palabras_objetivo'], config['margenes'])
-            control.actualizar(output=det)
+            control.actualizar(
+                output=det,
+                # Los dos escalones de VD-08 se distinguen en la traza igual que
+                # en el harness: el aviso deja pasar y el bloqueo no.
+                level=None if det['ok'] else (
+                    'WARNING' if det['severidad'] == 'aviso' else 'ERROR'),
+                status_message='; '.join(det['detalles']) or None)
             control.nota('vd-08', det['ok'],
                          comentario='; '.join(det['detalles']) or None)
 
@@ -220,7 +229,8 @@ def _escribir_capitulo(canon, agentes, config, numero, diario, observacion):
             continue
 
         # ---- Validador. Una llamada, o tres si validador.modo es separado (§5).
-        revisiones = _validar(agentes, config, redaccion['texto'], paquete, ficha, intento)
+        revisiones = _validar(
+            agentes, config, redaccion['texto'], paquete, ficha, intento, marcas)
         canon.guardar_revisiones(numero, intento, revisiones)
 
         # ---- Gate. Solo se calcula sobre revisiones que ya pasaron VD-10 (§9).
@@ -237,7 +247,8 @@ def _escribir_capitulo(canon, agentes, config, numero, diario, observacion):
         if veredicto['aprueba']:
             canon.fijar_intento_aprobado(numero, intento)
             _volcar_en_el_canon(
-                canon, agentes, numero, redaccion['texto'], ficha, personajes, diario)
+                canon, agentes, numero, redaccion['texto'], ficha, personajes, diario,
+                marcas)
             observacion.actualizar(output={
                 'aprobado': True, 'intento': intento,
                 'notas': notas(revisiones),
@@ -287,11 +298,17 @@ def _pasar_el_gate(agentes, config, revisiones, numero, intento):
                                           'umbrales': config['gate']},
             metadata={'capitulo': numero, 'intento': intento}) as juez:
         veredicto = gate(revisiones, config['gate'])
-        juez.actualizar(output={
-            'aprueba': veredicto['aprueba'],
-            'media': redondear(veredicto['media'], 2),
-            'motivos': veredicto['motivos'],
-        })
+        juez.actualizar(
+            output={
+                'aprueba': veredicto['aprueba'],
+                'media': redondear(veredicto['media'], 2),
+                'motivos': veredicto['motivos'],
+            },
+            # Un intento rechazado se marca como aviso, no como error: el gate
+            # hizo su trabajo. Pero es lo que se filtra para ver por que un
+            # capitulo costo tres intentos, y sin nivel hay que abrirlos todos.
+            level=None if veredicto['aprueba'] else 'WARNING',
+            status_message='; '.join(veredicto['motivos']) or None)
         for revision in revisiones:
             reparos = revision.get('incidencias') or []
             juez.nota(revision['dimension'], revision['nota'],
@@ -303,7 +320,7 @@ def _pasar_el_gate(agentes, config, revisiones, numero, intento):
     return veredicto
 
 
-def _validar(agentes, config, texto, paquete, encargo, intento):
+def _validar(agentes, config, texto, paquete, encargo, intento, marcas=None):
     """Una llamada al validador, o tres en paralelo si el modo es separado (§5).
 
     VD-10 se aplica siempre al conjunto de las tres dimensiones, venga de donde
@@ -314,6 +331,7 @@ def _validar(agentes, config, texto, paquete, encargo, intento):
     if config['validador']['modo'] != 'separado':
         return agentes.pedir(
             'validador', base, lambda s: [comprobar_revisiones(s['revisiones'])],
+            marcas=marcas,
         )['salida']['revisiones']
 
     # Modo separado: cada llamada trae un bloque, y solo se comprueba ese bloque.
@@ -322,7 +340,10 @@ def _validar(agentes, config, texto, paquete, encargo, intento):
             propias = [r for r in s['revisiones'] if r['dimension'] == dimension]
             resto = [{'dimension': d, 'nota': 3} for d in DIMENSIONES if d != dimension]
             return [comprobar_revisiones(propias + resto)]
-        return agentes.pedir('validador', {**base, 'dimension': dimension}, comprobar)
+        # La dimension entra en las marcas: son tres llamadas hermanas y sin
+        # esto no se distinguen en la traza (§20).
+        return agentes.pedir('validador', {**base, 'dimension': dimension}, comprobar,
+                             marcas=dict(marcas or {}, dimension=dimension))
 
     with ThreadPoolExecutor(max_workers=len(DIMENSIONES)) as ejecutor:
         partes = list(ejecutor.map(una, DIMENSIONES))
@@ -342,7 +363,8 @@ def _validar(agentes, config, texto, paquete, encargo, intento):
     return revisiones
 
 
-def _volcar_en_el_canon(canon, agentes, numero, texto, ficha, personajes, diario):
+def _volcar_en_el_canon(canon, agentes, numero, texto, ficha, personajes, diario,
+                        marcas=None):
     """Unica escritura en el canon dentro del loop: el cronista convierte el
     capitulo aprobado en resumen y en cambios de ficha, y el harness lo persiste
     en una transaccion (VD-11).
@@ -357,6 +379,7 @@ def _volcar_en_el_canon(canon, agentes, numero, texto, ficha, personajes, diario
             comprobar_eventos(s.get('eventos')),
             comprobar_resumen_solo_si_aprobado(canon.intento_aprobado(numero)),
         ],
+        marcas=marcas,
     )
     propuesta = respuesta['salida']
 
