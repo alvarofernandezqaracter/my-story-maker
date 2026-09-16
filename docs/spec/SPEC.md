@@ -421,11 +421,13 @@ El editor no aplica nada ni dispara reescrituras. En el alcance inicial el bucle
 
 Un único `config.json` en la raíz del proyecto, junto al canon. Aquí vive todo lo que se toca sin tocar código, y no se duplica en ninguna skill (§10): si un número aparece escrito en el código sin pasar por este fichero, es un bug y no una decisión. El harness lo carga al arrancar, lo valida entero y para si falta una clave o un valor cae fuera de rango, porque una errata en un umbral sale más barata descubierta al arrancar que tres capítulos después.
 
-**Modo de ejecución.** `ejecucion.modo` es la única bifurcación del sistema: con `real` las llamadas a agentes van a la API y con `simulado` las resuelve una capa local que devuelve respuestas fijas con el formato correcto. Todas las llamadas pasan por esa capa, así que el resto del harness no sabe cuál está activo y los tests y las demostraciones corren sin red y sin coste por el mismo camino que la ejecución de verdad. La credencial de la API no vive aquí: va en el entorno, porque este fichero se versiona y un secreto en él acaba en el repositorio.
+**Modo de ejecución.** `ejecucion.modo` es la única bifurcación del sistema y tiene tres valores. Con `simulado` las llamadas a agentes las resuelve una capa local que devuelve respuestas fijas con el formato correcto; con `real` salen contra la API de Claude con el SDK oficial; con `claude_code` salen contra la CLI de Claude Code instalada en la máquina, en modo headless. Todas pasan por la misma capa, así que el resto del harness no sabe cuál está activo y los tests y las demostraciones corren sin red y sin coste por el mismo camino que la ejecución de verdad. La credencial de la API no vive aquí: va en el entorno, porque este fichero se versiona y un secreto en él acaba en el repositorio.
+
+**Por qué un tercer modo.** `claude_code` existe para poder escribir una novela de verdad sin dar de alta una clave de API: quien ya tiene la CLI instalada ya tiene modelos y credencial, y el harness solo tiene que hablar con ella. El contrato es exactamente el del modo `real` y aguas arriba no cambia nada: las mismas instrucciones de §10, la misma petición de un único objeto JSON, la misma extracción de la respuesta y la misma política de §13 ante el fallo. La llamada va sin herramientas, sin MCP, sin las skills de la propia CLI y desde un directorio vacío, porque el agente tiene que ver lo que le manda el harness y no el repositorio desde el que corre. `modelo_por_rol` sigue mandando: el modelo de cada rol viaja en la llamada. El único número que este modo pone en el código es el tope de espera de una llamada, que es transporte y no criterio, igual que el `max_tokens` del modo `real`.
 
 | Clave | Por defecto | Para qué |
 |---|---|---|
-| `ejecucion.modo` | `simulado` | `simulado` \| `real`. Ver arriba |
+| `ejecucion.modo` | `simulado` | `simulado` \| `real` \| `claude_code`. Ver arriba |
 | `gate.nota_minima` | 3 | Suelo por dimensión en el gate (§8) |
 | `gate.media_minima` | 3,7 | Media exigida a las tres notas |
 | `gate.max_intentos` | 3 | Reintentos del escritor antes de bloquear |
