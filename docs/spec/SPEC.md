@@ -708,6 +708,8 @@ git log --reverse --pretty='| `%h` | %ad | %s |' --date=short -- docs/spec/
 
 **Stack.** Python 3.13 (mínimo 3.11) con `sqlite3` y `unittest`, los dos de la biblioteca estándar. Cierra DA-01. La razón de peso es la misma que cerró DA-01 en su día y no ha cambiado: el canon de §3 pide SQLite y el runtime ya lo trae, así que el modo `simulado` —que es el de por defecto y el que corren los tests— no necesita instalar nada. El modo `real` es la única parte con dependencia: el SDK oficial de Anthropic, importado de forma perezosa, de modo que un repo recién clonado escribe una novela entera sin red y sin `pip install`. El modo `claude_code` de §12 tampoco añade paquete alguno, porque habla con la CLI por `subprocess`: lo que pide no se instala con `pip` sino que es tener la CLI de Claude Code en el `PATH`.
 
+La interfaz de §19 tampoco añade paquete: el servidor es `http.server` de la biblioteca estándar. Lo que sí añade es la única dependencia de red del repo, y es del navegador, no del harness: three.js viaja por CDN y, si no llega, el formulario sigue funcionando entero.
+
 **Por qué Python y no Node.** El stack anterior era Node 24 con `node:sqlite` y `node:test`, y cumplía igual de bien. Se cambió porque quien mantiene el repo lee y modifica Python con mucha más soltura, y en un proyecto de un solo autor eso pesa más que la elegancia del runtime. La traducción fue directa: cada pieza de Node tenía equivalente en la biblioteca estándar de Python, así que no se perdió ninguna propiedad del diseño. De paso el código quedó síncrono, porque el `async` del original solo existía por el SDK y el invariante de §8 ya prohibía el paralelismo.
 
 **Qué es código y qué es texto.** El reparto de §1 se ve en las carpetas: `novela/` es todo lo determinista y no genera prosa; `agentes/` y `skills/` son texto que lee un modelo y no son fuente de verdad para nada.
@@ -716,9 +718,11 @@ git log --reverse --pretty='| `%h` | %ad | %s |' --date=short -- docs/spec/
 |---|---|
 | `novela/` | El harness: canon, generador de contexto, gate, validadores, capa de agentes y flujo |
 | `novela/__main__.py` | La CLI, que no decide nada: carga config, abre el canon y llama al flujo |
+| `novela/servidor.py` | El servidor local de §19: sirve `web/` y la API del brief |
 | `agentes/` | Un fichero por agente de §5, con su encargo y sus modos de fallo |
 | `skills/` | Las skills de §10, una carpeta por skill |
 | `capitulos/` | Un Markdown por intento, aprobado o no (§6) |
+| `web/` | La página del brief de §19: el formulario y la escena three.js |
 | `tests/` | Tests contra la capa simulada, sin red |
 
 `canon.db`, `capitulos/*.md` y `retoques.md` son salida y no se versionan.
@@ -734,8 +738,9 @@ git log --reverse --pretty='| `%h` | %ad | %s |' --date=short -- docs/spec/
 | `reanudar` | Sin argumentos (§13) |
 | `estado`, `ver`, `poner` | Lectura del canon y escritura a mano |
 | `desbloquear --capitulo N` | Las tres salidas manuales de §8 |
+| `ui [--puerto N]` | Abre la interfaz del brief en el navegador (§19) |
 
-Los tests se lanzan con `python -m unittest discover -s tests -t .`.
+Los tests se lanzan con `python -m unittest discover -s tests -t .`: cincuenta y uno, en tres ficheros y sin red. Los de la interfaz entran por la función que enruta, no por un socket, que es donde esa pieza decide algo.
 
 **Inyección de fallos.** Dos variables de entorno hacen que la capa simulada suspenda un intento concreto o devuelva un capítulo demasiado corto. Existen porque el camino interesante del sistema —rechazo, reintento, bloqueo— no se ve nunca si todas las respuestas simuladas son buenas. Solo tienen efecto en modo `simulado`.
 
