@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.10.1
+version: 0.11.0
 estado: borrador
 actualizado: 2026-09-16
 ---
@@ -499,6 +499,23 @@ DA-06 no se cierra con F8, pero deja de estar a ciegas: §20 manda las tres nota
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.11.0] — 2026-09-16
+
+**Añadido**
+- §20. Observabilidad: el harness manda a Langfuse qué se le pidió a cada agente, qué contestó, con qué modelo y cuánto costó. El motivo es la única pregunta que ni el canon ni el diario contestan —por qué el modelo contestó lo que contestó—, y la instrumentación cabe en un solo sitio porque toda llamada ya pasaba por la capa de §5.
+- §14. F8, la fase que cubre lo anterior. Su criterio de salida es que un capítulo rechazado se explique mirando su traza, sin volver a ejecutarlo.
+- §12. `trazas.activas` y `trazas.entorno`, las claves diecisiete y dieciocho. El entorno se valida al arrancar con las reglas de Langfuse porque escribirlo mal no falla: manda las trazas a otro sitio.
+- §12. El `.env` de la raíz, ignorado por git, del que salen las credenciales de Langfuse y la de la API. No pisa lo que ya haya en el entorno: quien exporta una variable a mano lo hace para esa ejecución.
+- §15. DA-12, qué hacer con el coste ahora que se conoce. El harness no tiene tope ni cuota, y es justo el hueco que §19 pinta como «sin datos todavía».
+
+**Cambiado**
+- §15. DA-06 sigue abierta pero deja de estar a ciegas: las tres notas y la media de cada intento viajan como puntuaciones, así que calibrar los umbrales pasa a ser mirar una distribución.
+- §18. Segunda dependencia opcional, `langfuse`, importada tan perezosamente como el SDK de Anthropic. Y setenta y cuatro tests: los de §20 apagan las trazas a mano en vez de fiarse de que el entorno esté limpio.
+
+**Contexto**
+- Las trazas no son fuente de verdad de nada. El estado sigue en el canon y el gate sigue decidiendo en código; por eso ningún fallo de observabilidad puede parar una novela, que es la regla de §13 al revés.
+- La primera pasada instrumentada contra la CLI de Claude Code sacó a la luz algo que llevaba tiempo pasando en silencio: una llamada al investigador devolvió JSON truncado y el reintento de §13 la salvó sin que nada se imprimiera. El fallo no es nuevo; lo nuevo es verlo.
 
 ### [0.10.1] — 2026-09-16
 
