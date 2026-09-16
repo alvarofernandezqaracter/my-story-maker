@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.8.0
+version: 0.9.0
 estado: borrador
 actualizado: 2026-09-16
 ---
@@ -489,6 +489,27 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.9.0] — 2026-09-16
+
+La interfaz deja de ser una ventanilla para el brief y pasa a ser el otro camino completo: desde el navegador se escribe el brief, se lanza a los agentes, se ve el proceso mientras corre y se leen los capítulos aprobados.
+
+**Añadido**
+- §19. La interfaz lanza el flujo. El hilo de trabajo es uno y solo uno, y arrancar un segundo mientras hay uno vivo devuelve 409, así que el invariante de §8 se conserva tal cual: lo que corre en paralelo es HTTP, no dos novelas.
+- §19. Seguimiento en vivo por el `diario` que las funciones de §4 ya llenaban para la CLI, servido por trozos. Se le añade un único evento, `agente`, que dice quién trabaja antes de que termine; sale de un gancho opcional en la capa de llamada de §5 y, sin nadie escuchando, no cambia nada. Lo que se lee en pantalla y lo que imprime `escribir` son la misma cosa.
+- §19. Sala de lectura de los capítulos aprobados, con las tres notas, el resumen del cronista y los hilos que abrió o cerró. Solo aprobados: un intento descartado sigue en `capitulos/` como rastro (§6), pero no es la novela.
+- §19. Las tres salidas manuales del bloqueo de §8, que antes solo estaban en la CLI.
+- §19. Identidad visual de Qaracter: la paleta sale de su logotipo —naranja `#FF7932` y azul pizarra `#233441`— y el logotipo va en la barra superior.
+
+**Cambiado**
+- §1. La interfaz gráfica sale entera de «fuera de alcance». La CLI no queda por debajo: son dos caminos completos sobre el mismo canon.
+- §14. El criterio de salida de F7 pasa a ser una novela entera escrita y leída desde el navegador.
+- §15. DA-11 queda decidida y sale de la tabla; su número queda muerto, como el de DA-01.
+
+**Contexto**
+- La decisión que cierra DA-11 es la contraria a la que este documento defendía en 0.8.0. Lo que la hace segura no es cambiar de opinión sobre el invariante sino dónde se sostiene: el bloqueo de un flujo a la vez está en el servidor, no en la disciplina de quien usa la página.
+- El brief sigue sin poder pisarse con el libro en marcha. Eso no ha cambiado y no depende de DA-11: rehacerlo dejaría el canon hablando de otra novela.
+- El motor se probó escribiendo una novela entera de seis capítulos por la API, con un rechazo del gate inyectado en el capítulo 2 para ver el reintento. El test que lo hace corre en modo `simulado`, sin red.
 
 ### [0.8.0] — 2026-09-16
 
