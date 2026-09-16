@@ -436,7 +436,7 @@ Un único `config.json` en la raíz del proyecto, junto al canon. Aquí vive tod
 | `margenes.capitulos_min` y `capitulos_max` | 0,8 y 1,2 | Desvío tolerado sobre el nº de capítulos del brief (VD-07) |
 | `margenes.palabras_aviso` | 0,15 | Desvío sobre `palabras_objetivo` que genera aviso (VD-08) |
 | `margenes.palabras_bloqueo` | 0,4 | Desvío que descarta el intento sin llamar al validador (VD-08) |
-| `margenes.parrafos_min` | 5 | Mínimo de párrafos de un capítulo redactado (VD-08) |
+| `margenes.parrafos_min` | 3 | Mínimo de párrafos de un capítulo redactado (VD-08) |
 | `modelo_por_rol` | ver §5 | Modelo de cada agente. Sigue abierto en DA-02 |
 | `busqueda_web` | `true` | Permite al investigador verificar datos dudosos |
 
