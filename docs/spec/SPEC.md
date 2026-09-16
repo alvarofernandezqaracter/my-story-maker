@@ -481,6 +481,8 @@ Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo q
 
 Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar la fase que se indica. Los ids no se reutilizan: DA-01 salió de la tabla al decidirse el stack (§18) y DA-11 al decidirse que la interfaz sí lanza el flujo (§19), con un hilo único que conserva el invariante de §8. Los dos números quedan muertos.
 
+DA-06 no se cierra con F8, pero deja de estar a ciegas: §20 manda las tres notas y la media de cada intento como puntuaciones, así que calibrar los umbrales pasa a ser mirar una distribución en lugar de discutirla.
+
 | Id | Decisión pendiente | Por qué importa | Cuándo decidirla |
 |---|---|---|---|
 | DA-02 | Modelo definitivo de cada agente | Validador y escritor se llevan casi todas las llamadas; el reparto decide el coste del libro | Antes de F3 |
@@ -492,6 +494,7 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 | DA-08 | Quién valida lo que propone el cronista | El harness valida forma, no fondo; un resumen que miente envenena el canon entero | Antes de F4 |
 | DA-09 | Unidad de escritura: capítulo entero o escena a escena | Si la prosa se degrada en capítulos largos, el loop cambia de grano | Durante F2 |
 | DA-10 | Qué hacer si la escaleta se queda corta o larga a mitad de libro | Replanificar toca el canon en caliente; forzarla estropea el final | Durante F4 |
+| DA-12 | Qué hacer con el coste, ahora que se conoce | §20 sabe lo que cuesta cada capítulo, pero nadie lo mira: el harness no tiene tope ni cuota, y es el hueco que §19 pinta como «sin datos todavía» | Después de F8 |
 
 ## §16 Historial de cambios
 
