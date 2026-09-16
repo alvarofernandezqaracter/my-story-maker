@@ -468,7 +468,7 @@ Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo q
 | F4 Novela entera | Loop sobre toda la escaleta, bloqueo y reanudación | Una novela corta completa, con al menos un bloqueo resuelto a mano |
 | F5 Cierre | Editor global y `retoques.md` | La lista de retoques es accionable sin releer los capítulos |
 | F6 Rigor | Búsqueda web del investigador y estados de verificación reales | La mayoría de datos del dossier llevan fuente comprobable |
-| F7 Interfaz | Página local del brief y lectura del canon (§19) | Un brief completo se crea desde el navegador y el flujo arranca en la CLI sin tocar un JSON a mano |
+| F7 Interfaz | Página local: brief, lanzamiento del flujo, seguimiento y lectura (§19) | Una novela entera se escribe y se lee desde el navegador, sin tocar la consola |
 
 ## §15 Decisiones abiertas
 
