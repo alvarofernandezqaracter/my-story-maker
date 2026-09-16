@@ -715,7 +715,14 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `b5ff9c1` | 2026-09-16 | docs(spec): §12 tercer modo de ejecucion contra la CLI de Claude Code |
 | `82658f6` | 2026-09-16 | docs(spec): §18 el modo claude_code no anade dependencia de python |
 | `7a32058` | 2026-09-16 | docs(spec): §16 entrada 0.7.0 y version en cabecera |
-
+| `d8e40cb` | 2026-09-16 | docs(spec): §17 tabla de commits regenerada para 0.7.0 |
+| `59f977c` | 2026-09-16 | docs(spec): §19 interfaz web del brief |
+| `1c99e3c` | 2026-09-16 | docs(spec): §1 la interfaz grafica sale a medias de fuera de alcance |
+| `d581fd3` | 2026-09-16 | docs(spec): §12 el puerto de la interfaz es configuracion |
+| `c5036e9` | 2026-09-16 | docs(spec): §14 F7 interfaz en el roadmap |
+| `54e4718` | 2026-09-16 | docs(spec): §15 DA-11 quien puede lanzar el flujo |
+| `278afb7` | 2026-09-16 | docs(spec): §18 web/, servidor.py y el comando ui |
+| `bc437c3` | 2026-09-16 | docs(spec): §16 entrada 0.8.0 y version en cabecera |
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
 ```
