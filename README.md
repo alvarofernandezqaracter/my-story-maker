@@ -12,7 +12,8 @@ Python 3.11 o superior (aquí corre sobre 3.13). El canon usa `sqlite3`, que
 viene en la propia biblioteca estándar, así que el modo `simulado` no necesita
 instalar nada. El modo `real` necesita `anthropic` y una credencial de la API en
 el entorno. El modo `claude_code` no necesita ninguna de las dos cosas: le basta
-con tener la CLI de Claude Code en el `PATH`.
+con tener la CLI de Claude Code en el `PATH`. Las trazas necesitan `langfuse` y
+tampoco son obligatorias.
 
 ## Arranque rápido, sin red y sin coste
 
@@ -53,6 +54,28 @@ python -m novela cerrar   --config config.claude-code.json
 
 En los dos casos el modelo de cada rol sale de `modelo_por_rol`, y el resto del
 harness es el mismo: mismas instrucciones, mismos validadores y mismo gate.
+
+## Ver qué hizo cada agente
+
+El harness manda a [Langfuse](https://langfuse.com) qué se le pidió a cada
+agente, qué contestó, con qué modelo y cuánto costó. Es la pregunta que ni el
+canon ni la consola contestan: **por qué el modelo contestó lo que contestó**.
+
+```bash
+pip install "my-story-maker[trazas]"
+cp .env.ejemplo .env          # y pon ahí tus claves de Langfuse
+```
+
+Una traza por unidad de trabajo —la preparación, **cada capítulo** y el cierre—,
+agrupadas en una sesión por novela. Dentro de la de un capítulo se ve el paquete
+de contexto que recibió el escritor, cada invocación del modelo por separado y
+los dos puntos donde el harness decide solo: VD-08 y el gate. Las tres notas del
+validador y la media viajan como puntuaciones, así que la calidad del libro se
+mira en una gráfica en lugar de releyendo capítulos.
+
+Se apagan con `trazas.activas` a `false`. Y no hacen falta para nada: sin el
+paquete, sin credencial o con Langfuse caído, la capa se calla y la novela se
+escribe igual.
 
 ## Comandos
 
@@ -114,6 +137,7 @@ no llega, la interfaz funciona igual.
 | `skills/` | Las skills de §10, que el harness carga al construir cada llamada |
 | `capitulos/` | Un Markdown por intento. Los fallidos se quedan como rastro |
 | `web/` | La interfaz del brief: el formulario y la escena three.js |
+| `.claude/skills/` | La skill de Langfuse, copiada de su repo (ver `PROCEDENCIA.md`) |
 | `tests/` | Tests contra la capa simulada, sin red |
 | `docs/spec/` | El spec |
 

@@ -1,8 +1,9 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 0.10.0, F0–F5 del roadmap funcionando de punta
-a punta en modo `simulado`, más F7: la interfaz web hace el ciclo entero.
+de un brief de cinco campos. Versión 0.11.0, F0–F5 del roadmap funcionando de punta
+a punta en modo `simulado`, más F7 —la interfaz web hace el ciclo entero— y F8:
+cada llamada a un agente deja traza en Langfuse.
 
 ## Regla número uno: el spec manda
 
@@ -40,8 +41,9 @@ actualiza en el mismo momento, no después. Eso implica además:
 
 Python 3.13 (mínimo 3.11) con `sqlite3` y `unittest`, los dos de la biblioteca
 estándar. El modo `simulado` —el de por defecto— no necesita instalar nada. La
-única dependencia es `anthropic`, importada de forma perezosa y solo en modo `real`;
-el modo `claude_code` no instala nada: habla con la CLI de Claude Code.
+dos dependencias son opcionales y perezosas: `anthropic` solo en modo `real` y
+`langfuse` solo si se quieren trazas (§20). El modo `claude_code` no instala nada:
+habla con la CLI de Claude Code.
 
 ```bash
 python -m novela init
@@ -50,7 +52,7 @@ python -m novela preparar     # investigador y arquitecto
 python -m novela escribir     # loop: escritor, VD-08, validador, gate, cronista
 python -m novela cerrar       # editor global y retoques.md
 python -m novela ui           # ciclo entero desde el navegador (§19)
-python -m unittest discover -s tests -t .    # 51 tests, sin red
+python -m unittest discover -s tests -t .    # 74 tests, sin red
 ```
 
 Otros comandos: `reanudar`, `estado`,
@@ -88,6 +90,8 @@ por fuera del canon o del paquete de contexto.
 | [novela/flujo.py](novela/flujo.py) | `preparar`, `escribir_capitulo`, `cerrar`, `reanudar` | §4, §8, §11 |
 | [novela/util.py](novela/util.py) | Redondeo y formato de números, compartidos por gate, VD-08 y CLI | — |
 | [novela/servidor.py](novela/servidor.py) | Interfaz web: sirve `web/`, la API y el hilo único del flujo | §19 |
+| [novela/trazas.py](novela/trazas.py) | Capa única de observabilidad; la única que sabe que Langfuse existe | §20 |
+| [novela/entorno.py](novela/entorno.py) | Lector del `.env`, de donde salen las credenciales | §12, §20 |
 | [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada**: carga config, abre el canon y llama al flujo | §18 |
 
 `canon.db`, `capitulos/*.md` y `retoques.md` son salida y no se versionan.
@@ -165,11 +169,16 @@ Un único `config.json` en la raíz, validado entero al arrancar. **Si un númer
 aparece escrito en el código sin pasar por este fichero, es un bug.** La credencial
 de la API no vive aquí: va en el entorno, porque el fichero se versiona.
 
-Dieciséis claves: `ejecucion.modo` (`simulado`, `real` o `claude_code`), `gate.{nota_minima,media_minima,max_intentos}`,
+Dieciocho claves: `ejecucion.modo` (`simulado`, `real` o `claude_code`), `gate.{nota_minima,media_minima,max_intentos}`,
 `contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`, `validador.modo`, `interfaz.puerto`,
+`trazas.{activas,entorno}`,
 `margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`,
 `modelo_por_rol`, `busqueda_web`. Reglas cruzadas: `palabras_bloqueo > palabras_aviso`
 y `capitulos_max >= capitulos_min`.
+
+Las credenciales —la de la API y las de Langfuse— van en un `.env` de la raíz que
+no se versiona. El harness lo lee al arrancar y **no pisa lo que ya haya** en el
+entorno.
 
 ## Modo simulado e inyección de fallos
 
@@ -236,9 +245,42 @@ la barra superior. Un solo tema, oscuro, porque lo comparte con la escena. three
 viaja por CDN —lo único del repo que necesita red— y degrada: si no llega, la interfaz
 entera sigue funcionando.
 
+## Observabilidad (§20)
+
+Cada llamada a un agente deja traza en Langfuse. La instrumentación vive en un
+solo sitio, [novela/trazas.py](novela/trazas.py), y entra por donde ya pasaba
+todo: [novela/agentes.py](novela/agentes.py) abre la observación `agent` del rol
+y la `generation` de cada invocación del modelo, y [novela/flujo.py](novela/flujo.py)
+abre las tres raíces.
+
+**Una traza es una unidad de trabajo cerrada, no el libro**: `preparar-novela`,
+un `escribir-capitulo` por capítulo y `cerrar-novela`. Lo que las junta es la
+sesión, derivada del brief porque el canon es fila única y no guarda ningún id.
+
+| Observación | Tipo |
+|---|---|
+| Las tres raíces | `span` |
+| `reunir-contexto` | `retriever` |
+| Los seis roles de §5 | `agent` |
+| `redactar-capitulo`, `revisar-capitulo`, … | `generation` |
+| `vd-08-extension`, `gate` | `evaluator` |
+
+Los nombres no llevan números dentro: el capítulo y el intento van en metadatos,
+porque un nombre distinto por ejecución no se puede agrupar. Las tres notas del
+gate, la media y el veredicto salen como **puntuaciones**.
+
+**Ningún fallo de observabilidad para una novela.** Sin SDK, sin credencial o con
+Langfuse caído, la capa se apaga, lo dice una vez y el libro se escribe igual. Las
+trazas no son fuente de verdad de nada: el estado vive en el canon y el gate
+decide en código.
+
+Instalación: `pip install "my-story-maker[trazas]"`, o apagarlas con
+`trazas.activas` a `false`. El modo `simulado` traza igual y sin gasto, que es
+como se prueba la instrumentación.
+
 ## Tests
 
-`python -m unittest discover -s tests -t .` corre 61 tests en tres ficheros, sin red y
+`python -m unittest discover -s tests -t .` corre 74 tests en tres ficheros, sin red y
 sin coste: [tests/test_deterministas.py](tests/test_deterministas.py) para config, gate
 y validadores, [tests/test_flujo.py](tests/test_flujo.py) para el canon, el generador
 de contexto y el flujo entero contra la capa simulada, y
@@ -246,6 +288,10 @@ de contexto y el flujo entero contra la capa simulada, y
 motor de la interfaz, que entran por `responder()` y no abren ningún puerto; uno de
 ellos escribe una novela entera por el motor. Cada test del flujo corre en su
 propio directorio temporal porque el harness escribe en el `cwd`.
+
+Los tests **apagan las trazas a mano** en lugar de fiarse de que el entorno esté
+limpio: uno que mandase trazas al Langfuse de quien lo lanza ha dejado de ser un
+test sin red.
 
 ## Estado actual y cosas abiertas
 
