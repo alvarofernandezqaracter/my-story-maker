@@ -24,6 +24,12 @@ python -m novela escribir     # loop: escritor, validador, gate, cronista
 python -m novela cerrar       # editor global y retoques.md
 ```
 
+O, si prefieres escribir el brief en el navegador en vez de a mano:
+
+```bash
+python -m novela ui           # http://127.0.0.1:8787
+```
+
 Con `ejecucion.modo` en `simulado`, que es el valor por defecto de
 `config.json`, las llamadas a agentes las resuelve una capa local que devuelve
 respuestas fijas con el formato correcto. Todo el harness corre por el mismo
@@ -63,8 +69,25 @@ harness es el mismo: mismas instrucciones, mismos validadores y mismo gate.
 | `poner <qué> <fichero>` | `personaje`, `capitulo`, `dato` — escritura a mano en el canon |
 | `desbloquear --capitulo N` | Salidas manuales del bloqueo. Con `--aprobar-intento K` o `--reiniciar` |
 | `skills` | Lista las skills que el harness carga en cada llamada |
+| `ui [--puerto N]` | Abre la interfaz del brief en el navegador |
 
 Opciones globales: `--config <ruta>` y `--canon <ruta>`.
+
+## La interfaz del brief
+
+`python -m novela ui` levanta un servidor local —`http.server`, nada que
+instalar— con los cinco campos del brief y una escena en three.js que dibuja un
+cuadernillo por capítulo: el grosor son las palabras por capítulo, el color es
+el estado que tiene en el canon y la luz la pone el tono. El puerto sale de
+`interfaz.puerto`.
+
+La interfaz **solo escribe el brief**. No lanza agentes, no arranca el flujo y
+no desbloquea: eso sigue siendo cosa de la CLI, y el porqué está en §19 del
+spec. Con una novela ya en marcha ni siquiera deja rehacer el brief; para eso
+está `python -m novela brief`, que lo pisa a sabiendas.
+
+La escena baja three.js de un CDN, y es lo único del repo que necesita red. Si
+no llega, el formulario funciona igual.
 
 ## Qué hay en cada sitio
 
@@ -74,6 +97,7 @@ Opciones globales: `--config <ruta>` y `--canon <ruta>`.
 | `agentes/` | Un `.md` por agente de §5, con su encargo y sus modos de fallo |
 | `skills/` | Las skills de §10, que el harness carga al construir cada llamada |
 | `capitulos/` | Un Markdown por intento. Los fallidos se quedan como rastro |
+| `web/` | La interfaz del brief: el formulario y la escena three.js |
 | `tests/` | Tests contra la capa simulada, sin red |
 | `docs/spec/` | El spec |
 
