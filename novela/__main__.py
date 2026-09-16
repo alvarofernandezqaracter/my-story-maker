@@ -78,7 +78,7 @@ def _contar_diario(diario):
         elif tipo == 'gate':
             desenlace = 'aprobado' if e['aprueba'] else 'rechazado ({})'.format(
                 '; '.join(e['motivos']))
-            _log('  cap. {} intento {}: notas {} media {} → {}'.format(
+            _log('  cap. {} intento {}: notas {} media {} -> {}'.format(
                 e['capitulo'], e['intento'],
                 '/'.join(str(n) for n in e['notas']), numero_corto(e['media']), desenlace))
         elif tipo == 'canon':
