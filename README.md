@@ -8,19 +8,19 @@ Este README solo dice cómo se arranca.
 
 ## Requisitos
 
-Node 22.5 o superior (aquí corre sobre 24). El canon usa `node:sqlite`, que
-viene en el propio Node, así que el modo `simulado` no necesita instalar nada.
-El modo `real` necesita `@anthropic-ai/sdk` y una credencial de la API en el
-entorno.
+Python 3.11 o superior (aquí corre sobre 3.13). El canon usa `sqlite3`, que
+viene en la propia biblioteca estándar, así que el modo `simulado` no necesita
+instalar nada. El modo `real` necesita `anthropic` y una credencial de la API en
+el entorno.
 
 ## Arranque rápido, sin red y sin coste
 
 ```bash
-node bin/novela.mjs init
-node bin/novela.mjs brief brief.ejemplo.json
-node bin/novela.mjs preparar     # investigador y arquitecto
-node bin/novela.mjs escribir     # loop: escritor, validador, gate, cronista
-node bin/novela.mjs cerrar       # editor global y retoques.md
+python -m novela init
+python -m novela brief brief.ejemplo.json
+python -m novela preparar     # investigador y arquitecto
+python -m novela escribir     # loop: escritor, validador, gate, cronista
+python -m novela cerrar       # editor global y retoques.md
 ```
 
 Con `ejecucion.modo` en `simulado`, que es el valor por defecto de
@@ -29,7 +29,7 @@ respuestas fijas con el formato correcto. Todo el harness corre por el mismo
 camino que en ejecución real.
 
 Para la ejecución de verdad, pon `ejecucion.modo` en `real` en `config.json`,
-instala el SDK (`npm install`) y deja la credencial en el entorno.
+instala el SDK (`pip install anthropic`) y deja la credencial en el entorno.
 
 ## Comandos
 
@@ -53,11 +53,11 @@ Opciones globales: `--config <ruta>` y `--canon <ruta>`.
 
 | Carpeta | Qué contiene |
 |---|---|
-| `src/` | El harness: todo lo determinista |
+| `novela/` | El harness: todo lo determinista, con la CLI en `__main__.py` |
 | `agentes/` | Un `.md` por agente de §5, con su encargo y sus modos de fallo |
 | `skills/` | Las skills de §10, que el harness carga al construir cada llamada |
 | `capitulos/` | Un Markdown por intento. Los fallidos se quedan como rastro |
-| `test/` | Tests contra la capa simulada, sin red |
+| `tests/` | Tests contra la capa simulada, sin red |
 | `docs/spec/` | El spec |
 
 `canon.db`, `capitulos/*.md` y `retoques.md` son salida y no se versionan.
@@ -65,7 +65,7 @@ Opciones globales: `--config <ruta>` y `--canon <ruta>`.
 ## Tests
 
 ```bash
-npm test
+python -m unittest discover -s tests -t .
 ```
 
 Corren en modo simulado. Dos variables de entorno inyectan fallos para
@@ -76,5 +76,5 @@ escritor devuelva un capítulo demasiado corto. Ambas toman una lista de
 
 ```bash
 # El capítulo 2 suspende a la primera y el reintento lo arregla
-NOVELA_SIM_FALLOS="2:1" node bin/novela.mjs escribir
+NOVELA_SIM_FALLOS="2:1" python -m novela escribir
 ```
