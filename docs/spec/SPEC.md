@@ -435,12 +435,15 @@ Un único `config.json` en la raíz del proyecto, junto al canon. Aquí vive tod
 | `contexto.ventana_resumenes` | 3 | Capítulos anteriores que van con resumen completo |
 | `contexto.palabras_enganche` | 400 | Cola literal del capítulo anterior |
 | `validador.modo` | `unico` | `unico` \| `separado`. Una llamada al validador o tres (§5) |
+| `interfaz.puerto` | 8787 | Puerto local de la interfaz del brief (§19) |
 | `margenes.capitulos_min` y `capitulos_max` | 0,8 y 1,2 | Desvío tolerado sobre el nº de capítulos del brief (VD-07) |
 | `margenes.palabras_aviso` | 0,15 | Desvío sobre `palabras_objetivo` que genera aviso (VD-08) |
 | `margenes.palabras_bloqueo` | 0,4 | Desvío que descarta el intento sin llamar al validador (VD-08) |
 | `margenes.parrafos_min` | 3 | Mínimo de párrafos de un capítulo redactado (VD-08) |
 | `modelo_por_rol` | ver §5 | Modelo de cada agente. Sigue abierto en DA-02 |
 | `busqueda_web` | `true` | Permite al investigador verificar datos dudosos |
+
+El puerto de la interfaz vive aquí y no en el código por la misma regla que el resto: es un número que se toca sin tocar código, y en una máquina con el 8787 ocupado hay que poder cambiarlo. `python -m novela ui --puerto N` lo pisa para un arranque suelto, igual que `--config` y `--canon`.
 
 **Por qué dos márgenes de palabras.** VD-08 tiene que distinguir el capítulo que se queda corto del que no sirve. Dentro de `palabras_aviso` el texto vale y la desviación viaja como aviso al reintento; pasado `palabras_bloqueo` no se gasta la llamada al validador y se reintenta la generación. Con un solo umbral había que elegir entre no filtrar nada o tirar capítulos aprovechables.
 
