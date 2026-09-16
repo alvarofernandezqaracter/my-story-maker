@@ -485,6 +485,7 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 | DA-08 | Quién valida lo que propone el cronista | El harness valida forma, no fondo; un resumen que miente envenena el canon entero | Antes de F4 |
 | DA-09 | Unidad de escritura: capítulo entero o escena a escena | Si la prosa se degrada en capítulos largos, el loop cambia de grano | Durante F2 |
 | DA-10 | Qué hacer si la escaleta se queda corta o larga a mitad de libro | Replanificar toca el canon en caliente; forzarla estropea el final | Durante F4 |
+| DA-11 | Si la interfaz puede lanzar el flujo, y no solo escribir el brief | Un botón de «escribir» en el navegador permite dos flujos sobre el mismo canon, que es justo lo que §8 prohíbe | Después de F7 |
 
 ## §16 Historial de cambios
 
