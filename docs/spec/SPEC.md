@@ -15,7 +15,7 @@ Sistema que escribe una novela histórica capítulo a capítulo a partir de un b
 
 **Qué produce.** Un canon consultable, un fichero por capítulo aprobado y una lista final de retoques. No maqueta el libro ni aplica esos retoques por sí mismo.
 
-**Fuera de alcance en el alcance inicial.** Exportación a EPUB, ilustraciones, varios proyectos a la vez, traducción y reescritura automática a partir del editor global. La interfaz gráfica estaba también en esta lista y ha salido, pero solo en parte: hay una página local para escribir el brief y mirar el canon (§19), y no la hay para gobernar el proceso, que sigue siendo cosa de la CLI.
+**Fuera de alcance en el alcance inicial.** Exportación a EPUB, ilustraciones, varios proyectos a la vez, traducción y reescritura automática a partir del editor global. La interfaz gráfica estaba también en esta lista y ha salido del todo: hay una página local (§19) desde la que se escribe el brief, se lanza a los agentes, se sigue el proceso y se leen los capítulos. La CLI no queda por debajo de ella; son dos caminos completos sobre el mismo canon.
 
 **Criterio de éxito.** Una novela completa sin contradicciones de canon detectables ni anacronismos groseros, con intervención humana solo en los dos puntos fijos que marca §4.
 
