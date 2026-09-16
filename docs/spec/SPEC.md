@@ -811,8 +811,11 @@ La interfaz de §19 tampoco añade paquete: el servidor es `http.server` de la b
 | `estado`, `ver`, `poner` | Lectura del canon y escritura a mano |
 | `desbloquear --capitulo N` | Las tres salidas manuales de §8 |
 | `ui [--puerto N]` | Abre la interfaz del brief en el navegador (§19) |
+| `ui.bat` | Lo mismo en Windows, buscando el intérprete por su cuenta |
 
 Los tests se lanzan con `python -m unittest discover -s tests -t .`: cincuenta y siete, en tres ficheros y sin red. Los de la interfaz entran por la función que enruta, no por un socket, que es donde esa pieza decide algo; uno de ellos escribe una novela entera por el motor de §19 para comprobar que el camino del navegador acaba donde el de la CLI.
+
+**El lanzador de Windows.** `ui.bat` en la raíz hace lo mismo que `python -m novela ui`, pero busca el intérprete en lugar de fiarse del `PATH`. No es comodidad: en Windows una consola hereda el entorno de quien la abrió, así que una ventana anterior a la instalación de Python no ve su carpeta por mucho que el registro la tenga, y lo que sí encuentra es el stub de la Microsoft Store, que está en el `PATH` y no ejecuta nada. El fichero comprueba que el intérprete arranca antes de usarlo, y va en CRLF porque `cmd` no lee un `.bat` con finales de línea de Unix.
 
 **Inyección de fallos.** Dos variables de entorno hacen que la capa simulada suspenda un intento concreto o devuelva un capítulo demasiado corto. Existen porque el camino interesante del sistema —rechazo, reintento, bloqueo— no se ve nunca si todas las respuestas simuladas son buenas. Solo tienen efecto en modo `simulado`.
 
