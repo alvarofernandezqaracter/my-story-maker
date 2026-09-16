@@ -11,7 +11,8 @@ Este README solo dice cómo se arranca.
 Python 3.11 o superior (aquí corre sobre 3.13). El canon usa `sqlite3`, que
 viene en la propia biblioteca estándar, así que el modo `simulado` no necesita
 instalar nada. El modo `real` necesita `anthropic` y una credencial de la API en
-el entorno.
+el entorno. El modo `claude_code` no necesita ninguna de las dos cosas: le basta
+con tener la CLI de Claude Code en el `PATH`.
 
 ## Arranque rápido, sin red y sin coste
 
@@ -28,8 +29,24 @@ Con `ejecucion.modo` en `simulado`, que es el valor por defecto de
 respuestas fijas con el formato correcto. Todo el harness corre por el mismo
 camino que en ejecución real.
 
-Para la ejecución de verdad, pon `ejecucion.modo` en `real` en `config.json`,
-instala el SDK (`pip install anthropic`) y deja la credencial en el entorno.
+## Ejecución con modelos de verdad
+
+Hay dos caminos y se eligen con `ejecucion.modo`, sin tocar nada más:
+
+- `real`: contra la API de Claude. Instala el SDK (`pip install anthropic`) y
+  deja la credencial en el entorno, nunca en `config.json`.
+- `claude_code`: contra la CLI de Claude Code que ya tengas instalada, en modo
+  headless. No hace falta clave de API porque la credencial es la de su sesión.
+  `config.claude-code.json` viene ya puesto con ese modo:
+
+```bash
+python -m novela preparar --config config.claude-code.json
+python -m novela escribir --config config.claude-code.json
+python -m novela cerrar   --config config.claude-code.json
+```
+
+En los dos casos el modelo de cada rol sale de `modelo_por_rol`, y el resto del
+harness es el mismo: mismas instrucciones, mismos validadores y mismo gate.
 
 ## Comandos
 

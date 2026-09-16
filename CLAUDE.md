@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 0.6.0, F0–F5 del roadmap funcionando de punta
+de un brief de cinco campos. Versión 0.7.0, F0–F5 del roadmap funcionando de punta
 a punta en modo `simulado`.
 
 ## Regla número uno: el spec manda
@@ -40,7 +40,8 @@ actualiza en el mismo momento, no después. Eso implica además:
 
 Python 3.13 (mínimo 3.11) con `sqlite3` y `unittest`, los dos de la biblioteca
 estándar. El modo `simulado` —el de por defecto— no necesita instalar nada. La
-única dependencia es `anthropic`, importada de forma perezosa y solo en modo `real`.
+única dependencia es `anthropic`, importada de forma perezosa y solo en modo `real`;
+el modo `claude_code` no instala nada: habla con la CLI de Claude Code.
 
 ```bash
 python -m novela init
@@ -48,7 +49,7 @@ python -m novela brief brief.ejemplo.json
 python -m novela preparar     # investigador y arquitecto
 python -m novela escribir     # loop: escritor, VD-08, validador, gate, cronista
 python -m novela cerrar       # editor global y retoques.md
-python -m unittest discover -s tests -t .    # 36 tests, sin red
+python -m unittest discover -s tests -t .    # 38 tests, sin red
 ```
 
 Otros comandos: `reanudar`, `estado`,
@@ -81,6 +82,7 @@ por fuera del canon o del paquete de contexto.
 | [novela/skills.py](novela/skills.py) | Carga `agentes/<rol>.md` + sus skills y compone las instrucciones | §10 |
 | [novela/agentes.py](novela/agentes.py) | Capa única de llamada; oculta simulado/real; `ParadaDelProceso` | §5, §12 |
 | [novela/proveedor.py](novela/proveedor.py) | Modo `real`: SDK de Anthropic, streaming, extracción de JSON | §12 |
+| [novela/claude_code.py](novela/claude_code.py) | Modo `claude_code`: `claude --print` sin herramientas, misma salida que el proveedor | §12 |
 | [novela/simulado.py](novela/simulado.py) | Respuestas fijas con el formato correcto + inyección de fallos | §12 |
 | [novela/flujo.py](novela/flujo.py) | `preparar`, `escribir_capitulo`, `cerrar`, `reanudar` | §4, §8, §11 |
 | [novela/util.py](novela/util.py) | Redondeo y formato de números, compartidos por gate, VD-08 y CLI | — |
@@ -159,7 +161,7 @@ Un único `config.json` en la raíz, validado entero al arrancar. **Si un númer
 aparece escrito en el código sin pasar por este fichero, es un bug.** La credencial
 de la API no vive aquí: va en el entorno, porque el fichero se versiona.
 
-Quince claves: `ejecucion.modo`, `gate.{nota_minima,media_minima,max_intentos}`,
+Quince claves: `ejecucion.modo` (`simulado`, `real` o `claude_code`), `gate.{nota_minima,media_minima,max_intentos}`,
 `contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`, `validador.modo`,
 `margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`,
 `modelo_por_rol`, `busqueda_web`. Reglas cruzadas: `palabras_bloqueo > palabras_aviso`
@@ -184,7 +186,7 @@ todas las respuestas simuladas son buenas.
 
 ## Tests
 
-`python -m unittest discover -s tests -t .` corre 36 tests en dos ficheros, sin red y
+`python -m unittest discover -s tests -t .` corre 38 tests en dos ficheros, sin red y
 sin coste: [tests/test_deterministas.py](tests/test_deterministas.py) para config, gate
 y validadores, y [tests/test_flujo.py](tests/test_flujo.py) para el canon, el generador
 de contexto y el flujo entero contra la capa simulada. Cada test del flujo corre en su
@@ -201,3 +203,6 @@ propio directorio temporal porque el harness escribe en el `cwd`.
   `true` para no tocar el esquema más tarde, pero el investigador la ignora.
 - El modo `real` no se ha ejercitado contra la API desde la migración: la ruta está
   portada y es la misma de antes, pero solo la cubren los tests en modo `simulado`.
+- El modo `claude_code` sí se ha ejercitado de punta a punta con la novela de
+  demostración: tres capítulos aprobados al primer intento y diez retoques. Comparte
+  instrucciones y contrato con `real`, pero no transporte.
