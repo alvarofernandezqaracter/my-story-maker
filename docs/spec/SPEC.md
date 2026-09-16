@@ -818,6 +818,24 @@ Los tests se lanzan con `python -m unittest discover -s tests -t .`: cincuenta y
 
 **Cómo se sigue el proceso.** Por el `diario` que las funciones de §4 ya llenaban para la CLI: la interfaz lo sirve por trozos y lo pinta evento a evento, así que lo que se lee en pantalla y lo que imprime `escribir` son la misma cosa. A eso se le añade un único evento nuevo, `agente`, que dice quién está trabajando **antes** de que termine; sale de un gancho opcional en la capa de llamada de §5 y, sin nadie escuchando, no cambia nada. El estado de cada capítulo aparece en tres sitios a la vez —tarjeta, escena y barra inferior— porque son tres preguntas distintas: en qué anda este, cómo va el libro y cuánto queda.
 
+**Qué se ve, y de dónde sale.** Nada de la pantalla es un dato propio de la interfaz: todo se lee del canon o se recalcula con las mismas reglas del harness.
+
+| Componente | De dónde sale |
+|---|---|
+| Pipeline | Los seis estados de §4, con `bloqueado` marcado sobre el paso donde se quedó |
+| Tarjetas de agentes | Los seis roles de §5, encendidos por el evento `agente` del diario |
+| Tarjetas de capítulo y lomos del índice | `estado` de la ficha y las notas del intento aprobado |
+| Intentos del capítulo en curso | La tabla de intentos, con la regla recalculada por el gate de §8 |
+| Umbrales | El bloque `gate` del perfil activo (§12) |
+| Ledger de pistas | Los datos del dossier, con su estado de verificación (VD-04) |
+| Deuda narrativa | Hilos abiertos que ningún capítulo cerró, los mismos de §7 |
+| Últimos archivos de trabajo | `capitulos/*.md` y `retoques.md`, por fecha de modificación |
+| Eventos | El diario del flujo, el mismo que imprime la CLI |
+
+Cuando no hay capítulo en el loop, la tabla de intentos enseña el último capítulo trabajado y lo dice; el dato es real y es el que interesa mirar después de una pasada.
+
+**Lo que la interfaz no puede enseñar.** Cuatro cosas que una interfaz de este tipo pide y este canon no tiene: la **cuota diaria** —no hay contabilidad de llamadas ni límite configurado en ningún sitio—, las **escenas** —la unidad de escritura es el capítulo entero mientras DA-09 siga abierta—, y el **focalizador** y el **gancho final**, que la ficha de §3 no guarda. Los cuatro se pintan en su sitio con «sin datos todavía» en lugar de rellenarse. Es deliberado: un hueco visible dice dónde falta modelo de datos, y un número inventado lo esconde.
+
 **Dónde se valida.** Dos veces, y la que manda es la del servidor: el navegador puede mentir y el harness no da nada por bueno porque venga de su propia página. La comprobación del brief es de forma —cinco campos, textos con contenido y dos enteros positivos—, no de márgenes: los de §12 los aplica VD-07 sobre la escaleta, que es donde el número de capítulos significa algo.
 
 **Por qué three.js.** La escena dibuja un cuadernillo por capítulo: cuántos son lo dice el brief, el grosor las palabras por capítulo, el color el estado del canon y la luz el tono. Es la parte que no se lee bien en una tabla —seis capítulos de 1.800 palabras es un número; seis cuadernillos sobre la mesa es una novela corta—, y mientras el flujo corre se ve el capítulo en curso levantarse y los aprobados cambiar de color. El resto es HTML corriente: los cinco campos son `input` de verdad, no texto dibujado en 3D. La escena es lo único del repo que necesita red, porque three.js viaja por CDN; si no llega, la interfaz entera sigue funcionando y la mesa se queda en su degradado.
