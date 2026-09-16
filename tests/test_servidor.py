@@ -1,0 +1,138 @@
+# La interfaz del brief (§19) por donde decide: responder() enruta y valida sin
+# socket de por medio, asi que los tests entran por ahi y no abren ningun
+# puerto. Sin red, igual que el resto.
+import json
+import os
+import shutil
+import tempfile
+import unittest
+from pathlib import Path
+
+from novela.canon import Canon
+from novela.config import cargar_config
+from novela.servidor import RAIZ_WEB, responder
+
+BRIEF = {
+    'epoca': 'Sevilla, 1587',
+    'premisa': 'Un registro falsificado hunde a un cargador de Indias.',
+    'tono': 'seco',
+    'capitulos': 4,
+    'palabras_por_capitulo': 600,
+}
+
+
+class EntornoDeInterfaz(unittest.TestCase):
+    def setUp(self):
+        self.raiz = Path(os.getcwd())
+        self.config = cargar_config(str(self.raiz / 'config.json'))
+        self.dir = tempfile.mkdtemp(prefix='novela-ui-')
+        self.canon = Canon(str(Path(self.dir) / 'canon.db'))
+
+    def tearDown(self):
+        self.canon.cerrar()
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def pedir(self, metodo, camino, cuerpo=None):
+        datos = json.dumps(cuerpo).encode('utf-8') if cuerpo is not None else b''
+        codigo, tipo, salida = responder(
+            metodo, camino, datos, self.canon, self.config, RAIZ_WEB)
+        return codigo, tipo, salida
+
+
+class TestProyecto(EntornoDeInterfaz):
+    def test_sin_brief_devuelve_el_canon_vacio(self):
+        codigo, _, salida = self.pedir('GET', '/api/proyecto')
+        cuerpo = json.loads(salida)
+        self.assertEqual(codigo, 200)
+        self.assertIsNone(cuerpo['estado'])
+        self.assertIsNone(cuerpo['brief'])
+        self.assertEqual(cuerpo['capitulos'], [])
+        self.assertTrue(cuerpo['editable'])
+        self.assertEqual(cuerpo['modo'], self.config['ejecucion']['modo'])
+
+    def test_la_escaleta_viaja_con_estado_y_notas(self):
+        self.canon.guardar_brief(BRIEF)
+        self.canon.guardar_fichas([{
+            'numero': 1, 'titulo': 'El registro', 'acto': 1, 'sinopsis': 's',
+            'fecha': '1587-04-01', 'personajes': [], 'etiquetas': [],
+            'objetivo': 'o', 'palabras_objetivo': 600,
+        }])
+        self.canon.guardar_intento(1, 1, 'capitulos/01-1.md', 600, estado='aprobado')
+        self.canon.guardar_revisiones(1, 1, [
+            {'dimension': 'continuidad', 'nota': 4, 'incidencias': [], 'notas_libres': ''},
+            {'dimension': 'anacronismos', 'nota': 5, 'incidencias': [], 'notas_libres': ''},
+            {'dimension': 'logica_ritmo', 'nota': 4, 'incidencias': [], 'notas_libres': ''},
+        ])
+        cuerpo = json.loads(self.pedir('GET', '/api/proyecto')[2])
+        capitulo = cuerpo['capitulos'][0]
+        self.assertEqual(capitulo['numero'], 1)
+        self.assertEqual(capitulo['notas'], [4, 5, 4])
+        self.assertEqual(capitulo['media'], 4.33)
+        self.assertEqual(capitulo['intentos'], 1)
+
+
+class TestBrief(EntornoDeInterfaz):
+    def test_un_brief_completo_entra_en_el_canon(self):
+        codigo, _, salida = self.pedir('POST', '/api/brief', BRIEF)
+        self.assertEqual(codigo, 200)
+        self.assertEqual(self.canon.estado(), 'borrador')
+        self.assertEqual(self.canon.proyecto()['capitulos'], 4)
+        self.assertEqual(json.loads(salida)['brief']['tono'], 'seco')
+
+    def test_sin_un_campo_no_escribe_nada(self):
+        incompleto = {k: v for k, v in BRIEF.items() if k != 'tono'}
+        codigo, _, salida = self.pedir('POST', '/api/brief', incompleto)
+        self.assertEqual(codigo, 400)
+        self.assertIn('tono', json.loads(salida)['error'])
+        self.assertIsNone(self.canon.proyecto())
+
+    def test_los_capitulos_tienen_que_ser_un_entero_positivo(self):
+        for valor in (0, -3, 2.5, '6', True):
+            with self.subTest(valor=valor):
+                codigo, _, _ = self.pedir(
+                    'POST', '/api/brief', {**BRIEF, 'capitulos': valor})
+                self.assertEqual(codigo, 400)
+        self.assertIsNone(self.canon.proyecto())
+
+    def test_el_texto_en_blanco_no_cuela(self):
+        codigo, _, salida = self.pedir('POST', '/api/brief', {**BRIEF, 'epoca': '   '})
+        self.assertEqual(codigo, 400)
+        self.assertIn('epoca', json.loads(salida)['error'])
+
+    def test_no_pisa_un_libro_en_marcha(self):
+        self.canon.guardar_brief(BRIEF)
+        self.canon.marcar_estado('escribiendo')
+        codigo, _, salida = self.pedir(
+            'POST', '/api/brief', {**BRIEF, 'epoca': 'Toledo, 1492'})
+        self.assertEqual(codigo, 409)
+        self.assertIn('novela brief', json.loads(salida)['error'])
+        self.assertEqual(self.canon.proyecto()['epoca'], 'Sevilla, 1587')
+
+    def test_el_cuerpo_que_no_es_json_se_rechaza(self):
+        codigo, _, salida = responder(
+            'POST', '/api/brief', b'no soy json', self.canon, self.config, RAIZ_WEB)
+        self.assertEqual(codigo, 400)
+        self.assertIn('JSON', json.loads(salida)['error'])
+
+
+class TestEstatico(EntornoDeInterfaz):
+    def test_la_raiz_sirve_la_pagina(self):
+        codigo, tipo, salida = self.pedir('GET', '/')
+        self.assertEqual(codigo, 200)
+        self.assertIn('text/html', tipo)
+        self.assertIn(b'<title>Legajo en blanco</title>', salida)
+
+    def test_no_se_sale_de_web(self):
+        for camino in ('/../config.json', '/../../etc/hosts', '/..%2fconfig.json'):
+            with self.subTest(camino=camino):
+                self.assertEqual(self.pedir('GET', camino)[0], 404)
+
+    def test_una_ruta_de_api_desconocida_es_404(self):
+        self.assertEqual(self.pedir('GET', '/api/agentes')[0], 404)
+
+    def test_la_interfaz_no_acepta_otros_metodos(self):
+        self.assertEqual(self.pedir('DELETE', '/estilo.css')[0], 405)
+
+
+if __name__ == '__main__':
+    unittest.main()

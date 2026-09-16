@@ -18,6 +18,7 @@ CONFIG = {
     'gate': {'nota_minima': 3, 'media_minima': 3.7, 'max_intentos': 3},
     'contexto': {'tope_contexto': 40000, 'ventana_resumenes': 3, 'palabras_enganche': 400},
     'validador': {'modo': 'unico'},
+    'interfaz': {'puerto': 8787},
     'margenes': {
         'capitulos_min': 0.8, 'capitulos_max': 1.2,
         'palabras_aviso': 0.15, 'palabras_bloqueo': 0.4, 'parrafos_min': 3,
@@ -59,6 +60,14 @@ class TestConfig(unittest.TestCase):
         roto['ejecucion']['modo'] = 'inventado'
         with self.assertRaisesRegex(ErrorConfig, 'ejecucion.modo'):
             validar_config(roto)
+
+    def test_el_puerto_de_la_interfaz_tiene_que_ser_un_puerto(self):
+        for puerto in (80, 0, 70000, 8787.0, '8787'):
+            roto = copy.deepcopy(CONFIG)
+            roto['interfaz']['puerto'] = puerto
+            with self.subTest(puerto=puerto):
+                with self.assertRaisesRegex(ErrorConfig, 'interfaz.puerto'):
+                    validar_config(roto)
 
     def test_para_si_falta_una_clave(self):
         roto = copy.deepcopy(CONFIG)
