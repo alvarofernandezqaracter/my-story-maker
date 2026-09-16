@@ -15,10 +15,11 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from .agentes import Agentes, ParadaDelProceso
+from .config import cargar_config, ErrorConfig
 from .canon import Canon
 from .flujo import preparar, escribir_capitulo, cerrar, reanudar, siguiente_capitulo
-from .gate import media, notas
-from .util import redondear
+from .gate import gate, media, notas
+from .util import numero_corto, redondear
 
 RAIZ_WEB = Path(__file__).resolve().parent.parent / 'web'
 
@@ -95,6 +96,36 @@ def comprobar_brief(bruto):
     }
 
 
+# ------------------------------------------------------------------ perfiles
+
+def perfiles(raiz='.'):
+    """Un perfil es uno de los `config*.json` de la raiz.
+
+    Lo que cambia de uno a otro es lo de §12 —modo de ejecucion y modelos—, asi
+    que la interfaz no inventa ningun concepto nuevo: ensena los ficheros que
+    hay y los que no validan no salen.
+    """
+    salida = []
+    for ruta in sorted(Path(raiz).glob('config*.json')):
+        try:
+            bruto = cargar_config(str(ruta))
+        except ErrorConfig:
+            continue
+        salida.append({
+            'nombre': ruta.stem,
+            'ruta': ruta.name,
+            'modo': bruto['ejecucion']['modo'],
+        })
+    return salida
+
+
+def cargar_perfil(nombre):
+    disponibles = {p['nombre']: p['ruta'] for p in perfiles()}
+    if nombre not in disponibles:
+        raise RespuestaError(400, 'no hay ningun perfil "{}"'.format(nombre))
+    return cargar_config(disponibles[nombre])
+
+
 # --------------------------------------------------------------------- motor
 
 class Motor:
@@ -108,6 +139,8 @@ class Motor:
 
     def __init__(self, config, ruta_canon):
         self.config = config
+        self.config_base = config
+        self.perfil = None
         self.ruta_canon = ruta_canon
         self.diario = []
         self.accion = None
@@ -127,6 +160,7 @@ class Motor:
         return {
             'corriendo': self.corriendo,
             'accion': self.accion,
+            'perfil': self.perfil,
             'error': self.error,
             'detalles': self.detalles,
             'desde': desde,
@@ -136,7 +170,7 @@ class Motor:
             'terminado_en': self.terminado_en,
         }
 
-    def arrancar(self, accion):
+    def arrancar(self, accion, perfil=None):
         if accion not in ACCIONES:
             raise RespuestaError(400, 'accion desconocida: {}'.format(accion))
         with self._cerrojo:
@@ -148,6 +182,8 @@ class Motor:
             self.error = None
             self.detalles = []
             self.accion = accion
+            self.config = cargar_perfil(perfil) if perfil else self.config_base
+            self.perfil = perfil or None
             self.arrancado_en = time.time()
             self.terminado_en = None
             self._hilo = threading.Thread(target=self._correr, args=(accion,), daemon=True)
@@ -233,19 +269,106 @@ def _capitulos(canon):
     return salida
 
 
+def _regla_del_intento(intento, config):
+    """Que regla decidio este intento.
+
+    No es un dato guardado: se recalcula con el gate de §8 sobre las revisiones
+    que si estan en el canon, que es la misma cuenta que se hizo en su momento.
+    """
+    if not intento['revisiones']:
+        return 'VD-08: descartado antes de llamar al validador'
+    decision = gate(intento['revisiones'], config['gate'])
+    if decision['aprueba']:
+        return 'gate: minima {} >= {} y media {} >= {}, sin incidencias graves'.format(
+            decision['minima'], config['gate']['nota_minima'],
+            numero_corto(redondear(decision['media'], 2)), config['gate']['media_minima'])
+    return 'gate: ' + '; '.join(decision['motivos'])
+
+
+def _intentos(canon, numero, config):
+    salida = []
+    for i in canon.intentos(numero):
+        ns = notas(i['revisiones']) if i['revisiones'] else None
+        salida.append({
+            'intento': i['intento'],
+            # El canon guarda la ruta con el separador del sistema; en la pagina
+            # se ensena siempre con barras, como el resto de rutas.
+            'ruta': i['ruta'].replace('\\', '/'),
+            'palabras': i['palabras'],
+            'notas': ns,
+            'media': redondear(media(ns), 2) if ns else None,
+            'estado': i['estado'],
+            'regla': _regla_del_intento(i, config),
+            'creado': i['creado'],
+        })
+    return salida
+
+
+def _archivos_de_trabajo(tope=8):
+    """Lo que el harness ha dejado en disco, del mas reciente al mas antiguo.
+
+    Son los ficheros de verdad: un Markdown por intento (§6) y retoques.md. No
+    se lee el canon para esto, se mira la carpeta.
+    """
+    encontrados = []
+    for ruta in list(Path('capitulos').glob('*.md')) + [Path('retoques.md')]:
+        if ruta.is_file():
+            encontrados.append({
+                'ruta': ruta.as_posix(),
+                'cuando': ruta.stat().st_mtime,
+                'bytes': ruta.stat().st_size,
+            })
+    encontrados.sort(key=lambda a: a['cuando'], reverse=True)
+    return encontrados[:tope]
+
+
+def _ruta_corta(ruta):
+    """La ruta del canon como se escribiria en la consola: relativa si esta bajo
+    el directorio de trabajo, y entera solo cuando de verdad esta en otro sitio.
+    """
+    try:
+        return Path(ruta).resolve().relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return Path(ruta).name
+
+
 def _proyecto(canon, config, motor=None):
     proyecto = canon.proyecto()
     estado = proyecto['estado'] if proyecto else None
-    retoques = Path('retoques.md')
+    capitulos = _capitulos(canon) if proyecto else []
+    # El capitulo en curso es el que esta en el loop. Si no hay ninguno —lo
+    # normal entre pasadas— se ensena el ultimo que tuvo intentos, marcado como
+    # no activo: el dato es real y es el que interesa mirar despues.
+    en_curso = next((c for c in capitulos if c['estado'] == 'en_curso'), None)
+    activo = en_curso is not None
+    if en_curso is None:
+        en_curso = next((c for c in reversed(capitulos) if c['intentos']), None)
     return {
         'modo': config['ejecucion']['modo'],
         'estado': estado,
         'brief': {c: proyecto[c] for c in CAMPOS_BRIEF} if proyecto else None,
         'editable': estado in ESTADOS_QUE_ACEPTAN_BRIEF,
-        'capitulos': _capitulos(canon) if proyecto else [],
+        'capitulos': capitulos,
         'gate': config['gate'],
         'corriendo': bool(motor and motor.corriendo),
-        'retoques': retoques.is_file(),
+        'retoques': Path('retoques.md').is_file(),
+        'canon': _ruta_corta(getattr(motor, 'ruta_canon', 'canon.db')),
+        'perfiles': perfiles(),
+        'perfil': getattr(motor, 'perfil', None),
+        # El capitulo que se esta escribiendo, con sus intentos uno a uno.
+        'en_curso': ({'numero': en_curso['numero'], 'titulo': en_curso['titulo'],
+                      'activo': activo,
+                      'intentos': _intentos(canon, en_curso['numero'], config)}
+                     if en_curso else None),
+        # Pistas del dossier: id y estado de verificacion (VD-04).
+        'dossier': [{'id': d['id'], 'estado': d['estado'], 'categoria': d['categoria']}
+                    for d in canon.datos()] if proyecto else [],
+        # Deuda narrativa: hilos que un capitulo abrio y ninguno cerro (§7).
+        'deuda': canon.hilos_vivos() if proyecto else [],
+        'archivos': _archivos_de_trabajo(),
+        # La cuota diaria no existe en el harness: no hay contabilidad de
+        # llamadas ni limite configurado, y aqui no se inventa ninguna de las dos.
+        'cuota': None,
     }
 
 
@@ -363,7 +486,8 @@ def responder(metodo, camino, cuerpo, canon, config, motor=None, raiz_web=RAIZ_W
                 return 200, TIPOS['.json'], _json(
                     motor.estado(int(desde) if desde.isdigit() else 0))
             if metodo == 'POST':
-                motor.arrancar((_cuerpo_json(cuerpo) or {}).get('accion'))
+                peticion = _cuerpo_json(cuerpo) or {}
+                motor.arrancar(peticion.get('accion'), peticion.get('perfil'))
                 return 202, TIPOS['.json'], _json(motor.estado())
 
         if camino == '/api/desbloquear' and metodo == 'POST':

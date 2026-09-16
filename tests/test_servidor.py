@@ -143,6 +143,7 @@ class TestFlujo(unittest.TestCase):
 
     def setUp(self):
         self.cwd = os.getcwd()
+        self.raiz_repo = Path(self.cwd)
         self.config = cargar_config(str(Path(self.cwd) / 'config.json'))
         self.dir = tempfile.mkdtemp(prefix='novela-motor-')
         os.chdir(self.dir)
@@ -201,6 +202,47 @@ class TestFlujo(unittest.TestCase):
         self.assertTrue(capitulo['texto'].startswith('#'))
         self.assertEqual(len(capitulo['notas']), 3)
         self.assertEqual(self.pedir('GET', '/api/capitulo/99')[0], 404)
+
+    def test_los_perfiles_son_los_config_de_la_raiz(self):
+        # El test corre en un directorio temporal, asi que aqui no hay ninguno.
+        self.assertEqual(json.loads(self.pedir('GET', '/api/proyecto')[2])['perfiles'], [])
+        (Path(self.dir) / 'config.json').write_bytes(
+            (self.raiz_repo / 'config.json').read_bytes())
+        perfiles = json.loads(self.pedir('GET', '/api/proyecto')[2])['perfiles']
+        self.assertEqual([p['nombre'] for p in perfiles], ['config'])
+        self.assertEqual(perfiles[0]['modo'], 'simulado')
+
+    def test_un_perfil_que_no_existe_se_rechaza(self):
+        codigo, _, salida = self.pedir('POST', '/api/flujo',
+                                       {'accion': 'preparar', 'perfil': 'inventado'})
+        self.assertEqual(codigo, 400)
+        self.assertIn('perfil', json.loads(salida)['error'])
+        self.assertFalse(self.motor.corriendo)
+
+    def test_sin_capitulo_en_curso_se_ensena_el_ultimo_trabajado(self):
+        self.canon.guardar_brief(BRIEF)
+        self.correr('todo')
+        cuerpo = json.loads(self.pedir('GET', '/api/proyecto')[2])
+        foco = cuerpo['en_curso']
+        self.assertFalse(foco['activo'])
+        self.assertEqual(foco['numero'], len(cuerpo['capitulos']))
+        self.assertTrue(foco['intentos'])
+        # La regla se recalcula con el gate de §8, no se guarda en el canon.
+        self.assertTrue(foco['intentos'][0]['regla'].startswith('gate:'))
+        self.assertIn('/', foco['intentos'][0]['ruta'])
+
+    def test_pistas_deuda_y_archivos_salen_del_canon(self):
+        self.canon.guardar_brief(BRIEF)
+        self.correr('todo')
+        cuerpo = json.loads(self.pedir('GET', '/api/proyecto')[2])
+        self.assertTrue(cuerpo['dossier'])
+        self.assertTrue(all(d['estado'] for d in cuerpo['dossier']))
+        self.assertTrue(cuerpo['archivos'])
+        self.assertTrue(all('cuando' in a for a in cuerpo['archivos']))
+        # La deuda son los hilos que abrio un capitulo y no cerro ninguno.
+        self.assertEqual(cuerpo['deuda'], self.canon.hilos_vivos())
+        # La cuota diaria no tiene fuente en el harness y va vacia a proposito.
+        self.assertIsNone(cuerpo['cuota'])
 
     def test_desbloquear_devuelve_el_capitulo_a_pendiente(self):
         self.canon.guardar_brief(BRIEF)
