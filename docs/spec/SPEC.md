@@ -769,22 +769,28 @@ Los tests se lanzan con `python -m unittest discover -s tests -t .`: cincuenta y
 
 **Inyección de fallos.** Dos variables de entorno hacen que la capa simulada suspenda un intento concreto o devuelva un capítulo demasiado corto. Existen porque el camino interesante del sistema —rechazo, reintento, bloqueo— no se ve nunca si todas las respuestas simuladas son buenas. Solo tienen efecto en modo `simulado`.
 
-## §19 Interfaz web del brief
+## §19 Interfaz web
 
-**Qué es.** Una página local que sirve para escribir el brief de §3 sin abrir un editor de JSON, con la escaleta del canon pintada al lado. Se arranca con `python -m novela ui`, escucha en `127.0.0.1` y no requiere nada instalado: el servidor es `http.server` de la biblioteca estándar.
+**Qué es.** Una página local, `python -m novela ui`, desde la que se hace el ciclo entero: escribir el brief de §3, lanzar a los agentes, ver el proceso mientras corre y leer los capítulos aprobados. Escucha solo en `127.0.0.1` y no necesita nada instalado, porque el servidor es `http.server` de la biblioteca estándar. La CLI de §18 sigue siendo el otro camino completo, no un camino de repuesto.
 
-**Qué no es.** No es un panel de control del harness. La interfaz **no lanza agentes, no arranca el flujo y no desbloquea nada**: el único camino para eso sigue siendo la CLI de §18. La razón es el invariante de §8 —nada corre en paralelo— y el de §13 —el estado vive en el canon—: un botón que dispare `escribir` desde el navegador abre la puerta a dos flujos sobre el mismo canon, y eso no lo arregla la interfaz, lo arregla no tenerla. Quién puede lanzar el flujo queda como DA-11.
+**Cómo convive con el invariante de §8.** Dentro del harness no corre nada en paralelo, y eso no cambia: el flujo vive en **un único hilo de trabajo** y el servidor rechaza con 409 cualquier intento de arrancar otro mientras hay uno vivo. Que el servidor siga atendiendo peticiones mientras tanto no es paralelismo del sistema —es HTTP—, y lo que esas peticiones hacen es leer un canon que ya está escrito. El orden de capítulos tampoco cambia: el bucle es el mismo del comando `escribir`, uno detrás de otro, porque el N+1 depende del canon que dejó el N.
 
-**Qué escribe.** Solo la fila de proyecto, y solo con el proyecto en `borrador` o vacío. Con el libro en marcha la interfaz devuelve 409 y remite a `python -m novela brief`, que sí deja pisar el brief a sabiendas: desde el navegador, rehacerlo dejaría el canon hablando de otra novela sin que nadie lo haya pedido.
+**Qué escribe.** El brief, con el proyecto en `borrador` o vacío —con el libro en marcha devuelve 409 y remite a `python -m novela brief`, que sí lo pisa a sabiendas—, y las tres salidas manuales del bloqueo de §8. Todo lo demás que entra en el canon lo sigue metiendo el cronista por el camino de siempre: la interfaz **no escribe capítulos ni fichas**, y ningún agente la ve.
 
 | Ruta | Qué hace |
 |---|---|
-| `GET /api/proyecto` | Estado, brief y escaleta con el estado y las notas de cada capítulo |
+| `GET /api/proyecto` | Estado, brief y escaleta con el estado, las notas y el resumen de cada capítulo |
 | `POST /api/brief` | Valida los cinco campos y los guarda. 400 si falta uno, 409 si hay libro en marcha |
+| `POST /api/flujo` | Arranca `preparar`, `escribir`, `cerrar`, `reanudar` o `todo`. 409 si ya hay uno |
+| `GET /api/flujo` | Estado del hilo y el diario desde el evento que se pida |
+| `GET /api/capitulo/N` | Texto del capítulo aprobado con sus notas, su resumen y sus hilos. 409 si no lo está |
+| `POST /api/desbloquear` | Las tres salidas de §8: reintentar, aprobar un intento o reiniciar |
 | `GET /*` | Los ficheros de `web/`, y nada de fuera de esa carpeta |
 
-**Dónde se valida.** Dos veces, y la que manda es la del servidor: el navegador puede mentir y el harness no da nada por bueno porque venga de su propia página. La comprobación es de forma —cinco campos, textos con contenido y dos enteros positivos—, no de márgenes: los de §12 los aplica VD-07 sobre la escaleta, que es donde el número de capítulos significa algo.
+**Cómo se sigue el proceso.** Por el `diario` que las funciones de §4 ya llenaban para la CLI: la interfaz lo sirve por trozos y lo pinta evento a evento, así que lo que se lee en pantalla y lo que imprime `escribir` son la misma cosa. A eso se le añade un único evento nuevo, `agente`, que dice quién está trabajando **antes** de que termine; sale de un gancho opcional en la capa de llamada de §5 y, sin nadie escuchando, no cambia nada. El estado de cada capítulo aparece en tres sitios a la vez —tarjeta, escena y barra inferior— porque son tres preguntas distintas: en qué anda este, cómo va el libro y cuánto queda.
 
-**Por qué three.js.** La escena dibuja un cuadernillo por capítulo: cuántos son lo dice el brief, el grosor lo dicen las palabras por capítulo, el color lo dice el estado del canon y la luz la enciende el tono. Es la parte del brief que no se lee bien como formulario —seis capítulos de 1.800 palabras es un número; seis cuadernillos en la mesa es una novela corta—, y el resto sigue siendo HTML: los cinco campos son `input` de verdad, no texto dibujado en 3D. La escena es la única pieza del repo que necesita red, porque three.js viaja por CDN; si no llega, el formulario funciona entero y la mesa se queda en su degradado.
+**Dónde se valida.** Dos veces, y la que manda es la del servidor: el navegador puede mentir y el harness no da nada por bueno porque venga de su propia página. La comprobación del brief es de forma —cinco campos, textos con contenido y dos enteros positivos—, no de márgenes: los de §12 los aplica VD-07 sobre la escaleta, que es donde el número de capítulos significa algo.
 
-**Sin tema claro.** La página se compromete con un solo mundo visual oscuro porque comparte paleta y luz con la escena. Es una decisión, no un olvido: mantener dos temas obligaría a pasar la paleta al render en cada cambio para ganar poco.
+**Por qué three.js.** La escena dibuja un cuadernillo por capítulo: cuántos son lo dice el brief, el grosor las palabras por capítulo, el color el estado del canon y la luz el tono. Es la parte que no se lee bien en una tabla —seis capítulos de 1.800 palabras es un número; seis cuadernillos sobre la mesa es una novela corta—, y mientras el flujo corre se ve el capítulo en curso levantarse y los aprobados cambiar de color. El resto es HTML corriente: los cinco campos son `input` de verdad, no texto dibujado en 3D. La escena es lo único del repo que necesita red, porque three.js viaja por CDN; si no llega, la interfaz entera sigue funcionando y la mesa se queda en su degradado.
+
+**Identidad visual.** La paleta sale del logotipo de Qaracter —naranja `#FF7932` y azul pizarra `#233441`—, con los neutros sesgados hacia ese azul, y el logotipo va en la barra superior. La página se compromete con un solo mundo visual oscuro, sin tema claro: comparte paleta y luz con la escena, y mantener dos temas obligaría a pasarle la paleta al render en cada cambio para ganar poco.
