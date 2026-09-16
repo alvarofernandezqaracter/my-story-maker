@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Legajo en blanco</title>
+<title>Taller de novelas</title>
+<link rel="icon" href="/qaracter.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap">
 <link rel="stylesheet" href="/estilo.css">
 <script type="importmap">
 {
@@ -21,11 +22,27 @@
 
 <canvas id="escena"></canvas>
 
-<main class="tablero">
+<header class="barra">
+  <a class="marca" href="https://www.qaracter.com" target="_blank" rel="noopener">
+    <img src="/qaracter.svg" alt="Qaracter" width="112" height="26">
+  </a>
+  <nav class="salas" aria-label="Secciones">
+    <button type="button" class="sala" data-sala="brief" aria-current="true">Brief</button>
+    <button type="button" class="sala" data-sala="taller">Taller</button>
+    <button type="button" class="sala" data-sala="lectura" disabled>Lectura</button>
+  </nav>
+  <div class="barra__estado">
+    <span class="pastilla" id="pastilla-estado">sin brief</span>
+    <span class="dato" id="dato-modo">modo —</span>
+  </div>
+</header>
+
+<!-- ============================================================ brief -->
+<main class="sala-panel" id="sala-brief">
   <form class="papeleta" id="papeleta" novalidate>
     <header class="papeleta__cabecera">
-      <p class="eyebrow">Brief — los cinco campos del §3</p>
-      <h1>Legajo en blanco</h1>
+      <p class="eyebrow">Brief — los cinco campos</p>
+      <h1>Empieza una novela</h1>
       <p class="entradilla">
         Esto es todo lo que se escribe a mano. Con estos cinco campos el
         investigador arma el dossier y el arquitecto la escaleta; el resto lo
@@ -48,8 +65,7 @@
 
     <div class="campo">
       <label for="tono">Tono</label>
-      <input id="tono" name="tono" type="text" list="tonos" autocomplete="off"
-             placeholder="seco">
+      <input id="tono" name="tono" type="text" list="tonos" autocomplete="off" placeholder="seco">
       <datalist id="tonos">
         <option value="seco"></option>
         <option value="lírico"></option>
@@ -58,7 +74,7 @@
         <option value="irónico"></option>
         <option value="contenido"></option>
       </datalist>
-      <p class="pista">El tono viaja a la skill de prosa y también enciende la luz de esta mesa.</p>
+      <p class="pista">El tono viaja a la skill de prosa y también enciende la luz de la mesa.</p>
     </div>
 
     <div class="campo campo--par">
@@ -73,7 +89,7 @@
       </div>
     </div>
 
-    <p class="aviso" id="aviso" role="status" hidden></p>
+    <p class="aviso" id="aviso-brief" role="status" hidden></p>
 
     <div class="acciones">
       <button class="boton" type="submit" id="guardar">Guardar el brief</button>
@@ -86,20 +102,87 @@
   </form>
 </main>
 
+<!-- ============================================================ taller -->
+<main class="sala-panel" id="sala-taller" hidden>
+  <section class="mando">
+    <header class="mando__cabecera">
+      <p class="eyebrow">Taller</p>
+      <h2 id="mando-titulo">Los seis agentes</h2>
+      <p class="entradilla" id="mando-texto">
+        Investigador y arquitecto preparan el libro; luego, capítulo a capítulo,
+        el escritor redacta, el validador puntúa, el gate decide y el cronista
+        escribe en el canon.
+      </p>
+    </header>
+
+    <div class="acciones acciones--columna">
+      <button class="boton boton--grande" type="button" id="arrancar">Escribir la novela</button>
+      <div class="acciones">
+        <button class="enlace" type="button" id="solo-preparar">solo preparar</button>
+        <button class="enlace" type="button" id="reanudar">reanudar</button>
+        <button class="enlace" type="button" id="cerrar">cerrar</button>
+      </div>
+    </div>
+
+    <p class="aviso" id="aviso-flujo" role="status" hidden></p>
+
+    <div class="ahora" id="ahora" hidden>
+      <span class="ahora__pulso" aria-hidden="true"></span>
+      <span class="ahora__rol" id="ahora-rol">—</span>
+      <span class="ahora__que" id="ahora-que"></span>
+    </div>
+
+    <div class="relevo" id="relevo" aria-label="Agentes del proceso"></div>
+  </section>
+
+  <section class="tarjetas" id="tarjetas" aria-label="Capítulos"></section>
+
+  <section class="diario" id="diario-caja">
+    <header class="diario__cabecera">
+      <span class="eyebrow">Diario del harness</span>
+      <button class="enlace" type="button" id="plegar-diario">plegar</button>
+    </header>
+    <ol class="diario__lista" id="diario"></ol>
+  </section>
+</main>
+
+<!-- =========================================================== lectura -->
+<main class="sala-panel" id="sala-lectura" hidden>
+  <div class="progreso" id="progreso" aria-hidden="true"></div>
+
+  <article class="lector" id="lector">
+    <header class="lector__cabecera">
+      <p class="eyebrow" id="lector-eyebrow">Capítulo</p>
+      <h1 id="lector-titulo">—</h1>
+      <div class="lector__notas" id="lector-notas"></div>
+    </header>
+    <div class="lector__texto" id="lector-texto"></div>
+    <footer class="lector__pie" id="lector-pie"></footer>
+  </article>
+
+  <aside class="ficha-lateral" id="ficha-lateral">
+    <h3>Lo que dejó en el canon</h3>
+    <div id="ficha-resumen"></div>
+  </aside>
+
+  <nav class="mandos-lectura" aria-label="Navegación de capítulos">
+    <button class="redondo" type="button" id="anterior" title="Capítulo anterior (←)">←</button>
+    <span class="dato" id="lector-indice">—</span>
+    <button class="redondo" type="button" id="siguiente" title="Capítulo siguiente (→)">→</button>
+    <button class="enlace" type="button" id="inmersion" title="Modo inmersión (f)">inmersión</button>
+  </nav>
+</main>
+
 <footer class="rail" id="rail">
-  <div class="rail__estado">
-    <span class="pastilla" id="pastilla-estado">sin canon</span>
-    <span class="rail__dato" id="rail-modo">modo —</span>
-    <span class="rail__dato" id="rail-foco">el legajo está en blanco</span>
-  </div>
   <div class="rail__capitulos" id="rail-capitulos"></div>
+  <span class="dato" id="rail-foco">el legajo está en blanco</span>
   <div class="rail__siguiente">
-    <span class="rail__dato">siguiente</span>
-    <code id="siguiente-comando">python -m novela preparar</code>
+    <span class="dato">consola</span>
+    <code id="siguiente-comando">python -m novela estado</code>
     <button class="enlace" type="button" id="copiar">copiar</button>
   </div>
 </footer>
 
-<script type="module" src="/papeleta.js"></script>
+<script type="module" src="/app.js"></script>
 </body>
 </html>
