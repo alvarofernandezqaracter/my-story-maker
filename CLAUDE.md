@@ -1,8 +1,8 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 0.8.0, F0–F5 del roadmap funcionando de punta
-a punta en modo `simulado`, más F7 (la interfaz del brief).
+de un brief de cinco campos. Versión 0.9.0, F0–F5 del roadmap funcionando de punta
+a punta en modo `simulado`, más F7: la interfaz web hace el ciclo entero.
 
 ## Regla número uno: el spec manda
 
@@ -49,7 +49,7 @@ python -m novela brief brief.ejemplo.json
 python -m novela preparar     # investigador y arquitecto
 python -m novela escribir     # loop: escritor, VD-08, validador, gate, cronista
 python -m novela cerrar       # editor global y retoques.md
-python -m novela ui           # interfaz del brief en el navegador (§19)
+python -m novela ui           # ciclo entero desde el navegador (§19)
 python -m unittest discover -s tests -t .    # 51 tests, sin red
 ```
 
@@ -87,7 +87,7 @@ por fuera del canon o del paquete de contexto.
 | [novela/simulado.py](novela/simulado.py) | Respuestas fijas con el formato correcto + inyección de fallos | §12 |
 | [novela/flujo.py](novela/flujo.py) | `preparar`, `escribir_capitulo`, `cerrar`, `reanudar` | §4, §8, §11 |
 | [novela/util.py](novela/util.py) | Redondeo y formato de números, compartidos por gate, VD-08 y CLI | — |
-| [novela/servidor.py](novela/servidor.py) | Interfaz web: sirve `web/` y la API del brief. Tampoco decide nada | §19 |
+| [novela/servidor.py](novela/servidor.py) | Interfaz web: sirve `web/`, la API y el hilo único del flujo | §19 |
 | [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada**: carga config, abre el canon y llama al flujo | §18 |
 
 `canon.db`, `capitulos/*.md` y `retoques.md` son salida y no se versionan.
@@ -130,7 +130,9 @@ números y umbrales viven en `config.json`.
 8. **Nada corre en paralelo** con la configuración por defecto. El único paralelismo
    posible es `validador.modo: "separado"`, que hace tres llamadas sobre el mismo
    capítulo (tres hilos, `ThreadPoolExecutor`). Nunca dos capítulos a la vez: el N+1
-   depende del canon que dejó el N.
+   depende del canon que dejó el N. La interfaz (§19) no es una excepción: su flujo
+   vive en **un solo hilo** y arrancar otro mientras hay uno vivo devuelve 409. Lo que
+   corre a la vez es HTTP, no dos novelas.
 9. **Un bloqueante que falla dos veces seguidas para el proceso** y deja el estado
    escrito (`ParadaDelProceso`). No hay reintento infinito ni backoff.
 10. **El estado vive en el canon, nunca en memoria del proceso.** Por eso `reanudar`
@@ -188,31 +190,49 @@ todas las respuestas simuladas son buenas.
 
 ## La interfaz web (§19)
 
-`python -m novela ui` levanta un servidor local de la biblioteca estándar que
-sirve [web/](web/) y dos rutas de API: `GET /api/proyecto` y `POST /api/brief`.
-El puerto sale de `interfaz.puerto`.
+`python -m novela ui` levanta un servidor local de la biblioteca estándar. Desde
+el navegador se hace el ciclo entero: brief, lanzar a los agentes, ver el proceso
+y leer los capítulos. El puerto sale de `interfaz.puerto`. La CLI no queda por
+debajo; son **dos caminos completos** sobre el mismo canon.
 
-**La interfaz no lanza agentes, no arranca el flujo y no desbloquea.** No es una
-carencia por rellenar: un botón de «escribir» en el navegador permite dos flujos
-sobre el mismo canon, que es justo lo que prohíbe el invariante 8. Lo único que
-escribe es la fila de proyecto, y solo con el proyecto en `borrador` o vacío;
-con una novela en marcha devuelve 409 y remite a `novela brief`. Si esto cambia
-alguna vez, se decide en DA-11 y se escribe primero en el spec.
+| Sala | Fichero | Qué hace |
+|---|---|---|
+| Brief | [web/brief.js](web/brief.js) | Los cinco campos de §3 |
+| Taller | [web/taller.js](web/taller.js) | Lanza el flujo, pinta el diario y las tarjetas de capítulo |
+| Lectura | [web/lectura.js](web/lectura.js) | Los capítulos aprobados, con notas, resumen e hilos |
 
-El brief se valida en el navegador y otra vez en el servidor, y la que manda es
-la del servidor. La escena de [web/legajo.js](web/legajo.js) baja three.js de un
-CDN —lo único del repo que necesita red— y degrada: si no llega, el formulario
-sigue entero. La página es de un solo tema, oscuro, porque comparte paleta con
-la escena.
+[web/app.js](web/app.js) guarda el estado y reparte; [web/legajo.js](web/legajo.js)
+es la escena; [web/api.js](web/api.js) es la capa de `fetch`.
+
+**El motor no admite dos flujos.** `Motor` de [novela/servidor.py](novela/servidor.py)
+tiene un hilo y un cerrojo: arrancar otro mientras hay uno vivo devuelve 409. Eso es
+lo que conserva el invariante 8, y por eso vive en el servidor y no en la disciplina
+de quien usa la página.
+
+**El brief sigue sin poder pisarse con el libro en marcha** (409, y remite a
+`novela brief`): rehacerlo dejaría el canon hablando de otra novela. Lo demás que la
+interfaz escribe son las tres salidas manuales del bloqueo. **Ningún capítulo ni ficha
+entra por aquí**: eso lo sigue metiendo el cronista.
+
+**Cómo se sigue el proceso.** Por el mismo `diario` que imprime la CLI, servido por
+trozos, más un evento `agente` que dice quién trabaja antes de terminar; sale de un
+gancho opcional en [novela/agentes.py](novela/agentes.py) y, sin nadie escuchando, no
+cambia nada.
+
+La paleta es la de Qaracter, sacada de su logotipo (`#FF7932` y `#233441`), que va en
+la barra superior. Un solo tema, oscuro, porque lo comparte con la escena. three.js
+viaja por CDN —lo único del repo que necesita red— y degrada: si no llega, la interfaz
+entera sigue funcionando.
 
 ## Tests
 
-`python -m unittest discover -s tests -t .` corre 51 tests en tres ficheros, sin red y
+`python -m unittest discover -s tests -t .` corre 57 tests en tres ficheros, sin red y
 sin coste: [tests/test_deterministas.py](tests/test_deterministas.py) para config, gate
 y validadores, [tests/test_flujo.py](tests/test_flujo.py) para el canon, el generador
 de contexto y el flujo entero contra la capa simulada, y
-[tests/test_servidor.py](tests/test_servidor.py) para el enrutado y la validación de la
-interfaz, que entran por `responder()` y no abren ningún puerto. Cada test del flujo corre en su
+[tests/test_servidor.py](tests/test_servidor.py) para el enrutado, la validación y el
+motor de la interfaz, que entran por `responder()` y no abren ningún puerto; uno de
+ellos escribe una novela entera por el motor. Cada test del flujo corre en su
 propio directorio temporal porque el harness escribe en el `cwd`.
 
 ## Estado actual y cosas abiertas

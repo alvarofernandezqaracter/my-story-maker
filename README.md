@@ -24,7 +24,7 @@ python -m novela escribir     # loop: escritor, validador, gate, cronista
 python -m novela cerrar       # editor global y retoques.md
 ```
 
-O, si prefieres escribir el brief en el navegador en vez de a mano:
+O, si prefieres no tocar la consola, todo eso mismo desde el navegador:
 
 ```bash
 python -m novela ui           # http://127.0.0.1:8787
@@ -69,25 +69,34 @@ harness es el mismo: mismas instrucciones, mismos validadores y mismo gate.
 | `poner <qué> <fichero>` | `personaje`, `capitulo`, `dato` — escritura a mano en el canon |
 | `desbloquear --capitulo N` | Salidas manuales del bloqueo. Con `--aprobar-intento K` o `--reiniciar` |
 | `skills` | Lista las skills que el harness carga en cada llamada |
-| `ui [--puerto N]` | Abre la interfaz del brief en el navegador |
+| `ui [--puerto N]` | Abre la interfaz web: brief, flujo, seguimiento y lectura |
 
 Opciones globales: `--config <ruta>` y `--canon <ruta>`.
 
-## La interfaz del brief
+## La interfaz web
 
 `python -m novela ui` levanta un servidor local —`http.server`, nada que
-instalar— con los cinco campos del brief y una escena en three.js que dibuja un
-cuadernillo por capítulo: el grosor son las palabras por capítulo, el color es
-el estado que tiene en el canon y la luz la pone el tono. El puerto sale de
-`interfaz.puerto`.
+instalar— y abre el navegador. Desde ahí se hace el ciclo entero, en tres salas:
 
-La interfaz **solo escribe el brief**. No lanza agentes, no arranca el flujo y
-no desbloquea: eso sigue siendo cosa de la CLI, y el porqué está en §19 del
-spec. Con una novela ya en marcha ni siquiera deja rehacer el brief; para eso
-está `python -m novela brief`, que lo pisa a sabiendas.
+- **Brief.** Los cinco campos. Una escena en three.js dibuja un cuadernillo por
+  capítulo: el grosor son las palabras, el color el estado en el canon y la luz
+  la pone el tono.
+- **Taller.** Un botón lanza a los agentes. Mientras corren se ve quién trabaja,
+  el diario del harness evento a evento —el mismo que imprime `escribir`— y una
+  tarjeta por capítulo con sus tres notas. Un capítulo bloqueado se desbloquea
+  desde su propia tarjeta.
+- **Lectura.** Los capítulos aprobados, con las notas del validador, el resumen
+  del cronista y los hilos que abrió o cerró. `←` y `→` cambian de capítulo y
+  `f` entra en modo inmersión.
+
+El puerto sale de `interfaz.puerto`. **Nunca corren dos flujos a la vez**: el
+servidor tiene un solo hilo de trabajo y rechaza el segundo, que es lo que
+mantiene en pie el invariante del spec. Con una novela en marcha tampoco deja
+rehacer el brief; para eso está `python -m novela brief`, que lo pisa a
+sabiendas.
 
 La escena baja three.js de un CDN, y es lo único del repo que necesita red. Si
-no llega, el formulario funciona igual.
+no llega, la interfaz funciona igual.
 
 ## Qué hay en cada sitio
 
