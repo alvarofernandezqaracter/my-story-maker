@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.6.0
+version: 0.7.0
 estado: borrador
 actualizado: 2026-09-16
 ---
@@ -485,6 +485,21 @@ Lo que no está decidido. Nada de aquí bloquea empezar; todo bloquea terminar l
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.7.0] — 2026-09-16
+
+El harness estrena un tercer modo de ejecución y con él escribe su primera novela con modelos de verdad, de punta a punta y sin clave de API.
+
+**Añadido**
+- §12. `ejecucion.modo` acepta `claude_code`: las llamadas a agentes las resuelve la CLI de Claude Code instalada en la máquina, en modo headless, que pone los modelos y la credencial de su propia sesión. El motivo es quitar el peaje de entrada: hasta ahora, ver el sistema escribir de verdad exigía dar de alta una clave y pagar por token aparte. El contrato es el del modo `real` y no cambia nada aguas arriba, así que el tercer modo no añade una segunda forma de hablar con un agente, solo un transporte más debajo de la misma.
+- §18. El modo nuevo no añade dependencia de Python: habla con la CLI por `subprocess`. Lo que pide no se instala con `pip`, es tener la CLI en el `PATH`.
+
+**Arreglado**
+- §18. El resumen del gate en la CLI imprimía `→`, que no existe en cp1252: en una consola de Windows el comando `escribir` moría al volcar el diario, con los tres capítulos ya aprobados y escritos en el canon. El fallo era solo de salida y el canon quedó entero, que es justo lo que promete §13, pero la traza se perdía. Pasa a `->`.
+
+**Contexto**
+- El modo se estrenó con la novela de demostración: tres capítulos de 150 palabras sobre el Toledo de 1492. Los tres pasaron el gate al primer intento —5/5/5, 5/5/5 y 5/5/4— y el editor global devolvió diez retoques. No cierra DA-06: tres capítulos cortos no calibran nada, y que nadie suspenda a la primera es un dato que tira más bien a que el listón está bajo.
+- El modo `real` sigue sin ejercitarse contra la API. Ahora hay un camino con modelos que sí se ejercita, pero es otro: comparten instrucciones y contrato, no transporte.
 
 ### [0.6.0] — 2026-09-16
 
