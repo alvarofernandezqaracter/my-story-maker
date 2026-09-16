@@ -28,7 +28,10 @@ actualiza en el mismo momento, no después. Eso implica además:
   español, con el ámbito entre paréntesis y la sección tocada:
   `docs(spec): §12 la credencial del modo real va en el entorno`,
   `feat(harness): capa unica de llamada a agentes, simulada y real`.
-- **Push**: Álvaro hace el push y trata con el remoto. Commitear en local y parar ahí.
+- **Push**: automático. Se commitea en local y se publica en el remoto sin pedir
+  confirmación cada vez. Quedan fuera y siguen exigiendo permiso expreso las
+  operaciones no reversibles: push --force, borrar ramas remotas y reescribir
+  historia ya publicada.
 - **Idioma y acentos**: todo en español. El código `.py` y los prompts de
   `agentes/` y `skills/` van **sin acentos** (ASCII); los documentos Markdown
   (`SPEC.md`, `README.md`, este fichero) sí llevan acentos.
