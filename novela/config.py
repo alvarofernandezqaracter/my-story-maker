@@ -34,7 +34,8 @@ def _modelos_por_rol(v):
 
 # (clave, predicado, que se espera)
 REGLAS = [
-    ('ejecucion.modo', lambda v: v in ('simulado', 'real'), '"simulado" o "real"'),
+    ('ejecucion.modo', lambda v: v in ('simulado', 'real', 'claude_code'),
+     '"simulado", "real" o "claude_code"'),
     ('gate.nota_minima', lambda v: _entero(v) and 1 <= v <= 5, 'entero entre 1 y 5'),
     ('gate.media_minima', lambda v: _numero(v) and 1 <= v <= 5, 'numero entre 1 y 5'),
     ('gate.max_intentos', lambda v: _entero(v) and v >= 1, 'entero >= 1'),

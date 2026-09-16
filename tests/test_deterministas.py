@@ -48,6 +48,18 @@ class TestConfig(unittest.TestCase):
     def test_el_fichero_del_proyecto_es_valido(self):
         self.assertEqual(validar_config(copy.deepcopy(CONFIG)), CONFIG)
 
+    def test_los_tres_modos_de_ejecucion_valen(self):
+        for modo in ('simulado', 'real', 'claude_code'):
+            copia = copy.deepcopy(CONFIG)
+            copia['ejecucion']['modo'] = modo
+            self.assertEqual(validar_config(copia)['ejecucion']['modo'], modo)
+
+    def test_para_si_el_modo_de_ejecucion_no_existe(self):
+        roto = copy.deepcopy(CONFIG)
+        roto['ejecucion']['modo'] = 'inventado'
+        with self.assertRaisesRegex(ErrorConfig, 'ejecucion.modo'):
+            validar_config(roto)
+
     def test_para_si_falta_una_clave(self):
         roto = copy.deepcopy(CONFIG)
         del roto['busqueda_web']

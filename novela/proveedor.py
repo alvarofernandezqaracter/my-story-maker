@@ -26,7 +26,7 @@ def _cliente_perezoso():
     return _cliente
 
 
-def _instruccion_de_formato(rol):
+def instruccion_de_formato(rol):
     """El contrato de salida se pide en el prompt y lo verifica VD-01 al recibirlo.
 
     Si el modelo devuelve algo que no parsea, el harness reintenta la llamada una
@@ -70,7 +70,7 @@ def llamar_al_proveedor(rol, modelo, instrucciones, entrada):
     with cliente.messages.stream(
         model=modelo,
         max_tokens=MAX_TOKENS,
-        system=instrucciones + _instruccion_de_formato(rol),
+        system=instrucciones + instruccion_de_formato(rol),
         thinking={'type': 'adaptive'},
         output_config={'effort': 'high'},
         messages=[{'role': 'user',

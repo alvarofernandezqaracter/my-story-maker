@@ -2,6 +2,7 @@
 # asi que el resto del harness no sabe si esta corriendo contra la API o contra
 # la capa simulada. Ningun agente escribe en el canon: devuelven una propuesta
 # que el harness valida (§9) y persiste.
+from .claude_code import llamar_a_claude_code
 from .proveedor import llamar_al_proveedor
 from .simulado import AGENTES_SIMULADOS
 from .skills import instrucciones_de
@@ -40,11 +41,14 @@ class Agentes:
 
         instrucciones = instrucciones_de(rol, **self.raices)['texto']
         modelo = self.modelo_de(rol)
+        # El unico sitio donde se elige transporte: API oficial o CLI de Claude
+        # Code. De aqui hacia arriba nadie sabe cual esta activo (§12).
+        llamar = llamar_a_claude_code if self.modo == 'claude_code' else llamar_al_proveedor
         try:
-            return llamar_al_proveedor(rol, modelo, instrucciones, entrada)['salida']
+            return llamar(rol, modelo, instrucciones, entrada)['salida']
         except Exception as primera:
             try:
-                return llamar_al_proveedor(rol, modelo, instrucciones, entrada)['salida']
+                return llamar(rol, modelo, instrucciones, entrada)['salida']
             except Exception as segunda:
                 raise ParadaDelProceso(
                     'el proveedor fallo dos veces en el rol {}'.format(rol),
