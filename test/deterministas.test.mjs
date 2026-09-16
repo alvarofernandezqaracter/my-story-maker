@@ -18,7 +18,7 @@ const CONFIG = JSON.parse(JSON.stringify({
   validador: { modo: 'unico' },
   margenes: {
     capitulos_min: 0.8, capitulos_max: 1.2,
-    palabras_aviso: 0.15, palabras_bloqueo: 0.4, parrafos_min: 5,
+    palabras_aviso: 0.15, palabras_bloqueo: 0.4, parrafos_min: 3,
   },
   modelo_por_rol: {
     investigador: 'claude-opus-5', arquitecto: 'claude-opus-5', escritor: 'claude-opus-5',
