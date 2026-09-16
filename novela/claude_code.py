@@ -34,6 +34,10 @@ BANDERAS = [
     '--max-turns', '1',
 ]
 
+# Lo que viaja en cada peticion, para la traza de §20. Son las banderas tal
+# cual, no una copia: aqui la linea de ordenes ES el parametro del modelo.
+PARAMETROS = {'banderas': BANDERAS, 'timeout_s': TIMEOUT_S}
+
 
 def _ejecutable():
     ruta = shutil.which('claude')

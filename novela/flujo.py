@@ -10,6 +10,7 @@ from .agentes import ParadaDelProceso
 from .contexto import generar_contexto
 from .esquemas import DIMENSIONES
 from .gate import gate, mejor_intento, incidencias_ordenadas, media, notas
+from .trazas import sesion_de
 from .util import redondear
 from .validadores import (
     Resultado,
@@ -57,38 +58,51 @@ def preparar(canon, agentes, config, diario=None):
         'palabras_por_capitulo': proyecto['palabras_por_capitulo'],
     }
 
-    # ---- Investigador. VD-04 corre antes de habilitar al arquitecto (§9).
-    if proyecto['estado'] == 'borrador':
-        respuesta = agentes.pedir(
-            'investigador',
-            {'brief': brief, 'busqueda_web': config['busqueda_web']},
-            lambda s: [comprobar_dossier(s['datos'])],
-        )
-        salida = respuesta['salida']
-        canon.guardar_datos(salida['datos'])
-        canon.marcar_estado('investigado')
-        _traza(diario, 'dossier', {'datos': len(salida['datos'])})
+    # El tramo entero es una traza de §20: entra el brief y sale el libro
+    # planeado. La sesion sale del brief y junta esta traza con la de cada
+    # capitulo y con la del cierre.
+    with agentes.trazas.traza('preparar-novela', entrada=brief,
+                              sesion=sesion_de(proyecto),
+                              etiquetas=['preparacion']) as observacion:
+        # ---- Investigador. VD-04 corre antes de habilitar al arquitecto (§9).
+        if proyecto['estado'] == 'borrador':
+            respuesta = agentes.pedir(
+                'investigador',
+                {'brief': brief, 'busqueda_web': config['busqueda_web']},
+                lambda s: [comprobar_dossier(s['datos'])],
+            )
+            salida = respuesta['salida']
+            canon.guardar_datos(salida['datos'])
+            canon.marcar_estado('investigado')
+            _traza(diario, 'dossier', {'datos': len(salida['datos'])})
 
-    # ---- Arquitecto. Necesita el dossier cerrado.
-    if canon.estado() == 'investigado':
-        dossier = canon.datos()
-        conocidos = canon.ids_conocidos()
-        respuesta = agentes.pedir(
-            'arquitecto',
-            {'brief': brief, 'dossier': dossier},
-            lambda s: [
-                comprobar_numero_de_capitulos(
-                    len(s['capitulos']), brief['capitulos'], config['margenes']),
-                comprobar_referencias('arquitecto', s, conocidos),
-            ],
-        )
-        salida = respuesta['salida']
-        canon.guardar_personajes(salida['personajes'])
-        canon.guardar_fichas(salida['capitulos'])
-        canon.marcar_estado('estructurado')
-        _traza(diario, 'escaleta', {
-            'personajes': len(salida['personajes']),
-            'capitulos': len(salida['capitulos']),
+        # ---- Arquitecto. Necesita el dossier cerrado.
+        if canon.estado() == 'investigado':
+            dossier = canon.datos()
+            conocidos = canon.ids_conocidos()
+            respuesta = agentes.pedir(
+                'arquitecto',
+                {'brief': brief, 'dossier': dossier},
+                lambda s: [
+                    comprobar_numero_de_capitulos(
+                        len(s['capitulos']), brief['capitulos'], config['margenes']),
+                    comprobar_referencias('arquitecto', s, conocidos),
+                ],
+            )
+            salida = respuesta['salida']
+            canon.guardar_personajes(salida['personajes'])
+            canon.guardar_fichas(salida['capitulos'])
+            canon.marcar_estado('estructurado')
+            _traza(diario, 'escaleta', {
+                'personajes': len(salida['personajes']),
+                'capitulos': len(salida['capitulos']),
+            })
+
+        observacion.actualizar(output={
+            'estado': canon.estado(),
+            'datos': len(canon.datos()),
+            'personajes': len(canon.personajes()),
+            'capitulos': len(canon.fichas()),
         })
 
     return {'estado': canon.estado(), 'diario': diario}
@@ -99,13 +113,43 @@ def preparar(canon, agentes, config, diario=None):
 def escribir_capitulo(canon, agentes, config, numero, diario=None):
     """Un capitulo se da por bueno cuando pasa el gate, no cuando el escritor
     termina. Todo lo de aqui es codigo salvo las cuatro llamadas a agentes.
+
+    Un capitulo es una traza de §20, no una novela entera: es la unidad de
+    trabajo cerrada del sistema, y lo que une las trazas del libro es la sesion.
     """
     diario = diario if diario is not None else []
     canon.marcar_ficha(numero, 'en_curso')
     if canon.estado() == 'estructurado':
         canon.marcar_estado('escribiendo')
 
-    paquete = generar_contexto(canon, numero, config)
+    encargo = canon.ficha(numero) or {'numero': numero}
+    with agentes.trazas.traza(
+            'escribir-capitulo',
+            entrada={'capitulo': numero,
+                     'titulo': encargo.get('titulo'),
+                     'sinopsis': encargo.get('sinopsis'),
+                     'palabras_objetivo': encargo.get('palabras_objetivo')},
+            sesion=sesion_de(canon.proyecto()),
+            etiquetas=['capitulo'],
+            metadata={'capitulo': numero}) as observacion:
+        return _escribir_capitulo(
+            canon, agentes, config, numero, diario, observacion)
+
+
+def _escribir_capitulo(canon, agentes, config, numero, diario, observacion):
+    # El paquete de contexto es una lectura del canon que no cambia nada, asi
+    # que en la traza es un `retriever` (§20): es el sitio donde mirar cuando un
+    # capitulo sale raro y hay que saber que sabia el escritor.
+    with agentes.trazas.paso('reunir-contexto', 'retriever',
+                             entrada={'capitulo': numero}) as recogida:
+        paquete = generar_contexto(canon, numero, config)
+        recogida.actualizar(output={
+            'tokens': paquete['tokens'],
+            'cabe': paquete['cabe'],
+            'recortes': paquete['recortes'],
+            'bloques': list(paquete['bloques']),
+        })
+
     if not paquete['cabe']:
         # §7: si no cabe ni recortando, el capitulo se bloquea en lugar de
         # escribirse con el contexto mutilado.
@@ -113,6 +157,9 @@ def escribir_capitulo(canon, agentes, config, numero, diario=None):
         canon.marcar_estado('bloqueado')
         _traza(diario, 'bloqueado', {
             'capitulo': numero, 'motivo': 'el paquete de contexto no cabe'})
+        observacion.actualizar(
+            output={'aprobado': False, 'motivo': 'contexto'},
+            level='ERROR', status_message='el paquete de contexto no cabe')
         return {'aprobado': False, 'motivo': 'contexto'}
 
     if paquete['recortes']:
@@ -142,8 +189,17 @@ def escribir_capitulo(canon, agentes, config, numero, diario=None):
         _escribir(ruta, redaccion['texto'])
 
         # ---- VD-08, antes del validador
-        det = comprobar_capitulo_redactado(
-            redaccion['texto'], ficha['palabras_objetivo'], config['margenes'])
+        with agentes.trazas.paso(
+                'vd-08-extension', 'evaluator',
+                entrada={'palabras_objetivo': ficha['palabras_objetivo'],
+                         'margenes': config['margenes']},
+                metadata={'capitulo': numero, 'intento': intento}) as control:
+            det = comprobar_capitulo_redactado(
+                redaccion['texto'], ficha['palabras_objetivo'], config['margenes'])
+            control.actualizar(output=det)
+            control.nota('vd-08', det['ok'],
+                         comentario='; '.join(det['detalles']) or None)
+
         canon.guardar_intento(
             capitulo=numero,
             intento=intento,
@@ -168,7 +224,7 @@ def escribir_capitulo(canon, agentes, config, numero, diario=None):
         canon.guardar_revisiones(numero, intento, revisiones)
 
         # ---- Gate. Solo se calcula sobre revisiones que ya pasaron VD-10 (§9).
-        veredicto = gate(revisiones, config['gate'])
+        veredicto = _pasar_el_gate(agentes, config, revisiones, numero, intento)
         _traza(diario, 'gate', {
             'capitulo': numero,
             'intento': intento,
@@ -182,6 +238,13 @@ def escribir_capitulo(canon, agentes, config, numero, diario=None):
             canon.fijar_intento_aprobado(numero, intento)
             _volcar_en_el_canon(
                 canon, agentes, numero, redaccion['texto'], ficha, personajes, diario)
+            observacion.actualizar(output={
+                'aprobado': True, 'intento': intento,
+                'notas': notas(revisiones),
+                'media': redondear(veredicto['media'], 2),
+                'palabras': det['palabras'],
+            })
+            observacion.nota('intentos', intento)
             return {'aprobado': True, 'intento': intento, 'revisiones': revisiones}
 
         # §8: incidencias del validador mas los avisos deterministas.
@@ -197,12 +260,47 @@ def escribir_capitulo(canon, agentes, config, numero, diario=None):
         canon.marcar_intento(numero, i['intento'], 'propuesto' if i is mejor else 'descartado')
     canon.marcar_ficha(numero, 'bloqueado')
     canon.marcar_estado('bloqueado')
+    motivo = 'agotados los {} intentos'.format(config['gate']['max_intentos'])
     _traza(diario, 'bloqueado', {
         'capitulo': numero,
-        'motivo': 'agotados los {} intentos'.format(config['gate']['max_intentos']),
+        'motivo': motivo,
         'conservado': mejor['ruta'] if mejor else None,
     })
+    observacion.actualizar(
+        output={'aprobado': False, 'motivo': 'intentos',
+                'conservado': mejor['ruta'] if mejor else None},
+        level='ERROR', status_message=motivo)
+    observacion.nota('intentos', config['gate']['max_intentos'])
     return {'aprobado': False, 'motivo': 'intentos'}
+
+
+def _pasar_el_gate(agentes, config, revisiones, numero, intento):
+    """El gate de §8, observado como `evaluator` de §20.
+
+    Es codigo puro y no llama a nadie, pero es donde el sistema decide si un
+    capitulo vale: las tres notas y el veredicto salen de aqui como
+    puntuaciones, que es lo que luego se mira por capitulo y a lo largo del
+    libro. Quien decide sigue siendo el gate; esto solo lo cuenta.
+    """
+    with agentes.trazas.paso(
+            'gate', 'evaluator', entrada={'revisiones': revisiones,
+                                          'umbrales': config['gate']},
+            metadata={'capitulo': numero, 'intento': intento}) as juez:
+        veredicto = gate(revisiones, config['gate'])
+        juez.actualizar(output={
+            'aprueba': veredicto['aprueba'],
+            'media': redondear(veredicto['media'], 2),
+            'motivos': veredicto['motivos'],
+        })
+        for revision in revisiones:
+            reparos = revision.get('incidencias') or []
+            juez.nota(revision['dimension'], revision['nota'],
+                      comentario='; '.join(
+                          i['sugerencia'] for i in reparos)[:900] or None)
+        juez.nota('media', redondear(veredicto['media'], 2))
+        juez.nota('gate', veredicto['aprueba'],
+                  comentario='; '.join(veredicto['motivos']) or None)
+    return veredicto
 
 
 def _validar(agentes, config, texto, paquete, encargo, intento):
@@ -285,16 +383,28 @@ def cerrar(canon, agentes, ruta='retoques.md', diario=None):
     es una lista de tareas.
     """
     diario = diario if diario is not None else []
-    salida = agentes.pedir('editor_global', {
-        'resumenes': canon.resumenes(),
-        'escaleta': canon.fichas(),
-        'personajes': canon.personajes(),
-        'hilos_vivos': canon.hilos_vivos(),
-    })['salida']
+    resumenes = canon.resumenes()
 
-    _escribir(ruta, _render_retoques(salida['retoques'], canon))
-    canon.marcar_estado('editado')
-    _traza(diario, 'retoques', {'total': len(salida['retoques']), 'ruta': ruta})
+    with agentes.trazas.traza(
+            'cerrar-novela',
+            entrada={'capitulos_aprobados': len(resumenes),
+                     'hilos_vivos': len(canon.hilos_vivos())},
+            sesion=sesion_de(canon.proyecto()),
+            etiquetas=['cierre']) as observacion:
+        salida = agentes.pedir('editor_global', {
+            'resumenes': resumenes,
+            'escaleta': canon.fichas(),
+            'personajes': canon.personajes(),
+            'hilos_vivos': canon.hilos_vivos(),
+        })['salida']
+
+        _escribir(ruta, _render_retoques(salida['retoques'], canon))
+        canon.marcar_estado('editado')
+        _traza(diario, 'retoques', {'total': len(salida['retoques']), 'ruta': ruta})
+        observacion.actualizar(
+            output={'retoques': len(salida['retoques']), 'ruta': ruta})
+        observacion.nota('retoques', len(salida['retoques']))
+
     return {'retoques': salida['retoques'], 'ruta': ruta, 'diario': diario}
 
 

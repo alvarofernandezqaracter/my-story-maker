@@ -8,6 +8,7 @@ from .agentes import Agentes, ParadaDelProceso
 from .canon import Canon
 from .config import cargar_config, ErrorConfig
 from .contexto import generar_contexto
+from .entorno import cargar_entorno
 from .flujo import preparar, escribir_capitulo, cerrar, reanudar, siguiente_capitulo
 from .gate import media, notas
 from .servidor import arrancar as arrancar_interfaz
@@ -90,6 +91,8 @@ def _contar_diario(diario):
             _log('  cap. {} BLOQUEADO: {}'.format(e['capitulo'], e['motivo']))
         elif tipo == 'parada':
             _log('  parada: {}'.format(e['motivo']))
+        elif tipo == 'trazas':
+            _log('  trazas: {}'.format(e['motivo']))
         elif tipo == 'retoques':
             _log('  {} retoques en {}'.format(e['total'], e['ruta']))
 
@@ -293,14 +296,23 @@ def main(argv=None):
         _log(AYUDA)
         return 0
 
+    # El .env antes que nada: de ahi salen las credenciales de §12 y de §20, y
+    # el SDK de Langfuse las lee en el momento de construirse.
+    cargar_entorno()
+
     try:
         config = cargar_config(opciones.get('config') or 'config.json')
         ruta_canon = opciones.get('canon') or 'canon.db'
         canon = Canon(ruta_canon)
-        agentes = Agentes(config)
+        agentes = Agentes(config, aviso=lambda m: sys.stderr.write('trazas: {}\n'.format(m)))
+        if config['trazas']['activas'] and not agentes.trazas.activa:
+            # Las trazas no paran nada, pero callarse por que no salen deja a
+            # quien las busca mirando un panel vacio sin saber por que.
+            _log('trazas desactivadas: {}'.format(agentes.trazas.motivo))
         try:
             _ejecutar(comando, posicionales, opciones, canon, agentes, config, ruta_canon)
         finally:
+            agentes.trazas.cerrar()
             canon.cerrar()
     except ErrorConfig as e:
         sys.stderr.write('\n{}\n\nEl harness para al arrancar: una errata en un umbral'

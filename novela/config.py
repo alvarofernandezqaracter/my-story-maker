@@ -3,6 +3,13 @@
 # rango: una errata en un umbral sale mas barata descubierta al arrancar.
 import json
 import math
+import re
+
+# Lo que Langfuse acepta como nombre de entorno (§20). Se valida aqui, al
+# arrancar, por la misma razon que todo lo demas de este fichero: un entorno mal
+# escrito se descubre tres capitulos despues, cuando las trazas no aparecen
+# donde se las busca.
+ENTORNO_DE_TRAZAS = re.compile(r'^(?!langfuse)[a-z0-9_\-]{1,40}$')
 
 ROLES = [
     'investigador', 'arquitecto', 'escritor', 'validador', 'cronista', 'editor_global',
@@ -50,6 +57,9 @@ REGLAS = [
     ('margenes.palabras_aviso', _fraccion, 'fraccion en (0, 1)'),
     ('margenes.palabras_bloqueo', _fraccion, 'fraccion en (0, 1)'),
     ('margenes.parrafos_min', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
+    ('trazas.activas', lambda v: isinstance(v, bool), 'booleano'),
+    ('trazas.entorno', lambda v: isinstance(v, str) and bool(ENTORNO_DE_TRAZAS.match(v)),
+     'minusculas, digitos, guion o guion bajo, sin empezar por "langfuse"'),
     ('modelo_por_rol', _modelos_por_rol, 'un modelo por cada rol de §5'),
     ('busqueda_web', lambda v: isinstance(v, bool), 'booleano'),
 ]

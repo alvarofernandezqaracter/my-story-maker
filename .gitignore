@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.env
 config.real.json
 canon.db
 canon.db-journal

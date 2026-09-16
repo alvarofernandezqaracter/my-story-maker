@@ -199,8 +199,13 @@ class Motor:
 
     def _correr(self, accion):
         canon = Canon(self.ruta_canon)
-        agentes = Agentes(self.config)
+        # El aviso de las trazas entra por el diario, que es lo que la pagina ya
+        # lee: si la observabilidad se cae, se ve donde se esta mirando (§20).
+        agentes = Agentes(self.config, aviso=lambda m: self.diario.append(
+            {'tipo': 'trazas', 'motivo': m}))
         agentes.observador = self._anotar
+        if self.config['trazas']['activas'] and not agentes.trazas.activa:
+            self.diario.append({'tipo': 'trazas', 'motivo': agentes.trazas.motivo})
         try:
             if accion in ('preparar', 'todo'):
                 preparar(canon, agentes, self.config, self.diario)
@@ -220,6 +225,9 @@ class Motor:
         except Exception as e:  # el hilo no puede morir en silencio
             self.error = str(e)
         finally:
+            # El buzon de trazas se vacia al acabar la pasada y no al morir el
+            # servidor: si no, lo ultimo que hizo el flujo no llega nunca.
+            agentes.trazas.cerrar()
             canon.cerrar()
             self.terminado_en = time.time()
 

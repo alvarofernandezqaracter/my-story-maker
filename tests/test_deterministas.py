@@ -1,9 +1,18 @@
-# Lo determinista del harness: config (§12), gate (§8) y validadores (§9).
-# Estos tests no llaman a ningun agente ni tocan disco.
+# Lo determinista del harness: config (§12), gate (§8), validadores (§9) y la
+# capa de trazas (§20). Estos tests no llaman a ningun agente ni salen a la red;
+# los de trazas comprueban justamente que con las trazas apagadas nadie sale.
 import copy
+import json
+import os
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
+from novela.agentes import reparto_de_tokens
 from novela.config import validar_config, ErrorConfig
+from novela.entorno import cargar_entorno, leer_env
+from novela.trazas import MUDA, Trazas, enmascarar, sesion_de
 from novela.gate import gate, mejor_intento, incidencias_ordenadas
 from novela.validadores import (
     comprobar_salida_de_agente, comprobar_dossier, comprobar_eventos,
@@ -19,6 +28,7 @@ CONFIG = {
     'contexto': {'tope_contexto': 40000, 'ventana_resumenes': 3, 'palabras_enganche': 400},
     'validador': {'modo': 'unico'},
     'interfaz': {'puerto': 8787},
+    'trazas': {'activas': False, 'entorno': 'pruebas'},
     'margenes': {
         'capitulos_min': 0.8, 'capitulos_max': 1.2,
         'palabras_aviso': 0.15, 'palabras_bloqueo': 0.4, 'parrafos_min': 3,
@@ -79,6 +89,22 @@ class TestConfig(unittest.TestCase):
         roto = copy.deepcopy(CONFIG)
         roto['gate']['media_minima'] = 9
         with self.assertRaisesRegex(ErrorConfig, 'media_minima'):
+            validar_config(roto)
+
+    def test_el_entorno_de_trazas_tiene_que_valer_para_langfuse(self):
+        # Langfuse no acepta mayusculas, espacios ni nombres suyos, y un entorno
+        # mal escrito no falla: manda las trazas a otro sitio (§20).
+        for entorno in ('Desarrollo', 'con espacio', 'langfuse-mio', '', 7):
+            roto = copy.deepcopy(CONFIG)
+            roto['trazas']['entorno'] = entorno
+            with self.subTest(entorno=entorno):
+                with self.assertRaisesRegex(ErrorConfig, 'trazas.entorno'):
+                    validar_config(roto)
+
+    def test_las_trazas_se_encienden_y_se_apagan_con_un_booleano(self):
+        roto = copy.deepcopy(CONFIG)
+        roto['trazas']['activas'] = 'si'
+        with self.assertRaisesRegex(ErrorConfig, 'trazas.activas'):
             validar_config(roto)
 
     def test_el_margen_de_bloqueo_tiene_que_superar_al_de_aviso(self):
@@ -228,6 +254,115 @@ class TestValidadores(unittest.TestCase):
         self.assertFalse(comprobar_revisiones([revision('continuidad', 7),
                                                revision('anacronismos', 3),
                                                revision('logica_ritmo', 3)])['ok'])
+
+
+# -------------------------------------------------------------------- §20
+
+class TestEntorno(unittest.TestCase):
+    """El .env de §20: las credenciales no viven en config.json."""
+
+    def _escribir(self, contenido):
+        carpeta = tempfile.mkdtemp(prefix='novela-env-')
+        ruta = Path(carpeta) / '.env'
+        ruta.write_text(contenido, encoding='utf-8')
+        return str(ruta)
+
+    def test_lee_pares_y_quita_comillas_y_comentarios(self):
+        ruta = self._escribir('# comentario\nA=1\nB="dos"\nC=\'tres\'\n\nsin_igual\n')
+        self.assertEqual(leer_env(ruta), {'A': '1', 'B': 'dos', 'C': 'tres'})
+
+    def test_sin_fichero_no_es_un_error(self):
+        self.assertEqual(leer_env('no-existe-este-fichero.env'), {})
+
+    def test_el_entorno_real_gana_sobre_el_fichero(self):
+        ruta = self._escribir('NOVELA_PRUEBA_ENV=del-fichero\n')
+        with mock.patch.dict(os.environ, {'NOVELA_PRUEBA_ENV': 'de-la-consola'}):
+            cargar_entorno(ruta)
+            self.assertEqual(os.environ['NOVELA_PRUEBA_ENV'], 'de-la-consola')
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop('NOVELA_PRUEBA_ENV', None)
+            cargar_entorno(ruta)
+            self.assertEqual(os.environ['NOVELA_PRUEBA_ENV'], 'del-fichero')
+            os.environ.pop('NOVELA_PRUEBA_ENV', None)
+
+
+class TestTrazas(unittest.TestCase):
+    """La capa de §20 apagada tiene que ser indistinguible de no existir."""
+
+    def test_apagada_por_configuracion_no_arranca_cliente(self):
+        trazas = Trazas({**CONFIG, 'trazas': {'activas': False, 'entorno': 'pruebas'}})
+        self.assertFalse(trazas.activa)
+        self.assertIn('activas', trazas.motivo)
+
+    def test_apagada_devuelve_objetos_mudos_que_aceptan_todo(self):
+        trazas = Trazas(CONFIG)
+        with trazas.traza('x', entrada={'a': 1}) as t:
+            t.actualizar(output={'b': 2})
+            t.nota('media', 4.0)
+            with trazas.paso('y', 'generation', entrada=1) as p:
+                self.assertIs(p, MUDA)
+        self.assertIs(t, MUDA)
+        trazas.cerrar()
+
+    def test_encendida_sin_credencial_se_queda_muda_y_lo_dice(self):
+        # Sin las dos claves en el entorno no hay cliente. El .env no se lee
+        # aqui: el test no puede depender del fichero de quien lo lance.
+        entorno = {k: v for k, v in os.environ.items() if not k.startswith('LANGFUSE_')}
+        with mock.patch.dict(os.environ, entorno, clear=True), \
+                mock.patch('novela.trazas.cargar_entorno', lambda *a, **k: []):
+            trazas = Trazas({**CONFIG, 'trazas': {'activas': True, 'entorno': 'pruebas'}})
+        self.assertFalse(trazas.activa)
+        self.assertIn('LANGFUSE_', trazas.motivo)
+
+    def test_un_fallo_apaga_las_trazas_y_no_sube(self):
+        trazas = Trazas(CONFIG)
+        avisos = []
+        trazas.aviso = avisos.append
+        trazas._cliente = object()          # basta con que no sea None
+        self.assertTrue(trazas.activa)
+        trazas.averiado(RuntimeError('la red no va'))
+        self.assertFalse(trazas.activa)
+        self.assertEqual(len(avisos), 1)
+        # El segundo fallo no vuelve a avisar: se avisa una vez y se calla.
+        trazas.averiado(RuntimeError('otra vez'))
+        self.assertEqual(len(avisos), 1)
+
+    def test_la_mascara_tapa_lo_que_parece_credencial(self):
+        limpio = enmascarar(data={'texto': 'la clave es sk-ant-api03-abcdef123456'})
+        self.assertNotIn('sk-ant-api03', json.dumps(limpio))
+        self.assertIn('CREDENCIAL_OCULTA', json.dumps(limpio))
+        # Lo que no lo parece se queda como estaba, byte a byte.
+        intacto = {'texto': 'Sevilla, 1587', 'nota': 4}
+        self.assertEqual(enmascarar(data=intacto), intacto)
+
+    def test_la_sesion_sale_del_brief_y_distingue_novelas(self):
+        uno = {'epoca': 'Sevilla, 1587', 'premisa': 'p', 'tono': 't',
+               'capitulos': 6, 'palabras_por_capitulo': 1800}
+        self.assertEqual(sesion_de(uno), sesion_de(dict(uno)))
+        self.assertNotEqual(sesion_de(uno), sesion_de({**uno, 'premisa': 'otra'}))
+        self.assertIsNone(sesion_de(None))
+
+
+class TestRepartoDeTokens(unittest.TestCase):
+    """Las cubetas de §20 no se solapan: cada token en una sola clave."""
+
+    def test_traduce_el_uso_del_sdk_y_el_de_la_cli(self):
+        class Uso:                                   # lo que devuelve el SDK
+            input_tokens = 100
+            output_tokens = 50
+            cache_read_input_tokens = 7
+            cache_creation_input_tokens = 0
+
+        self.assertEqual(reparto_de_tokens(Uso()),
+                         {'input': 100, 'output': 50, 'cache_read_input_tokens': 7})
+        self.assertEqual(
+            reparto_de_tokens({'input_tokens': 2, 'output_tokens': 9}),
+            {'input': 2, 'output': 9})
+
+    def test_sin_datos_no_se_inventa_nada(self):
+        self.assertIsNone(reparto_de_tokens(None))
+        self.assertIsNone(reparto_de_tokens({}))
+        self.assertIsNone(reparto_de_tokens({'input_tokens': 0}))
 
 
 if __name__ == '__main__':

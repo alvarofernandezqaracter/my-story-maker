@@ -29,6 +29,9 @@ class EntornoDeNovela(unittest.TestCase):
         self.dir = tempfile.mkdtemp(prefix='novela-')
         self.cwd = os.getcwd()
         self.config = cargar_config(str(Path(self.cwd) / 'config.json'))
+        # Los tests no mandan trazas: correrian contra el Langfuse de quien los
+        # lance y este repo se prueba sin red (§20).
+        self.config = {**self.config, 'trazas': {**self.config['trazas'], 'activas': False}}
         os.chdir(self.dir)
         self.canon = Canon(str(Path(self.dir) / 'canon.db'))
         self.agentes = Agentes(self.config)

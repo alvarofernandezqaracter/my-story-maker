@@ -25,6 +25,9 @@ class EntornoDeInterfaz(unittest.TestCase):
     def setUp(self):
         self.raiz = Path(os.getcwd())
         self.config = cargar_config(str(self.raiz / 'config.json'))
+        # Los tests no mandan trazas: correrian contra el Langfuse de quien los
+        # lance y este repo se prueba sin red (§20).
+        self.config = {**self.config, 'trazas': {**self.config['trazas'], 'activas': False}}
         self.dir = tempfile.mkdtemp(prefix='novela-ui-')
         self.canon = Canon(str(Path(self.dir) / 'canon.db'))
         self.motor = Motor(self.config, str(Path(self.dir) / 'canon.db'))
@@ -145,6 +148,9 @@ class TestFlujo(unittest.TestCase):
         self.cwd = os.getcwd()
         self.raiz_repo = Path(self.cwd)
         self.config = cargar_config(str(Path(self.cwd) / 'config.json'))
+        # Los tests no mandan trazas: correrian contra el Langfuse de quien los
+        # lance y este repo se prueba sin red (§20).
+        self.config = {**self.config, 'trazas': {**self.config['trazas'], 'activas': False}}
         self.dir = tempfile.mkdtemp(prefix='novela-motor-')
         os.chdir(self.dir)
         self.ruta = str(Path(self.dir) / 'canon.db')

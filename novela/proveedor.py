@@ -8,6 +8,17 @@
 import json
 
 MAX_TOKENS = 32000
+PENSAMIENTO = 'adaptive'
+ESFUERZO = 'high'
+
+# Lo que viaja en cada peticion, para que la traza de §20 diga con que se
+# genero cada capitulo. Sale de las constantes de arriba y no de una copia:
+# una traza que miente sobre los parametros es peor que no tenerla.
+PARAMETROS = {
+    'max_tokens': MAX_TOKENS,
+    'thinking': PENSAMIENTO,
+    'effort': ESFUERZO,
+}
 
 _cliente = None
 
@@ -71,8 +82,8 @@ def llamar_al_proveedor(rol, modelo, instrucciones, entrada):
         model=modelo,
         max_tokens=MAX_TOKENS,
         system=instrucciones + instruccion_de_formato(rol),
-        thinking={'type': 'adaptive'},
-        output_config={'effort': 'high'},
+        thinking={'type': PENSAMIENTO},
+        output_config={'effort': ESFUERZO},
         messages=[{'role': 'user',
                    'content': json.dumps(entrada, indent=2, ensure_ascii=False)}],
     ) as flujo:

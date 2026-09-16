@@ -25,6 +25,10 @@
     "palabras_bloqueo": 0.4,
     "parrafos_min": 3
   },
+  "trazas": {
+    "activas": true,
+    "entorno": "produccion"
+  },
   "modelo_por_rol": {
     "investigador": "claude-opus-5",
     "arquitecto": "claude-opus-5",

@@ -81,6 +81,9 @@ function linea(e) {
       return { marca: '✗', tono: 'mal', texto: `cap. ${e.capitulo} BLOQUEADO: ${e.motivo}` };
     case 'parada':
       return { marca: '✗', tono: 'mal', texto: `parada: ${e.motivo}` };
+    case 'trazas':
+      // Aviso, no error: sin observabilidad la novela se escribe igual (§20).
+      return { marca: '!', texto: `trazas: ${e.motivo}` };
     case 'retoques':
       return { marca: '✓', tono: 'bien', texto: `${e.total} retoques en ${e.ruta}` };
     default:
