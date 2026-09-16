@@ -688,6 +688,10 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `bb9253c` | 2026-09-16 | docs(spec): §17 tabla de commits regenerada para 0.5.1 |
 | `bb183ed` | 2026-09-16 | docs(spec): §18 el stack pasa a python y cambia la estructura del repo |
 | `0b11071` | 2026-09-16 | docs(spec): §16 entrada 0.6.0 y version en cabecera |
+| `72cba61` | 2026-09-16 | docs(spec): §17 tabla de commits regenerada para 0.6.0 |
+| `b5ff9c1` | 2026-09-16 | docs(spec): §12 tercer modo de ejecucion contra la CLI de Claude Code |
+| `82658f6` | 2026-09-16 | docs(spec): §18 el modo claude_code no anade dependencia de python |
+| `7a32058` | 2026-09-16 | docs(spec): §16 entrada 0.7.0 y version en cabecera |
 
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
