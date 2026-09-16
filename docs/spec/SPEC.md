@@ -445,6 +445,8 @@ Un único `config.json` en la raíz del proyecto, junto al canon. Aquí vive tod
 
 El puerto de la interfaz vive aquí y no en el código por la misma regla que el resto: es un número que se toca sin tocar código, y en una máquina con el 8787 ocupado hay que poder cambiarlo. `python -m novela ui --puerto N` lo pisa para un arranque suelto, igual que `--config` y `--canon`.
 
+La interfaz de §19 llama **perfil** a cada `config*.json` de la raíz y deja elegir con cuál se lanza una pasada. No es un concepto nuevo: es este mismo fichero, y lo que cambia de uno a otro es el modo de ejecución y los modelos. El que no valide no sale en la lista, por la misma razón por la que el harness para al arrancar.
+
 **Por qué dos márgenes de palabras.** VD-08 tiene que distinguir el capítulo que se queda corto del que no sirve. Dentro de `palabras_aviso` el texto vale y la desviación viaja como aviso al reintento; pasado `palabras_bloqueo` no se gasta la llamada al validador y se reintenta la generación. Con un solo umbral había que elegir entre no filtrar nada o tirar capítulos aprovechables.
 
 `busqueda_web` queda activada, como estaba, pero la búsqueda real no entra hasta F6 (§14): hasta entonces el investigador la ignora y el parámetro está puesto para no tocar el esquema más tarde.
