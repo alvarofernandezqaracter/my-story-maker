@@ -16,7 +16,6 @@ from novela.informe import agregar, texto
 from novela.trazas import id_de_traza
 from novela.trazas_cc import traza_de
 from novela.trazas_hook import procesar, situar
-from novela.transcripcion import llamadas, slug_de
 
 BRIEF = {
     'epoca': 'Sevilla, 1587',
@@ -157,45 +156,6 @@ class LaTrazaCompartida(unittest.TestCase):
     def test_dos_tramos_distintos_no_comparten_traza(self):
         self.assertNotEqual(traza_de('novela-abc', 'cap-04'),
                             traza_de('novela-abc', 'cap-05'))
-
-
-class LeerElTranscript(unittest.TestCase):
-    """Las llamadas ya hechas, sacadas del JSONL de la sesion (§22)."""
-
-    def setUp(self):
-        self.dir = tempfile.mkdtemp()
-        lineas = [
-            {'message': {'content': [
-                {'type': 'tool_use', 'id': 't1', 'name': 'Agent',
-                 'input': {'subagent_type': 'novela-escritor', 'prompt': 'cap-01'}}]},
-             'sessionId': 's1', 'timestamp': '2026-09-17T10:00:00Z'},
-            {'message': {'content': [
-                {'type': 'tool_use', 'id': 't2', 'name': 'Agent',
-                 'input': {'subagent_type': 'Explore', 'prompt': 'busca'}}]},
-             'sessionId': 's1', 'timestamp': '2026-09-17T10:01:00Z'},
-            {'message': {'content': [{'type': 'tool_result', 'tool_use_id': 't2'}]},
-             'toolUseResult': respuesta(), 'timestamp': '2026-09-17T10:02:00Z'},
-            {'message': {'content': [{'type': 'tool_result', 'tool_use_id': 't1'}]},
-             'toolUseResult': respuesta(), 'timestamp': '2026-09-17T10:03:00Z'},
-        ]
-        Path(self.dir, 'sesion.jsonl').write_text(
-            '\n'.join(json.dumps(l) for l in lineas), encoding='utf-8')
-
-    def test_empareja_la_llamada_con_su_resultado(self):
-        encontradas = llamadas(self.dir)
-        self.assertEqual(len(encontradas), 1)
-        momento, datos = encontradas[0]
-        self.assertEqual(datos['tool_input']['subagent_type'], 'novela-escritor')
-        self.assertEqual(datos['tool_response']['totalTokens'], 30624)
-        self.assertEqual(momento.hour, 10)
-
-    def test_los_subagentes_ajenos_no_entran(self):
-        tipos = [d['tool_input']['subagent_type'] for _, d in llamadas(self.dir)]
-        self.assertNotIn('Explore', tipos)
-
-    def test_el_slug_del_proyecto_es_la_ruta_con_guiones(self):
-        self.assertNotIn(' ', slug_de(self.dir))
-        self.assertNotIn(os.sep, slug_de(self.dir))
 
 
 def observacion(nombre, tipo, origen, capitulo=None, uso=None, coste=0.0, modelo=None):

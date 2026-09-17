@@ -6,4 +6,4 @@ novelas: lee el canon en ficheros, sirve la interfaz de §19 y traza lo que pasa
 (§20, §22).
 """
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'

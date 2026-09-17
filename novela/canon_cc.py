@@ -10,7 +10,18 @@
 import json
 from pathlib import Path
 
-from .util import redondear
+from decimal import Decimal, ROUND_HALF_UP
+
+
+def redondear(valor, decimales=2):
+    """Redondea a medio arriba.
+
+    Python redondea a medio par y eso, en los pocos empates exactos que dan los
+    flotantes, cambia el texto de un mensaje. Aqui se fija el criterio para que
+    las cifras que ve quien mira no dependan de ese detalle.
+    """
+    paso = Decimal(1).scaleb(-decimales)
+    return float(Decimal(repr(float(valor))).quantize(paso, rounding=ROUND_HALF_UP))
 
 
 def promedio(valores):

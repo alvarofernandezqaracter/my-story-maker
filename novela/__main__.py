@@ -13,7 +13,6 @@ from .config import cargar_config, ErrorConfig
 from .entorno import cargar_entorno
 from .informe import construir as construir_informe, texto as texto_informe
 from .servidor import arrancar as arrancar_interfaz
-from .transcripcion import exportar as exportar_transcript
 from .trazas_cc import exportar as exportar_trazas_cc
 from .trazas_hook import desde_stdin as trazar_desde_stdin
 
@@ -27,8 +26,6 @@ La novela se escribe desde Claude Code: abre el repositorio y lanza
                                    canon de novela-cc/ y no escribe en el
   novela trazar [--modelo M]       manda a Langfuse el canon de novela-cc/,
                                    reconstruido (§20)
-  novela trazar --transcript       lo mismo pero desde el transcript de la
-                                   sesion: con prompt, tokens, modelo y latencia
   novela hook-traza                lee un PostToolUse por stdin y traza la
                                    llamada al subagente. Lo llama el hook (§22)
   novela informe-trazas [--sesion S] [--salida F] [--json]
@@ -85,23 +82,9 @@ def _ejecutar(comando, posicionales, opciones, config):
             log=_log)
 
     elif comando == 'trazar':
-        # Quien orquesta es una sesion de Claude Code, asi que no hay una capa
-        # de agentes en la que interceptar la llamada. Quedan dos maneras de
-        # llegar a Langfuse despues, y dicen cual es cada una.
-        if opciones.get('transcript'):
-            # Lo que el hook habria visto si hubiera estado puesto: sale del
-            # transcript de la sesion, que guarda cada llamada al tool Agent con
-            # su gasto y su hora real (§22).
-            resultado = exportar_transcript(
-                ruta_config=opciones.get('config') or 'config.json', aviso=_aviso)
-            if not resultado['enviado']:
-                _log('no se mando nada: {}'.format(resultado['motivo']))
-                return
-            _log('{} de {} llamada(s) trazadas desde {}'.format(
-                resultado['trazadas'], resultado['llamadas'], resultado['directorio']))
-            _log('  con prompt, tokens, modelo y latencia reales')
-            return
-
+        # El hook de §22 traza cada llamada en vivo y trae el gasto. Esto trae
+        # lo otro: las notas del gate, el veredicto y el escalon de VD-08, que
+        # no son llamadas a ningun subagente y solo estan en el canon.
         modelo = opciones.get('modelo')
         resultado = exportar_trazas_cc(
             config, modelo=modelo if isinstance(modelo, str) else None, aviso=_aviso)

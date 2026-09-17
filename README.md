@@ -106,17 +106,17 @@ novela se escribe. Y no puede romper nada — un hook que revienta ensuciaría l
 sesión del orquestador, así que devuelve 0 siempre y deja además su línea en un
 diario local.
 
-Para una novela escrita **antes** de poner el hook hay dos rescates:
+El hook trae el gasto y ninguna nota. La otra mitad la trae esto:
 
 ```bash
-python -m novela trazar --transcript   # del transcript de la sesión, con gasto real
-python -m novela trazar                # del canon, reconstruido: sin tokens ni coste
+python -m novela trazar   # del canon: las notas, el veredicto del gate y VD-08
 ```
 
-El segundo levanta el árbol entero desde `novela-cc/` y va marcado como
-reconstruido. Salen el árbol, las notas, los veredictos y una puntuación extra
-que dice si la suma del gate cuadra con la fórmula; no salen la latencia, los
-tokens ni el coste, porque nadie los guardó.
+Levanta el árbol entero desde `novela-cc/` con **todas las puntuaciones** —las
+tres notas de cada intento, la media, el veredicto y una extra que dice si la
+suma del gate cuadra con la fórmula— y va marcado como reconstruido, porque no
+trae tokens ni coste. Hace falta porque lo que el orquestador decide solo no es
+una llamada a nadie: el hook no lo ve.
 
 Una traza por unidad de trabajo —la preparación, **cada capítulo** y el cierre—,
 agrupadas en una sesión por novela. Las tres notas del validador y la media
@@ -145,8 +145,7 @@ el cuestionario para que todas las pasadas pregunten lo mismo.
 | Comando | Qué hace |
 |---|---|
 | `ui [--puerto N]` | Abre la interfaz web. Mira y no escribe |
-| `trazar [--modelo M]` | Manda a Langfuse el canon de `novela-cc/`, reconstruido |
-| `trazar --transcript` | Lo mismo desde el transcript de la sesión, con gasto real |
+| `trazar [--modelo M]` | Manda a Langfuse las notas y los veredictos del canon |
 | `informe-trazas [--sesion S] [--salida F] [--json]` | Agrega el gasto de una novela |
 | `hook-traza` | Lo llama el hook, no una persona |
 | `ui.bat` | `ui` en Windows, buscando el intérprete por su cuenta |
@@ -173,7 +172,7 @@ Opción global: `--config <ruta>`.
 python -m unittest discover -s tests -t .
 ```
 
-Cincuenta y nueve, sin red y sin coste. Cubren el lector del canon, la auditoría
+Cincuenta y seis, sin red y sin coste. Cubren el lector del canon, la auditoría
 del gate, la API de la interfaz, el árbol de trazas reconstruido y el hook.
 
 **La orquestación en sí no tiene tests**, y no es un olvido: lo que hace es una

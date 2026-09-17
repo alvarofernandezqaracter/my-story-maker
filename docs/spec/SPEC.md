@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.0.0
+version: 1.1.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -527,6 +527,27 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.1.0] — 2026-09-17
+
+Limpieza de lo que sobraba en `novela/`, y una corrección: la reconstrucción
+desde el canon no era prescindible, era la mitad que falta.
+
+**Eliminado**
+- §18, §22. El comando `trazar --transcript` y su módulo. Sacaban de la
+  transcripción de una sesión lo que el hook habría visto de estar puesto: un
+  andamio para las novelas escritas antes del hook, que con el hook en su sitio
+  no vuelve a hacer falta.
+- `novela/util.py`. `numero_corto` no lo llamaba nadie desde 1.0.0 y `redondear`
+  lo usaba un solo módulo, que ahora lo lleva dentro.
+
+**Cambiado**
+- §20. La reconstrucción desde el canon se presentaba como un apaño para lo ya
+  escrito. Es al contrario: **el hook trae el gasto y ninguna puntuación, y la
+  reconstrucción trae todas las puntuaciones y ningún gasto**. Las notas, la
+  media, el veredicto del gate, el escalón de VD-08 y `gate-cuadra` salen solo de
+  ahí, porque lo que el orquestador decide por su cuenta no es una llamada a
+  nadie y el hook no lo ve. Sin esa pieza, DA-06 se queda sin datos.
+
 ### [1.0.0] — 2026-09-17
 
 Primera versión que no es borrador. El documento describe **un solo sistema**: la
@@ -636,14 +657,13 @@ el loop de intentos y el bloqueo.
 |---|---|
 | `ui [--puerto N]` | Abre la interfaz en el navegador (§19). Mira y no escribe |
 | `trazar [--modelo M]` | Manda a Langfuse el canon reconstruido (§20) |
-| `trazar --transcript` | Lo mismo desde el transcript de la sesión, con prompt, tokens, modelo y latencia reales (§22) |
 | `hook-traza` | Lee un `PostToolUse` por stdin y traza la llamada al subagente. Lo llama el hook, no una persona (§22) |
 | `informe-trazas [--sesion S] [--salida F] [--json]` | Lee de vuelta las trazas de una novela y agrega el gasto (§22) |
 | `ui.bat` | Lo mismo que `ui` en Windows, buscando el intérprete por su cuenta |
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: cincuenta y nueve, en dos
+**Tests.** `python -m unittest discover -s tests -t .`: cincuenta y seis, en dos
 ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, el árbol de trazas
 reconstruido y el hook de §22. Los dos últimos corren contra una capa de mentira
@@ -791,10 +811,13 @@ media, el recuento de graves y los motivos de *todos* los intentos, y en los
 demás ficheros lo que produjo cada rol. Con eso se levanta el árbol entero
 después de los hechos.
 
-Sigue haciendo falta aunque exista el hook, por dos razones: sirve para una
-novela escrita **antes** de que el hook estuviera puesto, y es lo único que puede
-trazar lo que el orquestador decidió por su cuenta —el gate, VD-08—, que no es una
-llamada a ningún subagente y por tanto no pasa por el hook.
+**No es una segunda versión del hook: es la otra mitad.** El hook trae el gasto
+—tokens, latencia, coste— y ninguna puntuación. Esta trae **todas las
+puntuaciones** —las tres notas, la media, el veredicto del gate, el escalón de
+VD-08 y `gate-cuadra`— y ningún gasto. Y no puede ser de otro modo: lo que el
+orquestador decide por su cuenta no es una llamada a nadie, así que el hook no lo
+ve. Sin esta pieza, Langfuse diría lo que cuesta una novela y nada de lo que vale,
+y DA-06 seguiría sin datos que mirar.
 
 Se lanza con `python -m novela trazar`, o con un botón en el panel de trazas de
 §19 que antes enseña el recuento de lo que saldría. Exportar deja marca en un
@@ -917,11 +940,6 @@ El hook traduce los ocho subagentes a los seis roles de §5 —los tres validado
 comparten nombre de observación y se distinguen por su dimensión— y saca el
 capítulo y el intento del prompt. Así una nota de continuidad se compara con las
 de cualquier otra pasada sin traducir nada.
-
-**Para lo ya escrito, el transcript.** `python -m novela trazar --transcript` saca
-de la transcripción de la sesión exactamente lo que el hook habría visto si
-hubiera estado puesto, con su gasto y su hora real. Es el mismo código de proceso:
-un solo camino para lo de ahora y para lo de antes.
 
 ### El informe
 
