@@ -54,20 +54,30 @@ function ponerCapitular(caja) {
   }
 }
 
-// Lo que el canon no sabe se dice, no se rellena. Escenas, focalizador y
-// gancho final no existen en el modelo de datos: la unidad de escritura sigue
-// siendo el capitulo entero (DA-09) y la ficha no guarda punto de vista.
-function dato(nombre, valor) {
-  const dt = document.createElement('dt');
-  dt.textContent = nombre;
-  const dd = document.createElement('dd');
-  if (valor === null || valor === undefined || valor === '') {
-    dd.textContent = 'sin datos todavía';
-    dd.dataset.vacio = 'si';
-  } else {
+// Lo que el canon no sabe se sigue diciendo, pero una vez (§19). Escenas,
+// focalizador y gancho final no existen en el modelo de datos -la unidad de
+// escritura sigue siendo el capitulo entero (DA-09) y la ficha no guarda punto
+// de vista-, y repetir «sin datos todavia» cuatro veces seguidas tapaba los dos
+// campos que si tenian valor. Los vacios se cuentan en una linea y el detalle de
+// cuales son se lee al pasar por encima.
+function pintarDatos(caja, hueco, campos) {
+  caja.textContent = '';
+  const pendientes = [];
+  for (const [nombre, valor] of campos) {
+    if (valor === null || valor === undefined || valor === '') {
+      pendientes.push(nombre);
+      continue;
+    }
+    const dt = document.createElement('dt');
+    dt.textContent = nombre;
+    const dd = document.createElement('dd');
     dd.textContent = String(valor);
+    caja.append(dt, dd);
   }
-  return [dt, dd];
+  hueco.hidden = pendientes.length === 0;
+  hueco.textContent = pendientes.length === 1
+    ? '1 campo pendiente' : `${pendientes.length} campos pendientes`;
+  hueco.title = `${pendientes.join(', ')} — el canon no los guarda todavía (§19)`;
 }
 
 export function crearLectura(ctx) {
@@ -195,26 +205,23 @@ export function crearLectura(ctx) {
   }
 
   function pintarMetadatos(datos) {
-    const caja = $('metadatos');
-    caja.textContent = '';
-    caja.append(
-      ...dato('focalizador', null),
-      ...dato('día de ficción', datos.fecha),
-      ...dato('acto', datos.acto),
-      ...dato('palabras', datos.palabras),
-    );
+    pintarDatos($('metadatos'), $('metadatos-pendientes'), [
+      ['focalizador', null],
+      ['día de ficción', datos.fecha],
+      ['acto', datos.acto],
+      ['palabras', datos.palabras],
+    ]);
   }
 
   function pintarFichaDatos(datos) {
-    const caja = $('ficha-datos');
-    caja.textContent = '';
-    caja.append(
-      ...dato('focalizador por escena', null),
-      ...dato('media', datos.media),
-      ...dato('escenas', null),
-      ...dato('palabras', datos.palabras),
-      ...dato('gancho final', null),
-    );
+    pintarDatos($('ficha-datos'), $('ficha-pendientes'), [
+      ['media', datos.media],
+      ['palabras', datos.palabras],
+      ['intento aprobado', datos.intento],
+      ['focalizador por escena', null],
+      ['escenas', null],
+      ['gancho final', null],
+    ]);
   }
 
   // Deuda narrativa: los hilos que un capitulo abrio y ninguno posterior cerro.
