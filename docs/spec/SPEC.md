@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.12.0
+version: 1.12.1
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -548,6 +548,15 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.12.1] — 2026-09-17
+
+**Añadido**
+- §20. El rol de cada observación viaja también en sus metadatos. Motivo: la
+  regla que dispara un juez no puede filtrar por el nombre de la observación
+  —sus columnas son `metadata`, `type`, `environment` y pocas más—, así que sin
+  una clave filtrable la regla puntuaría todo lo que entrase. Salió al crear las
+  dos primeras reglas contra la API.
+
 ### [1.12.0] — 2026-09-17
 
 **Añadido**
@@ -883,7 +892,7 @@ el loop de intentos y el bloqueo.
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: setenta y dos, en dos
+**Tests.** `python -m unittest discover -s tests -t .`: setenta y tres, en dos
 ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
@@ -1251,6 +1260,11 @@ restricción de la herramienta y manda sobre el diseño: un evaluador lee la
 entrada, la salida y los metadatos de **su** observación, y no puede mirar ni a
 sus hermanas ni a sus hijas. La del escritor es la única que lleva las dos
 mitades de lo que hay que juzgar, y por eso viajan juntas.
+
+Por eso mismo **el rol viaja en los metadatos** aunque ya sea el nombre de la
+observación: la regla que decide a quién se le suelta el juez filtra por
+`metadata`, `type`, `environment` y poco más, y el nombre de la observación no
+está entre sus columnas. Sin esa clave la regla puntuaría todo lo que entrase.
 
 **El prompt del juez no está en este repositorio, y es deliberado.** Vive solo en
 Langfuse. La novela la escribe una sesión de Claude Code cuyo escritor tiene

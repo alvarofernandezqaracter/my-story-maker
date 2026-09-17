@@ -507,6 +507,18 @@ class TestArbolDeTrazas(CanonDelegadoDePrueba):
         # Tambien el descartado: es la mitad de la comparacion que interesa.
         self.assertIn('Segunda', segundo['output']['texto'])
 
+    def test_el_rol_viaja_en_la_metadata_y_no_solo_en_el_nombre(self):
+        # Las reglas de evaluacion de §20 no pueden filtrar por el nombre de la
+        # observacion: sin esta clave no hay forma de soltarle un juez al
+        # escritor y solo al escritor, y la regla se queda puntuandolo todo.
+        self.correr()
+        for observacion in self.escritores():
+            self.assertEqual(observacion['metadata']['rol'], 'escritor')
+        roles = {o['metadata'].get('rol') for o in self.capa.arbol
+                 if o['tipo'] == 'agent'}
+        self.assertEqual(roles, {'investigador', 'arquitecto', 'escritor',
+                                 'validador', 'cronista'})
+
     def test_con_trazas_texto_apagada_la_novela_no_sale_de_casa(self):
         self.config = {**self.config,
                        'trazas': {**self.config['trazas'], 'texto': False}}

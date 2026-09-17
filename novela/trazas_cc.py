@@ -74,6 +74,15 @@ def _meta(**extra):
     return base
 
 
+# El rol viaja en la metadata aunque ya sea el nombre de la observacion, y no es
+# redundancia: las reglas de evaluacion de §20 filtran por `metadata`, `type`,
+# `environment` y unas pocas columnas mas, y el nombre de la observacion no esta
+# entre ellas. Sin esta clave no hay forma de soltarle un juez al escritor y solo
+# al escritor.
+ROLES = ('investigador', 'arquitecto', 'escritor', 'validador', 'cronista',
+         'editor_global')
+
+
 def disponibilidad(config):
     """Si la capa de §20 podria mandar algo, sin construir el cliente.
 
@@ -157,12 +166,12 @@ def _preparar(trazas, canon, sesion):
                       etiquetas=ETIQUETAS, metadata=_meta(),
                       trace_id=traza_de(sesion, 'preparar')) as traza:
         with trazas.paso('investigador', tipo='agent', entrada=canon.brief(),
-                         metadata=_meta(datos=len(datos))) as paso:
+                         metadata=_meta(rol='investigador', datos=len(datos))) as paso:
             paso.actualizar(output={'datos': len(datos), 'verificados': verificados,
                                     'categorias': sorted(
                                         {d.get('categoria') for d in datos if d.get('categoria')})})
         with trazas.paso('arquitecto', tipo='agent',
-                         metadata=_meta(capitulos=len(escaleta),
+                         metadata=_meta(rol='arquitecto', capitulos=len(escaleta),
                                         personajes=len(personajes))) as paso:
             paso.actualizar(output={'capitulos': len(escaleta),
                                     'personajes': [p.get('id') for p in personajes]})
@@ -211,7 +220,7 @@ def _capitulo(trazas, canon, config, ficha, sesion, modelo=None):
             with trazas.paso('cronista', tipo='agent',
                              entrada={'capitulo': numero,
                                       'intento': estado_ficha['intento_aprobado']},
-                             metadata=_meta(capitulo=numero), modelo=modelo) as paso:
+                             metadata=_meta(rol='cronista', capitulo=numero), modelo=modelo) as paso:
                 paso.actualizar(output={
                     'hilos_abiertos': len(resumen.get('hilos_abiertos') or []),
                     'hilos_cerrados': len(resumen.get('hilos_cerrados') or []),
@@ -253,7 +262,7 @@ def _intento(trazas, config, numero, intento, modelo=None, canon=None, paquete=N
             salida['texto'] = texto
 
     with trazas.paso('escritor', tipo='agent', entrada=entrada,
-                     metadata=comun, modelo=modelo) as paso:
+                     metadata={**comun, 'rol': 'escritor'}, modelo=modelo) as paso:
         paso.actualizar(output=salida)
 
     # VD-08 es uno de los dos puntos donde se decide sin preguntar a nadie (§20).
@@ -275,7 +284,7 @@ def _intento(trazas, config, numero, intento, modelo=None, canon=None, paquete=N
         with trazas.paso('validador', tipo='agent',
                          entrada={'capitulo': numero, 'intento': k,
                                   'dimension': dimension},
-                         metadata=_meta(capitulo=numero, intento=k,
+                         metadata=_meta(rol='validador', capitulo=numero, intento=k,
                                         dimension=dimension),
                          modelo=modelo) as paso:
             paso.actualizar(output={'dimension': dimension, 'nota': nota})
@@ -312,7 +321,7 @@ def _cerrar(trazas, canon, sesion, modelo=None):
                       metadata=_meta(), trace_id=traza_de(sesion, 'cerrar')) as traza:
         with trazas.paso('editor_global', tipo='agent',
                          entrada={'capitulos': len(canon.resumenes())},
-                         metadata=_meta(retoques=total), modelo=modelo) as paso:
+                         metadata=_meta(rol='editor_global', retoques=total), modelo=modelo) as paso:
             paso.actualizar(output={'retoques': total, 'ruta': ruta})
         traza.actualizar(output={'retoques': total, 'ruta': ruta})
     return 1

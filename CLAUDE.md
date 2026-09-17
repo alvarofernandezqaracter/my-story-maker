@@ -204,7 +204,7 @@ python -m novela ui                          # interfaz web, solo lectura (§19)
 python -m novela trazar                      # manda a Langfuse el canon reconstruido (§20)
 python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
                                              # sin Langfuse tira del diario local
-python -m unittest discover -s tests -t .    # 72 tests, sin red
+python -m unittest discover -s tests -t .    # 73 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
