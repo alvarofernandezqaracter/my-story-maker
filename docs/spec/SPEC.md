@@ -830,6 +830,8 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `ecf463f` | 2026-09-16 | docs(spec): §15 DA-12 que hacer con el coste, y DA-06 deja de estar a ciegas |
 | `9cd3ace` | 2026-09-16 | docs(spec): §18 la capa de trazas, el lector de .env y 74 tests |
 | `a0b3bec` | 2026-09-16 | docs(spec): §16 entrada 0.11.0 y version en cabecera |
+| `4e24036` | 2026-09-16 | docs(spec): §17 tabla de commits regenerada para 0.11.0 |
+| `c7aeb67` | 2026-09-17 | docs(spec): §21 orquestacion delegada, §1 los dos caminos y §16 entrada 0.12.0 |
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
 ```
