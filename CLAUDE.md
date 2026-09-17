@@ -1,9 +1,24 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 0.11.0, F0–F5 del roadmap funcionando de punta
-a punta en modo `simulado`, más F7 —la interfaz web hace el ciclo entero— y F8:
-cada llamada a un agente deja traza en Langfuse.
+de un brief de cinco campos. Versión 0.12.0.
+
+**Hay dos orquestaciones y este repositorio tiene las dos.**
+
+| | Camino principal (§21) | Harness (§1–§20) |
+|---|---|---|
+| Quién orquesta | Claude Code, una sesión padre | `novela/flujo.py` |
+| Dónde vive | `.claude/`, todo Markdown | `novela/`, 3.802 líneas de Python |
+| Canon | JSON en `novela-cc/canon/` | SQLite en `canon.db` |
+| Rama | `main` | `harness-python` |
+
+Los dos **comparten los prompts** de `agentes/` y `skills/` y los umbrales de
+`config.json`, y no los duplican: cada subagente lee su fichero de rol al
+arrancar. Tocar un prompt cambia los dos caminos.
+
+Lo que sigue describe el harness salvo donde diga otra cosa, porque es lo que el
+spec especifica en §1–§20. El camino principal está en §21 y en la sección
+«Orquestación delegada» de este fichero.
 
 ## Regla número uno: el spec manda
 
@@ -244,6 +259,28 @@ La paleta es la de Qaracter, sacada de su logotipo (`#FF7932` y `#233441`), que 
 la barra superior. Un solo tema, oscuro, porque lo comparte con la escena. three.js
 viaja por CDN —lo único del repo que necesita red— y degrada: si no llega, la interfaz
 entera sigue funcionando.
+
+## Orquestación delegada (§21) — el camino principal
+
+`.claude/skills/orquestar-novela/` es la máquina de estados escrita como
+instrucciones, y `.claude/agents/novela-*.md` son los ocho subagentes: los seis
+roles de §5, con **el validador partido en tres** porque los tres bloques se
+lanzan a la vez en un mismo mensaje. Ahí está el único paralelismo del sistema y
+no es opcional: tres cabezas que no se ven dan tres notas que no se contagian.
+
+La skill se invoca con `/orquestar-novela` o pidiendo preparar, escribir,
+reanudar o cerrar una novela. El canon son ficheros JSON bajo `novela-cc/canon/`,
+que no se versionan.
+
+**Ningún subagente escribe en el canon**: devuelven JSON y escribe el
+orquestador, con la propuesta ya comprobada delante. La única excepción es el
+borrador del escritor, que no es canon hasta que pasa el gate y lo resume el
+cronista.
+
+**Lo que este camino no tiene, y conviene no olvidarlo**: el gate deja de ser
+código —la fórmula está escrita pero la suma la hace un modelo—, el paquete de
+contexto deja de ser determinista, y no hay ni tests sin red ni trazas de §20,
+porque §20 cuelga de `novela/agentes.py` y aquí no se pasa por ahí.
 
 ## Observabilidad (§20)
 
