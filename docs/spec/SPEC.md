@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.6.0
+version: 1.7.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -529,6 +529,22 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.7.0] — 2026-09-17
+
+**Añadido**
+- §19. El grafo expone `setNodeState` y `setEdgeActive` y deja de saber de dónde
+  sale el dato. Encima de esas dos funciones van los dos modos, que es lo que
+  permite que la misma pantalla sirva para los dos.
+- §19. Replay del último capítulo, con play, pausa, 1x/2x/4x y deslizador. Se
+  rehace con lo que el canon guardó de ese capítulo, así que funciona sin que
+  haya ninguna ejecución corriendo. Ningún paso se inventa: sin detalle de
+  intentos no hay replay y se dice.
+- §19. Modo en vivo deducido del canon mientras hay capítulo en curso, con el
+  hueco declarado: no existe ningún evento que escuchar, y se nombra el que
+  haría falta en vez de fingirlo.
+- §19. El último resultado de cada nodo en su ficha, fila a fila y sin pintar
+  las que no tienen dato.
+
 ### [1.6.0] — 2026-09-17
 
 **Añadido**
@@ -925,6 +941,30 @@ DAG por capas y le pone el canon encima.
   canon, lo que ese nodo lleva hecho. Comparar dos nodos es leer el mismo sitio
   dos veces. Entra como cajón por la derecha cuando se pide un nodo y se cierra
   con Esc: vivir abierto le costaba al grafo un cuarto del ancho.
+- **Dos modos, y una sola forma de hablarle al grafo.** El grafo expone
+  `setNodeState(id, estado)` y `setEdgeActive(id, activa)` y **no sabe de dónde
+  sale el dato**. Encima de esas dos funciones van el replay y el modo en vivo,
+  y por eso la misma pantalla sirve para los dos.
+- **El replay del último capítulo** es el modo que funciona siempre, porque no
+  necesita que haya nada corriendo: rehace el recorrido con lo que el canon
+  guardó de ese capítulo —cuántos intentos, qué puntuó cada validador, qué
+  decidió el gate y por qué— y lo reproduce con play, pausa, 1x/2x/4x y un
+  deslizador. Cada paso es una foto entera del grafo y no un delta, que es lo
+  que hace que mover el deslizador sea aplicar una foto y no rehacer la
+  historia. **Ningún paso se inventa**: donde el canon no dice nada, no hay
+  paso, y si no hay detalle de intentos no hay replay y se dice.
+- **El modo en vivo se deduce del canon**, no de un diario. Cuando hay capítulo
+  en curso la página deduce el estado de cada nodo del último intento escrito y
+  lo refresca releyendo el canon. Para que fuera en vivo de verdad haría falta
+  que la sesión que orquesta publicara los pasos según ocurren —un `GET
+  /api/eventos` de cola, o un SSE `/api/flujo`, con un evento por llamada a
+  subagente—; **ninguno de los dos existe**, y el hook de §22 manda su traza a
+  Langfuse y no aquí. Mientras no existan, una llamada que aún no ha terminado
+  no se enciende.
+- **La ficha lleva el último resultado** de ese nodo cuando lo hay: las palabras
+  del borrador, el escalón de VD-08, la nota de esa dimensión con sus
+  incidencias, la operación del gate con sus motivos. Cada fila sin dato no se
+  pinta.
 - **La dispersión de las tres notas** sale en la ficha de cada validador. §5
   dice que es lo que hay que vigilar para saber si juzgar las tres dimensiones a
   la vez las estaba correlacionando, y hasta ahora no se medía en ningún sitio.

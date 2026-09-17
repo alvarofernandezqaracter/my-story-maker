@@ -11,6 +11,7 @@
 // fuente, y eso es deliberado: si aquí hiciera falta inventar un dato sería que
 // falta modelo, igual que en el resto de la interfaz (§19).
 import { crearGrafo, disponer } from './grafo.js';
+import { construir as construirReplay, crearMando } from './replay.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -445,6 +446,99 @@ function vivosDe(p) {
   };
 }
 
+// ------------------------------------------------------------- el modo vivo
+
+// Por donde va el capitulo que se esta escribiendo ahora mismo, deducido del
+// canon. `/api/proyecto` da el detalle de los intentos del capitulo en curso, y
+// lo que ya esta escrito dice hasta donde llego el ultimo.
+//
+// TODO — esto se refresca releyendo el canon cada 2,5 s, que es lo unico que
+// hay. Para que fuera de verdad en vivo haria falta que la sesion que orquesta
+// publicase los pasos segun ocurren: un `GET /api/eventos` de cola, o un SSE
+// `/api/flujo`, con un evento por llamada a subagente. Ninguno de los dos
+// existe, y el hook de §22 manda su traza a Langfuse y no a esta pagina, asi
+// que aqui no se finge: mientras no exista, el paso intermedio de una llamada
+// que aun no ha terminado no se enciende.
+function enVivoDe(p) {
+  const c = p.en_curso;
+  if (!c?.activo || !c.intentos?.length) return null;
+  const intento = c.intentos[c.intentos.length - 1];
+  const nodos = {};
+  const pie = `intento ${intento.intento}/${p.gate?.max_intentos ?? '?'}`;
+
+  for (const id of ['brief', 'investigador', 'dossier', 'arquitecto', 'escaleta',
+    'personajes', 'contexto']) nodos[id] = ['completado', ''];
+
+  nodos.escritor = ['completado', pie];
+  nodos.borrador = ['completado', intento.palabras ? intento.palabras + ' palabras' : ''];
+  nodos.vd08 = [intento.vd08 === 'bloqueo' ? 'reintento' : 'completado',
+    intento.vd08 === 'aviso' ? 'aviso' : ''];
+
+  const juzgado = Boolean(intento.notas);
+  ['val-continuidad', 'val-anacronismos', 'val-logica'].forEach((id, i) => {
+    nodos[id] = juzgado ? ['completado', 'nota ' + intento.notas[i]] : ['activo', ''];
+  });
+  nodos.gate = juzgado
+    ? [intento.estado === 'aprobado' ? 'completado' : 'reintento',
+      intento.media != null ? 'media ' + intento.media : '']
+    : ['pendiente', ''];
+  nodos.cronista = [intento.estado === 'aprobado' ? 'activo' : 'pendiente', ''];
+  nodos.canon = ['pendiente', ''];
+  nodos.editor = ['pendiente', ''];
+  nodos.retoques = ['pendiente', ''];
+  return { nodos, numero: c.numero };
+}
+
+// ---------------------------------------------------- el ultimo resultado
+
+// Lo que este nodo hizo la ultima vez que corrio, con el detalle del capitulo
+// que el canon guarda entero. Cada fila que no tiene dato no se pinta: media
+// pantalla de «sin datos todavia» tapa las dos que si lo tienen (§19).
+function ultimoResultadoDe(p, id) {
+  const capitulo = p.en_curso;
+  const intento = capitulo?.intentos?.[capitulo.intentos.length - 1];
+  if (!intento) return null;
+  const cabecera = `capítulo ${capitulo.numero}, intento ${intento.intento}`;
+  const filas = [];
+
+  if (id === 'contexto') {
+    const ficha = p.capitulos.find((c) => c.numero === capitulo.numero);
+    if (ficha?.contexto_tokens == null) return null;
+    filas.push(['tokens del paquete', ficha.contexto_tokens]);
+    if (ficha.recortes?.length) filas.push(['recortado', ficha.recortes.join(', ')]);
+  } else if (id === 'escritor' || id === 'borrador') {
+    if (intento.palabras) filas.push(['palabras', intento.palabras]);
+    if (intento.parrafos) filas.push(['párrafos', intento.parrafos]);
+    if (intento.tipo_reintento) filas.push(['tipo de reintento', intento.tipo_reintento]);
+  } else if (id === 'vd08') {
+    if (!intento.vd08) return null;
+    filas.push(['escalón', intento.vd08]);
+    for (const aviso of intento.avisos || []) {
+      if (aviso.startsWith('VD-08')) filas.push(['aviso', aviso]);
+    }
+  } else if (id.startsWith('val-')) {
+    if (!intento.notas) return null;
+    const dimension = ['val-continuidad', 'val-anacronismos', 'val-logica'].indexOf(id);
+    const clave = ['continuidad', 'anacronismos', 'logica_ritmo'][dimension];
+    filas.push(['nota', intento.notas[dimension]]);
+    for (const aviso of intento.avisos || []) {
+      if (aviso.startsWith(clave)) filas.push(['incidencia', aviso.slice(clave.length + 2)]);
+    }
+  } else if (id === 'gate') {
+    if (!intento.regla) return null;
+    filas.push(['operación', intento.regla], ['veredicto', intento.estado]);
+    for (const motivo of intento.motivos || []) filas.push(['motivo', motivo]);
+  } else if (id === 'cronista' || id === 'canon') {
+    const ficha = p.capitulos.find((c) => c.numero === capitulo.numero);
+    if (!ficha?.resumen) return null;
+    filas.push(['resumen escrito', 'sí']);
+  } else {
+    return null;
+  }
+
+  return filas.length ? { cabecera, filas } : null;
+}
+
 // ---------------------------------------------- el recorrido de un capítulo
 
 // Por dónde pasó un capítulo concreto. Lo que el canon no da no se cuenta: de
@@ -525,10 +619,16 @@ export function crearArquitectura(ctx) {
   const selector = $('recorrido');
   const nota = $('grafo-nota');
 
+  const cajaReplay = $('replay');
+  const tituloReplay = $('replay-titulo');
+  const pasoReplay = $('replay-paso');
+
   let grafo = null;
   let arrancando = null;
   let elegido = null;
   let ultimo = null;
+  let mando = null;
+  let enVivo = false;
 
   // La dispersión de las tres notas es lo que §5 dice que hay que vigilar para
   // saber si juzgar en una sola pasada las estaba correlacionando. Se mide sobre
@@ -579,18 +679,27 @@ export function crearArquitectura(ctx) {
       lista('Salidas', nodo.salidas),
       lista('Reglas', nodo.reglas));
 
-    // El único bloque que puede faltar: con el canon vacío no hay nada que
+    // Los dos bloques que pueden faltar: con el canon vacío no hay nada que
     // contar, y entonces no se pinta un hueco (§19).
     const filas = ultimo && nodo.canon ? nodo.canon(ultimo) : null;
     const notas = ultimo && nodo.dimension != null ? dimensionDe(ultimo, nodo.dimension) : null;
-    if (!filas && !notas) return;
+    const resultado = ultimo ? ultimoResultadoDe(ultimo, id) : null;
 
+    if (filas || notas) {
+      caja.append(bloqueDatos('En este canon', (filas || []).concat(notas || [])));
+    }
+    if (resultado) {
+      caja.append(bloqueDatos('Último resultado — ' + resultado.cabecera, resultado.filas));
+    }
+  }
+
+  function bloqueDatos(titulo, filas) {
     const bloque = document.createElement('div');
     bloque.className = 'ficha-nodo__canon';
     const h4 = document.createElement('h4');
-    h4.textContent = 'En este canon';
+    h4.textContent = titulo;
     const dl = document.createElement('dl');
-    for (const [clave, valor] of (filas || []).concat(notas || [])) {
+    for (const [clave, valor] of filas) {
       const dt = document.createElement('dt');
       dt.textContent = clave;
       const dd = document.createElement('dd');
@@ -598,7 +707,7 @@ export function crearArquitectura(ctx) {
       dl.append(dt, dd);
     }
     bloque.append(h4, dl);
-    caja.append(bloque);
+    return bloque;
   }
 
   function pintarSelector(p) {
@@ -618,8 +727,23 @@ export function crearArquitectura(ctx) {
     selector.disabled = !p.capitulos.length;
   }
 
+  // El replay y el modo vivo mandan sobre el grafo mientras estan puestos: los
+  // tres dicen lo mismo -por donde va el flujo- y pintarlos a la vez seria
+  // pintar dos respuestas encima de una sola pregunta.
   function aplicarRecorrido() {
     if (!grafo || !ultimo) return;
+    if (mando?.reproduciendo) return;
+    if (enVivo) {
+      const vivo = enVivoDe(ultimo);
+      if (vivo) {
+        for (const [id, [valor, pie]] of Object.entries(vivo.nodos)) {
+          grafo.setNodeState(id, valor, pie);
+        }
+        nota.textContent = `En vivo — capitulo ${vivo.numero} escribiendose.`
+          + ' La pagina lo ve releyendo el canon, no escuchando la sesion.';
+        return;
+      }
+    }
     const numero = Number(selector.value);
     if (!numero) {
       grafo.marcarRecorrido(null, null);
@@ -635,6 +759,7 @@ export function crearArquitectura(ctx) {
   }
 
   selector.addEventListener('change', () => {
+    mando?.parar();
     aplicarRecorrido();
     // El capítulo elegido aquí es el mismo que el de la mesa y el del rail: son
     // tres vistas del mismo foco y descuadrarlas confunde más de lo que ayuda.
@@ -660,7 +785,14 @@ export function crearArquitectura(ctx) {
       },
     }).then((instancia) => {
       grafo = instancia;
-      if (ultimo) grafo.refrescar(vivosDe(ultimo));
+      mando = crearMando({
+        caja: cajaReplay,
+        grafo: instancia,
+        alPintar: (paso, i, total) => {
+          pasoReplay.textContent = `${i + 1}/${total} · ${paso.etiqueta}`;
+        },
+      });
+      if (ultimo) { grafo.refrescar(vivosDe(ultimo)); cargarReplay(ultimo); }
       aplicarRecorrido();
       return instancia;
     }).catch((error) => {
@@ -673,6 +805,22 @@ export function crearArquitectura(ctx) {
     return arrancando;
   }
 
+  function cargarReplay(p) {
+    if (!mando) return;
+    const recorrido = construirReplay(p, p.gate?.max_intentos);
+    mando.cargar(recorrido);
+    if (recorrido) {
+      tituloReplay.textContent = `Replay · capitulo ${recorrido.numero}`;
+      pasoReplay.textContent = '';
+    } else {
+      // Sin detalle de intentos no hay recorrido que contar, y un capitulo
+      // aprobado repartido en pasos supuestos seria inventarselo (§19).
+      tituloReplay.textContent = 'Replay — sin datos todavía: el canon no guarda'
+        + ' el detalle de los intentos de ningún capítulo.';
+      pasoReplay.textContent = '';
+    }
+  }
+
   // Esc cierra la ficha, que es lo que espera cualquier cajon.
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && caja.dataset.abierta === 'si') cerrarFicha();
@@ -680,14 +828,19 @@ export function crearArquitectura(ctx) {
 
   return {
     pintar(proyecto) {
+      const cambia = proyecto.actualizado !== ultimo?.actualizado;
       ultimo = proyecto;
+      enVivo = Boolean(proyecto.en_curso?.activo);
       pintarSelector(proyecto);
+      if (mando?.reproduciendo) return;
       grafo?.refrescar(vivosDe(proyecto));
+      if (cambia) cargarReplay(proyecto);
       aplicarRecorrido();
       if (elegido && caja.dataset.abierta === 'si') pintarFicha(elegido);
     },
     async mostrar(si) {
       if (si) await arrancar();
+      if (!si) mando?.parar();
       grafo?.mostrar(si);
     },
   };

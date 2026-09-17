@@ -625,7 +625,10 @@ body[data-sala="taller"] .mando {
 /* Por donde esta pasando el flujo ahora mismo. El color y el grosor lo dicen
    solos; los guiones que corren y el punto que los acompana anaden la direccion,
    que es lo que no se puede pintar quieto. */
-.arista--activa .arista__trazo {
+/* Se repite `.arista` para empatar en especificidad con la regla de la vuelta
+   atras, que lleva un selector de atributo: sin eso la discontinua se quedaba
+   gris justo cuando es la que esta corriendo. */
+.arista.arista--activa .arista__trazo {
   stroke: var(--qa-naranja);
   stroke-width: 2.4;
   opacity: 1;
@@ -760,6 +763,51 @@ body[data-sala="taller"] .mando {
 }
 
 .grafo__mandos > * { pointer-events: auto; }
+
+.grafo__fila {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  flex-wrap: wrap;
+}
+
+/* El transporte del replay. Es lo que convierte el grafo en algo que se puede
+   ensenar sin tener una ejecucion corriendo detras. */
+.replay {
+  padding: var(--e1) var(--e2);
+  background: color-mix(in srgb, var(--superficie-alta) 88%, transparent);
+  border: 1px solid var(--linea);
+  border-left: 2px solid var(--qa-naranja);
+  border-radius: 2px;
+}
+
+.replay__titulo {
+  font-family: var(--dato);
+  font-size: calc(var(--t-caption) * .92);
+  letter-spacing: .04em;
+  color: var(--texto-tenue);
+}
+
+.replay__play { min-width: 6.5rem; }
+
+.replay__linea {
+  width: min(16rem, 40vw);
+  accent-color: var(--qa-naranja);
+}
+
+.replay__velocidad { display: flex; gap: var(--e2); }
+
+.replay__velocidad .enlace[aria-current="true"] {
+  color: var(--qa-naranja-tinta);
+  border-bottom-color: var(--qa-naranja);
+}
+
+/* El paso que se esta viendo, debajo de todo: es un renglon que cambia cada vez
+   y no puede empujar a los mandos al cambiar de largo. */
+.grafo__nota--paso {
+  min-height: 1.3em;
+  color: var(--texto);
+}
 
 .grafo__mandos label {
   font-family: var(--dato);
@@ -966,7 +1014,7 @@ body[data-sala="taller"] .mando {
    con el canon vacio no hay nada que contar y no se pinta un hueco. */
 .ficha-nodo__canon {
   padding: var(--e3);
-  background: color-mix(in srgb, var(--qa-pizarra) 40%, transparent);
+  background: color-mix(in srgb, var(--qa-pizarra) 7%, var(--superficie-alta));
   border-left: 2px solid var(--sepia);
 }
 

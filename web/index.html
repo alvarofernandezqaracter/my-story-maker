@@ -206,9 +206,20 @@
          aria-label="El pipeline de la novela como grafo por capas"></svg>
 
     <div class="grafo__mandos">
-      <label for="recorrido">Recorrido</label>
-      <select id="recorrido"></select>
+      <div class="grafo__fila">
+        <label for="recorrido">Recorrido</label>
+        <select id="recorrido"></select>
+      </div>
+
+      <!-- El transporte del replay. Reproduce el ultimo capitulo escrito a
+           partir de lo que el canon guardo de el, sin depender de que haya
+           ninguna ejecucion corriendo. -->
+      <div class="grafo__fila replay" id="replay">
+        <span class="replay__titulo" id="replay-titulo">Replay</span>
+      </div>
+
       <p class="grafo__nota" id="grafo-nota"></p>
+      <p class="grafo__nota grafo__nota--paso" id="replay-paso"></p>
     </div>
 
     <div class="leyenda" aria-hidden="true">
