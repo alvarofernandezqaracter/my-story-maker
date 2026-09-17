@@ -807,6 +807,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `c6df332` | 2026-09-17 | docs(spec): 1.9.0, §22 el diario local como origen del informe |
 | `cc00489` | 2026-09-17 | docs(spec): §17 regenerada para 1.9.0 |
 | `c758826` | 2026-09-17 | feat(web): §19 el brief vuelve a ser formulario y arranca al orquestador |
+| `094fa22` | 2026-09-17 | docs(spec): 1.10.0 y §17 regenerada |
+| `41fc644` | 2026-09-17 | docs(spec): 1.11.0, §20 lo que viaja y §12 trazas.texto |
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
 ```
