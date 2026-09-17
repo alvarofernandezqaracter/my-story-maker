@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.1.0
+version: 1.1.1
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -53,7 +53,7 @@ El §14 está muerto. Los números de sección no se reutilizan.
 | Resumen | Un párrafo por capítulo aprobado, con hilos abiertos y cerrados. Es lo que lee el editor global. |
 | Generador de contexto | Código que selecciona del canon lo que hace falta para un capítulo y arma el paquete de contexto. |
 | Paquete de contexto | Salida del generador: el subconjunto del canon que ve el escritor. |
-| Validador | Agente que puntúa el capítulo. Hay uno solo y juzga las tres dimensiones en la misma llamada. |
+| Validador | Agente que puntúa el capítulo. Son **tres**, uno por dimensión, lanzados a la vez y sin verse entre sí (§21). No confundir con `VD-xx`. |
 | Dimensión | Cada uno de los tres ejes que se juzgan por separado: continuidad, anacronismos, y lógica y ritmo. |
 | Nota | Puntuación de 1 a 5 de una dimensión. Siempre hay tres notas; nota global no existe. |
 | Gate | Código que decide, con las tres notas y sus incidencias, si el capítulo se aprueba o se reescribe. |
@@ -61,6 +61,8 @@ El §14 está muerto. Los números de sección no se reutilizan.
 | Intento | Cada pasada del escritor sobre el mismo capítulo. El tope lo fija `gate.max_intentos`, tres por defecto (§12). |
 | Editor global | Agente de pasada única al final, fuera del loop. Lee resúmenes, no texto. |
 | Orquestador | Quien lleva el proceso y escribe el canon: una sesión de Claude Code con la skill de §21. No genera prosa. |
+| `VD-xx` | **Validador determinista**: cada una de las once comprobaciones mecánicas de §9. Se cumplen o no, sin criterio literario ni llamada a ningún modelo. Las dos primeras letras vienen de «validador», pero **no son el agente validador**: ese juzga y estas cuentan. |
+| `DA-xx` | **Decisión abierta**: cada una de las cosas sin decidir de §15. Nada de ahí impide escribir una novela; todo impide darla por buena sin mirarla. Los ids no se reutilizan: DA-01 y DA-11 quedaron muertos al decidirse. |
 
 ## §3 Modelo de datos del canon
 
@@ -526,6 +528,20 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.1.1] — 2026-09-17
+
+**Añadido**
+- §2. Entradas de glosario para `VD-xx` y `DA-xx`. El documento las usaba en
+  todas sus secciones sin definirlas en ninguna, y la primera lleva además a
+  confusión con el agente validador de §5: comparten las letras y no son lo
+  mismo, porque uno juzga y las otras cuentan.
+
+**Corregido**
+- §2. La entrada «Validador» decía que hay uno solo y que juzga las tres
+  dimensiones en la misma llamada. Eso dejó de ser cierto cuando el validador se
+  partió en tres subagentes lanzados a la vez (§21), y el glosario se quedó
+  contradiciendo al resto del documento.
 
 ### [1.1.0] — 2026-09-17
 
