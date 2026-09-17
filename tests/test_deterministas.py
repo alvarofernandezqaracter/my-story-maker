@@ -27,7 +27,7 @@ CONFIG = {
     'gate': {'nota_minima': 3, 'media_minima': 3.7, 'max_intentos': 3},
     'contexto': {'tope_contexto': 40000, 'ventana_resumenes': 3, 'palabras_enganche': 400},
     'validador': {'modo': 'unico'},
-    'interfaz': {'puerto': 8787},
+    'interfaz': {'puerto': 8787, 'camino': 'delegado'},
     'trazas': {'activas': False, 'entorno': 'pruebas'},
     'margenes': {
         'capitulos_min': 0.8, 'capitulos_max': 1.2,

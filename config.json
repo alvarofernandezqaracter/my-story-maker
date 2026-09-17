@@ -16,7 +16,8 @@
     "modo": "unico"
   },
   "interfaz": {
-    "puerto": 8787
+    "puerto": 8787,
+    "camino": "delegado"
   },
   "margenes": {
     "capitulos_min": 0.8,

@@ -52,6 +52,10 @@ REGLAS = [
     ('validador.modo', lambda v: v in ('unico', 'separado'), '"unico" o "separado"'),
     ('interfaz.puerto', lambda v: _entero(v) and 1024 <= v <= 65535,
      'entero entre 1024 y 65535'),
+    # Por cual de los dos caminos mira la interfaz al abrirse (§19, §21). No
+    # cierra el otro: la pagina puede cambiar de canon sin reiniciar nada.
+    ('interfaz.camino', lambda v: v in ('delegado', 'harness'),
+     '"delegado" o "harness"'),
     ('margenes.capitulos_min', lambda v: _numero(v) and 0 < v <= 1, 'numero en (0, 1]'),
     ('margenes.capitulos_max', lambda v: _numero(v) and v >= 1, 'numero >= 1'),
     ('margenes.palabras_aviso', _fraccion, 'fraccion en (0, 1)'),

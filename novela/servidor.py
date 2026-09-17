@@ -14,9 +14,12 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs
 
+from . import trazas_cc
 from .agentes import Agentes, ParadaDelProceso
 from .config import cargar_config, ErrorConfig
 from .canon import Canon
+from .canon_cc import CanonCC, auditar_gate, media_de, notas_en_lista, operacion
+from .contexto import generar_contexto
 from .flujo import preparar, escribir_capitulo, cerrar, reanudar, siguiente_capitulo
 from .gate import gate, media, notas
 from .util import numero_corto, redondear
@@ -42,6 +45,17 @@ CAMPOS_BRIEF = ('epoca', 'premisa', 'tono', 'capitulos', 'palabras_por_capitulo'
 ESTADOS_QUE_ACEPTAN_BRIEF = (None, 'borrador')
 
 ACCIONES = ('preparar', 'escribir', 'cerrar', 'reanudar', 'todo')
+
+# Los dos caminos de §1. `delegado` es el principal y lee el canon en ficheros
+# de §21; `harness` lee el SQLite de §3. La misma pagina sirve para los dos
+# porque la forma de los datos es la misma, y por eso se pueden comparar.
+CAMINOS = ('delegado', 'harness')
+
+# Lo que el camino delegado no deja hacer desde aqui, y por que. En §21 escribe
+# el orquestador y nadie mas; la interfaz no es el orquestador, es un mirador.
+SOLO_MIRA = ('el camino delegado lo orquesta una sesion de Claude Code y en su canon'
+             ' escribe solo ella. Desde aqui se mira: para actuar, abre Claude Code'
+             ' en el repositorio y lanza /orquestar-novela')
 
 
 class RespuestaError(Exception):
@@ -352,12 +366,16 @@ def _proyecto(canon, config, motor=None):
     if en_curso is None:
         en_curso = next((c for c in reversed(capitulos) if c['intentos']), None)
     return {
+        'camino': 'harness',
+        'orquestador': 'novela/flujo.py',
         'modo': config['ejecucion']['modo'],
         'estado': estado,
+        'actualizado': None,
         'brief': {c: proyecto[c] for c in CAMPOS_BRIEF} if proyecto else None,
         'editable': estado in ESTADOS_QUE_ACEPTAN_BRIEF,
         'capitulos': capitulos,
         'gate': config['gate'],
+        'margenes': config['margenes'],
         'corriendo': bool(motor and motor.corriendo),
         'retoques': Path('retoques.md').is_file(),
         'canon': _ruta_corta(getattr(motor, 'ruta_canon', 'canon.db')),
@@ -373,6 +391,13 @@ def _proyecto(canon, config, motor=None):
                     for d in canon.datos()] if proyecto else [],
         # Deuda narrativa: hilos que un capitulo abrio y ninguno cerro (§7).
         'deuda': canon.hilos_vivos() if proyecto else [],
+        # La cronologia de §3 y el reparto de §6, que la pagina pinta igual por
+        # los dos caminos porque los dos las guardan.
+        'cronologia': canon.eventos() if proyecto else [],
+        'reparto': canon.personajes() if proyecto else [],
+        # El gate de este camino lo calcula codigo (§8), asi que no hay nada que
+        # auditar: la cuenta y la comprobacion serian la misma linea.
+        'auditoria': None,
         'archivos': _archivos_de_trabajo(),
         # La cuota diaria no existe en el harness: no hay contabilidad de
         # llamadas ni limite configurado, y aqui no se inventa ninguna de las dos.
@@ -449,6 +474,267 @@ def _desbloquear(canon, datos):
     return {'aviso': aviso}
 
 
+# ------------------------------------------------- lecturas del camino delegado
+
+# §21 El canon de `novela-cc/` no lo escribe nadie de aqui. Estas funciones lo
+# leen y le dan la forma que ya tenia el payload del harness, para que la pagina
+# no tenga dos modelos de datos: la sala se pinta igual y lo que cambia es de
+# donde salieron las cifras.
+
+def _archivos_cc(canon, tope=8):
+    """Lo que el orquestador ha dejado en disco, del mas reciente al mas antiguo.
+
+    Igual que en el harness se mira la carpeta y no el canon, porque la pregunta
+    que contesta es "que se ha tocado hace un momento".
+    """
+    encontrados = []
+    raiz = Path(canon.raiz)
+    candidatos = (list(raiz.glob('capitulos/*.md'))
+                  + list(raiz.glob('contexto/*.md'))
+                  + list(raiz.glob('canon/*.json'))
+                  + list(raiz.glob('canon/resumenes/*.json'))
+                  + [raiz / 'retoques.md'])
+    for ruta in candidatos:
+        if ruta.is_file():
+            encontrados.append({'ruta': ruta.as_posix(),
+                                'cuando': ruta.stat().st_mtime,
+                                'bytes': ruta.stat().st_size})
+    encontrados.sort(key=lambda a: a['cuando'], reverse=True)
+    return encontrados[:tope]
+
+
+def _intentos_cc(canon, numero, config):
+    """Los intentos de un capitulo, con la cuenta del gate rehecha encima.
+
+    `regla` no sale del canon: se recalcula con la formula de §8 sobre las notas
+    y los graves que si estan guardados, igual que hace el camino del harness.
+    Lo que este camino anade es `cuadra`, que dice si esa cuenta coincide con el
+    veredicto que el orquestador escribio (§21).
+    """
+    salida = []
+    for i in canon.intentos(numero):
+        cuenta = auditar_gate(i, config['gate'])
+        salida.append({
+            'intento': i.get('intento'),
+            'ruta': (i.get('ruta') or '').replace('\\', '/'),
+            'palabras': i.get('palabras'),
+            'parrafos': i.get('parrafos'),
+            'notas': notas_en_lista(i.get('notas')),
+            'media': media_de(i.get('notas')),
+            'estado': i.get('estado'),
+            'regla': operacion(i, config['gate'], cuenta),
+            'vd08': i.get('vd08'),
+            'motivos': i.get('motivos') or [],
+            'avisos': i.get('avisos') or [],
+            'tipo_reintento': i.get('tipo_reintento'),
+            'cuadra': cuenta['cuadra'] if cuenta else None,
+            'creado': None,
+        })
+    return salida
+
+
+def _capitulos_cc(canon):
+    salida = []
+    for ficha in canon.escaleta():
+        numero = ficha['numero']
+        estado = canon.ficha_estado(numero)
+        aprobado = canon.intento_aprobado(numero)
+        resumen = canon.resumen(numero)
+        salida.append({
+            'numero': numero,
+            'titulo': ficha.get('titulo'),
+            'acto': ficha.get('acto'),
+            'sinopsis': ficha.get('sinopsis'),
+            'fecha': ficha.get('fecha'),
+            'etiquetas': ficha.get('etiquetas') or [],
+            'estado': estado['estado'],
+            'palabras_objetivo': ficha.get('palabras_objetivo'),
+            'palabras': (aprobado or {}).get('palabras'),
+            'intentos': len(estado['intentos']),
+            'notas': notas_en_lista((aprobado or {}).get('notas')),
+            'media': media_de((aprobado or {}).get('notas')),
+            'legible': bool(aprobado),
+            'resumen': (resumen or {}).get('resumen'),
+            # Lo que costo el paquete de §7, que en este camino queda escrito.
+            'contexto_tokens': (estado['contexto'] or {}).get('tokens'),
+            'recortes': (estado['contexto'] or {}).get('recortes') or [],
+        })
+    return salida
+
+
+def _auditoria_cc(canon, config):
+    """El resumen de §21: cuantas cuentas del gate cuadran y cuales no.
+
+    Es el unico numero de esta pagina que no describe la novela sino el camino.
+    Existe porque §21 dice que la suma del gate la hace un modelo y lo llama su
+    punto mas debil; esto es lo que convierte esa frase en algo que se mira.
+    """
+    revisados = 0
+    discrepancias = []
+    for ficha in canon.escaleta():
+        for i in canon.intentos(ficha['numero']):
+            cuenta = auditar_gate(i, config['gate'])
+            if not cuenta:
+                continue
+            revisados += 1
+            if not cuenta['cuadra']:
+                discrepancias.append({
+                    'capitulo': ficha['numero'], 'intento': i.get('intento'),
+                    'canon': cuenta['aprueba_canon'], 'formula': cuenta['aprueba'],
+                    'operacion': operacion(i, config['gate'], cuenta),
+                })
+    return {'revisados': revisados, 'discrepancias': discrepancias}
+
+
+def _proyecto_cc(config, raiz=None):
+    canon = CanonCC(raiz) if raiz else CanonCC()
+    brief = canon.brief()
+    capitulos = _capitulos_cc(canon)
+    en_curso = next((c for c in capitulos if c['estado'] == 'en_curso'), None)
+    activo = en_curso is not None
+    if en_curso is None:
+        en_curso = next((c for c in reversed(capitulos) if c['intentos']), None)
+    texto_retoques, ruta_retoques = canon.retoques()
+    return {
+        'camino': 'delegado',
+        'orquestador': 'Claude Code',
+        # `ejecucion.modo` es del harness (§12) y aqui no significa nada: el
+        # modelo lo elige la sesion que orquesta, y el canon no lo guarda.
+        'modo': None,
+        'estado': canon.estado(),
+        'actualizado': canon.actualizado(),
+        'brief': brief,
+        # Nunca editable: en este canon escribe el orquestador (§21).
+        'editable': False,
+        'capitulos': capitulos,
+        'gate': config['gate'],
+        'margenes': config['margenes'],
+        'corriendo': False,
+        'retoques': bool(texto_retoques),
+        'ruta_retoques': ruta_retoques,
+        'canon': Path(canon.dir_canon).as_posix(),
+        'perfiles': perfiles(),
+        'perfil': None,
+        'en_curso': ({'numero': en_curso['numero'], 'titulo': en_curso['titulo'],
+                      'activo': activo,
+                      'intentos': _intentos_cc(canon, en_curso['numero'], config)}
+                     if en_curso else None),
+        'dossier': [{'id': d.get('id'), 'estado': d.get('estado'),
+                     'categoria': d.get('categoria'), 'dato': d.get('dato'),
+                     'fuente': d.get('fuente')}
+                    for d in canon.datos()],
+        'deuda': canon.hilos_vivos(),
+        'cronologia': canon.eventos(),
+        'reparto': canon.personajes(),
+        'auditoria': _auditoria_cc(canon, config),
+        'archivos': _archivos_cc(canon),
+        # Igual que en el harness: no hay contabilidad de llamadas ni limite.
+        'cuota': None,
+    }
+
+
+def _capitulo_cc(config, numero, raiz=None):
+    canon = CanonCC(raiz) if raiz else CanonCC()
+    ficha = next((c for c in canon.escaleta() if c['numero'] == numero), None)
+    if not ficha:
+        raise RespuestaError(404, 'no hay capitulo {}'.format(numero))
+    aprobado = canon.intento_aprobado(numero)
+    if not aprobado:
+        raise RespuestaError(409, 'el capitulo {} todavia no esta aprobado'.format(numero))
+    texto, ruta = canon.texto(numero)
+    if texto is None:
+        raise RespuestaError(404, 'el canon apunta a {} y ese fichero no esta'.format(ruta))
+    resumen = canon.resumen(numero) or {}
+    return {
+        'numero': numero,
+        'titulo': ficha.get('titulo'),
+        'acto': ficha.get('acto'),
+        'fecha': ficha.get('fecha'),
+        'texto': texto,
+        'ruta': ruta,
+        'palabras': aprobado.get('palabras'),
+        'parrafos': aprobado.get('parrafos'),
+        'intento': aprobado.get('intento'),
+        'notas': notas_en_lista(aprobado.get('notas')),
+        'media': media_de(aprobado.get('notas')),
+        # El canon delegado guarda la nota y el aviso, no el bloque entero de
+        # revision: no hay citas ni sugerencias, y no se inventan.
+        'revisiones': [],
+        'avisos': aprobado.get('avisos') or [],
+        'resumen': resumen.get('resumen'),
+        'hilos_abiertos': resumen.get('hilos_abiertos') or [],
+        'hilos_cerrados': resumen.get('hilos_cerrados') or [],
+        'personajes_presentes': resumen.get('personajes_presentes') or [],
+    }
+
+
+# -------------------------------------------------------- paquete de contexto
+
+def _contexto(via, canon, config, numero):
+    """El paquete con el que se escribio un capitulo (§7).
+
+    En el camino delegado esta en disco -el orquestador lo escribe ahi justo
+    para esto- y en el del harness se regenera con el canon de ahora mismo. Son
+    dos cosas distintas y la respuesta lo dice, porque regenerado no es el que
+    vio el escritor: el canon ha cambiado desde entonces.
+    """
+    if via == 'delegado':
+        texto, ruta = CanonCC().contexto(numero)
+        if texto is None:
+            raise RespuestaError(404, 'no hay paquete guardado en {}'.format(ruta))
+        return {'capitulo': numero, 'texto': texto, 'ruta': ruta,
+                'origen': 'guardado', 'tokens': None, 'recortes': []}
+    if not canon.ficha(numero):
+        raise RespuestaError(404, 'no hay capitulo {}'.format(numero))
+    paquete = generar_contexto(canon, numero, config)
+    return {'capitulo': numero, 'texto': paquete['texto'], 'ruta': None,
+            'origen': 'regenerado', 'tokens': paquete['tokens'],
+            'recortes': paquete['recortes']}
+
+
+# -------------------------------------------------------------- trazas (§20)
+
+# Lo ultimo que se mando, para que la pagina pueda decir "esto ya salio" sin
+# volver a mandarlo. Es del proceso y no del canon: si el servidor se muere se
+# pierde, y da igual, porque la verdad de esto vive en Langfuse.
+_ULTIMO_ENVIO = {}
+
+
+def _trazas(via, config):
+    disponible = trazas_cc.disponibilidad(config)
+    salida = {
+        'camino': via,
+        'activas': bool(config['trazas']['activas']),
+        'entorno': config['trazas']['entorno'],
+        'lista': disponible['lista'],
+        'motivo': disponible['motivo'],
+        'ultimo': _ULTIMO_ENVIO.get(via),
+        'plan': None,
+        # En el harness las trazas salen solas con cada llamada (§20); aqui no
+        # hay llamada que interceptar y se reconstruyen desde el canon (§21).
+        'reconstruido': via == 'delegado',
+    }
+    if via == 'delegado':
+        canon = CanonCC()
+        salida['plan'] = trazas_cc.plan(canon, config) if canon.existe else None
+    return salida
+
+
+def _exportar_trazas(via, config):
+    if via != 'delegado':
+        raise RespuestaError(
+            409, 'el harness traza mientras corre; aqui no hay nada que reconstruir')
+    resultado = trazas_cc.exportar(config)
+    _ULTIMO_ENVIO[via] = {
+        'cuando': time.time(),
+        'enviado': resultado['enviado'],
+        'motivo': resultado.get('motivo'),
+        'trazas': resultado.get('trazas'),
+        'sesion': resultado.get('sesion'),
+    }
+    return resultado
+
+
 # ----------------------------------------------------------------- enrutado
 
 def _estatico(camino, raiz_web):
@@ -465,6 +751,21 @@ def _estatico(camino, raiz_web):
         destino.read_bytes()
 
 
+def _via(parametros, config):
+    """Por cual de los dos caminos mira esta peticion.
+
+    Lo pide la pagina en cada llamada y el perfil pone el valor de partida
+    (§12). Un camino que no existe se rechaza en vez de caer al de por defecto:
+    ensenar el canon equivocado sin decirlo es peor que un 400.
+    """
+    pedido = parametros.get('camino', [None])[0]
+    if pedido is None:
+        return (config.get('interfaz') or {}).get('camino') or 'harness'
+    if pedido not in CAMINOS:
+        raise RespuestaError(400, 'camino desconocido: {}'.format(pedido))
+    return pedido
+
+
 def responder(metodo, camino, cuerpo, canon, config, motor=None, raiz_web=RAIZ_WEB):
     """Enrutado entero, sin socket de por medio: el manejador HTTP solo traduce.
 
@@ -473,10 +774,16 @@ def responder(metodo, camino, cuerpo, canon, config, motor=None, raiz_web=RAIZ_W
     camino, _, consulta = camino.partition('?')
     parametros = parse_qs(consulta)
     try:
+        via = _via(parametros, config) if camino.startswith('/api/') else 'harness'
+
         if camino == '/api/proyecto' and metodo == 'GET':
+            if via == 'delegado':
+                return 200, TIPOS['.json'], _json(_proyecto_cc(config))
             return 200, TIPOS['.json'], _json(_proyecto(canon, config, motor))
 
         if camino == '/api/brief' and metodo == 'POST':
+            if via == 'delegado':
+                raise RespuestaError(409, SOLO_MIRA)
             estado = canon.estado()
             if estado not in ESTADOS_QUE_ACEPTAN_BRIEF:
                 raise RespuestaError(
@@ -487,6 +794,18 @@ def responder(metodo, camino, cuerpo, canon, config, motor=None, raiz_web=RAIZ_W
             return 200, TIPOS['.json'], _json(_proyecto(canon, config, motor))
 
         if camino == '/api/flujo':
+            if via == 'delegado':
+                if metodo == 'POST':
+                    raise RespuestaError(409, SOLO_MIRA)
+                # El diario de §19 lo llena el motor del harness. En el camino
+                # delegado el relato esta en la conversacion de Claude Code, no
+                # aqui: se devuelve vacio y la pagina lo dice, en vez de fingir
+                # un stream que nadie esta escribiendo.
+                return 200, TIPOS['.json'], _json({
+                    'corriendo': False, 'accion': None, 'perfil': None,
+                    'error': None, 'detalles': [], 'desde': 0, 'total': 0,
+                    'diario': [], 'arrancado_en': None, 'terminado_en': None,
+                    'sin_motor': True})
             if not motor:
                 raise RespuestaError(503, 'esta interfaz no tiene motor de flujo')
             if metodo == 'GET':
@@ -499,16 +818,33 @@ def responder(metodo, camino, cuerpo, canon, config, motor=None, raiz_web=RAIZ_W
                 return 202, TIPOS['.json'], _json(motor.estado())
 
         if camino == '/api/desbloquear' and metodo == 'POST':
+            if via == 'delegado':
+                raise RespuestaError(409, SOLO_MIRA)
             if motor and motor.corriendo:
                 raise RespuestaError(
                     409, 'hay un flujo en marcha; para y vuelve a intentarlo')
             return 200, TIPOS['.json'], _json(_desbloquear(canon, _cuerpo_json(cuerpo)))
 
+        if camino == '/api/trazas':
+            if metodo == 'GET':
+                return 200, TIPOS['.json'], _json(_trazas(via, config))
+            if metodo == 'POST':
+                return 200, TIPOS['.json'], _json(_exportar_trazas(via, config))
+
         if camino.startswith('/api/capitulo/') and metodo == 'GET':
             resto = camino[len('/api/capitulo/'):]
             if not resto.isdigit():
                 raise RespuestaError(400, 'el capitulo se pide por numero')
+            if via == 'delegado':
+                return 200, TIPOS['.json'], _json(_capitulo_cc(config, int(resto)))
             return 200, TIPOS['.json'], _json(_capitulo(canon, int(resto)))
+
+        if camino.startswith('/api/contexto/') and metodo == 'GET':
+            resto = camino[len('/api/contexto/'):]
+            if not resto.isdigit():
+                raise RespuestaError(400, 'el contexto se pide por numero de capitulo')
+            return 200, TIPOS['.json'], _json(
+                _contexto(via, canon, config, int(resto)))
 
         if camino.startswith('/api/'):
             raise RespuestaError(404, 'no existe {} {}'.format(metodo, camino))

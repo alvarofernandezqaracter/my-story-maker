@@ -13,6 +13,7 @@ from .flujo import preparar, escribir_capitulo, cerrar, reanudar, siguiente_capi
 from .gate import media, notas
 from .servidor import arrancar as arrancar_interfaz
 from .skills import listar_skills
+from .trazas_cc import exportar as exportar_trazas_cc
 from .util import numero_corto
 
 AYUDA = """
@@ -30,7 +31,11 @@ novela — sistema multiagente de novelas historicas
   novela poner <que> <fichero>     personaje | capitulo — escritura a mano en el canon
   novela desbloquear --capitulo N [--aprobar-intento K | --reiniciar]
   novela skills                    lista las skills que el harness carga
-  novela ui [--puerto N]           interfaz web del brief en el navegador (§19)
+  novela ui [--puerto N] [--camino delegado|harness]
+                                   interfaz web en el navegador (§19). Por
+                                   defecto abre por interfaz.camino del perfil
+  novela trazar [--modelo M]       manda a Langfuse el canon delegado de
+                                   novela-cc/, reconstruido (§20, §21)
 
 Opciones globales: --config <ruta> (por defecto config.json)
                    --canon <ruta>  (por defecto canon.db)
@@ -267,13 +272,38 @@ def _ejecutar(comando, posicionales, opciones, canon, agentes, config, ruta_cano
         _log('proyecto: escribiendo')
 
     elif comando == 'ui':
-        # La interfaz solo escribe el brief; el flujo sigue corriendo en la CLI.
+        # La interfaz solo escribe el brief, y solo por el camino del harness;
+        # por el delegado mira y no toca (§21).
+        camino = opciones.get('camino')
+        if camino is not None and camino not in ('delegado', 'harness'):
+            raise ValueError('ui --camino acepta: delegado | harness')
+        if camino:
+            config = {**config, 'interfaz': {**config['interfaz'], 'camino': camino}}
         arrancar_interfaz(
             config, ruta_canon,
             puerto=_entero(opciones['puerto'], 'ui --puerto necesita un numero')
             if opciones.get('puerto') else None,
             abrir=not opciones.get('sin-navegador'),
             log=_log)
+
+    # ------------------------------------------- trazas del camino delegado
+    elif comando == 'trazar':
+        # El camino delegado no pasa por la capa de agentes, asi que no hay
+        # donde interceptar la llamada: lo que se manda se reconstruye del canon
+        # que dejo el orquestador, y va marcado como tal (§20, §21).
+        modelo = opciones.get('modelo')
+        resultado = exportar_trazas_cc(
+            config, modelo=modelo if isinstance(modelo, str) else None,
+            aviso=lambda m: sys.stderr.write('trazas: {}\n'.format(m)))
+        resumen = resultado.get('plan') or {}
+        if not resultado['enviado']:
+            _log('no se mando nada: {}'.format(resultado['motivo']))
+            return
+        _log('{} traza(s) en la sesion {}'.format(resultado['trazas'], resultado['sesion']))
+        _log('  {} intento(s), {} nota(s), {} retoque(s), entorno {}'.format(
+            resumen.get('intentos'), resumen.get('notas'), resumen.get('retoques'),
+            resumen.get('entorno')))
+        _log('  reconstruido del canon: sin latencia, sin tokens y sin coste')
 
     elif comando == 'skills':
         for s in listar_skills():

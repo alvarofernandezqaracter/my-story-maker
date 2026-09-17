@@ -28,6 +28,11 @@ class EntornoDeInterfaz(unittest.TestCase):
         # Los tests no mandan trazas: correrian contra el Langfuse de quien los
         # lance y este repo se prueba sin red (§20).
         self.config = {**self.config, 'trazas': {**self.config['trazas'], 'activas': False}}
+        # Y miran por el camino del harness, que es el que estas clases prueban.
+        # El perfil abre por el delegado (§12), y sin fijarlo aqui estos tests
+        # leerian el novela-cc/ del repositorio en vez de su canon temporal.
+        self.config = {**self.config,
+                       'interfaz': {**self.config['interfaz'], 'camino': 'harness'}}
         self.dir = tempfile.mkdtemp(prefix='novela-ui-')
         self.canon = Canon(str(Path(self.dir) / 'canon.db'))
         self.motor = Motor(self.config, str(Path(self.dir) / 'canon.db'))
@@ -125,7 +130,7 @@ class TestEstatico(EntornoDeInterfaz):
         codigo, tipo, salida = self.pedir('GET', '/')
         self.assertEqual(codigo, 200)
         self.assertIn('text/html', tipo)
-        self.assertIn(b'<title>Taller de novelas</title>', salida)
+        self.assertIn(b'<title>Escritorio de novelas</title>', salida)
 
     def test_no_se_sale_de_web(self):
         for camino in ('/../config.json', '/../../etc/hosts', '/..%2fconfig.json'):
@@ -151,6 +156,11 @@ class TestFlujo(unittest.TestCase):
         # Los tests no mandan trazas: correrian contra el Langfuse de quien los
         # lance y este repo se prueba sin red (§20).
         self.config = {**self.config, 'trazas': {**self.config['trazas'], 'activas': False}}
+        # Y miran por el camino del harness, que es el que estas clases prueban.
+        # El perfil abre por el delegado (§12), y sin fijarlo aqui estos tests
+        # leerian el novela-cc/ del repositorio en vez de su canon temporal.
+        self.config = {**self.config,
+                       'interfaz': {**self.config['interfaz'], 'camino': 'harness'}}
         self.dir = tempfile.mkdtemp(prefix='novela-motor-')
         os.chdir(self.dir)
         self.ruta = str(Path(self.dir) / 'canon.db')
