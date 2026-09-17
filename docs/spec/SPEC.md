@@ -897,6 +897,8 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `c7aeb67` | 2026-09-17 | docs(spec): §21 orquestacion delegada, §1 los dos caminos y §16 entrada 0.12.0 |
 | `1ff439a` | 2026-09-17 | docs(spec): §17 tabla de commits regenerada para 0.12.0 |
 | `3db83cc` | 2026-09-17 | docs(spec): §1 router de los dos caminos, §21 como seccion principal y §15 DA-13 y DA-14 |
+| `5adcf8e` | 2026-09-17 | docs(spec): §17 tabla de commits regenerada para 0.13.0 |
+| `f7f518e` | 2026-09-17 | docs(spec): §19 y §20 dejan de ser solo del harness, §12 interfaz.camino y §16 entrada 0.14.0 |
 La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
 
 ```
