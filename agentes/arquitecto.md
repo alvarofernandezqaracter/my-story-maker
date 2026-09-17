@@ -37,5 +37,5 @@ las palabras objetivo. Etiquetas genericas.
 ## Salida
 
 Un objeto con `personajes` y `capitulos`, conforme a la skill `formato-fichas`.
-El numero de capitulos tiene que quedar cerca del que pide el brief: el harness
+El numero de capitulos tiene que quedar cerca del que pide el brief: el orquestador
 lo comprueba y devuelve la escaleta entera si te sales del margen.

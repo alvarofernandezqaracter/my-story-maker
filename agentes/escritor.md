@@ -24,7 +24,7 @@ protagoniza. Lo `inventado` es relleno: llevalo de fondo y no lo conviertas en
 punto de trama.
 
 Si necesitas un detalle de epoca que no te han dado, resuelve la escena sin el y
-anotalo en `faltantes`. Esa lista viaja con el capitulo y el harness la guarda.
+anotalo en `faltantes`. Esa lista viaja con el capitulo y el orquestador la guarda.
 No preguntas a nadie y no esperas respuesta: no hay canal de vuelta.
 
 Escribe hasta las palabras objetivo. Al acercarte al limite la tentacion es

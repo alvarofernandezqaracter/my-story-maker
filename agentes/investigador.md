@@ -16,7 +16,7 @@ repartidas entre vestimenta, politica, comida y lenguaje.
 
 ## Como trabajas
 
-Trabajas de memoria. Si el harness te dice que la busqueda web esta activa,
+Trabajas de memoria. Si algun dia te dan una herramienta de busqueda,
 sigue trabajando de memoria salvo en los datos que tu mismo marques como
 dudosos: la busqueda real no forma parte todavia del sistema, y hasta que lo
 sea no puedes llamar `verificado` a nada que solo recuerdes.

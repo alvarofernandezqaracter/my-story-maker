@@ -1,36 +1,19 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 0.14.0.
+de un brief de cinco campos. Versión 1.0.0.
 
-**El camino principal es la orquestación delegada**: quien orquesta es una sesión
-de Claude Code, no código. Hay un segundo camino, el harness de Python, que hace
-lo mismo escrito en `novela/` y que vive también aquí.
+**Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
+quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
+criterio histórico y el juicio literario son de los subagentes.
 
-| | Camino principal (§21) | Harness (§14, §18–§20) |
-|---|---|---|
-| Quién orquesta | Una sesión de Claude Code | `novela/flujo.py` |
-| Dónde vive | `.claude/`, todo Markdown | `novela/`, 3.802 líneas de Python |
-| Canon | JSON en `novela-cc/canon/` | SQLite en `canon.db` |
-| Se lanza con | `/orquestar-novela` | `python -m novela ...` |
-| Rama | `main` | `harness-python` |
-
-**La interfaz web (§19) mira los dos.** `python -m novela ui` abre por el camino
-que diga `interfaz.camino`, y un conmutador de la barra cambia de canon sin
-reiniciar. Por el delegado **solo mira**: brief, arranque y desbloqueo devuelven
-409, porque en ese canon escribe el orquestador y nadie más.
-
-**Los dos comparten los prompts** de `agentes/` y `skills/` y los umbrales de
-`config.json`, y no los duplican: cada subagente lee su fichero de rol al
-arrancar. Tocar un prompt cambia los dos caminos, y eso es deliberado.
+Se arranca con `/orquestar-novela`, o pidiendo preparar, escribir, reanudar o
+cerrar una novela.
 
 ## Regla número uno: el spec manda
 
 [`docs/spec/SPEC.md`](docs/spec/SPEC.md) es la fuente de verdad. Si el código y el
 spec cuentan cosas distintas, manda el spec y el código es el que está mal.
-
-§1 dice qué secciones describen el diseño —que vale para los dos caminos— y
-cuáles son de un camino concreto.
 
 **El spec y el código nunca divergen.** Cuando un cambio introduce, cambia o
 elimina algo que el spec describe (una clave de `config.json`, un campo del
@@ -42,7 +25,12 @@ el spec se actualiza en el mismo momento, no después. Eso implica además:
 - Añadir su entrada en §16 con **sección tocada y motivo**, formato Keep a Changelog.
 - Regenerar la tabla de §17 con el `git log` que la propia §17 documenta al final.
 - Los números de sección son estables y **no se reutilizan**; si una sección
-  desaparece, su número queda muerto (pasó con DA-01).
+  desaparece, su número queda muerto (pasó con DA-01, DA-11 y §14).
+
+Hay un segundo spec, [`docs/spec/TRAZAS.md`](docs/spec/TRAZAS.md), con su propia
+versión. `SPEC.md` describe cómo se escribe una novela; aquel describe qué se ha
+aprendido mirando cómo se escribió. **Aquel observa y no decide**: cuando un
+hallazgo se convierte en un cambio de diseño, se muda a `SPEC.md`.
 
 ## Cómo se trabaja este repo
 
@@ -50,8 +38,7 @@ el spec se actualiza en el mismo momento, no después. Eso implica además:
   cómo. Una sección por commit.
 - **Commits**: uno por sección o por unidad de cambio, mensaje en minúsculas y en
   español, con el ámbito entre paréntesis y la sección tocada:
-  `docs(spec): §12 la credencial del modo real va en el entorno`,
-  `feat(harness): capa unica de llamada a agentes, simulada y real`.
+  `docs(spec): §12 la credencial del modo real va en el entorno`.
 - **Push**: automático. Se commitea en local y se publica en el remoto sin pedir
   confirmación cada vez. Quedan fuera y siguen exigiendo permiso expreso las
   operaciones no reversibles: push --force, borrar ramas remotas y reescribir
@@ -60,14 +47,7 @@ el spec se actualiza en el mismo momento, no después. Eso implica además:
   `agentes/`, `skills/` y `.claude/` van **sin acentos** (ASCII); los documentos
   Markdown (`SPEC.md`, `README.md`, este fichero) sí llevan acentos.
 
-# El camino principal: orquestación delegada (§21)
-
-Tú eres el orquestador. Tu trabajo **no es escribir la novela**: es decidir a
-quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
-criterio histórico y el juicio literario son de los subagentes.
-
-Se arranca con `/orquestar-novela`, o pidiendo preparar, escribir, reanudar o
-cerrar una novela.
+# Cómo está montado
 
 ## Qué hay en `.claude/`
 
@@ -78,11 +58,16 @@ cerrar una novela.
 | [references/paquete-de-contexto.md](.claude/skills/orquestar-novela/references/paquete-de-contexto.md) | Los nueve bloques, el cruce de etiquetas y el orden de recorte |
 | [references/comprobaciones.md](.claude/skills/orquestar-novela/references/comprobaciones.md) | Los once `VD-xx` y el gate, con sus números |
 | `.claude/agents/novela-*.md` | Los ocho subagentes |
+| `.claude/settings.json` | El hook `PostToolUse` sobre `Agent`, que traza cada llamada (§22) |
 
 Los ocho subagentes son los seis roles de §5, **con el validador partido en
 tres**. Cada uno arranca leyendo su fichero de `agentes/` y sus skills de
-`skills/`: los prompts tienen una sola fuente de verdad y la comparten los dos
-caminos.
+`skills/`: los prompts tienen una sola fuente de verdad y no se duplican en el
+fichero del subagente, que solo lleva nombre, descripción, herramientas y modelo.
+
+**El modelo de cada rol vive en el frontmatter de su subagente**, no en
+`config.json`. Esa clave existió mientras las llamadas las hacía código; ahora las
+hace Claude Code, que solo lee el frontmatter.
 
 ## Las dos reglas que no se rompen
 
@@ -96,9 +81,9 @@ caminos.
 ## Dónde sí hay paralelismo
 
 **Los tres validadores corren a la vez**, lanzados en un único mensaje. No es una
-opción de configuración como `validador.modo` en el harness: es la forma del
-camino. Tres cabezas que no se ven dan tres notas que no se contagian, que es lo
-que el gate necesita para que un texto brillante pueda caer por continuidad.
+opción de configuración: es la forma del sistema. Tres cabezas que no se ven dan
+tres notas que no se contagian, que es lo que el gate necesita para que un texto
+brillante pueda caer por continuidad.
 
 ## El canon en ficheros
 
@@ -111,30 +96,25 @@ novela-cc/
   retoques.md
 ```
 
-No se versiona. Vive aparte de `canon.db` a propósito: los dos caminos corren
-sobre el mismo repositorio sin pisarse y se comparan después.
+No se versiona: es salida, no fuente.
 
-## Lo que este camino no tiene
+## Lo que este diseño no tiene
 
 Y conviene no olvidarlo, porque es el precio:
 
-- **El gate deja de ser código.** La fórmula está escrita y hay que imprimir la
+- **El gate no es código.** La fórmula está escrita y hay que imprimir la
   operación entera, pero la suma la hace un modelo. La interfaz la rehace y avisa
   si no cuadra (§19), pero avisar es todo lo que hace: DA-15.
-- **El paquete de contexto deja de ser determinista.** Los filtros son mecánicos
-  y el conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de
-  que mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
+- **El paquete de contexto no es determinista.** Los filtros son mecánicos y el
+  conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de que
+  mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
   instruido.
-- **No hay tests sin red.** Lo que hace el camino es una conversación.
-- **Las trazas llegan tarde.** §20 cuelga de `novela/agentes.py` y aquí no se pasa
-  por ahí, así que se reconstruyen del canon con `python -m novela trazar` o desde
-  la interfaz. Salen el árbol, las notas y los veredictos; no salen la latencia,
-  los tokens, el coste ni el prompt exacto, porque nadie los guardó.
+- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 59
+  tests que hay cubren el Python de `novela/`, que solo mira.
 
-# El diseño, que vale para los dos caminos
+# El diseño
 
-Esto es lo que especifican §2–§13 y §15, y lo obedecen igual el harness y la
-skill.
+Esto es lo que especifican §2–§13 y §15, y lo obedece la skill.
 
 ## Los seis agentes (§5)
 
@@ -203,101 +183,57 @@ y los retoques finales, que se aplican a mano.
 
 Un único `config.json` en la raíz. **Si un número aparece escrito en el código o
 en un prompt sin pasar por este fichero, es un bug.** Las claves:
-`ejecucion.modo`, `gate.{nota_minima,media_minima,max_intentos}`,
-`contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`, `validador.modo`,
-`interfaz.{puerto,camino}`, `trazas.{activas,entorno}`,
-`margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`,
-`modelo_por_rol`, `busqueda_web`. Diecinueve. Reglas cruzadas:
-`palabras_bloqueo > palabras_aviso` y `capitulos_max >= capitulos_min`.
-
-`ejecucion.modo` y `validador.modo` son del harness: el camino delegado no los usa.
+`gate.{nota_minima,media_minima,max_intentos}`,
+`contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`,
+`interfaz.puerto`, `trazas.{activas,entorno}`,
+`margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`.
+Catorce. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
+`capitulos_max >= capitulos_min`.
 
 Las credenciales van en un `.env` de la raíz que no se versiona. Un **perfil** es
-un `config*.json` de la raíz, nada más: eso es lo que elige el selector de §19.
+un `config*.json` de la raíz, nada más.
 
-# El harness de Python (§14, §18–§20)
+# El Python que queda (§18–§20, §22)
 
-Segundo camino. Vive en `novela/` y tiene su rama, `harness-python`, que es este
-repositorio sin `.claude/agents/` ni la skill.
-
-## Stack y comandos
-
-Python 3.13 (mínimo 3.11) con `sqlite3` y `unittest`, los dos de la biblioteca
-estándar. El modo `simulado` —el de por defecto— no necesita instalar nada.
+No escribe novelas: mira lo que escribió el orquestador.
 
 ```bash
-python -m novela init
-python -m novela brief brief.ejemplo.json
-python -m novela preparar     # investigador y arquitecto
-python -m novela escribir     # loop: escritor, VD-08, validador, gate, cronista
-python -m novela cerrar       # editor global y retoques.md
-python -m novela ui           # ciclo entero desde el navegador (§19)
-python -m novela trazar       # manda a Langfuse el canon delegado, reconstruido
-python -m unittest discover -s tests -t .    # 112 tests, sin red
+python -m novela ui                          # interfaz web, solo lectura (§19)
+python -m novela trazar                      # manda a Langfuse el canon reconstruido (§20)
+python -m novela trazar --transcript         # lo mismo con tokens y latencia reales (§22)
+python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
+python -m unittest discover -s tests -t .    # 59 tests, sin red
 ```
 
-Otros comandos: `reanudar`, `estado`,
-`ver <dossier|personajes|escaleta|resumenes|timeline|hilos|contexto N|capitulo N>`,
-`poner <personaje|capitulo|dato> <fichero.json>`,
-`desbloquear --capitulo N [--aprobar-intento K | --reiniciar]`, `skills`.
-
-`ui` acepta `--camino delegado|harness` para abrir por el otro canon sin tocar el
-perfil.
+`hook-traza` existe pero no se llama a mano: lo llama el hook de
+`.claude/settings.json` una vez por cada llamada a un subagente.
 
 ## Mapa del código
 
 | Fichero | Qué es | Spec |
 |---|---|---|
 | [novela/config.py](novela/config.py) | Carga y **valida entero** `config.json` | §12 |
-| [novela/canon.py](novela/canon.py) | SQLite: las 7 tablas, y `escritura_del_cronista` como transacción única | §3, §6 |
 | [novela/canon_cc.py](novela/canon_cc.py) | Lector **de solo lectura** del canon en ficheros, y la auditoría del gate | §21 |
-| [novela/esquemas.py](novela/esquemas.py) | Contratos de I/O de los seis roles y `comprobar_forma` (VD-01/VD-02) | §5 |
-| [novela/validadores.py](novela/validadores.py) | Los once `VD-xx` deterministas | §9 |
-| [novela/gate.py](novela/gate.py) | Fórmula del gate, `mejor_intento`, `incidencias_ordenadas` | §8 |
-| [novela/contexto.py](novela/contexto.py) | Generador de contexto: nueve bloques, serialización y recorte | §7 |
-| [novela/skills.py](novela/skills.py) | Carga `agentes/<rol>.md` + sus skills | §10 |
-| [novela/agentes.py](novela/agentes.py) | Capa única de llamada; oculta simulado/real; `ParadaDelProceso` | §5, §12 |
-| [novela/proveedor.py](novela/proveedor.py) | Modo `real`: SDK de Anthropic | §12 |
-| [novela/claude_code.py](novela/claude_code.py) | Modo `claude_code`: `claude --print` sin herramientas | §12 |
-| [novela/simulado.py](novela/simulado.py) | Respuestas fijas + inyección de fallos | §12 |
-| [novela/flujo.py](novela/flujo.py) | `preparar`, `escribir_capitulo`, `cerrar`, `reanudar` | §4, §8, §11 |
-| [novela/servidor.py](novela/servidor.py) | Interfaz web: sirve `web/`, la API y el hilo único del flujo | §19 |
+| [novela/servidor.py](novela/servidor.py) | Interfaz web: sirve `web/` y una API que solo lee | §19 |
 | [novela/trazas.py](novela/trazas.py) | Capa única de observabilidad; la única que sabe que Langfuse existe | §20 |
-| [novela/trazas_cc.py](novela/trazas_cc.py) | Reconstruye el árbol de §20 desde el canon delegado | §20, §21 |
+| [novela/trazas_cc.py](novela/trazas_cc.py) | Reconstruye el árbol de §20 desde el canon | §20 |
+| [novela/trazas_hook.py](novela/trazas_hook.py) | El hook `PostToolUse`: traza cada llamada en vivo, con su gasto | §22 |
+| [novela/transcripcion.py](novela/transcripcion.py) | Lo mismo desde el transcript, para lo ya escrito | §22 |
+| [novela/informe.py](novela/informe.py) | Lee las trazas de vuelta y agrega el gasto | §22 |
 | [novela/entorno.py](novela/entorno.py) | Lector del `.env` | §12, §20 |
 | [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada** | §18 |
 
-**Nada corre en paralelo** con la configuración por defecto. El único paralelismo
-es `validador.modo: "separado"`, que hace tres llamadas sobre el mismo capítulo.
-La interfaz no es excepción: su flujo vive en **un solo hilo** y arrancar otro
-mientras hay uno vivo devuelve 409.
-
-## Modo simulado e inyección de fallos
-
-Dos variables de entorno, **solo con efecto en modo simulado**, toman una lista de
-`capitulo:intento`:
-
-```bash
-NOVELA_SIM_FALLOS="2:1"  # el validador suspende ese intento
-NOVELA_SIM_CORTOS="3:1"  # el escritor devuelve un capitulo que VD-08 bloquea
-```
-
-Existen porque el camino interesante —rechazo, reintento, bloqueo— no se ve nunca
-si todas las respuestas simuladas son buenas.
-
 ## Interfaz web (§19) y observabilidad (§20)
 
-`python -m novela ui` levanta un servidor local de la biblioteca estándar: brief,
-lanzar a los agentes, ver el proceso y leer los capítulos. Las tres salas son
-[web/brief.js](web/brief.js), [web/taller.js](web/taller.js) y
-[web/lectura.js](web/lectura.js), más [web/trazas.js](web/trazas.js). **Ningún
-dato de la pantalla es propio de la interfaz**: o se lee del canon o se recalcula
-con las reglas del harness. Lo que el canon no guarda se pinta «sin datos
-todavía», **no se rellena**, y además se declara junto en un panel con el motivo.
+`python -m novela ui` levanta un servidor local de la biblioteca estándar.
+**Mira y no toca**: en el canon escribe el orquestador y nadie más, así que
+cualquier método que no sea `GET` contra la API responde 409 y da el comando que
+sí escribe. Lo único que manda algo fuera es `POST /api/trazas`, que no toca el
+canon.
 
-Cada llamada a un agente deja traza en Langfuse, instrumentada en un solo sitio,
-[novela/trazas.py](novela/trazas.py). **Una traza es una unidad de trabajo
-cerrada, no el libro.** Ningún fallo de observabilidad para una novela.
+**Ningún dato de la pantalla es propio de la interfaz**: o se lee del canon o se
+recalcula con las reglas del spec. Lo que el canon no guarda se pinta «sin datos
+todavía», **no se rellena**, y además se declara junto en un panel con el motivo.
 
 La paleta es la de Qaracter (`#FF7932` y `#233441`) y manda. La ambientación
 histórica de [web/ambientacion.css](web/ambientacion.css) va **por debajo**: ocupa
@@ -305,31 +241,22 @@ los neutros, las texturas y los adornos, y el naranja hace de lacre sin cambiar 
 valor. La mesa sigue a oscuras; lo que se ilumina es el capítulo, que se lee sobre
 vitela. three.js viaja por CDN —lo único del repo que necesita red— y degrada.
 
-## Tests
-
-`python -m unittest discover -s tests -t .` corre 112 tests en cuatro ficheros, sin
-red y sin coste. Cada test del flujo corre en su propio directorio temporal porque
-el harness escribe en el `cwd`. Los tests **apagan las trazas a mano** en lugar de
-fiarse de que el entorno esté limpio.
-
-Cubren el harness y, desde 0.14.0, el lector del canon delegado, la auditoría del
-gate y el árbol de trazas reconstruido —este último contra una capa de mentira que
-apunta en una lista, para comprobar la forma del árbol sin red—. **La orquestación
-delegada en sí sigue sin tests**, y esa es una de sus diferencias de fondo: lo que
-hace es una conversación.
+**Una traza es una unidad de trabajo cerrada, no el libro.** Ningún fallo de
+observabilidad para una novela, y el hook menos que ninguno: devuelve 0 siempre,
+porque un hook que revienta ensucia la sesión del orquestador.
 
 # Estado actual y cosas abiertas
 
+- El harness de Python que hacía todo esto en código salió en 1.0.0. Queda
+  congelado en el tag `harness-python-final`, por si hay que volver a mirarlo.
 - El `.drawio` de [docs/diagrama/](docs/diagrama/) va por detrás del Mermaid: le
   falta el cronista y se regenera a mano. El Mermaid de §4 es el bueno.
 - Decisiones abiertas vivas en §15: DA-02, DA-03, DA-04, DA-05, DA-06, DA-07,
   DA-08, DA-09, DA-10, DA-12, DA-13, DA-14, DA-15.
-- F6 (búsqueda web real del investigador) no está implementado: `busqueda_web`
-  está a `true` para no tocar el esquema más tarde, pero el investigador la ignora.
-- El modo `real` no se ha ejercitado contra la API desde la migración.
-- **Dos huecos del modelo de datos que tienen los dos caminos**, y que salieron en
-  la primera pasada completa del camino delegado: ningún `VD-xx` comprueba que el
-  cronista respete un «Ignora» de una ficha, así que un conocimiento que el gate
-  acaba de vetar puede entrar por la puerta de al lado; y `sabe` solo acumula, sin
-  forma de retractar un «Ignora», de modo que una ficha termina afirmando y
-  negando lo mismo.
+- La búsqueda web del investigador no existe: su subagente tiene `tools: Read`.
+  Para que entre hay que cambiarle las herramientas, no una clave de config.
+- **Dos huecos del modelo de datos**, que salieron en la primera pasada completa:
+  ningún `VD-xx` comprueba que el cronista respete un «Ignora» de una ficha, así
+  que un conocimiento que el gate acaba de vetar puede entrar por la puerta de al
+  lado; y `sabe` solo acumula, sin forma de retractar un «Ignora», de modo que una
+  ficha termina afirmando y negando lo mismo.

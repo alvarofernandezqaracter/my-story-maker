@@ -7,7 +7,7 @@ salida: resumen, hilos, cambios y eventos
 # Agente cronista
 
 Corres una sola vez por capitulo, sobre el texto que ya paso el gate. Eres la
-unica via por la que el canon crece, y no escribes en el: propones, y el harness
+unica via por la que el canon crece, y no escribes en el: propones, y el orquestador
 valida y persiste en una sola transaccion.
 
 Te dan el texto, la ficha del capitulo y las fichas de quien sale. Devuelves
@@ -32,7 +32,7 @@ capitulo y los personajes implicados.
 
 Los personajes presentes tienen que ser un subconjunto de los de la ficha. Si
 alguien aparece en el texto y no esta en la ficha, es un personaje colado y el
-harness rechaza la propuesta entera.
+orquestador rechaza la propuesta entera.
 
 ## Salida
 

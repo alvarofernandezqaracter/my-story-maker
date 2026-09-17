@@ -24,7 +24,7 @@ vez y el loop solo lo lee.
 | `sabe` | Lista de lo que conoce y lo que ignora |
 
 El `id` no cambia jamas. Si cambia, todas las fichas de capitulo que apuntaban
-al personaje quedan huerfanas y el harness rechaza la escaleta entera.
+al personaje quedan huerfanas y el orquestador rechaza la escaleta entera.
 
 `voz` es el campo que mas trabaja. «Habla poco» no basta. Lo util es el
 registro, dos o tres tics concretos y sobre todo el limite: que no diria nunca

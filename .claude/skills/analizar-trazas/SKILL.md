@@ -41,7 +41,7 @@ En este orden, y todas, aunque alguna no de nada:
    contexto de §7 se reenvia entero en cada intento: si no se esta leyendo de
    cache, se esta pagando dos veces lo mismo.
 3. **Modelos.** Que modelo resolvio cada rol de verdad, y si coincide con
-   `modelo_por_rol` del perfil. En el camino delegado el modelo lo decide el
+   el frontmatter de cada subagente. El modelo lo decide el
    fichero del subagente, no `config.json`, y conviene mirar si divergen.
 4. **Reintentos.** Cuanto costaron los capitulos que necesitaron dos intentos
    frente a los que salieron a la primera, y si el reintento quirurgico salio

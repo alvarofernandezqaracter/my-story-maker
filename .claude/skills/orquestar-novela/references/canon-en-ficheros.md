@@ -5,9 +5,8 @@ Python, asi que el canon son ficheros JSON bajo `novela-cc/canon/`. Cambia el
 soporte, no el papel: **sigue siendo la unica fuente de verdad del proyecto**, y
 sigue sin poder escribirlo nadie mas que el orquestador.
 
-Todo va bajo `novela-cc/` a proposito. El camino de Python usa `canon.db`,
-`capitulos/` y `retoques.md` en la raiz, asi que los dos pueden correr sobre el
-mismo repositorio sin pisarse y se pueden comparar despues.
+Todo va bajo `novela-cc/`, incluidos los borradores y los retoques. Es salida y
+no se versiona: lo que se versiona es lo que la produce.
 
 ## El arbol
 

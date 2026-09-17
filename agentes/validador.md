@@ -39,4 +39,4 @@ poco.
 ## Salida
 
 Tres bloques, uno por dimension, conforme a la skill `rubricas-validador`. Si el
-harness te pide una sola dimension, devuelve solo ese bloque.
+orquestador te pide una sola dimension, devuelve solo ese bloque.

@@ -6,119 +6,58 @@ El diseño completo está en [`docs/spec/SPEC.md`](docs/spec/SPEC.md) y es la
 fuente de verdad: si el código y el spec cuentan cosas distintas, manda el spec.
 Este README solo dice cómo se arranca.
 
-## Requisitos
+## Cómo se escribe una novela
 
-Python 3.11 o superior (aquí corre sobre 3.13). El canon usa `sqlite3`, que
-viene en la propia biblioteca estándar, así que el modo `simulado` no necesita
-instalar nada. El modo `real` necesita `anthropic` y una credencial de la API en
-el entorno. El modo `claude_code` no necesita ninguna de las dos cosas: le basta
-con tener la CLI de Claude Code en el `PATH`. Las trazas necesitan `langfuse` y
-tampoco son obligatorias.
+No con un comando. Se abre **Claude Code** en este repositorio y se lanza:
 
-## Arranque rápido, sin red y sin coste
-
-```bash
-python -m novela init
-python -m novela brief brief.ejemplo.json
-python -m novela preparar     # investigador y arquitecto
-python -m novela escribir     # loop: escritor, validador, gate, cronista
-python -m novela cerrar       # editor global y retoques.md
+```
+/orquestar-novela
 ```
 
-O, si prefieres no tocar la consola, todo eso mismo desde el navegador:
+La sesión te pide los cinco campos del brief —época y lugar, premisa, tono,
+capítulos y palabras por capítulo— y a partir de ahí orquesta: un investigador
+levanta el dossier de época, un arquitecto monta la escaleta y las fichas, y
+luego, capítulo a capítulo, un escritor redacta, tres validadores puntúan a la
+vez, el gate decide y un cronista vuelca lo aprobado en el canon. Al terminar,
+un editor global propone los retoques finales.
+
+También entiende «prepara la novela», «sigue escribiendo», «reanuda»,
+«desbloquea el capítulo 4» o «ciérrala».
+
+**Quien orquesta es la sesión, no un programa.** La máquina de estados, el
+cálculo del gate y las once comprobaciones están escritos como instrucciones en
+[`.claude/skills/orquestar-novela/`](.claude/skills/orquestar-novela/), en
+Markdown y sin una línea de código. Los ocho subagentes están en
+[`.claude/agents/`](.claude/agents/) y cada uno arranca leyendo su encargo de
+`agentes/`, que es la única fuente de verdad de los prompts.
+
+El canon queda en `novela-cc/`: los JSON del estado, el paquete de contexto con
+el que se escribió cada capítulo, un Markdown por intento y `retoques.md`. Es
+salida y no se versiona.
+
+## Y para mirar lo que ha escrito
+
+Ahí sí hay Python, y no escribe nada: mira.
+
+### Requisitos
+
+Python 3.11 o superior (aquí corre sobre 3.13). Todo sale de la biblioteca
+estándar, así que **un repositorio recién clonado no necesita `pip install`**.
+Las trazas necesitan `langfuse` y son opcionales.
+
+### La interfaz web
 
 ```bash
 python -m novela ui           # http://127.0.0.1:8787
 ```
 
-Con `ejecucion.modo` en `simulado`, que es el valor por defecto de
-`config.json`, las llamadas a agentes las resuelve una capa local que devuelve
-respuestas fijas con el formato correcto. Todo el harness corre por el mismo
-camino que en ejecución real.
+Levanta un servidor local —`http.server`, nada que instalar— y abre el
+navegador. Son tres salas:
 
-## Ejecución con modelos de verdad
-
-Hay dos caminos y se eligen con `ejecucion.modo`, sin tocar nada más:
-
-- `real`: contra la API de Claude. Instala el SDK (`pip install anthropic`) y
-  deja la credencial en el entorno, nunca en `config.json`.
-- `claude_code`: contra la CLI de Claude Code que ya tengas instalada, en modo
-  headless. No hace falta clave de API porque la credencial es la de su sesión.
-  `config.claude-code.json` viene ya puesto con ese modo:
-
-```bash
-python -m novela preparar --config config.claude-code.json
-python -m novela escribir --config config.claude-code.json
-python -m novela cerrar   --config config.claude-code.json
-```
-
-En los dos casos el modelo de cada rol sale de `modelo_por_rol`, y el resto del
-harness es el mismo: mismas instrucciones, mismos validadores y mismo gate.
-
-## Ver qué hizo cada agente
-
-El harness manda a [Langfuse](https://langfuse.com) qué se le pidió a cada
-agente, qué contestó, con qué modelo y cuánto costó. Es la pregunta que ni el
-canon ni la consola contestan: **por qué el modelo contestó lo que contestó**.
-
-```bash
-pip install "my-story-maker[trazas]"
-cp .env.ejemplo .env          # y pon ahí tus claves de Langfuse
-```
-
-Una traza por unidad de trabajo —la preparación, **cada capítulo** y el cierre—,
-agrupadas en una sesión por novela. Dentro de la de un capítulo se ve el paquete
-de contexto que recibió el escritor, cada invocación del modelo por separado y
-los dos puntos donde el harness decide solo: VD-08 y el gate. Las tres notas del
-validador y la media viajan como puntuaciones, así que la calidad del libro se
-mira en una gráfica en lugar de releyendo capítulos.
-
-Se apagan con `trazas.activas` a `false`. Y no hacen falta para nada: sin el
-paquete, sin credencial o con Langfuse caído, la capa se calla y la novela se
-escribe igual.
-
-### Y el camino delegado también traza
-
-Ahí no hay llamada que interceptar —orquesta Claude Code— pero sí hay un punto
-único donde está todo: el canon. `python -m novela trazar`, o el botón del panel
-de trazas de la interfaz, levanta el mismo árbol desde `novela-cc/` y lo manda.
-La sesión se deriva del brief con la misma cuenta que el harness, así que **las
-dos orquestaciones del mismo brief caen en la misma sesión** y se comparan una
-al lado de la otra.
-
-Es observabilidad reconstruida y va marcada como tal, con las etiquetas
-`delegado` y `reconstruido`: salen el árbol, las notas, los veredictos y una
-puntuación extra que dice si la suma del gate cuadra con la fórmula; no salen la
-latencia, los tokens, el coste ni el prompt exacto, porque nadie los guardó.
-
-## Comandos
-
-| Comando | Qué hace |
-|---|---|
-| `init` | Crea el canon vacío |
-| `brief <fichero.json>` | Guarda el brief y deja el proyecto en `borrador` |
-| `preparar` | Investigador y arquitecto |
-| `escribir [--capitulo N]` | Loop de capítulo. Sin `--capitulo`, va hasta el final o hasta el primer bloqueo |
-| `cerrar` | Editor global y `retoques.md` |
-| `reanudar` | Sin argumentos: sigue desde el primer capítulo no aprobado |
-| `estado` | Estado del proyecto y de cada capítulo, con sus notas |
-| `ver <qué> [N]` | `dossier`, `personajes`, `escaleta`, `resumenes`, `timeline`, `hilos`, `contexto N`, `capitulo N` |
-| `poner <qué> <fichero>` | `personaje`, `capitulo`, `dato` — escritura a mano en el canon |
-| `desbloquear --capitulo N` | Salidas manuales del bloqueo. Con `--aprobar-intento K` o `--reiniciar` |
-| `skills` | Lista las skills que el harness carga en cada llamada |
-| `ui [--puerto N] [--camino X]` | Abre la interfaz web: brief, flujo, seguimiento y lectura |
-| `trazar [--modelo M]` | Manda a Langfuse el canon delegado de `novela-cc/`, reconstruido |
-
-Opciones globales: `--config <ruta>` y `--canon <ruta>`.
-
-## La interfaz web
-
-`python -m novela ui` levanta un servidor local —`http.server`, nada que
-instalar— y abre el navegador. Son tres salas:
-
-- **Brief.** Los cinco campos. Una escena en three.js dibuja un cuadernillo por
-  capítulo: el grosor son las palabras, el color el estado en el canon y la luz
-  la pone el tono, con el candil parpadeando encima de la mesa.
+- **Brief.** Los cinco campos del canon, en lectura. Una escena en three.js
+  dibuja un cuadernillo por capítulo: el grosor son las palabras, el color el
+  estado en el canon y la luz la pone el tono, con el candil parpadeando encima
+  de la mesa.
 - **Escritorio.** El pipeline de estados, una tarjeta por subagente, la tabla de
   intentos con el escalón de VD-08 y la operación entera del gate, la auditoría
   de esa operación, la cronología de la novela por día de ficción, el reparto,
@@ -130,48 +69,103 @@ instalar— y abre el navegador. Son tres salas:
   capítulo y `f` entra en modo inmersión. Desde la ficha se abre el paquete de
   contexto con el que se escribió.
 
-### Mira los dos caminos
-
-Un conmutador en la barra cambia entre el canon delegado (`novela-cc/`) y el del
-harness (`canon.db`) sin reiniciar nada. Por el delegado la página **solo
-mira**: quien orquesta es una sesión de Claude Code y en ese canon escribe ella
-sola, así que en vez de botones la página da el comando exacto que toca pegar.
-Lo que sí hace, y solo puede hacer ahí, es rehacer la cuenta del gate con la
-fórmula del spec y avisar si no coincide con la que escribió el orquestador.
-
-Por el camino del harness los botones siguen donde estaban, y un capítulo
-bloqueado se desbloquea desde su propia tarjeta.
+**La página mira y no toca.** En el canon escribe la sesión de Claude Code que
+orquesta y nadie más, así que en vez de botones la página da el comando exacto
+que toca pegar. Lo que sí hace, y es lo que más justifica abrirla, es rehacer la
+cuenta del gate con la fórmula del spec y avisar si no coincide con la que
+escribió el orquestador: la suma la hace un modelo y eso es lo más frágil del
+sistema.
 
 Lo que el canon no guarda —la cuota diaria, las escenas, el focalizador, el
-gancho final y, en el delegado, el coste y las citas de las incidencias—
-aparece como «sin datos todavía» y está listado con su motivo en un panel. Es
-aposta: preferimos el hueco a un número inventado.
+gancho final, el coste y las citas de las incidencias— aparece como «sin datos
+todavía» y está listado con su motivo en un panel. Es aposta: preferimos el
+hueco a un número inventado.
 
-El puerto y el camino de arranque salen de `interfaz.puerto` e
-`interfaz.camino`. **Nunca corren dos flujos a la vez**: el servidor tiene un
-solo hilo de trabajo y rechaza el segundo, que es lo que mantiene en pie el
-invariante del spec. Con una novela en marcha tampoco deja rehacer el brief;
-para eso está `python -m novela brief`, que lo pisa a sabiendas.
+El puerto sale de `interfaz.puerto`, y `--puerto N` lo pisa para un arranque
+suelto. La escena baja three.js de un CDN, y es lo único del repo que necesita
+red. Si no llega, la interfaz funciona igual.
 
-La escena baja three.js de un CDN, y es lo único del repo que necesita red. Si
-no llega, la interfaz funciona igual.
+En Windows, `ui.bat` hace lo mismo buscando el intérprete por su cuenta, sin
+fiarse del `PATH`.
+
+### Ver qué hizo cada subagente
+
+A [Langfuse](https://langfuse.com) va qué se le pidió a cada subagente, qué
+contestó, con qué modelo y cuánto costó. Es la pregunta que el canon no
+contesta: **por qué el modelo contestó lo que contestó**.
+
+```bash
+pip install "my-story-maker[trazas]"
+cp .env.ejemplo .env          # y pon ahí tus claves de Langfuse
+```
+
+Con eso puesto, el hook de [`.claude/settings.json`](.claude/settings.json)
+traza **cada llamada en el momento en que ocurre**, con su prompt, su modelo,
+sus tokens y su latencia reales. No hay que lanzar nada: ocurre solo mientras la
+novela se escribe. Y no puede romper nada — un hook que revienta ensuciaría la
+sesión del orquestador, así que devuelve 0 siempre y deja además su línea en un
+diario local.
+
+Para una novela escrita **antes** de poner el hook hay dos rescates:
+
+```bash
+python -m novela trazar --transcript   # del transcript de la sesión, con gasto real
+python -m novela trazar                # del canon, reconstruido: sin tokens ni coste
+```
+
+El segundo levanta el árbol entero desde `novela-cc/` y va marcado como
+reconstruido. Salen el árbol, las notas, los veredictos y una puntuación extra
+que dice si la suma del gate cuadra con la fórmula; no salen la latencia, los
+tokens ni el coste, porque nadie los guardó.
+
+Una traza por unidad de trabajo —la preparación, **cada capítulo** y el cierre—,
+agrupadas en una sesión por novela. Las tres notas del validador y la media
+viajan como puntuaciones, así que la calidad del libro se mira en una gráfica en
+lugar de releyendo capítulos.
+
+Se apagan con `trazas.activas` a `false`. Y no hacen falta para nada: sin el
+paquete, sin credencial o con Langfuse caído, la capa se calla y la novela se
+escribe igual.
+
+### En qué se fue el gasto
+
+```bash
+python -m novela informe-trazas --salida informe.md
+```
+
+Lee de vuelta las trazas de una novela y las agrega: gasto por rol, por capítulo
+y por modelo, reparto de caché, llamadas más caras y más lentas, y el cruce del
+coste de cada capítulo con sus notas y sus intentos. **El código cuenta y el
+modelo juzga**: lo que se lee después se acumula en
+[`docs/spec/TRAZAS.md`](docs/spec/TRAZAS.md), y la skill `analizar-trazas` lleva
+el cuestionario para que todas las pasadas pregunten lo mismo.
+
+## Comandos
+
+| Comando | Qué hace |
+|---|---|
+| `ui [--puerto N]` | Abre la interfaz web. Mira y no escribe |
+| `trazar [--modelo M]` | Manda a Langfuse el canon de `novela-cc/`, reconstruido |
+| `trazar --transcript` | Lo mismo desde el transcript de la sesión, con gasto real |
+| `informe-trazas [--sesion S] [--salida F] [--json]` | Agrega el gasto de una novela |
+| `hook-traza` | Lo llama el hook, no una persona |
+| `ui.bat` | `ui` en Windows, buscando el intérprete por su cuenta |
+
+Opción global: `--config <ruta>`.
 
 ## Qué hay en cada sitio
 
 | Carpeta | Qué contiene |
 |---|---|
-| `novela/` | El harness: todo lo determinista, con la CLI en `__main__.py` |
-| `agentes/` | Un `.md` por agente de §5, con su encargo y sus modos de fallo |
-| `skills/` | Las skills de §10, que el harness carga al construir cada llamada |
-| `capitulos/` | Un Markdown por intento. Los fallidos se quedan como rastro |
+| `.claude/skills/orquestar-novela/` | La máquina de estados como instrucciones, y tres referencias |
+| `.claude/agents/` | Los ocho subagentes: seis roles con el validador partido en tres |
+| `agentes/` | Un `.md` por rol, con su encargo y sus modos de fallo. Única fuente de los prompts |
+| `skills/` | Las skills de §10, que cada subagente carga al arrancar |
+| `novela/` | El Python que mira: canon, interfaz, trazas e informe |
 | `web/` | La interfaz: las tres salas, la escena three.js y la ambientación |
-| `novela-cc/` | El canon en ficheros del camino delegado |
-| `.claude/` | Los ocho subagentes, la skill que los orquesta y la de Langfuse (ver `PROCEDENCIA.md`) |
-| `tests/` | Tests contra la capa simulada, sin red |
-| `docs/spec/` | El spec |
-
-`canon.db`, `capitulos/*.md`, `retoques.md` y `novela-cc/` son salida y no se
-versionan.
+| `novela-cc/` | El canon en ficheros. Es salida y no se versiona |
+| `tests/` | Tests del Python de `novela/`, sin red |
+| `docs/spec/` | El spec, y el documento de análisis de trazas |
 
 ## Tests
 
@@ -179,13 +173,17 @@ versionan.
 python -m unittest discover -s tests -t .
 ```
 
-Corren en modo simulado. Dos variables de entorno inyectan fallos para
-ejercitar los caminos que de otro modo no se ven: `NOVELA_SIM_FALLOS` hace que
-el validador suspenda un intento concreto y `NOVELA_SIM_CORTOS` hace que el
-escritor devuelva un capítulo demasiado corto. Ambas toman una lista de
-`capitulo:intento` y solo tienen efecto en modo simulado.
+Cincuenta y nueve, sin red y sin coste. Cubren el lector del canon, la auditoría
+del gate, la API de la interfaz, el árbol de trazas reconstruido y el hook.
 
-```bash
-# El capítulo 2 suspende a la primera y el reintento lo arregla
-NOVELA_SIM_FALLOS="2:1" python -m novela escribir
-```
+**La orquestación en sí no tiene tests**, y no es un olvido: lo que hace es una
+conversación. Es el precio de este diseño y está escrito en §21 del spec.
+
+## Un apunte de historia
+
+Hasta la versión 0.14.0 este repositorio mantenía **dos implementaciones** del
+mismo sistema a propósito: la orquestación delegada que ves aquí y un harness de
+Python en `novela/flujo.py` que hacía lo mismo en código, para poder comparar las
+dos maneras de resolver el problema. La comparación se hizo. Mantener las dos
+obliga a implementar cada cambio dos veces, así que en 1.0.0 el harness salió del
+repositorio. Queda congelado en el tag `harness-python-final`.

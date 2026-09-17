@@ -1,6 +1,6 @@
 ---
 name: orquestar-novela
-description: Escribe una novela historica completa orquestando los ocho subagentes novela-* sobre un canon en ficheros. Usala cuando se pida preparar, escribir, continuar, reanudar, desbloquear o cerrar una novela de este repositorio, o cuando se pida lanzar el camino de orquestacion sin Python.
+description: Escribe una novela historica completa orquestando los ocho subagentes novela-* sobre un canon en ficheros. Usala cuando se pida preparar, escribir, continuar, reanudar, desbloquear o cerrar una novela de este repositorio.
 ---
 
 # Orquestar la novela
@@ -10,11 +10,12 @@ se llama, con que delante, y que se hace con lo que devuelve. La prosa, el
 criterio historico y el juicio literario son de los subagentes `novela-*`. Tu
 pones el orden, las comprobaciones y la memoria.
 
-Este es el segundo camino de ejecucion del repositorio. El primero es el harness
-de Python (`python -m novela escribir`), que hace exactamente esto mismo en
-codigo. **Los dos comparten los prompts de `agentes/` y `skills/` y no los
-duplican**: cada subagente lee su fichero de rol al arrancar. Si cambias un
-prompt, cambian los dos caminos, y eso es deliberado.
+**Los prompts no se duplican**: cada subagente lee su fichero de rol de
+`agentes/` al arrancar, y el fichero de `.claude/agents/` solo lleva lo que hace
+falta para lanzarlo. Si cambias un encargo, cambialo en `agentes/`.
+
+El Python que hay en `novela/` no escribe novelas: mira lo que tu escribes. No lo
+llames para nada de esto.
 
 ## Antes de empezar
 

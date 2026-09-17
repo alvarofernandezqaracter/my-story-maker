@@ -50,7 +50,7 @@ algo mientras piensa.
 
 ## Palabras objetivo
 
-El numero que te llega es un objetivo real, no una sugerencia, y el harness lo
+El numero que te llega es un objetivo real, no una sugerencia, y el orquestador lo
 comprueba antes de que nadie lea el capitulo. Quedarse corto por resumir el
 final es el fallo mas comun: si vas justo, corta una escena entera y desarrolla
 las que quedan, en vez de contarlas todas de lejos.
