@@ -110,7 +110,7 @@ Y conviene no olvidarlo, porque es el precio:
   conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de que
   mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
   instruido.
-- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 56
+- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 62
   tests que hay cubren el Python de `novela/`, que solo mira.
 
 # El diseño
@@ -202,7 +202,8 @@ No escribe novelas: mira lo que escribió el orquestador.
 python -m novela ui                          # interfaz web, solo lectura (§19)
 python -m novela trazar                      # manda a Langfuse el canon reconstruido (§20)
 python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
-python -m unittest discover -s tests -t .    # 56 tests, sin red
+                                             # sin Langfuse tira del diario local
+python -m unittest discover -s tests -t .    # 62 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
@@ -218,7 +219,7 @@ python -m unittest discover -s tests -t .    # 56 tests, sin red
 | [novela/trazas.py](novela/trazas.py) | Capa única de observabilidad; la única que sabe que Langfuse existe | §20 |
 | [novela/trazas_cc.py](novela/trazas_cc.py) | Reconstruye el árbol de §20 desde el canon | §20 |
 | [novela/trazas_hook.py](novela/trazas_hook.py) | El hook `PostToolUse`: traza cada llamada en vivo, con su gasto | §22 |
-| [novela/informe.py](novela/informe.py) | Lee las trazas de vuelta y agrega el gasto | §22 |
+| [novela/informe.py](novela/informe.py) | Lee las trazas de vuelta y agrega el gasto; sin Langfuse, del diario local | §22 |
 | [novela/entorno.py](novela/entorno.py) | Lector del `.env` | §12, §20 |
 | [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada** | §18 |
 

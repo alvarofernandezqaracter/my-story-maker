@@ -30,7 +30,9 @@ La novela se escribe desde Claude Code: abre el repositorio y lanza
                                    llamada al subagente. Lo llama el hook (§22)
   novela informe-trazas [--sesion S] [--salida F] [--json]
                                    lee de vuelta las trazas de una novela y
-                                   agrega el gasto para analizarlo (§22)
+                                   agrega el gasto para analizarlo (§22). Si
+                                   Langfuse no contesta, tira del diario local
+                                   del hook: sale todo menos el dinero
 
 Opciones globales: --config <ruta> (por defecto config.json)
 """.strip()
@@ -105,6 +107,9 @@ def _ejecutar(comando, posicionales, opciones, config):
         if informe is None:
             _log('sin informe: {}'.format(motivo))
             return
+        if informe.get('procedencia') == 'diario':
+            _log('Langfuse no sirvio la sesion: {}'.format(informe['sin_langfuse']))
+            _log('  informe hecho con el diario local: sin coste, el resto igual')
         salida = texto_informe(informe, informe['sesion'])
         destino = opciones.get('salida')
         if opciones.get('json'):

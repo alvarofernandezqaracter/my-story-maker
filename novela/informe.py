@@ -13,10 +13,12 @@
 # poder verlo, y por eso esto no interpreta nada: cuenta.
 import json
 from collections import defaultdict
+from pathlib import Path
 
 from .canon_cc import CanonCC, DIMENSIONES, auditar_gate, notas_en_lista
 from .trazas import sesion_de, Trazas
 from .trazas_cc import _config_de_trazas
+from .trazas_hook import DIARIO
 
 # Cuantas observaciones se piden por vuelta. Una novela de seis capitulos deja
 # del orden de cien, asi que con una pagina suele bastar; el bucle esta por las
@@ -115,6 +117,84 @@ def recoger(config, sesion, aviso=None):
             'metadata': extra.get('metadata') or {},
         })
     return observaciones, None
+
+
+def del_diario(raiz, sesion=None):
+    """Las mismas llamadas, leidas del diario local del hook (§22).
+
+    El diario se escribe pase lo que pase con Langfuse, asi que es lo que queda
+    cuando el servicio no contesta. Cada linea se traduce a la forma que espera
+    `agregar`, para que el informe salga por el mismo sitio y no haya dos
+    maneras de contar lo mismo.
+
+    **El diario no sabe de dinero.** Lleva el modelo y el reparto de tokens,
+    pero el coste lo calcula Langfuse cruzandolos con su lista de precios, y
+    aqui no hay lista. El coste sale a cero y quien lo lea tiene que saberlo:
+    por eso el informe se marca con su procedencia y el texto pone una raya
+    donde iria el dinero, en vez de un cero que se lee como gratis.
+    """
+    ruta = Path(raiz) / DIARIO
+    if not ruta.exists():
+        return None, 'tampoco hay diario local en {}'.format(ruta)
+
+    observaciones = []
+    rotas = 0
+    repetidas = 0
+    vistas = set()
+    for linea in ruta.read_text(encoding='utf-8').splitlines():
+        if not linea.strip():
+            continue
+        try:
+            d = json.loads(linea)
+        except ValueError:
+            rotas += 1
+            continue
+        if sesion and d.get('sesion') and d['sesion'] != sesion:
+            continue
+        # El diario solo sabe anadir: el hook escribe una linea por evento y
+        # nadie la borra, asi que un evento entregado dos veces -o una sesion
+        # reanudada sobre el mismo canon- deja la misma llamada repetida. En
+        # Langfuse eso no se nota porque la observacion lleva id y se solapa;
+        # aqui hay que descartarlo o cada numero sale al doble. La firma es lo
+        # que no pueden compartir dos llamadas distintas: mismo rol, misma
+        # dimension, mismo capitulo e intento, y ademas los mismos milisegundos
+        # exactos y los mismos tokens.
+        firma = (d.get('rol'), d.get('dimension'), d.get('capitulo'),
+                 d.get('intento'), d.get('duracion_ms'), d.get('tokens'))
+        if firma in vistas:
+            repetidas += 1
+            continue
+        vistas.add(firma)
+        observaciones.append({
+            'id': d.get('traza'),
+            'nombre': d.get('rol') or 'sin-nombre',
+            # El diario solo anota llamadas a subagentes, que es justo lo que
+            # `agregar` cuenta: se presentan como la `generation` del hook para
+            # que el filtro de alli valga igual sin tener que tocarlo.
+            'tipo': 'generation',
+            'modelo': d.get('modelo'),
+            'uso': d.get('reparto') or {},
+            'coste': 0,
+            'latencia': 0,
+            'traza': d.get('traza'),
+            'metadata': {
+                'origen': 'hook',
+                'capitulo': d.get('capitulo'),
+                'intento': d.get('intento'),
+                'dimension': d.get('dimension'),
+                'tokens_totales': d.get('tokens'),
+                'duracion_ms': d.get('duracion_ms'),
+                'modelo': d.get('modelo'),
+            },
+        })
+    if not observaciones:
+        return None, 'el diario local de {} no tiene ninguna llamada de esa sesion'.format(ruta)
+    reparos = []
+    if repetidas:
+        reparos.append('{} linea(s) repetidas descartadas'.format(repetidas))
+    if rotas:
+        reparos.append('{} linea(s) ilegibles'.format(rotas))
+    return observaciones, ('; '.join(reparos) if reparos else None)
 
 
 def _meta(obs, clave):
@@ -244,16 +324,29 @@ def _calidad(canon, config, por_capitulo):
 def texto(informe, sesion):
     """El informe en Markdown, que es lo que lee el analista."""
     t = informe['total']
+    # Lo que no se sabe no se rellena con un cero: un cero se lee como gratis.
+    del_diario_ = informe.get('procedencia') == 'diario'
+    dinero = (lambda v: '—') if del_diario_ else (lambda v: '{:.4f}'.format(v))
+
     lineas = ['# Informe de trazas', '',
               'Sesion `{}` — {} observaciones, {} llamadas con gasto medido.'.format(
                   sesion, informe['observaciones'], informe['llamadas']), '']
+    if del_diario_:
+        lineas += ['> **Sin Langfuse: esto sale del diario local del hook.**'
+                   ' {}. El diario anota quien, cuando, cuanto tardo y cuantos'
+                   ' tokens costo, asi que lo de abajo es tan real como siempre'
+                   ' salvo el dinero: el coste lo calcula Langfuse cruzando'
+                   ' modelo y tokens con su lista de precios, y sin el no hay'
+                   ' precio que aplicar. Donde iria dinero va una raya. No lo'
+                   ' rellenes al leerlo.'.format(
+                       informe.get('sin_langfuse', 'Langfuse no contesto')), '']
 
     lineas += ['## Totales', '',
                '- Tokens: {:,} ({:,} frescos de entrada, {:,} de salida)'.format(
                    t['tokens'], t['entrada'], t['salida']),
                '- Cache: {:,} leidos, {:,} escritos'.format(
                    t['cache_leida'], t['cache_escrita']),
-               '- Coste calculado: {:.4f}'.format(t['coste']),
+               '- Coste calculado: {}'.format(dinero(t['coste'])),
                '- Tiempo de modelo: {:.1f} min'.format(t['ms'] / 60000.0), '']
     if informe.get('cache'):
         lineas += ['- De cada 100 tokens de entrada, {} salieron de cache'.format(
@@ -264,15 +357,15 @@ def texto(informe, sesion):
                  '| {} | llamadas | tokens | coste | min |'.format(primera),
                  '|---|---:|---:|---:|---:|']
         for clave, c in sorted(datos.items(), key=lambda kv: -kv[1]['tokens']):
-            filas.append('| {} | {} | {:,} | {:.4f} | {:.1f} |'.format(
-                clave, c['llamadas'], c['tokens'], c['coste'], c['ms'] / 60000.0))
+            filas.append('| {} | {} | {:,} | {} | {:.1f} |'.format(
+                clave, c['llamadas'], c['tokens'], dinero(c['coste']), c['ms'] / 60000.0))
         return filas + ['']
 
     # Un modelo que Langfuse no tiene en su lista sale a coste cero, y un cero
     # que en realidad es un "no lo se" envenena cualquier conclusion sobre
     # gasto. Se dice aqui en vez de dejar que el analista lo interprete.
-    sin_precio = sorted(m for m, c in informe['por_modelo'].items()
-                        if c['tokens'] and not c['coste'])
+    sin_precio = [] if del_diario_ else sorted(
+        m for m, c in informe['por_modelo'].items() if c['tokens'] and not c['coste'])
     if sin_precio:
         lineas += ['> Sin precio en Langfuse, cuentan tokens pero no coste: {}.'
                    ' El coste total de arriba se queda corto mientras no se les'
@@ -290,9 +383,9 @@ def texto(informe, sesion):
                    '|---:|---:|---|---:|---:|---:|---:|---:|']
         for f in calidad['capitulos']:
             notas = '/'.join(str(v) for v in (f['notas'] or {}).values()) or '—'
-            lineas.append('| {} | {} | {} | {} | {} | {} | {:,} | {:.4f} |'.format(
+            lineas.append('| {} | {} | {} | {} | {} | {} | {:,} | {} |'.format(
                 f['capitulo'], f['intentos'], notas, f['media'], f['palabras'],
-                f['contexto_tokens'], f['tokens'], f['coste']))
+                f['contexto_tokens'], f['tokens'], dinero(f['coste'])))
         lineas += ['']
         if calidad['descartados']:
             lineas += ['### Intentos descartados', '']
@@ -302,14 +395,16 @@ def texto(informe, sesion):
                     '; '.join(d['motivos']) or 'sin motivos escritos'))
             lineas += ['']
 
-    for titulo, clave, unidad in (('Llamadas mas caras', 'mas_caras', 'coste'),
-                                  ('Llamadas mas lentas', 'mas_lentas', 'ms')):
+    # Sin coste la primera lista sigue valiendo, porque el desempate ya era por
+    # tokens; lo que cambia es el titulo, que si no prometeria dinero.
+    caras = 'Llamadas con mas tokens' if del_diario_ else 'Llamadas mas caras'
+    for titulo, clave in ((caras, 'mas_caras'), ('Llamadas mas lentas', 'mas_lentas')):
         lineas += ['## {}'.format(titulo), '']
         for c in informe[clave]:
-            lineas.append('- {} cap {} intento {}{} — {:,} tokens, {:.4f}, {:.0f}s'.format(
+            lineas.append('- {} cap {} intento {}{} — {:,} tokens, {}, {:.0f}s'.format(
                 c['rol'], c['capitulo'], c['intento'],
                 ' ({})'.format(c['dimension']) if c['dimension'] else '',
-                c['tokens'], c['coste'], c['ms'] / 1000.0))
+                c['tokens'], dinero(c['coste']), c['ms'] / 1000.0))
         lineas += ['']
 
     return '\n'.join(lineas)
@@ -324,12 +419,26 @@ def construir(config, sesion=None, raiz=None, aviso=None):
         sesion = sesion_de(canon.brief())
 
     observaciones, motivo = recoger(config, sesion, aviso=aviso)
-    if observaciones is None:
-        return None, motivo
     if not observaciones:
-        return None, 'Langfuse no tiene ninguna observacion de la sesion {}'.format(sesion)
+        # Langfuse no esta, o no contesta, o no tiene nada de esta sesion. El
+        # diario del hook si esta: es local y se escribe pase lo que pase. Se
+        # cae a el en vez de no dar informe, porque casi todo lo que el analisis
+        # necesita -llamadas, roles, capitulos, intentos, tokens y duracion- lo
+        # sabe el diario. Lo unico que no es el dinero, y eso se declara.
+        motivo = motivo or 'Langfuse no tiene ninguna observacion de la sesion {}'.format(sesion)
+        observaciones, aviso_diario = del_diario(canon.raiz, sesion)
+        if observaciones is None:
+            return None, '{}; {}'.format(motivo, aviso_diario)
+        if aviso and aviso_diario:
+            aviso(aviso_diario)
+        procedencia, porque = 'diario', motivo
+    else:
+        procedencia, porque = 'langfuse', None
 
     informe = agregar(observaciones, canon=canon if canon.existe else None,
                       config=config if canon.existe else None)
     informe['sesion'] = sesion
+    informe['procedencia'] = procedencia
+    if porque:
+        informe['sin_langfuse'] = porque
     return informe, None

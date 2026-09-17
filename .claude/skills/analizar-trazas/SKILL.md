@@ -31,6 +31,12 @@ tabla. Si el informe no trae un numero, no te lo inventes: dilo y sigue.
 Si una columna sale a cero, casi nunca es que no se mando, sino que no se pidio;
 antes de concluir nada, mira `novela/informe.py`.
 
+**Mira de donde sale el informe.** Si arriba trae el aviso de que Langfuse no
+contesto, lo de abajo viene del diario local del hook: todo es igual de real
+salvo el dinero, que alli no se guarda, y por eso donde iria coste va una raya.
+Con ese informe se contesta todo lo de abajo menos lo que hable de euros, y eso
+se dice y se pasa; no se deduce el coste de los tokens.
+
 ## 2. Las preguntas que se hacen siempre
 
 En este orden, y todas, aunque alguna no de nada:

@@ -12,7 +12,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from novela.informe import agregar, texto
+from novela.informe import agregar, del_diario, texto
 from novela.trazas import id_de_traza
 from novela.trazas_cc import traza_de
 from novela.trazas_hook import procesar, situar
@@ -202,6 +202,85 @@ class AgregarElInforme(unittest.TestCase):
                            if o['metadata']['origen'] != 'hook'])
         self.assertEqual(informe['llamadas'], 0)
         self.assertEqual(informe['total']['coste'], 0)
+
+
+def apunte(rol, capitulo=None, intento=None, dimension=None, ms=1000, tokens=100,
+           sesion='novela-abc'):
+    """Una linea del diario del hook, como la escribe `_anotar`."""
+    return {'momento': '2026-09-17T10:00:00+00:00', 'rol': rol,
+            'dimension': dimension, 'subagente': 'novela-' + rol,
+            'tramo': 'cap-{:02d}'.format(capitulo) if capitulo else 'preparar',
+            'capitulo': capitulo, 'intento': intento, 'modelo': 'claude-opus-5[1m]',
+            'estado': 'completed', 'duracion_ms': ms, 'tokens': tokens,
+            'reparto': {'input': 10, 'output': 20, 'cache_read_input_tokens': 70},
+            'herramientas': 0, 'sesion_cc': 'sesion-cc', 'sesion': sesion,
+            'traza': 'abc123'}
+
+
+class ElInformeSinLangfuse(unittest.TestCase):
+    """Cuando el servicio no contesta, el informe sale del diario local (§22)."""
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.raiz = os.path.join(self.dir, 'novela-cc')
+        os.makedirs(os.path.join(self.raiz, 'trazas'))
+
+    def _diario(self, apuntes):
+        crudo = [json.dumps(a) for a in apuntes] + ['']
+        Path(self.raiz, 'trazas', 'llamadas.jsonl').write_text(
+            chr(10).join(crudo), encoding='utf-8')
+
+    def test_el_diario_se_lee_como_llamadas_con_gasto(self):
+        self._diario([apunte('escritor', 1, 1, tokens=500),
+                      apunte('validador', 1, 1, 'continuidad', tokens=300)])
+        observaciones, reparo = del_diario(self.raiz, 'novela-abc')
+        self.assertIsNone(reparo)
+        informe = agregar(observaciones)
+        self.assertEqual(informe['llamadas'], 2)
+        self.assertEqual(informe['total']['tokens'], 800)
+        self.assertEqual(sorted(informe['por_rol']), ['escritor', 'validador'])
+
+    def test_una_llamada_anotada_dos_veces_cuenta_una(self):
+        # El diario solo anade, asi que el mismo evento entregado dos veces deja
+        # dos lineas identicas. Contarlas las dos duplicaria todos los numeros.
+        self._diario([apunte('escritor', 1, 1, tokens=500)] * 2
+                     + [apunte('escritor', 1, 2, tokens=500)])
+        observaciones, reparo = del_diario(self.raiz, 'novela-abc')
+        self.assertIn('1 linea(s) repetidas', reparo)
+        self.assertEqual(agregar(observaciones)['llamadas'], 2)
+
+    def test_dos_llamadas_iguales_de_verdad_no_se_confunden(self):
+        # Mismo rol y mismo capitulo, pero ni los milisegundos ni los tokens
+        # coinciden: son dos llamadas, no una repetida.
+        self._diario([apunte('validador', 3, 1, 'continuidad', ms=900, tokens=210),
+                      apunte('validador', 3, 1, 'anacronismos', ms=901, tokens=211)])
+        observaciones, _ = del_diario(self.raiz, 'novela-abc')
+        self.assertEqual(agregar(observaciones)['llamadas'], 2)
+
+    def test_las_lineas_de_otra_novela_no_entran(self):
+        self._diario([apunte('escritor', 1, 1),
+                      apunte('cronista', 1, sesion='novela-otra')])
+        observaciones, _ = del_diario(self.raiz, 'novela-abc')
+        self.assertEqual([o['nombre'] for o in observaciones], ['escritor'])
+
+    def test_sin_diario_se_dice_y_no_se_inventa(self):
+        observaciones, motivo = del_diario(os.path.join(self.dir, 'vacio'), None)
+        self.assertIsNone(observaciones)
+        self.assertIn('diario', motivo)
+
+    def test_el_texto_pone_una_raya_donde_iria_el_dinero(self):
+        self._diario([apunte('escritor', 1, 1, tokens=500)])
+        observaciones, _ = del_diario(self.raiz, 'novela-abc')
+        informe = agregar(observaciones)
+        informe['procedencia'] = 'diario'
+        informe['sin_langfuse'] = 'Langfuse no contesto'
+        salida = texto(informe, 'novela-abc')
+        self.assertIn('Coste calculado: —', salida)
+        self.assertIn('diario local del hook', salida)
+        # La nota de "sin precio en Langfuse" hablaria de una lista de precios
+        # que aqui no se ha llegado a consultar.
+        self.assertNotIn('Sin precio en Langfuse', salida)
+        self.assertNotIn('Llamadas mas caras', salida)
 
 
 if __name__ == '__main__':
