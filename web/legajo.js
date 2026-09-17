@@ -14,16 +14,21 @@ const MAX_PIEZAS = 48;
 // Los mismos colores que estilo.css, que son los de Qaracter.
 //
 // La mesa tiene luz de dia, asi que el cuadernillo es la masa oscura sobre el
-// suelo claro. El que no se ha empezado va en azul pizarra #233441, que es el
-// segundo color de la marca y el unico que aguanta como masa contra ese suelo;
-// el naranja se reserva para el capitulo en curso, que es lo que hay que mirar.
+// suelo claro, y los dos colores de la marca se reparten el legajo: el capitulo
+// aprobado va en azul pizarra #233441 y el que se esta escribiendo en naranja
+// #FF7932, que es el que hay que mirar. El que no se ha empezado se queda en un
+// pizarra lavado, que es el mismo color sin peso.
+//
+// El verde y el rojo de los estados no entran aqui: en una tarjeta son una
+// señal que se lee en un segundo, pero seis cuadernillos verdes sobre la mesa
+// son una mesa verde, y eso ya no es la paleta de nadie.
 const COLOR = {
   mesa: 0xe4e9ed,
   niebla: 0xedf0f2,
   naranja: 0xff7932,
-  pendiente: 0x233441,
+  pendiente: 0xb3c2cc,
   en_curso: 0xff7932,
-  aprobado: 0x1a7a57,
+  aprobado: 0x233441,
   bloqueado: 0xb5283f,
   canto: 0x8a6b45,
 };

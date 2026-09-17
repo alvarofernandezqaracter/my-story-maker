@@ -244,18 +244,22 @@ h2 { font-size: var(--t-titulo); }
   font-size: var(--t-cuerpo);
 }
 
-/* Los cinco campos del brief, en lectura. Fueron un formulario mientras hubo
-   un orquestador al que mandarselos; ahora los escribe la sesion de Claude Code
-   y aqui solo se leen, asi que son una lista de definicion y no inputs. */
-.brief-leido {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: var(--e2) var(--e5);
-  margin: 0;
-  align-items: baseline;
+/* Los cinco campos del brief. El boton de abajo no escribe en el canon: arranca
+   una sesion de Claude Code con esto delante y se aparta, que es lo que deja
+   intacta la regla de que en el canon escribe el orquestador y nadie mas. */
+.brief-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
 }
 
-.brief-leido dt {
+.brief-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+
+.brief-form label > span {
   font-family: var(--dato);
   font-size: var(--t-caption);
   letter-spacing: .08em;
@@ -263,32 +267,32 @@ h2 { font-size: var(--t-titulo); }
   color: var(--texto-tenue);
 }
 
-.brief-leido dd {
-  margin: 0;
-  color: var(--texto);
-  line-height: 1.55;
-}
-
-button:focus-visible {
-  outline: 2px solid var(--qa-naranja);
-  outline-offset: 2px;
-}
-
-.pista { margin: 0; max-width: var(--medida); font-size: var(--t-caption); color: var(--texto-tenue); }
-
-.aviso {
-  margin: 0;
-  max-width: var(--medida);
-  padding: var(--e2) var(--e3);
-  border-left: 2px solid var(--fallo);
-  background: color-mix(in srgb, var(--fallo) 14%, transparent);
+.brief-form input,
+.brief-form textarea {
+  width: 100%;
+  padding: var(--e2);
+  font-family: var(--texto-ui);
   font-size: var(--t-cuerpo);
+  color: var(--texto);
+  background: var(--superficie-alta);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  resize: vertical;
 }
 
-.aviso[data-tono="bien"] {
-  border-left-color: var(--ok);
-  background: color-mix(in srgb, var(--ok) 14%, transparent);
+.brief-form input:focus-visible,
+.brief-form textarea:focus-visible {
+  outline: 2px solid var(--qa-naranja-tinta);
+  outline-offset: 1px;
+  border-color: var(--qa-naranja);
 }
+
+.brief-form ::placeholder { color: var(--texto-tenue); opacity: .75; }
+
+/* Los dos numeros van juntos porque se leen juntos: cuantos capitulos de que
+   largo es una sola decision. */
+.brief-form__par { display: flex; gap: var(--e3); }
+.brief-form__par label { flex: 1 1 0; min-width: 0; }
 
 /* ================================================================ botones */
 

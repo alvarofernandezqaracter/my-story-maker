@@ -12,6 +12,10 @@
   "interfaz": {
     "puerto": 8787
   },
+  "lanzador": {
+    "comando": "claude",
+    "permisos": "acceptEdits"
+  },
   "margenes": {
     "capitulos_min": 0.8,
     "capitulos_max": 1.2,

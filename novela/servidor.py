@@ -1,10 +1,13 @@
 # §19 Interfaz web. Servidor local de la biblioteca estandar: sirve web/ y
 # expone una API pequena sobre el canon de `novela-cc/`.
 #
-# **Mira y no toca.** Quien escribe en ese canon es la sesion de Claude Code que
-# orquesta (§21), y esta pagina no es el orquestador: es un mirador. No hay
-# motor, no hay hilo de flujo y no hay ninguna ruta que escriba. Para actuar se
-# abre Claude Code y se lanza /orquestar-novela.
+# **En el canon escribe el orquestador y nadie mas** (§21). Aqui no hay motor ni
+# hilo de flujo, y ninguna ruta toca un fichero del canon: lo que hay es un
+# mirador sobre lo que la sesion de Claude Code va dejando escrito.
+#
+# La unica excepcion al «solo GET» es POST /api/lanzar, y no rompe esa regla:
+# arranca al orquestador con el brief que se ha tecleado y se aparta. Quien
+# escribe la novela sigue siendo el, no esto.
 #
 # Ningun dato de esta pantalla es propio de la interfaz: o se lee del canon o se
 # recalcula con las reglas del spec. Lo que el canon no guarda se dice que no
@@ -16,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs
 
-from . import trazas_cc
+from . import lanzador, trazas_cc
 from .config import cargar_config, ErrorConfig
 from .canon_cc import CanonCC, auditar_gate, media_de, notas_en_lista, operacion
 
@@ -37,7 +40,8 @@ TIPOS = {
 CAMPOS_BRIEF = ('epoca', 'premisa', 'tono', 'capitulos', 'palabras_por_capitulo')
 
 # Lo que no se puede hacer desde aqui, y por que. Sale en la respuesta de
-# cualquier metodo que no sea GET contra la API.
+# cualquier metodo que no sea GET contra la API, salvo las dos rutas que no
+# tocan el canon: la de trazas y la de lanzar.
 SOLO_MIRA = ('en este canon escribe la sesion de Claude Code que orquesta, y nadie'
              ' mas (§21). Desde aqui se mira: para actuar, abre Claude Code en el'
              ' repositorio y lanza /orquestar-novela')
@@ -347,6 +351,22 @@ def responder(metodo, camino, cuerpo, config, raiz_web=RAIZ_WEB):
                 # entero: manda a Langfuse lo que el canon ya dice. No toca el
                 # canon, que es lo que SOLO_MIRA protege.
                 return 200, TIPOS['.json'], _json(_exportar_trazas(config))
+
+        if camino == '/api/lanzar':
+            # La otra ruta que no es GET y tampoco escribe en el canon: arranca
+            # una sesion de Claude Code con el brief y se aparta. Quien escribe
+            # la novela es esa sesion, igual que si se hubiera abierto a mano.
+            if metodo == 'GET':
+                return 200, TIPOS['.json'], _json(lanzador.estado())
+            if metodo == 'POST':
+                try:
+                    peticion = json.loads(cuerpo or b'{}')
+                except ValueError:
+                    raise RespuestaError(400, 'el cuerpo no es JSON') from None
+                try:
+                    return 200, TIPOS['.json'], _json(lanzador.lanzar(peticion, config))
+                except lanzador.ErrorLanzador as e:
+                    raise RespuestaError(409, str(e)) from None
 
         if camino.startswith('/api/capitulo/') and metodo == 'GET':
             resto = camino[len('/api/capitulo/'):]

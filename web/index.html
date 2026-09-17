@@ -51,24 +51,60 @@
       <h1 id="papeleta-titulo">El brief de esta novela</h1>
       <p class="entradilla">
         Con estos cinco campos el investigador arma el dossier de época y el
-        arquitecto la escaleta; el resto se levanta capítulo a capítulo. Los
-        escribe el orquestador, no esta página: aquí se leen.
+        arquitecto la escaleta; el resto se levanta capítulo a capítulo. Ninguno
+        tiene valor por defecto y no se inventa ninguno.
       </p>
     </header>
 
-    <dl class="brief-leido" id="brief-leido"></dl>
+    <!-- El botón no escribe en el canon: arranca una sesión de Claude Code con
+         este brief y se aparta. Quien escribe la novela sigue siendo ella. -->
+    <form class="brief-form" id="brief-form">
+      <label>
+        <span>Época y lugar</span>
+        <input name="epoca" required autocomplete="off"
+               placeholder="Sevilla, 1587">
+      </label>
+      <label>
+        <span>Premisa</span>
+        <textarea name="premisa" rows="3" required
+                  placeholder="Qué le pasa a quién, y qué está en juego."></textarea>
+      </label>
+      <label>
+        <span>Tono</span>
+        <input name="tono" required autocomplete="off"
+               placeholder="seco, lírico, sombrío, épico…">
+      </label>
+      <div class="brief-form__par">
+        <label>
+          <span>Capítulos</span>
+          <input name="capitulos" type="number" min="1" required value="6">
+        </label>
+        <label>
+          <span>Palabras por capítulo</span>
+          <input name="palabras_por_capitulo" type="number" min="1" required value="1800">
+        </label>
+      </div>
+
+      <div class="acciones">
+        <button class="boton boton--grande" type="submit" id="brief-lanzar">
+          Lanzar agentes
+        </button>
+        <span class="dato" id="brief-estado"></span>
+      </div>
+      <p class="pista" id="brief-pista"></p>
+    </form>
 
     <p class="aviso" id="aviso-brief" role="status" hidden></p>
 
     <div class="consola">
-      <span class="eyebrow">Para empezar una novela</span>
+      <span class="eyebrow">O a mano, en una sesión tuya</span>
       <div class="consola__linea">
         <code>/orquestar-novela</code>
         <button class="enlace" type="button" id="brief-copiar">copiar</button>
       </div>
       <p class="pista">
-        En Claude Code, dentro de este repositorio. Te pedirá los cinco campos y
-        no se los inventará.
+        En Claude Code, dentro de este repositorio. Es lo mismo que hace el
+        botón, con la sesión delante.
       </p>
     </div>
   </section>

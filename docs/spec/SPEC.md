@@ -551,6 +551,22 @@ repositorio, que es donde se mira si hace falta.
   añade, así que un evento entregado dos veces duplicaba todos los números; en la
   primera pasada eran 83 líneas para 41 llamadas.
 
+### [1.9.0] — 2026-09-17
+
+**Añadido**
+- §19. La sala del brief vuelve a tener los cinco campos de §3 y gana un botón
+  que arranca. `POST /api/lanzar` levanta una sesión de Claude Code sobre el
+  repositorio con el brief delante y se aparta.
+- §12. `lanzador.comando` y `lanzador.permisos`. El modo de permisos es una
+  clave y no una constante porque una sesión arrancada desde la página no tiene
+  a nadie delante a quien preguntarle si puede escribir.
+
+**Cambiado**
+- §19. Se deroga el invariante de que ningún método distinto de `GET` hiciera
+  nada, en una sola ruta y acotado a arrancar al orquestador. **La primera regla
+  de §21 no se toca**: en el canon sigue escribiendo el orquestador y nadie más,
+  y lo único que ha cambiado es quién le da al interruptor.
+
 ### [1.8.0] — 2026-09-17
 
 **Añadido**
@@ -824,10 +840,11 @@ el loop de intentos y el bloqueo.
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: cincuenta y seis, en dos
+**Tests.** `python -m unittest discover -s tests -t .`: sesenta y siete, en dos
 ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
-§19 —por la función que enruta, no por un socket—, el árbol de trazas
-reconstruido y el hook de §22. Los dos últimos corren contra una capa de mentira
+§19 —por la función que enruta, no por un socket—, la comprobación del brief que
+hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
+hook de §22. Los dos últimos corren contra una capa de mentira
 que apunta en una lista: lo que se prueba es la forma del árbol —qué cuelga de
 qué y qué puntuaciones salen—, que es justo lo que rompe un fallo de
 reconstrucción. Cada test corre en su propio directorio temporal, y todos apagan
@@ -859,7 +876,7 @@ de línea de Unix.
 
 Son cuatro salas y contestan cuatro preguntas distintas: **brief** qué libro es, **escritorio** por dónde va, **arquitectura** cómo está montado el sistema que lo escribe, y **lectura** el capítulo. Solo la tercera sigue diciendo algo con el canon vacío.
 
-### Por qué no escribe
+### Por qué no escribe, y qué sí hace el botón
 
 **La interfaz no escribe en el canon.** No es una limitación técnica: la primera
 regla de §21 dice que ahí escribe el orquestador y nadie más, y la página no es el
@@ -869,8 +886,35 @@ regla por la puerta de atrás, y el motivo por el que existe —que lo que entra
 haya pasado por una comprobación— no cambia porque quien escriba sea una
 interfaz.
 
-Lo que la página ofrece en lugar de botones es **el comando exacto** que toca
-pegar en Claude Code, que es lo que de verdad hace avanzar el libro.
+**Lo que sí hace es arrancar al orquestador.** La sala del brief tiene los cinco
+campos de §3 y un botón, y ese botón no escribe: `POST /api/lanzar` arranca una
+sesión de Claude Code sobre este repositorio con el brief delante —`claude -p`
+con `/orquestar-novela` y los cinco campos— y se aparta. **La primera regla de
+§21 queda intacta**, y conviene ver por qué: en el canon sigue escribiendo el
+orquestador y nadie más; lo único que ha cambiado es quién le da al interruptor.
+Lo que sí se deroga es el invariante de que ningún método distinto de `GET`
+hiciera nada, y se deroga en una sola ruta y acotado a esto.
+
+De ahí salen las tres decisiones que lo rodean:
+
+- **El proceso queda suelto.** Escribir una novela son muchos minutos y muchas
+  llamadas, y la petición HTTP que lo arranca no se queda esperando. La página
+  ve el avance como lo ve siempre: releyendo el canon.
+- **Un lanzamiento a la vez.** Dos sesiones sobre el mismo canon se pisarían, y
+  eso es la misma razón por la que se escribe un capítulo a la vez (§21).
+- **El brief se comprueba dos veces, y la que manda es la segunda.** La página
+  mira que estén los cinco campos y que los dos números sean números; la
+  comprobación de verdad, la de los `VD-xx`, la hace el orquestador antes de
+  escribir, que es donde significa algo. Lo de aquí solo evita gastar una sesión
+  entera en un brief a medias.
+
+Lo que el brief teclee viaja como **un solo argumento** de la línea de órdenes y
+nunca por un shell, así que no puede convertirse en otra orden. Lo que la sesión
+imprima va a `novela-cc/lanzamiento.log`, que no es canon y que nada vuelve a
+leer como dato: está para poder mirar por qué no arrancó algo que no arrancó.
+
+Y la página sigue dando **el comando exacto** para hacerlo a mano en una sesión
+propia, que es lo mismo que hace el botón con la sesión delante.
 
 **Y no hay diario que servir.** El relato de una pasada está en la conversación
 de Claude Code, que es donde se imprime la operación del gate. La página lo dice
@@ -879,8 +923,10 @@ después de los hechos. Los subagentes se marcan por su **rastro** —el
 investigador ha pasado si hay dossier, el cronista si hay resumen— y no por una
 llamada que esta página no ha visto.
 
-**Lo único que manda algo fuera** es `POST /api/trazas`, y no toca el canon:
-reconstruye el árbol de §20 con lo que el canon ya dice y lo manda a Langfuse.
+**Las dos rutas que no son `GET`** son `POST /api/trazas`, que reconstruye el
+árbol de §20 con lo que el canon ya dice y lo manda a Langfuse, y
+`POST /api/lanzar`. **Ninguna de las dos toca el canon**, que es lo que
+`SOLO_MIRA` protege y lo que sigue contestando 409 a todo lo demás.
 
 ### Qué sirve
 
@@ -891,6 +937,8 @@ reconstruye el árbol de §20 con lo que el canon ya dice y lo manda a Langfuse.
 | `GET /api/contexto/N` | El paquete de §7, tal cual quedó en disco |
 | `GET /api/trazas` | Estado de la capa de §20 y qué se mandaría |
 | `POST /api/trazas` | Reconstruye el canon y lo manda a Langfuse |
+| `GET /api/lanzar` | Si hay una sesión arrancada desde aquí, y cuál |
+| `POST /api/lanzar` | Arranca una sesión de Claude Code con el brief. No toca el canon |
 | `GET /*` | Los ficheros de `web/`, y nada de fuera de esa carpeta |
 | Cualquier otro método contra `/api/` | 409 con el porqué y el comando que sí escribe |
 
@@ -1030,7 +1078,7 @@ verlos.
 que `#capitulo/3` abre ese capítulo. Sirve para mandar a alguien a lo que se le
 quiere enseñar sin tener que decirle dónde hacer clic.
 
-**Qué valida.** Poco, porque no entra nada: solo el número de capítulo de las rutas que lo llevan. El brief lo comprueba el orquestador antes de escribirlo, con los `VD-xx` de §9, que es donde esa comprobación significa algo.
+**Qué valida.** Poco: el número de capítulo de las rutas que lo llevan, y del brief que entra por `/api/lanzar`, que estén los cinco campos y que los dos números sean números. El resto lo comprueba el orquestador antes de escribir, con los `VD-xx` de §9, que es donde esa comprobación significa algo.
 
 **Por qué three.js.** La escena dibuja un cuadernillo por capítulo: cuántos son lo dice el brief, el grosor las palabras por capítulo, el color el estado del canon y la luz el tono. Es la parte que no se lee bien en una tabla —seis capítulos de 1.800 palabras es un número; seis cuadernillos sobre la mesa es una novela corta—, y según el orquestador va escribiendo se ve el capítulo en curso levantarse y los aprobados cambiar de color. El resto es HTML corriente.
 

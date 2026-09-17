@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.8.0.
+de un brief de cinco campos. Versión 1.9.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -110,8 +110,9 @@ Y conviene no olvidarlo, porque es el precio:
   conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de que
   mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
   instruido.
-- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 62
-  tests que hay cubren el Python de `novela/`, que solo mira.
+- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 67
+  tests que hay cubren el Python de `novela/`, que mira el canon y arranca al
+  orquestador, pero no escribe novelas.
 
 # El diseño
 
@@ -186,9 +187,9 @@ Un único `config.json` en la raíz. **Si un número aparece escrito en el códi
 en un prompt sin pasar por este fichero, es un bug.** Las claves:
 `gate.{nota_minima,media_minima,max_intentos}`,
 `contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`,
-`interfaz.puerto`, `trazas.{activas,entorno}`,
+`interfaz.puerto`, `lanzador.{comando,permisos}`, `trazas.{activas,entorno}`,
 `margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`.
-Catorce. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
+Dieciséis. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
 `capitulos_max >= capitulos_min`.
 
 Las credenciales van en un `.env` de la raíz que no se versiona. Un **perfil** es
@@ -203,7 +204,7 @@ python -m novela ui                          # interfaz web, solo lectura (§19)
 python -m novela trazar                      # manda a Langfuse el canon reconstruido (§20)
 python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
                                              # sin Langfuse tira del diario local
-python -m unittest discover -s tests -t .    # 62 tests, sin red
+python -m unittest discover -s tests -t .    # 67 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
@@ -216,6 +217,7 @@ python -m unittest discover -s tests -t .    # 62 tests, sin red
 | [novela/config.py](novela/config.py) | Carga y **valida entero** `config.json` | §12 |
 | [novela/canon_cc.py](novela/canon_cc.py) | Lector **de solo lectura** del canon en ficheros, y la auditoría del gate | §21 |
 | [novela/servidor.py](novela/servidor.py) | Interfaz web: sirve `web/` y una API que solo lee | §19 |
+| [novela/lanzador.py](novela/lanzador.py) | Arranca `claude -p` con el brief. **No escribe en el canon** | §19 |
 | [novela/trazas.py](novela/trazas.py) | Capa única de observabilidad; la única que sabe que Langfuse existe | §20 |
 | [novela/trazas_cc.py](novela/trazas_cc.py) | Reconstruye el árbol de §20 desde el canon | §20 |
 | [novela/trazas_hook.py](novela/trazas_hook.py) | El hook `PostToolUse`: traza cada llamada en vivo, con su gasto | §22 |
@@ -230,10 +232,13 @@ Cuatro salas: **brief** qué libro es, **escritorio** por dónde va, **arquitect
 el pipeline de §4, §7, §8 y §9 como grafo por capas en **SVG inline**, y
 **lectura** el capítulo. Solo la tercera sigue diciendo algo con el canon vacío,
 y cada una tiene su enlace (`#arquitectura`).
-**Mira y no toca**: en el canon escribe el orquestador y nadie más, así que
-cualquier método que no sea `GET` contra la API responde 409 y da el comando que
-sí escribe. Lo único que manda algo fuera es `POST /api/trazas`, que no toca el
-canon.
+**En el canon escribe el orquestador y nadie más**, así que cualquier método que
+no sea `GET` contra la API responde 409 y da el comando que sí escribe. Las dos
+excepciones no tocan el canon: `POST /api/trazas`, que manda a Langfuse lo que el
+canon ya dice, y `POST /api/lanzar`, que **arranca** una sesión de Claude Code con
+el brief de la sala del brief y se aparta. Esa segunda deroga el «solo GET» en una
+ruta; la primera regla de §21 no se toca, porque quien escribe la novela sigue
+siendo esa sesión.
 
 **Ningún dato de la pantalla es propio de la interfaz**: o se lee del canon o se
 recalcula con las reglas del spec. Lo que el canon no guarda se pinta «sin datos

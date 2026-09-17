@@ -16,6 +16,11 @@ import re
 # donde se las busca.
 ENTORNO_DE_TRAZAS = re.compile(r'^(?!langfuse)[a-z0-9_\-]{1,40}$')
 
+# Los modos de permiso con los que el lanzador de §19 puede arrancar una sesion.
+# Se valida aqui por lo mismo: un modo mal escrito no se ve hasta que la sesion
+# ya ha arrancado y se ha quedado parada sin nadie a quien preguntar.
+PERMISOS_DE_CLAUDE = ('default', 'acceptEdits', 'bypassPermissions', 'plan')
+
 class ErrorConfig(Exception):
     """config.json no sirve. Se para antes de hacer nada."""
 
@@ -43,6 +48,10 @@ REGLAS = [
     ('contexto.palabras_enganche', lambda v: _entero(v) and v >= 0, 'entero >= 0'),
     ('interfaz.puerto', lambda v: _entero(v) and 1024 <= v <= 65535,
      'entero entre 1024 y 65535'),
+    ('lanzador.comando', lambda v: isinstance(v, str) and bool(v.strip()),
+     'el nombre o la ruta del CLI de Claude Code'),
+    ('lanzador.permisos', lambda v: v in PERMISOS_DE_CLAUDE,
+     'uno de ' + ', '.join(PERMISOS_DE_CLAUDE)),
     ('margenes.capitulos_min', lambda v: _numero(v) and 0 < v <= 1, 'numero en (0, 1]'),
     ('margenes.capitulos_max', lambda v: _numero(v) and v >= 1, 'numero >= 1'),
     ('margenes.palabras_aviso', _fraccion, 'fraccion en (0, 1)'),

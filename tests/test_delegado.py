@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 from novela.canon_cc import CanonCC, auditar_gate, operacion
+from novela import lanzador
 from novela.config import cargar_config, validar_config, ErrorConfig
 from novela.servidor import RAIZ_WEB, responder
 from novela.trazas_cc import disponibilidad, exportar, plan
@@ -236,6 +237,32 @@ class TestApiDelegada(CanonDelegadoDePrueba):
             self.assertEqual(codigo, 409)
             self.assertIn('orquestar-novela', cuerpo['error'])
 
+    def test_lanzar_sin_los_cinco_campos_no_arranca_nada(self):
+        # La comprobacion de verdad la hacen los VD-xx en el orquestador; esta
+        # solo evita gastar una sesion entera en un brief a medias (§3).
+        codigo, cuerpo = self.pedir('POST', '/api/lanzar', {'epoca': 'Sevilla, 1587'})
+        self.assertEqual(codigo, 409)
+        for campo in ('premisa', 'tono', 'capitulos', 'palabras_por_capitulo'):
+            self.assertIn(campo, cuerpo['error'])
+
+    def test_lanzar_con_un_numero_que_no_es_numero_no_arranca_nada(self):
+        codigo, cuerpo = self.pedir('POST', '/api/lanzar', {**BRIEF, 'capitulos': 'seis'})
+        self.assertEqual(codigo, 409)
+        self.assertIn('capitulos', cuerpo['error'])
+
+    def test_sin_lanzamiento_el_estado_lo_dice(self):
+        codigo, cuerpo = self.pedir('GET', '/api/lanzar')
+        self.assertEqual(codigo, 200)
+        self.assertFalse(cuerpo['corriendo'])
+
+    def test_el_prompt_lleva_la_skill_y_los_cinco_campos(self):
+        # Va como un solo argumento y nunca por un shell, asi que lo que se
+        # teclee en la pagina no puede convertirse en otra orden.
+        texto = lanzador.prompt(lanzador.validar(BRIEF))
+        self.assertTrue(texto.startswith('/orquestar-novela'))
+        for campo in lanzador.CAMPOS:
+            self.assertIn(campo + ':', texto)
+
     def test_la_raiz_sirve_la_pagina(self):
         codigo, _, salida = responder('GET', '/', b'', self.config, RAIZ_WEB)
         self.assertEqual(codigo, 200)
@@ -455,8 +482,14 @@ class TestClavesDeConfig(unittest.TestCase):
         self.base = cargar_config('config.json')
 
     def test_el_perfil_del_repositorio_vale(self):
-        self.assertEqual(sorted(self.base),
-                         ['contexto', 'gate', 'interfaz', 'margenes', 'trazas'])
+        self.assertEqual(
+            sorted(self.base),
+            ['contexto', 'gate', 'interfaz', 'lanzador', 'margenes', 'trazas'])
+
+    def test_un_modo_de_permiso_inventado_no_arranca(self):
+        with self.assertRaisesRegex(ErrorConfig, 'lanzador.permisos'):
+            validar_config({**self.base,
+                            'lanzador': {**self.base['lanzador'], 'permisos': 'a saco'}})
 
     def test_un_umbral_fuera_de_rango_no_arranca(self):
         with self.assertRaisesRegex(ErrorConfig, 'gate.nota_minima'):

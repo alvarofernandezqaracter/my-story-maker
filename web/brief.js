@@ -1,22 +1,23 @@
-// Sala del brief: los cinco campos de §3, en modo lectura.
+// Sala del brief: los cinco campos de §3, y el boton que arranca.
 //
-// Fue un formulario mientras hubo un orquestador al que mandarle el brief. Ya no
-// lo hay: en el canon de §21 escribe la sesion de Claude Code y nadie mas, asi
-// que lo honesto es ensenar lo que hay escrito y decir con que comando se
-// escribe, en vez de un formulario que siempre devolveria un 409.
-const CAMPOS = [
-  ['epoca', 'Época y lugar'],
-  ['premisa', 'Premisa'],
-  ['tono', 'Tono'],
-  ['capitulos', 'Capítulos'],
-  ['palabras_por_capitulo', 'Palabras por capítulo'],
-];
+// El formulario no escribe en el canon. Manda el brief a POST /api/lanzar, que
+// arranca una sesion de Claude Code con esos cinco campos delante y se aparta:
+// quien escribe la novela sigue siendo esa sesion, igual que si se hubiera
+// abierto a mano (§21). Lo que la pagina hace despues es lo de siempre, mirar
+// el canon llenarse.
+const CAMPOS = ['epoca', 'premisa', 'tono', 'capitulos', 'palabras_por_capitulo'];
 
 const $ = (id) => document.getElementById(id);
 
 export function crearBrief(ctx) {
-  const lista = $('brief-leido');
+  const formulario = $('brief-form');
+  const boton = $('brief-lanzar');
+  const linea = $('brief-estado');
+  const pista = $('brief-pista');
   const aviso = $('aviso-brief');
+
+  let corriendo = false;
+  let rellenado = false;
 
   $('brief-copiar').addEventListener('click', async () => {
     try {
@@ -28,23 +29,84 @@ export function crearBrief(ctx) {
     }
   });
 
-  function pintarCampos(brief) {
-    lista.textContent = '';
-    if (!brief) {
-      const vacio = document.createElement('p');
-      vacio.className = 'vacio';
-      vacio.textContent = 'sin datos todavía: este canon no tiene brief.';
-      lista.append(vacio);
-      return;
-    }
-    for (const [clave, etiqueta] of CAMPOS) {
-      const dt = document.createElement('dt');
-      dt.textContent = etiqueta;
-      const dd = document.createElement('dd');
-      dd.textContent = brief[clave] ?? '—';
-      lista.append(dt, dd);
+  function leerFormulario() {
+    const datos = {};
+    for (const campo of CAMPOS) datos[campo] = formulario.elements[campo].value;
+    return datos;
+  }
+
+  function pintarLanzamiento(estado) {
+    corriendo = Boolean(estado?.corriendo);
+    boton.disabled = corriendo;
+    boton.textContent = corriendo ? 'agentes en marcha' : 'Lanzar agentes';
+    if (corriendo) {
+      linea.textContent = `sesión ${estado.pid} escribiendo`;
+      pista.textContent = estado.lanzado?.log
+        ? `Lo que imprima la sesión va a ${estado.lanzado.log}. El canon se llena`
+          + ' solo y esta página lo va viendo.'
+        : 'El canon se llena solo y esta página lo va viendo.';
+    } else {
+      linea.textContent = '';
     }
   }
+
+  async function mirarLanzamiento() {
+    try {
+      pintarLanzamiento(await ctx.api.lanzamiento());
+    } catch {
+      // Que no se pueda preguntar por el lanzamiento no es motivo para romper
+      // la sala: el formulario sigue sirviendo.
+    }
+  }
+
+  formulario.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (corriendo) return;
+    boton.disabled = true;
+    linea.textContent = 'arrancando…';
+    pista.textContent = '';
+    try {
+      const salida = await ctx.api.lanzar(leerFormulario());
+      pintarLanzamiento({ corriendo: true, pid: salida.pid, lanzado: salida });
+      ctx.refrescar();
+    } catch (error) {
+      boton.disabled = false;
+      linea.textContent = '';
+      // El porqué viene del servidor entero: es el mismo criterio de §3 que
+      // aplicaría el orquestador, y decirlo a medias no ayuda a arreglarlo.
+      pista.textContent = error.message;
+    }
+  });
+
+  mirarLanzamiento();
+
+  return {
+    pintar(proyecto) {
+      // El brief del canon se vuelca una sola vez sobre el formulario: si se
+      // reescribiera en cada refresco, borraria lo que se este tecleando.
+      if (proyecto?.brief && !rellenado) {
+        rellenado = true;
+        for (const campo of CAMPOS) {
+          formulario.elements[campo].value = proyecto.brief[campo] ?? '';
+        }
+      }
+
+      aviso.hidden = !proyecto?.brief;
+      if (proyecto?.brief) {
+        aviso.textContent = 'Este canon ya tiene novela. Lanzar de nuevo no la'
+          + ' empieza otra vez: la sesión lee el estado del canon y sigue por'
+          + ' donde se quedó, que es lo que hace reanudable el libro.';
+      }
+      $('papeleta-titulo').textContent = proyecto?.brief
+        ? 'El brief de esta novela' : 'Empieza una novela';
+      pintarEjecuciones(proyecto);
+      if (!corriendo) mirarLanzamiento();
+    },
+    // La escena 3D se pinta con lo que hay tecleado, no solo con lo guardado:
+    // asi el legajo se monta mientras se escribe el brief y no despues.
+    leer: () => (rellenado || formulario.elements.epoca.value
+      ? leerFormulario() : ctx.estado.proyecto?.brief || null),
+  };
 
   // Una ejecucion es un canon con su brief. Hay uno por carpeta, asi que la
   // lista tiene una entrada o ninguna.
@@ -96,21 +158,4 @@ export function crearBrief(ctx) {
     fila.addEventListener('click', () => ctx.ir('taller'));
     caja.append(fila);
   }
-
-  return {
-    pintar(proyecto) {
-      pintarCampos(proyecto?.brief);
-      pintarEjecuciones(proyecto);
-      aviso.hidden = Boolean(proyecto?.brief);
-      if (!proyecto?.brief) {
-        aviso.textContent = 'Todavía no hay novela en este canon. El comando de abajo'
-          + ' la empieza: te pedirá los cinco campos.';
-      }
-      $('papeleta-titulo').textContent = proyecto?.brief
-        ? 'El brief de esta novela' : 'Empieza una novela';
-    },
-    // La escena 3D se pinta con el brief del canon, que es el unico que hay: ya
-    // no existe el brief a medio escribir de un formulario.
-    leer: () => ctx.estado.proyecto?.brief || null,
-  };
 }
