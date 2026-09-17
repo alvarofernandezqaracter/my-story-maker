@@ -969,7 +969,9 @@ Registro literal de todos los commits que han tocado `docs/spec/`. §16 dice por
 | `3db83cc` | 2026-09-17 | docs(spec): §1 router de los dos caminos, §21 como seccion principal y §15 DA-13 y DA-14 |
 | `5adcf8e` | 2026-09-17 | docs(spec): §17 tabla de commits regenerada para 0.13.0 |
 | `f7f518e` | 2026-09-17 | docs(spec): §19 y §20 dejan de ser solo del harness, §12 interfaz.camino y §16 entrada 0.14.0 |
-La tabla es una foto del momento de cerrar la versión y no incluye el commit que la añade. Se regenera con:
+| `e9bcd4b` | 2026-09-17 | docs(spec): §17 tabla de commits regenerada para 0.14.0 |
+| `b3ff46e` | 2026-09-17 | refactor: el harness de Python sale del repositorio, queda la orquestacion delegada |
+| `0ee326e` | 2026-09-17 | docs(spec): 1.0.0, el spec describe un solo sistema |
 
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short -- docs/spec/
