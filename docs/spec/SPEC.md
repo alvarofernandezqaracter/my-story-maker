@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.13.0
+version: 0.14.0
 estado: borrador
 actualizado: 2026-09-17
 ---
@@ -24,7 +24,8 @@ Comparten los prompts de `agentes/`, las skills de §10 y los umbrales de §12, 
 | §2–§11, §13, §15 | Glosario, canon, máquina de estados, agentes, paquete de contexto, gate, validadores, skills, editor global, operación y decisiones abiertas | **El diseño.** Valen igual para los dos caminos: la skill de §21 no inventa un gate, obedece el de §8 |
 | §12 | Configuración | El diseño, menos `ejecucion.modo` y `validador.modo`, que son del harness |
 | §21 | Orquestación delegada | **El camino principal** |
-| §14, §18, §19, §20 | Roadmap, estructura y comandos, interfaz web y observabilidad | Solo el harness |
+| §19, §20 | Interfaz web y observabilidad | Los dos caminos, aunque la maquinaria sea Python: la página mira los dos canones y las trazas cubren los dos |
+| §14, §18 | Roadmap, estructura y comandos | Solo el harness |
 | §16, §17 | Historial y log de commits | El documento |
 
 Cuando este documento dice «el harness» sin más, habla del camino de Python. Cuando dice «el orquestador», habla de quien manda en cada caso.
@@ -452,6 +453,7 @@ Un único `config.json` en la raíz del proyecto, junto al canon. Aquí vive tod
 | `contexto.palabras_enganche` | 400 | Cola literal del capítulo anterior |
 | `validador.modo` | `unico` | `unico` \| `separado`. Una llamada al validador o tres (§5) |
 | `interfaz.puerto` | 8787 | Puerto local de la interfaz del brief (§19) |
+| `interfaz.camino` | `delegado` | `delegado` \| `harness`. Por cuál de los dos canones de §1 abre la página (§19) |
 | `trazas.activas` | `true` | Manda las trazas de §20 a Langfuse |
 | `trazas.entorno` | `desarrollo` | Separa las pasadas de prueba de las que escriben libros de verdad |
 | `margenes.capitulos_min` y `capitulos_max` | 0,8 y 1,2 | Desvío tolerado sobre el nº de capítulos del brief (VD-07) |
@@ -463,7 +465,11 @@ Un único `config.json` en la raíz del proyecto, junto al canon. Aquí vive tod
 
 El puerto de la interfaz vive aquí y no en el código por la misma regla que el resto: es un número que se toca sin tocar código, y en una máquina con el 8787 ocupado hay que poder cambiarlo. `python -m novela ui --puerto N` lo pisa para un arranque suelto, igual que `--config` y `--canon`.
 
+`interfaz.camino` dice con qué canon se abre la página y nada más: **no cierra el otro**, que sigue a un clic en la barra superior. Está en el perfil y no en el código porque es la respuesta a «qué estoy mirando por defecto», y esa respuesta cambia según se esté trabajando en un camino o en el otro. Por defecto es `delegado`, que es el camino principal del repositorio (§1). `python -m novela ui --camino harness` lo pisa para un arranque suelto. Un valor que no sea uno de los dos para el harness al arrancar, como cualquier otra clave de esta tabla: abrir el canon equivocado sin decirlo es peor que no abrir.
+
 La interfaz de §19 llama **perfil** a cada `config*.json` de la raíz y deja elegir con cuál se lanza una pasada. No es un concepto nuevo: es este mismo fichero, y lo que cambia de uno a otro es el modo de ejecución y los modelos. El que no valide no sale en la lista, por la misma razón por la que el harness para al arrancar.
+
+Con esta clave la tabla tiene diecinueve. `ejecucion.modo` y `validador.modo` siguen siendo del harness; `interfaz.camino`, en cambio, es de la página, que ya no es de un solo camino.
 
 **Por qué dos márgenes de palabras.** VD-08 tiene que distinguir el capítulo que se queda corto del que no sirve. Dentro de `palabras_aviso` el texto vale y la desviación viaja como aviso al reintento; pasado `palabras_bloqueo` no se gasta la llamada al validador y se reintenta la generación. Con un solo umbral había que elegir entre no filtrar nada o tirar capítulos aprovechables.
 
@@ -515,11 +521,33 @@ DA-06 no se cierra con F8, pero deja de estar a ciegas: §20 manda las tres nota
 | DA-10 | Qué hacer si la escaleta se queda corta o larga a mitad de libro | Replanificar toca el canon en caliente; forzarla estropea el final | Durante F4 |
 | DA-12 | Qué hacer con el coste, ahora que se conoce | §20 sabe lo que cuesta cada capítulo, pero nadie lo mira: el harness no tiene tope ni cuota, y es el hueco que §19 pinta como «sin datos todavía» | Después de F8 |
 | DA-13 | Si un validador debe vigilar que el cronista respete los «Ignora» de una ficha | Ninguno de los once `VD-xx` lo mira, así que un conocimiento que el gate acaba de vetar puede entrar en el canon por la propuesta del cronista. VD-09 solo comprueba que los presentes sean subconjunto de la ficha, no lo que aprenden | Antes de calibrar DA-06 |
+| DA-15 | Qué hacer cuando la auditoría del gate no cuadra en el camino delegado | Hoy se avisa y nada más: §19 lo pinta y §20 lo manda como puntuación, pero el canon manda aunque la suma esté mal. Convertirlo en un `VD-xx` obligaría al orquestador a rehacer el capítulo, y todavía no hay ni un caso real que diga si pasa lo bastante como para que compense | Cuando haya varias pasadas delegadas que mirar |
 | DA-14 | Cómo se retracta un «Ignora» de `sabe` | El campo solo acumula, así que cuando un personaje aprende lo que su ficha decía que ignoraba, la ficha acaba afirmando y negando lo mismo, y el paquete de §7 arrastra las dos líneas. Hace falta decidir si `sabe` se parte en dos campos, si los «Ignora» caducan o si el cronista puede retirar líneas | Antes de F4 |
 
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.14.0] — 2026-09-17
+
+**Añadido**
+- §19. La interfaz sirve **los dos caminos**: lee `novela-cc/` igual que `canon.db` y se cambia de uno a otro con un conmutador, sin reiniciar. El motivo es que §21 puso su canon aparte «para poder compararlos después» y hasta ahora compararlos era abrir dos ficheros a mano.
+- §19. La auditoría del gate: la fórmula de §8 rehecha sobre lo que el orquestador escribió, con la discrepancia a la vista. §21 llama a esa suma el punto más débil del camino delegado, y una debilidad que nadie mide no se puede discutir.
+- §19. Cronología, reparto y el paquete de contexto a un clic. Los tres salían ya del canon y no se enseñaban; el paquete es además lo único que explica después por qué el escritor escribió lo que escribió.
+- §19. Ambientación histórica: grano de papel y viñeta de candil en el escritorio, y el capítulo leído sobre vitela con tinta y capitular en lacre. La página escribe novelas históricas y no lo decía por ningún sitio. Va por debajo de la identidad de Qaracter, no en su lugar, y no añade ni un dato.
+- §20. Las trazas del camino delegado, reconstruidas del canon y marcadas como tales. La sesión se deriva del brief con la misma cuenta que el harness, así que las dos orquestaciones del mismo brief caen en la misma sesión de Langfuse.
+- §12. `interfaz.camino`, la clave diecinueve: por cuál de los dos canones abre la página.
+- §18. `novela/canon_cc.py` y `novela/trazas_cc.py`, el comando `trazar` y `ui --camino`. Los tests pasan de setenta y cuatro a ciento doce.
+- §15. DA-15: qué hacer cuando la auditoría del gate no cuadra. Hoy solo avisa.
+
+**Cambiado**
+- §19 y §20 dejan de llevar la marca de «solo el harness»: la maquinaria sigue siendo Python, pero lo que sirven ya es de los dos caminos. §1 lo recoge en su tabla.
+- §19. Por el camino delegado la interfaz **no escribe**: brief, arranque y desbloqueo devuelven 409. La primera regla de §21 dice que en ese canon escribe el orquestador y nadie más, y una interfaz que escribiera la rompería por la puerta de atrás.
+- §19. Los huecos del modelo de datos se declaran además juntos, en un panel con el motivo de cada uno, en vez de solo como un «sin datos todavía» suelto en su sitio.
+- §21. «No hay tests sin red ni trazas» se parte en dos: sin tests sigue, sin trazas ya no. Lo que queda es que llegan tarde, y lo que se pierde por llegar tarde está escrito.
+
+**Contexto**
+- La reconstrucción no inventa lo que el canon no guarda: no hay latencia, tokens, coste ni el prompt exacto, y las marcas de tiempo son las de exportar. Por eso cada traza sale etiquetada `reconstruido`: mezclada con las del harness sin distintivo convertiría una comparación en un error.
 
 ### [0.13.0] — 2026-09-17
 
@@ -895,12 +923,15 @@ Las trazas de §20 son la segunda dependencia opcional, `langfuse`, y se importa
 | `novela/` | El harness: canon, generador de contexto, gate, validadores, capa de agentes y flujo |
 | `novela/__main__.py` | La CLI, que no decide nada: carga config, abre el canon y llama al flujo |
 | `novela/servidor.py` | El servidor local de §19: sirve `web/`, la API y el hilo del flujo |
+| `novela/canon_cc.py` | El lector del canon en ficheros de §21, de solo lectura, y la auditoría del gate |
 | `novela/trazas.py` | La capa de §20: la única que sabe que Langfuse existe |
+| `novela/trazas_cc.py` | Reconstruye el árbol de §20 desde el canon delegado y lo manda por esa capa |
 | `novela/entorno.py` | El lector del `.env`, de donde salen las credenciales de §12 y §20 |
 | `agentes/` | Un fichero por agente de §5, con su encargo y sus modos de fallo |
 | `skills/` | Las skills de §10, una carpeta por skill |
 | `capitulos/` | Un Markdown por intento, aprobado o no (§6) |
-| `web/` | La página de §19: las tres salas, la escena three.js y el logotipo |
+| `web/` | La página de §19: las tres salas, la escena three.js, la ambientación y el logotipo |
+| `novela-cc/` | El canon en ficheros del camino principal (§21). Tampoco se versiona |
 | `tests/` | Tests contra la capa simulada, sin red |
 
 `canon.db`, `capitulos/*.md` y `retoques.md` son salida y no se versionan.
@@ -916,10 +947,11 @@ Las trazas de §20 son la segunda dependencia opcional, `langfuse`, y se importa
 | `reanudar` | Sin argumentos (§13) |
 | `estado`, `ver`, `poner` | Lectura del canon y escritura a mano |
 | `desbloquear --capitulo N` | Las tres salidas manuales de §8 |
-| `ui [--puerto N]` | Abre la interfaz del brief en el navegador (§19) |
+| `ui [--puerto N] [--camino X]` | Abre la interfaz en el navegador (§19), por el canon que diga el perfil |
+| `trazar [--modelo M]` | Manda a Langfuse el canon delegado reconstruido (§20) |
 | `ui.bat` | Lo mismo en Windows, buscando el intérprete por su cuenta |
 
-Los tests se lanzan con `python -m unittest discover -s tests -t .`: setenta y cuatro, en tres ficheros y sin red. Los de la interfaz entran por la función que enruta, no por un socket, que es donde esa pieza decide algo; uno de ellos escribe una novela entera por el motor de §19 para comprobar que el camino del navegador acaba donde el de la CLI. Los de §20 apagan las trazas a mano en lugar de fiarse de que el entorno esté limpio: un test que manda trazas al Langfuse de quien lo lanza ha dejado de ser un test sin red.
+Los tests se lanzan con `python -m unittest discover -s tests -t .`: ciento doce, en cuatro ficheros y sin red. Los de la interfaz entran por la función que enruta, no por un socket, que es donde esa pieza decide algo; uno de ellos escribe una novela entera por el motor de §19 para comprobar que el camino del navegador acaba donde el de la CLI. Los de §20 apagan las trazas a mano en lugar de fiarse de que el entorno esté limpio: un test que manda trazas al Langfuse de quien lo lanza ha dejado de ser un test sin red. Los del camino delegado montan un `novela-cc/` de juguete en su propio directorio y recorren el árbol de trazas contra una capa de mentira que apunta en una lista: lo que se prueba es la forma del árbol —qué cuelga de qué y qué puntuaciones salen—, que es justo lo que rompe un fallo de reconstrucción y lo que el modo apagado no llega a ejercitar.
 
 **El lanzador de Windows.** `ui.bat` en la raíz hace lo mismo que `python -m novela ui`, pero busca el intérprete en lugar de fiarse del `PATH`. No es comodidad: en Windows una consola hereda el entorno de quien la abrió, así que una ventana anterior a la instalación de Python no ve su carpeta por mucho que el registro la tenga, y lo que sí encuentra es el stub de la Microsoft Store, que está en el `PATH` y no ejecuta nada. El fichero comprueba que el intérprete arranca antes de usarlo, y va en CRLF porque `cmd` no lee un `.bat` con finales de línea de Unix.
 
@@ -927,14 +959,32 @@ Los tests se lanzan con `python -m unittest discover -s tests -t .`: setenta y c
 
 ## §19 Interfaz web
 
-> **Camino del harness.** Esta sección describe solo el camino de Python, que vive en la rama `harness-python`. El camino principal del repositorio es la orquestación delegada de §21, que no pasa por aquí.
+> **Los dos caminos.** El servidor es Python y vive en `novela/`, pero lo que sirve ya no es de un solo camino: la página mira **los dos canones de §1** y dice siempre por cuál está mirando. Lo que cambia entre uno y otro no es la pantalla sino lo que se puede hacer desde ella.
 
 
-**Qué es.** Una página local, `python -m novela ui`, desde la que se hace el ciclo entero: escribir el brief de §3, lanzar a los agentes, ver el proceso mientras corre y leer los capítulos aprobados. Escucha solo en `127.0.0.1` y no necesita nada instalado, porque el servidor es `http.server` de la biblioteca estándar. La CLI de §18 sigue siendo el otro camino completo, no un camino de repuesto.
+**Qué es.** Una página local, `python -m novela ui`, desde la que se sigue una novela entera: el brief de §3, el estado del canon, el proceso y los capítulos aprobados. Escucha solo en `127.0.0.1` y no necesita nada instalado, porque el servidor es `http.server` de la biblioteca estándar. La CLI de §18 sigue siendo el otro camino completo, no un camino de repuesto.
 
-**Cómo convive con el invariante de §8.** Dentro del harness no corre nada en paralelo, y eso no cambia: el flujo vive en **un único hilo de trabajo** y el servidor rechaza con 409 cualquier intento de arrancar otro mientras hay uno vivo. Que el servidor siga atendiendo peticiones mientras tanto no es paralelismo del sistema —es HTTP—, y lo que esas peticiones hacen es leer un canon que ya está escrito. El orden de capítulos tampoco cambia: el bucle es el mismo del comando `escribir`, uno detrás de otro, porque el N+1 depende del canon que dejó el N.
+### Los dos canones en la misma página
 
-**Qué escribe.** El brief, con el proyecto en `borrador` o vacío —con el libro en marcha devuelve 409 y remite a `python -m novela brief`, que sí lo pisa a sabiendas—, y las tres salidas manuales del bloqueo de §8. Todo lo demás que entra en el canon lo sigue metiendo el cronista por el camino de siempre: la interfaz **no escribe capítulos ni fichas**, y ningún agente la ve.
+El repositorio tiene dos orquestaciones sobre el mismo diseño (§1), y hasta ahora la página solo sabía de una. Ahora sirve las dos y se cambia de una a otra con un conmutador en la barra superior, sin reiniciar nada. Es la pieza que faltaba para que «se comparan después» —que es la razón por la que §21 puso su canon aparte— signifique algo más que abrir dos ficheros.
+
+| | Camino delegado (§21) | Camino del harness (§18) |
+|---|---|---|
+| De dónde lee | `novela-cc/canon/*.json` | `canon.db` |
+| Quién orquesta | Una sesión de Claude Code | `novela/flujo.py`, en el hilo del servidor |
+| Qué puede hacer la página | **Solo mirar** | Escribir el brief, lanzar el flujo y desbloquear |
+| Qué ofrece en vez de botones | El comando exacto que toca pegar en Claude Code | Los botones de siempre |
+| Relato del proceso | Lo que quedó escrito en el canon | El diario, evento a evento |
+
+**Por el camino delegado la interfaz no escribe.** No es una limitación técnica: la primera regla de §21 dice que en ese canon escribe el orquestador y nadie más, y la página no es el orquestador. Todo lo que escribiría —brief, arranque del flujo, las tres salidas del bloqueo— responde 409 y remite a `/orquestar-novela`. Dejar que la página tocara ese canon rompería la regla por la puerta de atrás, y el motivo por el que existe la regla —que lo que entra en el canon haya pasado por una comprobación— no cambia porque quien escriba sea una interfaz.
+
+**Y por él no hay diario que servir.** El relato de una pasada delegada está en la conversación de Claude Code, que es donde se imprime la operación del gate. La página lo dice en vez de fingir un stream que nadie escribe, y enseña lo que sí tiene: el canon después de los hechos. Los subagentes se marcan por su **rastro** —el investigador ha pasado si hay dossier, el cronista si hay resumen— y no por una llamada que esta página no ha visto.
+
+**Cómo convive con el invariante de §8.** Esto vale para el camino del harness, que es el único donde la página lanza algo. Dentro del harness no corre nada en paralelo, y eso no cambia: el flujo vive en **un único hilo de trabajo** y el servidor rechaza con 409 cualquier intento de arrancar otro mientras hay uno vivo. Que el servidor siga atendiendo peticiones mientras tanto no es paralelismo del sistema —es HTTP—, y lo que esas peticiones hacen es leer un canon que ya está escrito. El orden de capítulos tampoco cambia: el bucle es el mismo del comando `escribir`, uno detrás de otro, porque el N+1 depende del canon que dejó el N.
+
+**Qué escribe.** Por el camino del harness, el brief —con el proyecto en `borrador` o vacío; con el libro en marcha devuelve 409 y remite a `python -m novela brief`, que sí lo pisa a sabiendas— y las tres salidas manuales del bloqueo de §8. Por el delegado, nada. Todo lo demás que entra en el canon lo sigue metiendo el cronista por el camino de siempre: la interfaz **no escribe capítulos ni fichas**, y ningún agente la ve.
+
+Todas las rutas de `/api/` aceptan `?camino=delegado|harness`; sin el parámetro manda `interfaz.camino` del perfil (§12). Un camino que no existe es un 400 y no una caída silenciosa al de por defecto.
 
 | Ruta | Qué hace |
 |---|---|
@@ -943,28 +993,40 @@ Los tests se lanzan con `python -m unittest discover -s tests -t .`: setenta y c
 | `POST /api/flujo` | Arranca `preparar`, `escribir`, `cerrar`, `reanudar` o `todo`. 409 si ya hay uno |
 | `GET /api/flujo` | Estado del hilo y el diario desde el evento que se pida |
 | `GET /api/capitulo/N` | Texto del capítulo aprobado con sus notas, su resumen y sus hilos. 409 si no lo está |
+| `GET /api/contexto/N` | El paquete de §7: guardado en el delegado, regenerado en el harness |
 | `POST /api/desbloquear` | Las tres salidas de §8: reintentar, aprobar un intento o reiniciar |
+| `GET /api/trazas` | Estado de la capa de §20 y, en el delegado, qué se mandaría |
+| `POST /api/trazas` | Reconstruye el canon delegado y lo manda a Langfuse. 409 en el harness |
 | `GET /*` | Los ficheros de `web/`, y nada de fuera de esa carpeta |
 
-**Cómo se sigue el proceso.** Por el `diario` que las funciones de §4 ya llenaban para la CLI: la interfaz lo sirve por trozos y lo pinta evento a evento, así que lo que se lee en pantalla y lo que imprime `escribir` son la misma cosa. A eso se le añade un único evento nuevo, `agente`, que dice quién está trabajando **antes** de que termine; sale de un gancho opcional en la capa de llamada de §5 y, sin nadie escuchando, no cambia nada. El estado de cada capítulo aparece en tres sitios a la vez —tarjeta, escena y barra inferior— porque son tres preguntas distintas: en qué anda este, cómo va el libro y cuánto queda.
+**Por qué el paquete de contexto tiene ruta propia.** Es lo único que explica después por qué el escritor escribió lo que escribió, y sin verlo la tabla de intentos es una lista de notas sin causa. Por el camino delegado está en disco —`novela-cc/contexto/cap-NN.md`, que el orquestador escribe justo para esto— y es literalmente el que se usó; por el del harness no se guarda, así que se regenera con el canon de **ahora**, que no es el mismo que vio el escritor. La respuesta dice cuál de las dos cosas es, porque confundirlas convierte una auditoría en una suposición.
+
+**Cómo se sigue el proceso, por el camino del harness.** Por el `diario` que las funciones de §4 ya llenaban para la CLI: la interfaz lo sirve por trozos y lo pinta evento a evento, así que lo que se lee en pantalla y lo que imprime `escribir` son la misma cosa. A eso se le añade un único evento nuevo, `agente`, que dice quién está trabajando **antes** de que termine; sale de un gancho opcional en la capa de llamada de §5 y, sin nadie escuchando, no cambia nada. El estado de cada capítulo aparece en tres sitios a la vez —tarjeta, escena y barra inferior— porque son tres preguntas distintas: en qué anda este, cómo va el libro y cuánto queda.
 
 **Qué se ve, y de dónde sale.** Nada de la pantalla es un dato propio de la interfaz: todo se lee del canon o se recalcula con las mismas reglas del harness.
 
 | Componente | De dónde sale |
 |---|---|
 | Pipeline | Los seis estados de §4, con `bloqueado` marcado sobre el paso donde se quedó |
-| Tarjetas de agentes | Los seis roles de §5, encendidos por el evento `agente` del diario |
-| Tarjetas de capítulo y lomos del índice | `estado` de la ficha y las notas del intento aprobado |
-| Intentos del capítulo en curso | La tabla de intentos, con la regla recalculada por el gate de §8 |
+| Tarjetas de subagentes | Los ocho de §21 —el validador partido en tres—, encendidos por el evento `agente` en el harness y por el rastro en el canon en el delegado |
+| Tarjetas de capítulo y lomos del índice | `estado` de la ficha, las notas del intento aprobado y el día de ficción |
+| Intentos del capítulo | La tabla de intentos, con el escalón de VD-08 y la operación del gate recalculada |
+| Auditoría del gate | Solo en el delegado: la fórmula de §8 rehecha sobre el canon (ver abajo) |
 | Umbrales | El bloque `gate` del perfil activo (§12) |
-| Ledger de pistas | Los datos del dossier, con su estado de verificación (VD-04) |
+| Dossier de época | Los datos del investigador, con su estado de verificación (VD-04) |
+| Cronología | Los eventos de §3 por día de ficción; los históricos, sin capítulo (VD-05) |
+| Reparto | Las fichas de personaje, con la ubicación y el `sabe` que lleva el cronista |
 | Deuda narrativa | Hilos abiertos que ningún capítulo cerró, los mismos de §7 |
-| Últimos archivos de trabajo | `capitulos/*.md` y `retoques.md`, por fecha de modificación |
-| Eventos | El diario del flujo, el mismo que imprime la CLI |
+| Paquete de contexto | `contexto/cap-NN.md` en el delegado; regenerado en el harness |
+| Trazas | El estado de la capa de §20 y el recuento de lo que se mandaría |
+| Últimos archivos de trabajo | Los Markdown y JSON del canon activo, por fecha de modificación |
+| Eventos | El diario del flujo, el mismo que imprime la CLI. Vacío en el delegado |
 
 Cuando no hay capítulo en el loop, la tabla de intentos enseña el último capítulo trabajado y lo dice; el dato es real y es el que interesa mirar después de una pasada.
 
-**Lo que la interfaz no puede enseñar.** Cuatro cosas que una interfaz de este tipo pide y este canon no tiene: la **cuota diaria** —no hay contabilidad de llamadas ni límite configurado en ningún sitio—, las **escenas** —la unidad de escritura es el capítulo entero mientras DA-09 siga abierta—, y el **focalizador** y el **gancho final**, que la ficha de §3 no guarda. Los cuatro se pintan en su sitio con «sin datos todavía» en lugar de rellenarse. Es deliberado: un hueco visible dice dónde falta modelo de datos, y un número inventado lo esconde.
+**La auditoría del gate.** §21 dice que el punto más débil del camino delegado es que la suma del gate la hace un modelo. La página coge las tres notas y el recuento de graves que el orquestador dejó escritos, aplica la fórmula de §8 con los umbrales del perfil y compara su veredicto con el guardado. **No corrige nada**: el canon es la verdad aunque se equivoque, y reescribirlo desde aquí sería justo lo que §21 prohíbe. Lo que hace es dejar la discrepancia a la vista, en la fila del intento y en un panel con el recuento. Es el único dato de esta pantalla que no habla de la novela sino del camino, y existe porque una debilidad que nadie mide no se puede discutir. En el camino del harness el panel no aparece: allí la cuenta la hace el código, y auditarla sería ejecutar la misma línea dos veces.
+
+**Lo que la interfaz no puede enseñar.** Antes se pintaba «sin datos todavía» en el sitio de cada cosa que falta. Ahora esos huecos se declaran además juntos, en un panel al final de la columna, con el motivo de cada uno: la **cuota diaria** —no hay contabilidad de llamadas ni límite configurado en ningún sitio—, las **escenas** —la unidad de escritura es el capítulo entero mientras DA-09 siga abierta—, y el **focalizador** y el **gancho final**, que la ficha de §3 no guarda. Por el camino delegado se suman dos más: el **coste y los tokens** de cada llamada, que el canon en ficheros no guarda y las trazas reconstruidas no inventan, y las **citas de las incidencias**, porque `estado.json` guarda la nota y el aviso pero no el bloque entero de revisión. Sigue siendo deliberado, y el panel lo hace más claro: un hueco visible dice dónde falta modelo de datos, y en una lista se ve además cuánto falta.
 
 **Dónde se valida.** Dos veces, y la que manda es la del servidor: el navegador puede mentir y el harness no da nada por bueno porque venga de su propia página. La comprobación del brief es de forma —cinco campos, textos con contenido y dos enteros positivos—, no de márgenes: los de §12 los aplica VD-07 sobre la escaleta, que es donde el número de capítulos significa algo.
 
@@ -972,16 +1034,24 @@ Cuando no hay capítulo en el loop, la tabla de intentos enseña el último cap�
 
 **Identidad visual.** La paleta sale del logotipo de Qaracter —naranja `#FF7932` y azul pizarra `#233441`—, con los neutros sesgados hacia ese azul, y el logotipo va en la barra superior. La página se compromete con un solo mundo visual oscuro, sin tema claro: comparte paleta y luz con la escena, y mantener dos temas obligaría a pasarle la paleta al render en cada cambio para ganar poco.
 
+**Ambientación histórica.** Lo que aquí se escribe son novelas históricas y la página no lo decía por ningún sitio: era una consola de proceso con una tipografía bonita. La ambientación entra **por debajo de la identidad, no en su lugar**: mandan los dos colores de Qaracter y lo histórico ocupa los neutros, las texturas y los adornos. El naranja hace además de lacre sin cambiar de valor, que es la coincidencia que permite tener sellos sin inventar un color nuevo.
+
+La idea que lo ordena todo es una mesa a oscuras con papel iluminado encima. El escritorio sigue oscuro —comparte luz con la escena— y lleva grano de papel verjurado, viñeta de candil, filos entintados y un florón en cada título. Lo que se ilumina es lo que en esa mesa sería papel: **el capítulo se lee sobre vitela**, con tinta ferrogálica en vez de texto claro, capitular en lacre y florón de cambio de escena. No contradice el «un solo mundo visual»: no es un tema claro, es un objeto claro dentro del mundo oscuro, y el render no se entera. La capitular la decide el código y no el CSS, porque solo se dibuja bien si el párrafo empieza por letra: una raya de diálogo a cuatro líneas de alto queda peor que sin adorno.
+
+En la escena, la luz rasante parpadea como un candil con dos senos que no casan, para que la llama no repita ciclo. Es lo primero que se apaga con `prefers-reduced-motion`, igual que las motas de polvo.
+
+Nada de la ambientación añade datos. Lo que se ve sigue saliendo del canon.
+
 ## §20 Observabilidad
 
-> **Camino del harness.** Esta sección describe solo el camino de Python, que vive en la rama `harness-python`. El camino principal del repositorio es la orquestación delegada de §21, que no pasa por aquí.
+> **Los dos caminos, por dos vías distintas.** El harness traza mientras corre, porque toda llamada pasa por su capa de agentes. El camino delegado no tiene esa capa, así que su árbol se **reconstruye del canon** después de los hechos. Es el mismo árbol y la misma sesión; lo que cambia es cuándo se llena y qué se pierde por el camino.
 
 
 **Qué es.** El harness manda a [Langfuse](https://langfuse.com) lo que hace cada agente: qué se le pidió, qué contestó, con qué modelo, cuántos tokens gastó y cuánto costó. Es la respuesta a la única pregunta que ni el canon ni el diario contestan: **por qué el modelo contestó lo que contestó**. El canon guarda el resultado y el diario guarda el relato; las trazas guardan el contexto exacto que tenía el agente al decidir.
 
 **Nada de esto es fuente de verdad.** El estado sigue viviendo en el canon (§13) y el gate sigue decidiendo en código (§8). Las trazas solo observan, así que **ningún fallo de observabilidad puede parar una novela**: si falta el SDK, falta la credencial o Langfuse no responde, la capa se apaga, lo dice una vez y el libro se escribe igual. Es la regla de §13 al revés: allí se para porque el fallo afecta al libro; aquí no afecta, así que se sigue.
 
-**Dónde se instrumenta.** En un solo sitio, por la misma razón que el modo de ejecución: toda llamada pasa por la capa de agentes de §5, así que ahí nacen la observación del agente y la del modelo, y el resto del harness no sabe que existen. Las tres raíces las abre el flujo de §4.
+**Dónde se instrumenta.** En un solo sitio, por la misma razón que el modo de ejecución: toda llamada pasa por la capa de agentes de §5, así que ahí nacen la observación del agente y la del modelo, y el resto del harness no sabe que existen. Las tres raíces las abre el flujo de §4. Eso es el camino del harness; el delegado entra por el mismo sitio pero por otra puerta, y se cuenta más abajo.
 
 **Qué es una traza.** Una unidad de trabajo cerrada, no el libro entero: la preparación, **cada capítulo** y el cierre. Lo que las junta en una novela es la sesión, que se deriva del brief —el canon es fila única y no guarda ningún id de proyecto, y derivarla evita tocar el esquema de §3—. Un capítulo por traza mantiene el árbol legible y hace que la escaleta se lea como una lista de trazas comparables.
 
@@ -998,6 +1068,18 @@ Los nombres se tratan como una API y no llevan números dentro: el capítulo y e
 **Las notas del gate son puntuaciones.** Las tres dimensiones de §8, la media y el veredicto se mandan como *scores* sobre la observación del gate, y los intentos que costó el capítulo sobre su traza. Es lo que convierte la observabilidad en algo que sirve para decidir: DA-06 pedía calibrar `nota_minima` y `media_minima` con capítulos reales, y esto es de dónde salen esos datos.
 
 **Credenciales y coste.** Las claves van en un `.env` de la raíz que no se versiona, por la misma razón que la credencial de la API de §12. Lo que parece una credencial se tapa antes de salir, porque las instrucciones de §10 y el brief son texto libre. El modo `simulado` traza igual, con el modelo `simulado` y sin gasto: sirve para probar la instrumentación sin pagarla.
+
+### Las trazas del camino delegado
+
+§21 daba esto por perdido: «no hay dónde instrumentar sin inventarse un punto único que aquí no existe». El punto único sí existe, solo que no es una llamada: **es el canon**. El orquestador escribe en `estado.json` las tres notas, el mínimo, la media, el recuento de graves y los motivos de *todos* los intentos, y en los demás ficheros lo que produjo cada rol. Con eso se levanta el árbol entero después de los hechos y se manda por la misma capa, que sigue siendo la única que sabe que Langfuse existe.
+
+Se lanza con `python -m novela trazar`, o con un botón en el panel de trazas de §19 que antes enseña el recuento de lo que saldría. Exportar deja marca en un servicio de fuera, así que no ocurre solo: se ve primero el tamaño y luego se pulsa.
+
+**El árbol es el mismo de la tabla de arriba**, con dos diferencias que salen de la forma del camino: los tres validadores van como tres observaciones `agent` separadas, porque en §21 eso no es una opción de configuración sino la forma del camino; y la sesión se deriva del brief con la misma cuenta que el harness, así que **las dos orquestaciones del mismo brief caen en la misma sesión de Langfuse**. Eso es lo que convierte «se comparan después» en algo que se hace en la herramienta y no a ojo.
+
+**Qué se pierde, y se dice.** No hay latencia, ni tokens, ni coste, ni el prompt exacto: eso solo lo tiene quien hizo la llamada, y esta reconstrucción no estaba allí. Las marcas de tiempo son las del momento de exportar, no las de la escritura. Por eso cada traza sale etiquetada `delegado` y `reconstruido` y lleva `reconstruido: true` en los metadatos: una traza reconstruida mezclada con las del harness sin distintivo convertiría una comparación en un error.
+
+**Qué se gana.** Lo que hace falta para cerrar DA-06: las tres notas y la media de cada intento como puntuaciones, el veredicto del gate, los intentos que costó cada capítulo y el escalón de VD-08. Y una puntuación más que el harness no necesita, `gate-cuadra`, que marca los intentos donde la fórmula de §8 no da lo que el orquestador escribió: es la auditoría de §19 llevada a donde se pueden filtrar y contar.
 
 ## §21 Orquestación delegada
 
@@ -1042,9 +1124,20 @@ La excepción a la primera regla es el borrador del escritor, que no es canon: e
 
 - **El gate de §8 deja de ser código.** La fórmula está escrita y el orquestador tiene que imprimir la operación entera —los tres números, el mínimo, la media a dos decimales y el recuento de graves—, pero la suma la hace un modelo. Es el punto más débil del camino.
 - **El paquete de §7 deja de ser determinista.** Los filtros son mecánicos y el conteo va por `wc`, pero el ensamblado lo hace un modelo: que mismo capítulo y mismo canon den el mismo paquete pasa de garantizado a instruido.
-- **No hay tests sin red ni trazas.** §20 nace en `novela/agentes.py` y este camino no pasa por ahí, así que no hay dónde instrumentar sin inventarse un punto único que aquí no existe.
+- **No hay tests sin red.** Lo que hace el camino es una conversación, y no hay capa simulada que ponerle delante.
+- **Las trazas llegan tarde.** §20 nace en `novela/agentes.py` y este camino no pasa por ahí. Se resolvió reconstruyéndolas del canon, que es el punto único que sí existe, pero es observabilidad *a posteriori*: el árbol, las notas y los veredictos salen enteros y la latencia, los tokens, el coste y el prompt exacto no salen, porque nadie los guardó.
 
 Se acepta a sabiendas. La contrapartida es que el camino cabe en doce ficheros de Markdown y se cambia editando prosa.
+
+### El mirador
+
+Lo que el camino delegado no tenía, y ahora sí, es un sitio donde mirarlo mientras pasa y después. La interfaz de §19 lee `novela-cc/` con el mismo diseño de pantalla con el que lee `canon.db`, y desde ahí **solo mira**: la primera regla de este camino dice que en su canon escribe el orquestador y nadie más, y una interfaz que escribiera lo rompería por la puerta de atrás.
+
+Tres cosas que solo tienen sentido aquí:
+
+- **La auditoría del gate.** La fórmula de §8 rehecha sobre las notas guardadas y comparada con el veredicto que escribió el orquestador. Es la respuesta a «el punto más débil del camino»: seguirá siendo débil, pero deja de ser invisible.
+- **El paquete de contexto, a un clic.** Está en `contexto/cap-NN.md` porque el orquestador lo escribe justo para esto, y es lo único que explica después por qué el escritor escribió lo que escribió. El harness no lo guarda y tiene que regenerarlo.
+- **El rastro en vez del diario.** No hay stream que servir, así que cada subagente se marca por lo que dejó escrito: el investigador ha pasado si hay dossier, el cronista si hay resumen.
 
 ### Evidencia de la primera pasada
 
