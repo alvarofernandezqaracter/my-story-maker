@@ -10,3 +10,8 @@ canon.db-shm
 capitulos/*.md
 retoques.md
 novela-cc/
+
+# Salida de pasadas viejas, no se versiona (igual que canon.db y capitulos/)
+*.viejo.db
+*.viejo.md
+capitulos.viejo/
