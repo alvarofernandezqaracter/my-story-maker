@@ -6,38 +6,119 @@
 // ficheros y no inventa nada que no este en ellos.
 import { crearTrazas } from './trazas.js';
 
+// Cómo se lee el estado de una ficha de capítulo cuando se cuenta en una línea.
+const ESTADO = {
+  aprobado: 'aprobado',
+  en_curso: 'en curso',
+  bloqueado: 'bloqueado',
+  pendiente: 'pendiente',
+};
+
+// La media y el rango de una de las tres dimensiones a lo largo del libro. §5
+// dice que la dispersión de las tres notas es lo que hay que vigilar para saber
+// si juzgar en una sola pasada las estaba correlacionando, así que la tarjeta
+// del validador la enseña en vez de repetir que ha pasado por aquí.
+function porDimension(p, indice) {
+  const conNota = p.capitulos.filter((c) => c.notas);
+  if (!conNota.length) return null;
+  const notas = conNota.map((c) => c.notas[indice]);
+  const media = notas.reduce((a, b) => a + b, 0) / notas.length;
+  return { conNota, notas, media, ultimo: conNota[conNota.length - 1] };
+}
+
 // Los ocho subagentes de §21: los seis roles de §5 con el validador partido en
 // tres, porque los tres se lanzan a la vez y en un mismo mensaje.
+//
+// Cada uno lleva dos cosas. `produce` es lo que entrega, fijo y distinto en cada
+// uno: es lo que separa una tarjeta de otra cuando todavía no ha corrido nada.
+// `cuenta` es lo que lleva hecho en este canon, sacado de lo que dejó escrito
+// (§19: no hay diario, hay rastro). Devuelve null cuando no ha pasado, y
+// entonces no se pinta ninguna línea: ocho tarjetas repitiendo la misma frase
+// son ruido con forma de dato.
 const SUBAGENTES = [
-  { id: 'investigador', rol: 'investigador', nombre: 'investigador' },
-  { id: 'arquitecto', rol: 'arquitecto', nombre: 'arquitecto' },
-  { id: 'escritor', rol: 'escritor', nombre: 'escritor' },
-  { id: 'validador-continuidad', rol: 'validador', nombre: 'continuidad', paralelo: true },
-  { id: 'validador-anacronismos', rol: 'validador', nombre: 'anacronismos', paralelo: true },
-  { id: 'validador-logica-ritmo', rol: 'validador', nombre: 'lógica y ritmo', paralelo: true },
-  { id: 'cronista', rol: 'cronista', nombre: 'cronista' },
-  { id: 'editor_global', rol: 'editor_global', nombre: 'editor global' },
+  {
+    id: 'investigador', rol: 'investigador', nombre: 'investigador',
+    produce: 'el dossier de época, con categoría, fuente y estado por dato',
+    cuenta: (p) => {
+      if (!p.dossier.length) return null;
+      const verificados = p.dossier.filter((d) => d.estado === 'verificado').length;
+      return ['1 intervención, en la preparación',
+        `${p.dossier.length} datos · ${verificados} verificados`];
+    },
+  },
+  {
+    id: 'arquitecto', rol: 'arquitecto', nombre: 'arquitecto',
+    produce: 'la escaleta en tres actos y las fichas de personaje',
+    cuenta: (p) => {
+      if (!p.capitulos.length) return null;
+      return ['1 intervención, en la preparación',
+        `${p.capitulos.length} capítulos · ${p.reparto.length} personajes`];
+    },
+  },
+  {
+    id: 'escritor', rol: 'escritor', nombre: 'escritor',
+    produce: 'el borrador de cada intento, en capitulos/',
+    cuenta: (p) => {
+      const tocados = p.capitulos.filter((c) => c.intentos);
+      if (!tocados.length) return null;
+      const total = tocados.reduce((n, c) => n + c.intentos, 0);
+      const ultimo = tocados[tocados.length - 1];
+      return [`${total} borradores en ${tocados.length} capítulos`,
+        `último: cap. ${ultimo.numero}, intento ${ultimo.intentos},`
+          + ` ${ESTADO[ultimo.estado] || ultimo.estado}`];
+    },
+  },
+  {
+    id: 'validador-continuidad', rol: 'validador', nombre: 'continuidad',
+    paralelo: true, dimension: 0,
+    produce: 'una nota de 1 a 5 de coherencia con el canon',
+  },
+  {
+    id: 'validador-anacronismos', rol: 'validador', nombre: 'anacronismos',
+    paralelo: true, dimension: 1,
+    produce: 'una nota de 1 a 5 de época contra el dossier',
+  },
+  {
+    id: 'validador-logica-ritmo', rol: 'validador', nombre: 'lógica y ritmo',
+    paralelo: true, dimension: 2,
+    produce: 'una nota de 1 a 5 de causa, efecto y tensión',
+  },
+  {
+    id: 'cronista', rol: 'cronista', nombre: 'cronista',
+    produce: 'el resumen, los hilos y los cambios de ficha',
+    cuenta: (p) => {
+      const con = p.capitulos.filter((c) => c.resumen);
+      if (!con.length) return null;
+      const eventos = p.cronologia.filter((e) => e.capitulo).length;
+      return [`${con.length} intervenciones, una por capítulo aprobado`,
+        `${eventos} eventos de trama · ${p.deuda.length} hilos vivos`,
+        `último resumen: cap. ${con[con.length - 1].numero}`];
+    },
+  },
+  {
+    id: 'editor_global', rol: 'editor_global', nombre: 'editor global',
+    produce: 'la lista corta de retoques finales',
+    cuenta: (p) => (p.retoques
+      ? ['1 intervención, al cerrar', `escritos en ${p.ruta_retoques}`]
+      : null),
+  },
 ];
 
-const QUE_HACE = {
-  investigador: 'levantando el dossier de la época',
-  arquitecto: 'montando personajes y escaleta',
-  escritor: 'redactando el capítulo',
-  validador: 'puntuando su dimensión de 1 a 5',
-  cronista: 'volcando el capítulo en el canon',
-  editor_global: 'leyendo los resúmenes para los retoques',
-};
-
-// Qué deja escrito cada uno en el canon. Es lo que permite decir, sin diario,
-// si un rol ya ha pasado por aquí: se mira su rastro, no su llamada.
-const RASTRO = {
-  investigador: (p) => p.dossier.length > 0,
-  arquitecto: (p) => p.capitulos.length > 0,
-  escritor: (p) => p.capitulos.some((c) => c.intentos > 0),
-  validador: (p) => p.capitulos.some((c) => c.notas),
-  cronista: (p) => p.capitulos.some((c) => c.resumen),
-  editor_global: (p) => Boolean(p.retoques),
-};
+// Las tres tarjetas del validador cuentan lo mismo con su propia dimensión, así
+// que la función es una y se reparte por índice.
+for (const sub of SUBAGENTES) {
+  if (sub.dimension === undefined) continue;
+  const indice = sub.dimension;
+  sub.cuenta = (p) => {
+    const d = porDimension(p, indice);
+    if (!d) return null;
+    const revisados = p.auditoria?.revisados || d.conNota.length;
+    return [`${revisados} puntuaciones, una por intento juzgado`,
+      `media ${d.media.toFixed(2)} en los aprobados`
+        + ` · rango ${Math.min(...d.notas)}–${Math.max(...d.notas)}`,
+      `última: ${d.ultimo.notas[indice]} en el cap. ${d.ultimo.numero}`];
+  };
+}
 
 // La máquina de estados de §4, en su orden. `bloqueado` no ocupa puesto: es
 // salida lateral, y se marca sobre el paso donde el proyecto se quedó.
@@ -113,8 +194,10 @@ export function crearTaller(ctx) {
     alto.append(luz, nombre);
     const tarea = document.createElement('p');
     tarea.className = 'agente__tarea';
-    tarea.textContent = 'en reposo';
-    tarjeta.append(alto, tarea);
+    tarea.textContent = sub.produce;
+    const cuenta = document.createElement('p');
+    cuenta.className = 'agente__cuenta';
+    tarjeta.append(alto, tarea, cuenta);
     agentes.append(tarjeta);
   }
 
@@ -130,18 +213,25 @@ export function crearTaller(ctx) {
 
   function pintarAgentes(proyecto) {
     for (const nodo of agentes.children) {
-      const rol = nodo.dataset.rol;
-      // No hay diario que diga quién trabaja ahora mismo, así que lo único que
-      // se puede afirmar es quién ha dejado rastro en el canon.
-      const trabajado = Boolean(RASTRO[rol]?.(proyecto));
+      const sub = SUBAGENTES.find((x) => x.id === nodo.dataset.sub);
+      // No hay diario que diga quién trabaja ahora mismo, así que lo que se
+      // cuenta es lo que cada uno dejó escrito: cuánto entregó y qué fue lo
+      // último. La línea que no tiene dato detrás no se pinta.
+      const lineas = sub.cuenta?.(proyecto) || null;
       nodo.dataset.activo = 'no';
-      nodo.dataset.visto = trabajado ? 'si' : 'no';
-      nodo.querySelector('.agente__tarea').textContent = trabajado
-        ? 'ha dejado su rastro en el canon' : 'en reposo';
+      nodo.dataset.visto = lineas ? 'si' : 'no';
+      const caja = nodo.querySelector('.agente__cuenta');
+      caja.textContent = '';
+      for (const linea of lineas || []) {
+        const fila = document.createElement('span');
+        fila.textContent = linea;
+        caja.append(fila);
+      }
     }
     $('agentes-pista').textContent = 'Los tres validadores se lanzan en un mismo'
       + ' mensaje y no se ven entre sí: esa independencia es lo que permite que un'
-      + ' texto brillante caiga por continuidad.';
+      + ' texto brillante caiga por continuidad. La dispersión de sus tres notas es'
+      + ' lo que dice si esa independencia está funcionando (§5).';
   }
 
   function pintarPipeline(proyecto) {
