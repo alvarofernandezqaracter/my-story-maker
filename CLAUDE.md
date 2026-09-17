@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 0.13.0.
+de un brief de cinco campos. Versión 0.14.0.
 
 **El camino principal es la orquestación delegada**: quien orquesta es una sesión
 de Claude Code, no código. Hay un segundo camino, el harness de Python, que hace
@@ -14,6 +14,11 @@ lo mismo escrito en `novela/` y que vive también aquí.
 | Canon | JSON en `novela-cc/canon/` | SQLite en `canon.db` |
 | Se lanza con | `/orquestar-novela` | `python -m novela ...` |
 | Rama | `main` | `harness-python` |
+
+**La interfaz web (§19) mira los dos.** `python -m novela ui` abre por el camino
+que diga `interfaz.camino`, y un conmutador de la barra cambia de canon sin
+reiniciar. Por el delegado **solo mira**: brief, arranque y desbloqueo devuelven
+409, porque en ese canon escribe el orquestador y nadie más.
 
 **Los dos comparten los prompts** de `agentes/` y `skills/` y los umbrales de
 `config.json`, y no los duplican: cada subagente lee su fichero de rol al
@@ -114,13 +119,17 @@ sobre el mismo repositorio sin pisarse y se comparan después.
 Y conviene no olvidarlo, porque es el precio:
 
 - **El gate deja de ser código.** La fórmula está escrita y hay que imprimir la
-  operación entera, pero la suma la hace un modelo.
+  operación entera, pero la suma la hace un modelo. La interfaz la rehace y avisa
+  si no cuadra (§19), pero avisar es todo lo que hace: DA-15.
 - **El paquete de contexto deja de ser determinista.** Los filtros son mecánicos
   y el conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de
   que mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
   instruido.
-- **Ni tests sin red ni trazas.** §20 cuelga de `novela/agentes.py` y aquí no se
-  pasa por ahí.
+- **No hay tests sin red.** Lo que hace el camino es una conversación.
+- **Las trazas llegan tarde.** §20 cuelga de `novela/agentes.py` y aquí no se pasa
+  por ahí, así que se reconstruyen del canon con `python -m novela trazar` o desde
+  la interfaz. Salen el árbol, las notas y los veredictos; no salen la latencia,
+  los tokens, el coste ni el prompt exacto, porque nadie los guardó.
 
 # El diseño, que vale para los dos caminos
 
@@ -193,13 +202,13 @@ y los retoques finales, que se aplican a mano.
 ## Configuración (§12)
 
 Un único `config.json` en la raíz. **Si un número aparece escrito en el código o
-en un prompt sin pasar por este fichero, es un bug.** Dieciocho claves:
+en un prompt sin pasar por este fichero, es un bug.** Las claves:
 `ejecucion.modo`, `gate.{nota_minima,media_minima,max_intentos}`,
 `contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`, `validador.modo`,
-`interfaz.puerto`, `trazas.{activas,entorno}`,
+`interfaz.{puerto,camino}`, `trazas.{activas,entorno}`,
 `margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`,
-`modelo_por_rol`, `busqueda_web`. Reglas cruzadas: `palabras_bloqueo > palabras_aviso`
-y `capitulos_max >= capitulos_min`.
+`modelo_por_rol`, `busqueda_web`. Diecinueve. Reglas cruzadas:
+`palabras_bloqueo > palabras_aviso` y `capitulos_max >= capitulos_min`.
 
 `ejecucion.modo` y `validador.modo` son del harness: el camino delegado no los usa.
 
@@ -223,7 +232,8 @@ python -m novela preparar     # investigador y arquitecto
 python -m novela escribir     # loop: escritor, VD-08, validador, gate, cronista
 python -m novela cerrar       # editor global y retoques.md
 python -m novela ui           # ciclo entero desde el navegador (§19)
-python -m unittest discover -s tests -t .    # 74 tests, sin red
+python -m novela trazar       # manda a Langfuse el canon delegado, reconstruido
+python -m unittest discover -s tests -t .    # 112 tests, sin red
 ```
 
 Otros comandos: `reanudar`, `estado`,
@@ -231,12 +241,16 @@ Otros comandos: `reanudar`, `estado`,
 `poner <personaje|capitulo|dato> <fichero.json>`,
 `desbloquear --capitulo N [--aprobar-intento K | --reiniciar]`, `skills`.
 
+`ui` acepta `--camino delegado|harness` para abrir por el otro canon sin tocar el
+perfil.
+
 ## Mapa del código
 
 | Fichero | Qué es | Spec |
 |---|---|---|
 | [novela/config.py](novela/config.py) | Carga y **valida entero** `config.json` | §12 |
 | [novela/canon.py](novela/canon.py) | SQLite: las 7 tablas, y `escritura_del_cronista` como transacción única | §3, §6 |
+| [novela/canon_cc.py](novela/canon_cc.py) | Lector **de solo lectura** del canon en ficheros, y la auditoría del gate | §21 |
 | [novela/esquemas.py](novela/esquemas.py) | Contratos de I/O de los seis roles y `comprobar_forma` (VD-01/VD-02) | §5 |
 | [novela/validadores.py](novela/validadores.py) | Los once `VD-xx` deterministas | §9 |
 | [novela/gate.py](novela/gate.py) | Fórmula del gate, `mejor_intento`, `incidencias_ordenadas` | §8 |
@@ -249,6 +263,7 @@ Otros comandos: `reanudar`, `estado`,
 | [novela/flujo.py](novela/flujo.py) | `preparar`, `escribir_capitulo`, `cerrar`, `reanudar` | §4, §8, §11 |
 | [novela/servidor.py](novela/servidor.py) | Interfaz web: sirve `web/`, la API y el hilo único del flujo | §19 |
 | [novela/trazas.py](novela/trazas.py) | Capa única de observabilidad; la única que sabe que Langfuse existe | §20 |
+| [novela/trazas_cc.py](novela/trazas_cc.py) | Reconstruye el árbol de §20 desde el canon delegado | §20, §21 |
 | [novela/entorno.py](novela/entorno.py) | Lector del `.env` | §12, §20 |
 | [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada** | §18 |
 
@@ -275,33 +290,40 @@ si todas las respuestas simuladas son buenas.
 `python -m novela ui` levanta un servidor local de la biblioteca estándar: brief,
 lanzar a los agentes, ver el proceso y leer los capítulos. Las tres salas son
 [web/brief.js](web/brief.js), [web/taller.js](web/taller.js) y
-[web/lectura.js](web/lectura.js). **Ningún dato de la pantalla es propio de la
-interfaz**: o se lee del canon o se recalcula con las reglas del harness. Lo que
-el canon no guarda se pinta «sin datos todavía» y **no se rellena**.
+[web/lectura.js](web/lectura.js), más [web/trazas.js](web/trazas.js). **Ningún
+dato de la pantalla es propio de la interfaz**: o se lee del canon o se recalcula
+con las reglas del harness. Lo que el canon no guarda se pinta «sin datos
+todavía», **no se rellena**, y además se declara junto en un panel con el motivo.
 
 Cada llamada a un agente deja traza en Langfuse, instrumentada en un solo sitio,
 [novela/trazas.py](novela/trazas.py). **Una traza es una unidad de trabajo
 cerrada, no el libro.** Ningún fallo de observabilidad para una novela.
 
-La paleta es la de Qaracter (`#FF7932` y `#233441`). three.js viaja por CDN —lo
-único del repo que necesita red— y degrada.
+La paleta es la de Qaracter (`#FF7932` y `#233441`) y manda. La ambientación
+histórica de [web/ambientacion.css](web/ambientacion.css) va **por debajo**: ocupa
+los neutros, las texturas y los adornos, y el naranja hace de lacre sin cambiar de
+valor. La mesa sigue a oscuras; lo que se ilumina es el capítulo, que se lee sobre
+vitela. three.js viaja por CDN —lo único del repo que necesita red— y degrada.
 
 ## Tests
 
-`python -m unittest discover -s tests -t .` corre 74 tests en tres ficheros, sin
+`python -m unittest discover -s tests -t .` corre 112 tests en cuatro ficheros, sin
 red y sin coste. Cada test del flujo corre en su propio directorio temporal porque
 el harness escribe en el `cwd`. Los tests **apagan las trazas a mano** en lugar de
 fiarse de que el entorno esté limpio.
 
-Cubren el harness. **El camino delegado no tiene tests**, y esa es una de sus
-diferencias de fondo.
+Cubren el harness y, desde 0.14.0, el lector del canon delegado, la auditoría del
+gate y el árbol de trazas reconstruido —este último contra una capa de mentira que
+apunta en una lista, para comprobar la forma del árbol sin red—. **La orquestación
+delegada en sí sigue sin tests**, y esa es una de sus diferencias de fondo: lo que
+hace es una conversación.
 
 # Estado actual y cosas abiertas
 
 - El `.drawio` de [docs/diagrama/](docs/diagrama/) va por detrás del Mermaid: le
   falta el cronista y se regenera a mano. El Mermaid de §4 es el bueno.
 - Decisiones abiertas vivas en §15: DA-02, DA-03, DA-04, DA-05, DA-06, DA-07,
-  DA-08, DA-09, DA-10, DA-12.
+  DA-08, DA-09, DA-10, DA-12, DA-13, DA-14, DA-15.
 - F6 (búsqueda web real del investigador) no está implementado: `busqueda_web`
   está a `true` para no tocar el esquema más tarde, pero el investigador la ignora.
 - El modo `real` no se ha ejercitado contra la API desde la migración.
