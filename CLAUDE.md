@@ -225,6 +225,9 @@ python -m unittest discover -s tests -t .    # 56 tests, sin red
 ## Interfaz web (§19) y observabilidad (§20)
 
 `python -m novela ui` levanta un servidor local de la biblioteca estándar.
+Cuatro salas: **brief** qué libro es, **escritorio** por dónde va, **arquitectura**
+el pipeline de §4, §7, §8 y §9 como grafo por capas, y **lectura** el capítulo.
+Solo la tercera sigue diciendo algo con el canon vacío.
 **Mira y no toca**: en el canon escribe el orquestador y nadie más, así que
 cualquier método que no sea `GET` contra la API responde 409 y da el comando que
 sí escribe. Lo único que manda algo fuera es `POST /api/trazas`, que no toca el

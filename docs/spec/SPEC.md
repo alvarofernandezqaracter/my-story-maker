@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.1.1
+version: 1.2.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -529,6 +529,27 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.2.0] — 2026-09-17
+
+**Añadido**
+- §19. Cuarta sala, «arquitectura»: el pipeline de §4, §7, §8 y §9 como DAG por
+  capas navegable, con el recorrido de un capítulo concreto encima. El diseño
+  solo se podía leer en este documento y en la skill, así que la pregunta «por
+  dónde ha pasado esto» no tenía dónde mirarse.
+- §19. La dispersión de las tres notas del validador, que §5 manda vigilar para
+  saber si juzgarlas a la vez las estaba correlacionando, y que hasta ahora no
+  se medía en ningún sitio.
+- §19. Una escala de espaciado y otra de tipografía en `:root`, porque las
+  medidas sueltas dejaban tarjetas de distinta altura en la misma fila.
+
+**Cambiado**
+- §19. Las ocho tarjetas de subagente dejan de repetir «ha dejado su rastro en
+  el canon» y cuentan lo que cada uno produce y lo que lleva entregado. La frase
+  era cierta y era la misma ocho veces, que es lo mismo que no decir nada.
+- §19. Los campos que el canon no guarda se colapsan en una sola línea con su
+  recuento. Se siguen declarando —la regla de no rellenar no cambia—, pero
+  cuatro «sin datos todavía» seguidos escondían los que sí tenían valor.
+
 ### [1.1.1] — 2026-09-17
 
 **Añadido**
@@ -715,7 +736,9 @@ de línea de Unix.
 > orquesta, y esta página no es el orquestador.
 
 
-**Qué es.** Una página local, `python -m novela ui`, desde la que se sigue una novela entera: el brief de §3, el estado del canon, el proceso y los capítulos aprobados. Escucha solo en `127.0.0.1` y no necesita nada instalado, porque el servidor es `http.server` de la biblioteca estándar.
+**Qué es.** Una página local, `python -m novela ui`, desde la que se sigue una novela entera: el brief de §3, el estado del canon, el proceso, la arquitectura que lo ejecuta y los capítulos aprobados. Escucha solo en `127.0.0.1` y no necesita nada instalado, porque el servidor es `http.server` de la biblioteca estándar.
+
+Son cuatro salas y contestan cuatro preguntas distintas: **brief** qué libro es, **escritorio** por dónde va, **arquitectura** cómo está montado el sistema que lo escribe, y **lectura** el capítulo. Solo la tercera sigue diciendo algo con el canon vacío.
 
 ### Por qué no escribe
 
@@ -759,7 +782,8 @@ reconstruye el árbol de §20 con lo que el canon ya dice y lo manda a Langfuse.
 | Componente | De dónde sale |
 |---|---|
 | Pipeline | Los seis estados de §4, con `bloqueado` marcado sobre el paso donde se quedó |
-| Tarjetas de subagentes | Los ocho de §21 —el validador partido en tres—, encendidos por el rastro que cada uno dejó en el canon |
+| Tarjetas de subagentes | Los ocho de §21 —el validador partido en tres—, con lo que cada uno produce y lo que lleva entregado en este canon |
+| Grafo de arquitectura | El pipeline de §4, §7, §8 y §9, con los nodos encendidos por el rastro de cada uno |
 | Tarjetas de capítulo y lomos del índice | `estado` de la ficha, las notas del intento aprobado y el día de ficción |
 | Intentos del capítulo | La tabla de intentos, con el escalón de VD-08 y la operación del gate recalculada |
 | Auditoría del gate | La fórmula de §8 rehecha sobre el canon (ver abajo) |
@@ -776,13 +800,53 @@ Cuando no hay capítulo en el loop, la tabla de intentos enseña el último cap�
 
 **La auditoría del gate.** §21 dice que el punto más débil del sistema es que la suma del gate la hace un modelo. La página coge las tres notas y el recuento de graves que el orquestador dejó escritos, aplica la fórmula de §8 con los umbrales del perfil y compara su veredicto con el guardado. **No corrige nada**: el canon es la verdad aunque se equivoque, y reescribirlo desde aquí sería justo lo que §21 prohíbe. Lo que hace es dejar la discrepancia a la vista, en la fila del intento y en un panel con el recuento. Es el único dato de esta pantalla que no habla de la novela sino del sistema, y existe porque una debilidad que nadie mide no se puede discutir.
 
-**Lo que la interfaz no puede enseñar.** Cada cosa que falta se pinta «sin datos todavía» en su sitio, y además se declaran todas juntas en un panel al final de la columna, con el motivo de cada una: la **cuota diaria** —no hay contabilidad de llamadas ni límite configurado en ningún sitio—, las **escenas** —la unidad de escritura es el capítulo entero mientras DA-09 siga abierta—, y el **focalizador** y el **gancho final**, que la ficha de §3 no guarda. A eso se suman dos más: el **coste y los tokens** de cada llamada, que el canon en ficheros no guarda y las trazas reconstruidas no inventan —los tiene el hook de §22, pero en Langfuse y no aquí—, y las **citas de las incidencias**, porque `estado.json` guarda la nota y el aviso pero no el bloque entero de revisión. Es deliberado: un hueco visible dice dónde falta modelo de datos, y en una lista se ve además cuánto falta.
+**Lo que la interfaz no puede enseñar.** Cada cosa que falta se sigue diciendo, pero **una vez y en corto**: los campos vacíos de una ficha se colapsan en una línea que dice cuántos son y cuáles al pasar por encima. Cuatro «sin datos todavía» seguidos tapaban los dos campos que sí tenían valor, que es el fallo contrario al que la regla quería evitar. Además se declaran todas juntas en un panel al final de la columna, con el motivo de cada una: la **cuota diaria** —no hay contabilidad de llamadas ni límite configurado en ningún sitio—, las **escenas** —la unidad de escritura es el capítulo entero mientras DA-09 siga abierta—, y el **focalizador** y el **gancho final**, que la ficha de §3 no guarda. A eso se suman dos más: el **coste y los tokens** de cada llamada, que el canon en ficheros no guarda y las trazas reconstruidas no inventan —los tiene el hook de §22, pero en Langfuse y no aquí—, y las **citas de las incidencias**, porque `estado.json` guarda la nota y el aviso pero no el bloque entero de revisión. Es deliberado: un hueco visible dice dónde falta modelo de datos, y en una lista se ve además cuánto falta.
+
+### La sala de arquitectura
+
+El diseño vivía en este documento y en la skill, y la página solo enseñaba su
+resultado: se veía que un capítulo había caído por continuidad, no **por dónde
+había pasado para caer ahí**. La cuarta sala dibuja el pipeline entero como un
+DAG por capas y le pone el canon encima.
+
+- **Layout determinista por capas.** La banda en Y la da el nivel del nodo y
+  dentro de la banda los nodos se reparten simétricos con una separación fija.
+  No hay una sola coordenada a mano: mismo modelo, mismo dibujo.
+- **Un artefacto comparte banda con el agente que lo produce.** Con una banda
+  por nodo serían dieciocho, y a esa altura los nombres dejan de leerse. La
+  banda es la etapa del pipeline y el fichero que sale de ella es parte de la
+  etapa.
+- **Tres formas y ninguna más**: esfera el agente LLM, cilindro el artefacto o
+  estado, rombo la decisión —el gate y VD-08, que es la otra que decide—. Una
+  cuarta forma ya obliga a ir a mirar la leyenda.
+- **Las vueltas atrás van aparte**, discontinuas y por un carril a la izquierda:
+  los dos reintentos de §8 y el canon que alimenta el paquete del capítulo
+  siguiente (§4) son la misma flecha, pero no el mismo viaje.
+- **El recorrido de un capítulo.** Se elige uno y el grafo apaga lo que no
+  recorrió y cuenta las veces que pasó por cada nodo. Aquí vuelve a mandar la
+  regla de la casa: `/api/proyecto` da el número de intentos de todos los
+  capítulos pero el detalle solo del que está en curso, así que **cuál de las
+  dos vueltas atrás se usó no se enciende salvo que el canon lo diga**, y la
+  línea de estado explica por qué.
+- **El panel es el mismo para los dieciocho nodos**: descripción, entradas,
+  salidas y reglas, cada regla citada con su sección. Debajo, y solo si hay
+  canon, lo que ese nodo lleva hecho. Comparar dos nodos es leer el mismo sitio
+  dos veces.
+- **La dispersión de las tres notas** sale en la ficha de cada validador. §5
+  dice que es lo que hay que vigilar para saber si juzgar las tres dimensiones a
+  la vez las estaba correlacionando, y hasta ahora no se medía en ningún sitio.
+
+La escena es un segundo lienzo WebGL y no se monta hasta que se abre la
+pestaña; con la pestaña fuera de pantalla no dibuja. Si three.js no llega, el
+panel sigue contando el sistema entero.
 
 **Qué valida.** Poco, porque no entra nada: solo el número de capítulo de las rutas que lo llevan. El brief lo comprueba el orquestador antes de escribirlo, con los `VD-xx` de §9, que es donde esa comprobación significa algo.
 
 **Por qué three.js.** La escena dibuja un cuadernillo por capítulo: cuántos son lo dice el brief, el grosor las palabras por capítulo, el color el estado del canon y la luz el tono. Es la parte que no se lee bien en una tabla —seis capítulos de 1.800 palabras es un número; seis cuadernillos sobre la mesa es una novela corta—, y según el orquestador va escribiendo se ve el capítulo en curso levantarse y los aprobados cambiar de color. El resto es HTML corriente. La escena es lo único del repo que necesita red, porque three.js viaja por CDN; si no llega, la interfaz entera sigue funcionando y la mesa se queda en su degradado.
 
 **Identidad visual.** La paleta sale del logotipo de Qaracter —naranja `#FF7932` y azul pizarra `#233441`—, con los neutros sesgados hacia ese azul, y el logotipo va en la barra superior. La página se compromete con un solo mundo visual oscuro, sin tema claro: comparte paleta y luz con la escena, y mantener dos temas obligaría a pasarle la paleta al render en cada cambio para ganar poco.
+
+**La escala.** Los espaciados salen de una escala de 4/8/12/16/24/32 y los tamaños de letra de cuatro pasos —título, sección, cuerpo y caption— declarados en `:root`. Lo que necesita otro tamaño lo deriva con `calc()` de uno de ellos, para que siga atado a la escala en vez de escaparse de ella. Los párrafos se cortan a unos 65 caracteres. No es decoración: con veinte medidas sueltas dos tarjetas de la misma fila acababan midiendo distinto, y eso se lee como si a una le faltara algo.
 
 **Ambientación histórica.** Lo que aquí se escribe son novelas históricas y la página no lo decía por ningún sitio: era una consola de proceso con una tipografía bonita. La ambientación entra **por debajo de la identidad, no en su lugar**: mandan los dos colores de Qaracter y lo histórico ocupa los neutros, las texturas y los adornos. El naranja hace además de lacre sin cambiar de valor, que es la coincidencia que permite tener sellos sin inventar un color nuevo.
 
