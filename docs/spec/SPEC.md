@@ -458,6 +458,8 @@ evitar. DA-02 se decide en ese frontmatter.
 | `contexto.ventana_resumenes` | 3 | Capítulos anteriores que van con resumen completo |
 | `contexto.palabras_enganche` | 400 | Cola literal del capítulo anterior |
 | `interfaz.puerto` | 8787 | Puerto local de la interfaz del brief (§19) |
+| `lanzador.comando` | `claude` | El CLI de Claude Code que arranca el botón de §19 |
+| `lanzador.permisos` | `acceptEdits` | Modo de permisos con el que arranca esa sesión |
 | `trazas.activas` | `true` | Manda las trazas de §20 a Langfuse |
 | `trazas.entorno` | `desarrollo` | Separa las pasadas de prueba de las que escriben libros de verdad |
 | `margenes.capitulos_min` y `capitulos_max` | 0,8 y 1,2 | Desvío tolerado sobre el nº de capítulos del brief (VD-07) |
@@ -472,7 +474,15 @@ un concepto nuevo: es este mismo fichero, y lo que cambia de uno a otro son los
 umbrales. El que no valide no sale en la lista, por la misma razón por la que se
 para al arrancar.
 
-Con esto la tabla tiene **catorce** claves, y ninguna sobra: cada una la lee alguien.
+**Por qué el modo de permisos es una clave y no una constante.** Una sesión
+arrancada desde la página no tiene a nadie delante a quien preguntarle si puede
+escribir un fichero, así que sin un modo que lo resuelva la novela se queda
+parada en la primera escritura. `acceptEdits` es lo que trae el perfil del
+repositorio y es lo mínimo que hace falta. `bypassPermissions` existe y no se
+pone por defecto: eso es una decisión de quien opera la máquina, y tiene que
+estar escrita en su fichero y no escondida en el código.
+
+Con esto la tabla tiene **dieciséis** claves, y ninguna sobra: cada una la lee alguien.
 
 **Por qué dos márgenes de palabras.** VD-08 tiene que distinguir el capítulo que se queda corto del que no sirve. Dentro de `palabras_aviso` el texto vale y la desviación viaja como aviso al reintento; pasado `palabras_bloqueo` no se gasta la llamada al validador y se reintenta la generación. Con un solo umbral había que elegir entre no filtrar nada o tirar capítulos aprovechables.
 
@@ -747,6 +757,15 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `2515589` | 2026-09-17 | docs(spec): §2 glosario define VD-xx y DA-xx, y corrige la entrada del validador |
 | `334a33c` | 2026-09-17 | docs(spec): §17 regenerada para 1.1.1 |
 | `10752ca` | 2026-09-17 | docs(spec): 1.2.0, §19 la sala de arquitectura y la escala de diseno |
+| `5654cfc` | 2026-09-17 | docs(spec): §17 regenerada para 1.2.0 |
+| `66839c5` | 2026-09-17 | feat(web): §19 el cuarto tiene luz de dia y el legajo vive en el brief |
+| `aa606ed` | 2026-09-17 | feat(web): §19 el grafo de arquitectura pasa a SVG por columnas |
+| `8a97a27` | 2026-09-17 | feat(web): §19 los cinco estados de nodo del grafo |
+| `f14457a` | 2026-09-17 | feat(web): §19 la arista activa corre y dice por donde va el flujo |
+| `f2a4294` | 2026-09-17 | feat(web): §19 replay del ultimo capitulo y modo en vivo sobre el grafo |
+| `8c2d8ce` | 2026-09-17 | feat(web): §19 leyenda de estados, foco de teclado y repaso a tres anchos |
+| `c6df332` | 2026-09-17 | docs(spec): 1.9.0, §22 el diario local como origen del informe |
+
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
 ```
