@@ -646,7 +646,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `6fae2ef` | 2026-09-17 | docs(spec): 1.1.0 y §17 regenerada |
 | `2d2b59f` | 2026-09-17 | docs(trazas): §6 primera pasada de analisis, sesion novela-1abde479ff05 |
 | `2515589` | 2026-09-17 | docs(spec): §2 glosario define VD-xx y DA-xx, y corrige la entrada del validador |
-
+| `334a33c` | 2026-09-17 | docs(spec): §17 regenerada para 1.1.1 |
+| `10752ca` | 2026-09-17 | docs(spec): 1.2.0, §19 la sala de arquitectura y la escala de diseno |
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
 ```
