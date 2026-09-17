@@ -202,7 +202,8 @@
      tiene algo que decir con el canon vacio: ensena el sistema, no el libro. -->
 <main class="sala-panel" id="sala-arquitectura" hidden>
   <div class="grafo">
-    <canvas id="lienzo-arquitectura"></canvas>
+    <svg class="grafo__svg" id="lienzo-arquitectura" role="img"
+         aria-label="El pipeline de la novela como grafo por capas"></svg>
 
     <div class="grafo__mandos">
       <label for="recorrido">Recorrido</label>
@@ -211,10 +212,10 @@
     </div>
 
     <div class="leyenda" aria-hidden="true">
-      <span><i data-forma="agente"></i>esfera — agente LLM</span>
-      <span><i data-forma="artefacto"></i>cilindro — artefacto o estado</span>
-      <span><i data-forma="decision"></i>rombo — decisión</span>
-      <span><i data-forma="realimenta"></i>discontinua — vuelta atrás del loop</span>
+      <span><i data-forma="agente"></i>agente LLM</span>
+      <span><i data-forma="artefacto"></i>dato</span>
+      <span><i data-forma="decision"></i>código del harness</span>
+      <span><i data-forma="realimenta"></i>vuelta atrás del loop</span>
     </div>
 
     <p class="vacio grafo__aviso" id="grafo-aviso" hidden></p>

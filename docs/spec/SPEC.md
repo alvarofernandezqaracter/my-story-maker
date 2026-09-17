@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.3.0
+version: 1.4.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -529,6 +529,24 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.4.0] — 2026-09-17
+
+**Cambiado**
+- §19. El grafo de la sala de arquitectura pasa a **SVG inline** y a un layout
+  por columnas de izquierda a derecha. No hay nada en un DAG de dieciocho nodos
+  que justifique WebGL, y en SVG el dibujo hereda los mismos tokens de color que
+  el resto de la página en vez de llevar una paleta suya.
+- §19. La ficha del nodo entra como cajón por la derecha cuando se pide un nodo,
+  en vez de vivir abierta. Diez columnas en fila dan un dibujo cuatro veces más
+  ancho que alto, y el panel fijo le costaba al grafo un cuarto del ancho, que
+  es tamaño de letra al encuadrar.
+- §19. Las siluetas se nombran por lo que son: cápsula el agente LLM, caja el
+  dato, hexágono el código del harness.
+
+**Añadido**
+- §19. Enlace por sala: `#arquitectura` abre el grafo directamente, igual que
+  `#capitulo/3` abre ese capítulo.
+
 ### [1.3.0] — 2026-09-17
 
 **Cambiado**
@@ -828,16 +846,30 @@ resultado: se veía que un capítulo había caído por continuidad, no **por dó
 había pasado para caer ahí**. La cuarta sala dibuja el pipeline entero como un
 DAG por capas y le pone el canon encima.
 
-- **Layout determinista por capas.** La banda en Y la da el nivel del nodo y
-  dentro de la banda los nodos se reparten simétricos con una separación fija.
-  No hay una sola coordenada a mano: mismo modelo, mismo dibujo.
-- **Un artefacto comparte banda con el agente que lo produce.** Con una banda
-  por nodo serían dieciocho, y a esa altura los nombres dejan de leerse. La
-  banda es la etapa del pipeline y el fichero que sale de ella es parte de la
-  etapa.
-- **Tres formas y ninguna más**: esfera el agente LLM, cilindro el artefacto o
-  estado, rombo la decisión —el gate y VD-08, que es la otra que decide—. Una
-  cuarta forma ya obliga a ir a mirar la leyenda.
+- **SVG inline, sin ninguna librería de grafos.** Cajas, curvas y texto: no hay
+  nada en un DAG de dieciocho nodos que justifique una dependencia, y el dibujo
+  tiene que poder heredar los mismos tokens de color que el resto de la página.
+- **Layout determinista por capas, de izquierda a derecha.** La columna la da el
+  nivel del nodo y dentro de la columna los nodos se reparten simétricos con una
+  separación mínima garantizada. No hay una sola coordenada a mano: mismo
+  modelo, mismo dibujo, en cualquier pantalla.
+- **Un artefacto comparte columna con el agente que lo produce.** Con una
+  columna por nodo serían dieciocho y el dibujo no cabría a lo ancho de ninguna
+  pantalla. La columna es la etapa del pipeline y el fichero que sale de ella es
+  parte de la etapa, así que esa arista no viaja: baja de una caja a la de
+  debajo. La que salta una fila se abomba por la izquierda, porque una recta
+  atravesaría la caja de en medio y se leería como una cadena que no existe.
+- **Tres siluetas y ninguna más**: cápsula el agente LLM, caja recta el dato,
+  hexágono el código del harness —el gate y VD-08, que es lo que decide sin
+  llamar a nadie—. Una cuarta obliga a ir a mirar la leyenda cada vez.
+- **Diez columnas dan un dibujo casi cuatro veces más ancho que alto.** De ahí
+  salen las dos decisiones de tamaño: la caja se aprieta todo lo que se puede y
+  el nombre que no cabe en una línea se parte en dos, y el grafo se lleva la
+  sala entera. Cada píxel de ancho que se le quitara se lo estaría quitando al
+  tamaño de la letra al encuadrar.
+- **Se navega con rueda y arrastre**, moviendo el `viewBox` y no las cajas: el
+  zoom es sobre el puntero, porque lo que hay debajo del ratón tiene que
+  quedarse debajo del ratón. Un arrastre no cuenta como clic.
 - **Las vueltas atrás van aparte**, discontinuas y por un carril a la izquierda:
   los dos reintentos de §8 y el canon que alimenta el paquete del capítulo
   siguiente (§4) son la misma flecha, pero no el mismo viaje.
@@ -850,14 +882,19 @@ DAG por capas y le pone el canon encima.
 - **El panel es el mismo para los dieciocho nodos**: descripción, entradas,
   salidas y reglas, cada regla citada con su sección. Debajo, y solo si hay
   canon, lo que ese nodo lleva hecho. Comparar dos nodos es leer el mismo sitio
-  dos veces.
+  dos veces. Entra como cajón por la derecha cuando se pide un nodo y se cierra
+  con Esc: vivir abierto le costaba al grafo un cuarto del ancho.
 - **La dispersión de las tres notas** sale en la ficha de cada validador. §5
   dice que es lo que hay que vigilar para saber si juzgar las tres dimensiones a
   la vez las estaba correlacionando, y hasta ahora no se medía en ningún sitio.
 
-La escena es un segundo lienzo WebGL y no se monta hasta que se abre la
-pestaña; con la pestaña fuera de pantalla no dibuja. Si three.js no llega, el
-panel sigue contando el sistema entero.
+El grafo no se monta hasta que se abre la pestaña: son dieciocho nodos y
+veintitrés aristas, y construirlos de entrada se los cobraría a quien no va a
+verlos.
+
+**Cada sala tiene su enlace.** `#arquitectura` abre el grafo directamente, igual
+que `#capitulo/3` abre ese capítulo. Sirve para mandar a alguien a lo que se le
+quiere enseñar sin tener que decirle dónde hacer clic.
 
 **Qué valida.** Poco, porque no entra nada: solo el número de capítulo de las rutas que lo llevan. El brief lo comprueba el orquestador antes de escribirlo, con los `VD-xx` de §9, que es donde esa comprobación significa algo.
 

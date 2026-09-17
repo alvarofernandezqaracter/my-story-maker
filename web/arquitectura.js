@@ -10,7 +10,7 @@
 // lo que se lee bajo «en este canon» sale de /api/proyecto. No hay una tercera
 // fuente, y eso es deliberado: si aquí hiciera falta inventar un dato sería que
 // falta modelo, igual que en el resto de la interfaz (§19).
-import { crearGrafo } from './grafo.js';
+import { crearGrafo, disponer } from './grafo.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -407,31 +407,13 @@ const ARISTAS = [
   { de: 'canon', a: 'contexto', tipo: 'realimenta', carril: 2 },
 ];
 
-const TIPO = { agente: 'agente', artefacto: 'artefacto', decision: 'decisión' };
+const TIPO = { agente: 'agente LLM', artefacto: 'dato', decision: 'código del harness' };
 
 // --------------------------------------------------------------- el reparto
 
-const PASO_Y = 1.75;
-const SEPARACION_X = 3.6;   // separación mínima garantizada entre centros
-
-// Layout por capas y nada más: la banda la da el nivel, y dentro de la banda los
-// nodos se reparten simétricos con una separación fija. Mismo modelo, mismo
-// dibujo, siempre y en cualquier pantalla.
-function disponer(nodos) {
-  const bandas = new Map();
-  for (const nodo of nodos) {
-    if (!bandas.has(nodo.nivel)) bandas.set(nodo.nivel, []);
-    bandas.get(nodo.nivel).push(nodo);
-  }
-  for (const [, lista] of bandas) {
-    lista.forEach((nodo, i) => {
-      nodo.x = (i - (lista.length - 1) / 2) * SEPARACION_X;
-      nodo.y = -nodo.nivel * PASO_Y;
-      nodo.compartida = lista.length > 1;
-    });
-  }
-  return nodos;
-}
+// El reparto lo hace el grafo, que es de quien es la geometria: aqui esta el
+// modelo -quien va en que banda y con quien la comparte- y alli las coordenadas
+// con las que se dibuja.
 
 // --------------------------------------------------------- lo que ha corrido
 
@@ -545,7 +527,7 @@ export function crearArquitectura(ctx) {
 
   let grafo = null;
   let arrancando = null;
-  let elegido = 'gate';
+  let elegido = null;
   let ultimo = null;
 
   // La dispersión de las tres notas es lo que §5 dice que hay que vigilar para
@@ -563,6 +545,11 @@ export function crearArquitectura(ctx) {
     ];
   }
 
+  function cerrarFicha() {
+    caja.dataset.abierta = 'no';
+    grafo?.elegir(null);
+  }
+
   function pintarFicha(id) {
     const nodo = porId.get(id);
     caja.textContent = '';
@@ -576,7 +563,12 @@ export function crearArquitectura(ctx) {
     tipo.className = 'ficha-nodo__tipo';
     tipo.dataset.forma = nodo.forma;
     tipo.textContent = TIPO[nodo.forma];
-    alto.append(h3, tipo);
+    const cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.className = 'enlace ficha-nodo__cerrar';
+    cerrar.textContent = 'cerrar';
+    cerrar.addEventListener('click', cerrarFicha);
+    alto.append(h3, tipo, cerrar);
 
     const desc = document.createElement('p');
     desc.className = 'ficha-nodo__desc';
@@ -650,32 +642,41 @@ export function crearArquitectura(ctx) {
     if (numero) ctx.elegirCapitulo(numero);
   });
 
-  // El grafo no se monta hasta que se abre la pestaña: es una segunda escena
-  // WebGL, y montarla de entrada se la cobraría a quien no va a verla.
+  // El grafo no se monta hasta que se abre la pestaña: son dieciocho nodos y
+  // veintitrés aristas, y construirlos de entrada se los cobraría a quien no va
+  // a verlos.
   function arrancar() {
     if (arrancando) return arrancando;
     arrancando = crearGrafo($('lienzo-arquitectura'), {
       nodos,
       aristas: ARISTAS,
       onSenalar: () => {},   // el hover solo resalta; el panel lo fija el clic
-      onElegir: (id) => { elegido = id; pintarFicha(id); },
+      onElegir: (id) => {
+        elegido = id;
+        // Con id nulo solo se cierra: vaciar el panel mientras sale deja ver el
+        // cajon en blanco durante la transicion.
+        if (id) pintarFicha(id);
+        caja.dataset.abierta = id ? 'si' : 'no';
+      },
     }).then((instancia) => {
       grafo = instancia;
       if (ultimo) grafo.refrescar(vivosDe(ultimo));
       aplicarRecorrido();
       return instancia;
-    }).catch(() => {
+    }).catch((error) => {
       const aviso = $('grafo-aviso');
       aviso.hidden = false;
-      aviso.textContent = 'La escena no ha cargado: three.js viaja por CDN y es lo único'
-        + ' de este repositorio que necesita red. El panel de la derecha sigue contando'
-        + ' el sistema entero.';
+      aviso.textContent = 'El grafo no ha podido dibujarse (' + error.message + ').'
+        + ' El panel de la derecha sigue contando el sistema entero.';
       return null;
     });
     return arrancando;
   }
 
-  pintarFicha(elegido);
+  // Esc cierra la ficha, que es lo que espera cualquier cajon.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && caja.dataset.abierta === 'si') cerrarFicha();
+  });
 
   return {
     pintar(proyecto) {
@@ -683,7 +684,7 @@ export function crearArquitectura(ctx) {
       pintarSelector(proyecto);
       grafo?.refrescar(vivosDe(proyecto));
       aplicarRecorrido();
-      pintarFicha(elegido);
+      if (elegido && caja.dataset.abierta === 'si') pintarFicha(elegido);
     },
     async mostrar(si) {
       if (si) await arrancar();

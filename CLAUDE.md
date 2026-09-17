@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.3.0.
+de un brief de cinco campos. Versión 1.4.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -226,8 +226,9 @@ python -m unittest discover -s tests -t .    # 56 tests, sin red
 
 `python -m novela ui` levanta un servidor local de la biblioteca estándar.
 Cuatro salas: **brief** qué libro es, **escritorio** por dónde va, **arquitectura**
-el pipeline de §4, §7, §8 y §9 como grafo por capas, y **lectura** el capítulo.
-Solo la tercera sigue diciendo algo con el canon vacío.
+el pipeline de §4, §7, §8 y §9 como grafo por capas en **SVG inline**, y
+**lectura** el capítulo. Solo la tercera sigue diciendo algo con el canon vacío,
+y cada una tiene su enlace (`#arquitectura`).
 **Mira y no toca**: en el canon escribe el orquestador y nadie más, así que
 cualquier método que no sea `GET` contra la API responde 409 y da el comando que
 sí escribe. Lo único que manda algo fuera es `POST /api/trazas`, que no toca el

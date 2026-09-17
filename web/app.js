@@ -121,13 +121,19 @@ function elegirCapitulo(numero) {
 
 // -------------------------------------------------------------------- salas
 
+// Cada sala tiene su enlace, igual que cada capitulo tiene el suyo: #arquitectura
+// abre el grafo directamente. Sirve para enviar a alguien a lo que se le quiere
+// ensenar sin tener que decirle donde hacer clic.
+const SALAS = ['brief', 'taller', 'arquitectura', 'lectura'];
+
 function ir(sala) {
   estado.sala = sala;
   document.body.dataset.sala = sala;
+  if (sala !== 'lectura') history.replaceState(null, '', '#' + sala);
   for (const boton of document.querySelectorAll('.sala')) {
     boton.setAttribute('aria-current', boton.dataset.sala === sala ? 'true' : 'false');
   }
-  for (const nombre of ['brief', 'taller', 'arquitectura', 'lectura']) {
+  for (const nombre of SALAS) {
     $(`sala-${nombre}`).hidden = nombre !== sala;
   }
   // El grafo tiene su propio bucle de dibujo y se para cuando no se ve: una
@@ -270,7 +276,9 @@ function programar() {
   // #capitulo/3 abre ese capítulo directamente: sirve para volver a donde se
   // estaba leyendo y para enlazar un capítulo concreto.
   const enlace = location.hash.match(/^#capitulo\/(\d+)$/);
+  const sala = location.hash.slice(1);
   if (enlace && legible(Number(enlace[1]))) await abrirLectura(Number(enlace[1]));
+  else if (SALAS.includes(sala) && sala !== 'lectura') ir(sala);
   else if (estado.proyecto?.brief) ir('taller');
   else ir('brief');
 })();

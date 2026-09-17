@@ -537,12 +537,13 @@ body[data-sala="taller"] .mando {
    ensena la novela, ensena el sistema que la escribe, y por eso es la unica
    pantalla que sigue teniendo algo que decir con el canon vacio.
 
-   Ocupa el alto util entero y no scrollea: el lienzo se encuadra solo y lo que
-   crece es el panel de la derecha, que lleva su propio scroll. */
+   Ocupa el alto util entero y no scrollea. El grafo se lleva la sala entera y la
+   ficha entra por la derecha cuando se pide: diez columnas en fila dan un dibujo
+   cuatro veces mas ancho que alto, y cada pixel que se le quitara de ancho se lo
+   quitaba al tamano de la letra al encuadrar. */
 #sala-arquitectura {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: var(--e4);
+  position: relative;
+  display: block;
   height: 100%;
   padding: var(--barra-alto) var(--e4) var(--rail-alto);
   overflow: hidden;
@@ -569,6 +570,73 @@ body[data-sala="taller"] .mando {
 }
 
 #lienzo-arquitectura:active { cursor: grabbing; }
+
+/* ------------------------------------------------------ el grafo, por dentro */
+
+/* Todo lo que se dibuja son cajas, curvas y texto, y nada de eso lleva un color
+   propio: salen los mismos tokens que el resto de la pagina. */
+
+.grafo__svg .nodo { cursor: pointer; }
+
+.nodo__silueta {
+  fill: var(--superficie-alta);
+  stroke: var(--linea);
+  stroke-width: 1.5;
+  transition: fill .2s ease, stroke .2s ease, opacity .2s ease;
+}
+
+.nodo__nombre {
+  font-family: var(--texto-ui);
+  font-size: 13px;
+  fill: var(--texto);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.nodo__pie {
+  font-family: var(--dato);
+  font-size: 10px;
+  letter-spacing: .04em;
+  fill: var(--texto-tenue);
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.arista__trazo {
+  fill: none;
+  stroke: var(--linea);
+  stroke-width: 1.6;
+  transition: stroke .2s ease, opacity .2s ease;
+}
+
+.punta { fill: var(--texto-tenue); }
+
+/* La vuelta atras se distingue del camino feliz sin tener que seguirla con el
+   dedo: baja a su carril y va discontinua. */
+.arista[data-tipo="realimenta"] .arista__trazo {
+  stroke: var(--texto-tenue);
+  stroke-dasharray: 7 5;
+  opacity: .8;
+}
+
+/* Lo que un capitulo no recorrio se apaga, no se esconde: lo que no se uso es
+   parte de la respuesta. */
+.nodo--fuera .nodo__silueta,
+.nodo--fuera .nodo__nombre,
+.nodo--fuera .nodo__pie { opacity: .22; }
+.arista--fuera { opacity: .16; }
+
+.nodo--elegido .nodo__silueta {
+  stroke: var(--qa-naranja);
+  stroke-width: 2.5;
+}
+
+.grafo__svg .nodo:focus-visible { outline: none; }
+.grafo__svg .nodo:focus-visible .nodo__silueta {
+  stroke: var(--qa-naranja-tinta);
+  stroke-width: 3;
+}
 
 /* Los mandos flotan sobre el lienzo: el grafo es lo que se mira, y la barra de
    arriba solo tiene que estar ahi cuando se la busca. */
@@ -667,17 +735,26 @@ body[data-sala="taller"] .mando {
    REGLAS, siempre y en ese orden. Lo que cambia entre un nodo y otro es lo que
    pone dentro, nunca la forma, para que comparar dos sea leer el mismo sitio. */
 .ficha-nodo {
+  position: absolute;
+  top: calc(var(--barra-alto) + var(--e4));
+  right: var(--e4);
+  bottom: calc(var(--rail-alto) + var(--e4));
+  z-index: 3;
+  width: min(360px, calc(100% - var(--e5)));
   display: flex;
   flex-direction: column;
   gap: var(--e3);
-  height: 100%;
   min-height: 0;
   overflow-y: auto;
   padding: var(--e4);
-  background: color-mix(in srgb, var(--superficie) 92%, transparent);
+  background: color-mix(in srgb, var(--superficie) 92%, var(--superficie-alta));
   background-image: var(--verjura);
   border: 1px solid var(--linea);
   border-left: 2px solid var(--qa-naranja);
+  box-shadow: -12px 0 32px rgba(35, 52, 65, .12);
+  visibility: hidden;
+  transform: translateX(calc(100% + var(--e5)));
+  transition: transform .22s ease, visibility .22s;
   border-radius: 2px;
 }
 
@@ -719,6 +796,29 @@ body[data-sala="taller"] .mando {
   font-size: var(--t-cuerpo);
   line-height: 1.55;
   color: var(--texto-tenue);
+}
+
+.ficha-nodo[data-abierta="si"] { visibility: visible; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ficha-nodo { transition: none; }
+}
+
+/* En pantalla estrecha el cajon se lleva el ancho entero: a 360px de ficha sobre
+   390px de pantalla no queda grafo detras que mirar. */
+@media (max-width: 720px) {
+  .ficha-nodo {
+    left: var(--e4);
+    width: auto;
+    top: calc(var(--barra-alto) + var(--e5));
+  }
+}
+
+/* El cierre del cajon: la ficha se pide y se suelta, no vive abierta tapando un
+   quinto del grafo. */
+.ficha-nodo__cerrar {
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 
 .ficha-nodo section { display: flex; flex-direction: column; gap: var(--e2); }
@@ -779,16 +879,13 @@ body[data-sala="taller"] .mando {
 
 /* ---------------------------------------------------------------- estrecho */
 
+/* El grafo ocupa la sala entera y la ficha es un cajon encima, asi que aqui no
+   hay nada que reapilar: lo unico que cambia en estrecho es que el cajon se
+   lleva todo el ancho, y eso ya esta mas arriba. El grafo sigue encuadrandose
+   solo y se navega con rueda y arrastre, que es como se navega en cualquier
+   tamano. */
 @media (max-width: 900px) {
   #sala-arquitectura {
-    grid-template-columns: minmax(0, 1fr);
-    height: auto;
-    min-height: 100%;
-    overflow-y: auto;
-    padding: calc(var(--barra-alto) + var(--e4)) var(--e4) calc(var(--rail-alto) + var(--e4));
+    padding: var(--barra-alto) var(--e3) var(--rail-alto);
   }
-
-  .grafo { height: 56vh; }
-
-  .ficha-nodo { height: auto; overflow: visible; }
 }
