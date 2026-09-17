@@ -620,6 +620,33 @@ body[data-sala="taller"] .mando {
   opacity: .8;
 }
 
+/* ------------------------------------------------------- la arista que corre */
+
+/* Por donde esta pasando el flujo ahora mismo. El color y el grosor lo dicen
+   solos; los guiones que corren y el punto que los acompana anaden la direccion,
+   que es lo que no se puede pintar quieto. */
+.arista--activa .arista__trazo {
+  stroke: var(--qa-naranja);
+  stroke-width: 2.4;
+  opacity: 1;
+}
+
+.punta--viva { fill: var(--qa-naranja); }
+
+.arista__viajero {
+  fill: var(--qa-naranja);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.arista--activa .arista__viajero { opacity: 1; }
+
+/* Sin movimiento la arista activa se sigue viendo -es la naranja y la gruesa- y
+   el punto sobra, porque quieto no dice nada que el trazo no diga ya. */
+@media (prefers-reduced-motion: reduce) {
+  .arista__viajero { display: none; }
+}
+
 /* ------------------------------------------------- los cinco estados de nodo */
 
 /* Un nodo esta en exactamente uno de estos cinco. La regla que los ordena es que

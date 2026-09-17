@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.5.0
+version: 1.6.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -529,6 +529,16 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.6.0] — 2026-09-17
+
+**Añadido**
+- §19. La arista activa se anima con los guiones corriendo de origen a destino y
+  un punto que los acompaña. Lo que añade el movimiento es la dirección, que es
+  lo único que no se puede pintar quieto; el color y el grosor ya dicen cuál es.
+- §19. Un solo `requestAnimationFrame` para el grafo, activo solo mientras hay
+  algo que mover: sala cerrada, pestaña de fondo o ninguna arista activa y no se
+  pide ni un fotograma.
+
 ### [1.5.0] — 2026-09-17
 
 **Añadido**
@@ -895,6 +905,15 @@ DAG por capas y le pone el canon encima.
   El activo late a 0,83 Hz y el reintento a 1,25 Hz, los dos muy por debajo del
   límite de 3 Hz que hace peligrosa una animación. La escala se aplica a la
   silueta y no al grupo, para que el nombre no se estire mientras late.
+- **La arista por la que pasa el flujo se anima**, con los guiones corriendo de
+  origen a destino y un punto que los acompaña. El color y el grosor ya dicen
+  cuál es; lo que añade el movimiento es la **dirección**, que es lo único que
+  no se puede pintar quieto. En el reparto a los tres validadores se animan las
+  tres a la vez y los tres nodos se ponen activos a la vez, porque eso es lo que
+  pasa: van en un mismo mensaje (§21).
+- **Un solo `requestAnimationFrame` para el grafo entero**, y solo mientras hay
+  algo que mover. Con la sala cerrada, con la pestaña del navegador de fondo o
+  sin ninguna arista activa no se pide ni un fotograma.
 - **El recorrido de un capítulo.** Se elige uno y el grafo apaga lo que no
   recorrió y cuenta las veces que pasó por cada nodo. Aquí vuelve a mandar la
   regla de la casa: `/api/proyecto` da el número de intentos de todos los

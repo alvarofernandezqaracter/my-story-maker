@@ -13,7 +13,7 @@
 // La caja de un nodo y la rejilla sobre la que se posan. Todo lo demas se deriva
 // de estos cinco numeros.
 const CAJA = { ancho: 122, alto: 46 };
-const SEPARACION_X = 154;   // entre centros de columna
+const SEPARACION_X = 164;   // entre centros de columna
 const SEPARACION_Y = 72;    // separacion minima garantizada entre centros de fila
 const CARRIL = 38;          // cuanto baja cada vuelta atras por debajo del grafo
 const SUELO = 12;           // aire entre la ultima caja y el primer carril
@@ -23,11 +23,20 @@ const MARGEN = 30;          // aire alrededor del dibujo dentro del viewBox
 // alto, y encuadrarlo entero en un panel apaisado encoge la letra hasta que deja
 // de leerse. La caja se aprieta todo lo que se puede y el nombre que no cabe en
 // una linea se parte en dos, que es lo que permite apretarla.
-const MAXIMO_LINEA = 13;
+const MAXIMO_LINEA = 12;
 
 const SVG = 'http://www.w3.org/2000/svg';
 
 const ZOOM = { min: 0.45, max: 3.2, paso: 1.12 };
+
+// El flujo por una arista activa. La direccion se lee porque los guiones corren
+// de origen a destino, y el punto que los acompana es lo que hace que se siga
+// con la vista sin tener que buscar la punta de flecha.
+const FLUJO = {
+  velocidad: 78,   // unidades de trazo por segundo
+  guion: 13,       // largo del guion que viaja
+  hueco: 11,       // y el del hueco entre dos
+};
 
 function elemento(nombre, atributos = {}) {
   const nodo = document.createElementNS(SVG, nombre);
@@ -179,7 +188,8 @@ export async function crearGrafo(svg, { nodos, aristas, onSenalar, onElegir } = 
   for (const [nombre, clase] of [['punta', 'punta'], ['punta-viva', 'punta punta--viva']]) {
     const marcador = elemento('marker', {
       id: nombre, viewBox: '0 0 10 10', refX: 9, refY: 5,
-      markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse',
+      markerUnits: 'userSpaceOnUse', markerWidth: 10, markerHeight: 10,
+      orient: 'auto',
     });
     marcador.append(elemento('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: clase }));
     defs.append(marcador);
@@ -203,9 +213,10 @@ export async function crearGrafo(svg, { nodos, aristas, onSenalar, onElegir } = 
     const trazo = elemento('path', {
       d, class: 'arista__trazo', 'marker-end': 'url(#punta)',
     });
-    g.append(trazo);
+    const viajero = elemento('circle', { class: 'arista__viajero', r: 3.4 });
+    g.append(trazo, viajero);
     capaAristas.append(g);
-    piezasArista.set(arista.id, { g, trazo, arista });
+    piezasArista.set(arista.id, { g, trazo, viajero, arista, largo: null });
   }
 
   const piezasNodo = new Map();
@@ -222,13 +233,12 @@ export async function crearGrafo(svg, { nodos, aristas, onSenalar, onElegir } = 
     const forma = silueta(nodo.forma);
     // La marca del nodo completado. Discreta y en el canto, porque lo que tiene
     // que leerse de un vistazo es el color del borde y no un icono.
-    // La capsula del agente se come la esquina, asi que la marca se mete mas
-    // adentro en esa silueta que en las de canto recto.
-    const sangria = nodo.forma === 'agente' ? 30 : 23;
+    // La marca vive en el canto de arriba a la derecha, pegada al filo: mas
+    // adentro se le echa encima al nombre, que en esta caja llega a doce
+    // caracteres de ancho.
     const marca = elemento('path', {
       class: 'nodo__marca',
-      d: `M ${CAJA.ancho / 2 - sangria} ${-CAJA.alto / 2 + 15}`
-        + ` l 3.4 3.6 l 6.2 -7`,
+      d: `M ${CAJA.ancho / 2 - 16} ${-CAJA.alto / 2 + 9} l 3 3.2 l 5.6 -6.4`,
     });
     const etiqueta = elemento('text', { class: 'nodo__nombre' });
     // El contador de intentos cuelga por debajo de la caja y solo aparece cuando
@@ -246,6 +256,47 @@ export async function crearGrafo(svg, { nodos, aristas, onSenalar, onElegir } = 
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); elegirNodo(nodo.id); }
     });
   }
+
+  // ------------------------------------------------------------- el latido
+
+  // Un solo requestAnimationFrame para el grafo entero, y solo mientras hay algo
+  // que mover. Con la sala cerrada o la pestana del navegador de fondo no se
+  // pide ni un fotograma: una animacion de adorno no tiene por que gastar bateria
+  // de alguien que esta mirando otra cosa.
+  //
+  // Con prefers-reduced-motion el bucle no arranca nunca. La arista activa se
+  // sigue distinguiendo -cambia de color y de grosor-, que es la misma regla que
+  // gobierna los estados de nodo: lo que se pierde es la urgencia, no el dato.
+  const quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const activas = new Set();
+  let visible = false;
+  let latiendo = false;
+
+  function fotograma(t) {
+    if (!latiendo) return;
+    const avance = (t / 1000) * FLUJO.velocidad;
+    const ciclo = FLUJO.guion + FLUJO.hueco;
+    for (const id of activas) {
+      const pieza = piezasArista.get(id);
+      if (!pieza) continue;
+      if (pieza.largo == null) pieza.largo = pieza.trazo.getTotalLength();
+      // Los guiones corren hacia el destino: en SVG eso es restarle al offset.
+      pieza.trazo.style.strokeDashoffset = String(-(avance % ciclo));
+      const punto = pieza.trazo.getPointAtLength(avance % pieza.largo);
+      pieza.viajero.setAttribute('cx', punto.x);
+      pieza.viajero.setAttribute('cy', punto.y);
+    }
+    requestAnimationFrame(fotograma);
+  }
+
+  function revisarLatido() {
+    const deberia = visible && !quieto && activas.size > 0 && !document.hidden;
+    if (deberia === latiendo) return;
+    latiendo = deberia;
+    if (latiendo) requestAnimationFrame(fotograma);
+  }
+
+  document.addEventListener('visibilitychange', revisarLatido);
 
   // --------------------------------------------------------- estado dibujado
   let elegido = null;
@@ -389,8 +440,18 @@ export async function crearGrafo(svg, { nodos, aristas, onSenalar, onElegir } = 
   function setEdgeActive(id, activa) {
     const pieza = piezasArista.get(id);
     if (!pieza) return;
-    pieza.g.classList.toggle('arista--activa', Boolean(activa));
-    pieza.trazo.setAttribute('marker-end', activa ? 'url(#punta-viva)' : 'url(#punta)');
+    const si = Boolean(activa);
+    pieza.g.classList.toggle('arista--activa', si);
+    pieza.trazo.setAttribute('marker-end', si ? 'url(#punta-viva)' : 'url(#punta)');
+    if (si) {
+      activas.add(id);
+      pieza.trazo.style.strokeDasharray = `${FLUJO.guion} ${FLUJO.hueco}`;
+    } else {
+      activas.delete(id);
+      pieza.trazo.style.strokeDasharray = '';
+      pieza.trazo.style.strokeDashoffset = '';
+    }
+    revisarLatido();
   }
 
   return {
@@ -415,8 +476,15 @@ export async function crearGrafo(svg, { nodos, aristas, onSenalar, onElegir } = 
     elegir: elegirNodo,
     encuadrar,
     mostrar(si) {
+      visible = si;
       if (si) encuadrar();
+      revisarLatido();
     },
-    destruir() {},
+    destruir() {
+      visible = false;
+      activas.clear();
+      revisarLatido();
+      document.removeEventListener('visibilitychange', revisarLatido);
+    },
   };
 }
