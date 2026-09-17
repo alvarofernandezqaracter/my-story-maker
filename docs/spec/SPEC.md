@@ -604,6 +604,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | Commit | Fecha | Mensaje |
 |---|---|---|
 | `55b7b45` | 2026-09-17 | docs(spec): §17 tabla de commits regenerada para 1.0.0 |
+| `4653d33` | 2026-09-17 | docs: la documentacion describe el sistema que hay, y nada mas |
+| `41aeb91` | 2026-09-17 | refactor(novela): fuera el transcript y util.py |
 
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
