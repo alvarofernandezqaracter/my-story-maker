@@ -622,6 +622,9 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `55b7b45` | 2026-09-17 | docs(spec): §17 tabla de commits regenerada para 1.0.0 |
 | `4653d33` | 2026-09-17 | docs: la documentacion describe el sistema que hay, y nada mas |
 | `41aeb91` | 2026-09-17 | refactor(novela): fuera el transcript y util.py |
+| `6fae2ef` | 2026-09-17 | docs(spec): 1.1.0 y §17 regenerada |
+| `2d2b59f` | 2026-09-17 | docs(trazas): §6 primera pasada de analisis, sesion novela-1abde479ff05 |
+| `2515589` | 2026-09-17 | docs(spec): §2 glosario define VD-xx y DA-xx, y corrige la entrada del validador |
 
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
