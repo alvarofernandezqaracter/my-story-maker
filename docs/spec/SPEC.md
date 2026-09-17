@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.10.0
+version: 1.11.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -462,6 +462,7 @@ evitar. DA-02 se decide en ese frontmatter.
 | `lanzador.permisos` | `acceptEdits` | Modo de permisos con el que arranca esa sesión |
 | `trazas.activas` | `true` | Manda las trazas de §20 a Langfuse |
 | `trazas.entorno` | `desarrollo` | Separa las pasadas de prueba de las que escriben libros de verdad |
+| `trazas.texto` | `true` | Si el capítulo y su paquete de contexto viajan dentro de la traza (§20) |
 | `margenes.capitulos_min` y `capitulos_max` | 0,8 y 1,2 | Desvío tolerado sobre el nº de capítulos del brief (VD-07) |
 | `margenes.palabras_aviso` | 0,15 | Desvío sobre `palabras_objetivo` que genera aviso (VD-08) |
 | `margenes.palabras_bloqueo` | 0,4 | Desvío que descarta el intento sin llamar al validador (VD-08) |
@@ -482,7 +483,15 @@ repositorio y es lo mínimo que hace falta. `bypassPermissions` existe y no se
 pone por defecto: eso es una decisión de quien opera la máquina, y tiene que
 estar escrita en su fichero y no escondida en el código.
 
-Con esto la tabla tiene **dieciséis** claves, y ninguna sobra: cada una la lee alguien.
+**Por qué el texto es una clave y no una constante.** Con `trazas.texto` puesta,
+lo que sale de la máquina deja de ser un árbol de números y pasa a ser la novela
+entera. Es la única forma de que exista evaluación de calidad —un evaluador de
+Langfuse solo lee la entrada, la salida y los metadatos de la observación a la que
+apunta, y no abre ficheros—, pero mandar el libro a un servicio de fuera es una
+decisión de quien opera la máquina y no un detalle de implementación. Quien la
+apaga pierde el juez y conserva las trazas, las notas y el gasto.
+
+Con esto la tabla tiene **diecisiete** claves, y ninguna sobra: cada una la lee alguien.
 
 **Por qué dos márgenes de palabras.** VD-08 tiene que distinguir el capítulo que se queda corto del que no sirve. Dentro de `palabras_aviso` el texto vale y la desviación viaja como aviso al reintento; pasado `palabras_bloqueo` no se gasta la llamada al validador y se reintenta la generación. Con un solo umbral había que elegir entre no filtrar nada o tirar capítulos aprovechables.
 
@@ -538,6 +547,21 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.11.0] — 2026-09-17
+
+**Añadido**
+- §20. La reconstrucción manda el paquete de contexto y el texto de cada intento
+  dentro de la observación del escritor, el paquete de entrada y el capítulo de
+  salida. Motivo: es el requisito de la evaluación de calidad. Un evaluador de
+  Langfuse solo lee la entrada, la salida y los metadatos de la observación a la
+  que apunta —no abre ficheros ni mira a sus hermanas—, así que hasta ahora
+  habría juzgado la ruta de un fichero en vez de un capítulo.
+- §12. `trazas.texto`. Es una clave y no una constante porque con ella puesta lo
+  que sale de la máquina es el libro entero, y eso lo decide quien opera la
+  máquina. Apagarla cuesta el juez y no cuesta las trazas.
+- §19. El panel de trazas cuenta las palabras que saldrían antes de exportar, por
+  la misma razón por la que ya enseñaba el recuento del árbol.
 
 ### [1.10.0] — 2026-09-17
 
@@ -1160,12 +1184,28 @@ separadas, porque en §21 eso no es una opción de configuración sino cómo se 
 La sesión se deriva del brief, así que dos exportaciones de la misma novela caen
 en la misma sesión y se solapan en lugar de duplicarse.
 
-**Qué se pierde, y se dice.** No hay latencia, ni tokens, ni coste, ni el prompt
-exacto: eso solo lo tiene quien hizo la llamada, y esta reconstrucción no estaba
-allí. Las marcas de tiempo son las del momento de exportar, no las de la
-escritura. Por eso cada traza sale con `reconstruido: true` en los metadatos, y
-**§22 cuenta el gasto solo de lo que viene del hook**: sumar lo reconstruido sería
-inventárselo.
+**Qué se pierde, y se dice.** No hay latencia, ni tokens, ni coste: eso solo lo
+tiene quien hizo la llamada, y esta reconstrucción no estaba allí. Las marcas de
+tiempo son las del momento de exportar, no las de la escritura. Por eso cada traza
+sale con `reconstruido: true` en los metadatos, y **§22 cuenta el gasto solo de lo
+que viene del hook**: sumar lo reconstruido sería inventárselo.
+
+**Qué sí viaja, desde que hay `trazas.texto`.** El paquete de contexto de cada
+capítulo y el texto de **cada intento, aprobado o no**, dentro de la observación
+del escritor: el paquete como entrada y el capítulo como salida. No es un extra
+de comodidad, es el requisito de la evaluación de calidad: un evaluador de
+Langfuse solo lee la entrada, la salida y los metadatos de la observación a la que
+apunta —no abre ficheros, y no puede mirar ni a sus hermanas ni a sus hijas—, así
+que las dos mitades de lo que hay que juzgar tienen que estar juntas o no hay nada
+que juzgar. Los intentos descartados viajan por la misma razón por la que
+`estado.json` los guarda: son la mitad de la comparación que interesa, porque sin
+ellos no se ve si el validador se indulta a sí mismo.
+
+Esto es lo más parecido al prompt exacto que esta reconstrucción puede dar, y no
+es poco: el paquete es literalmente lo que el escritor tuvo delante, guardado en
+`contexto/cap-NN.md` justo para esto. Pero sigue sin ser la llamada. Y como con
+ello sale el libro entero a un servicio de fuera, se gobierna con una clave (§12)
+y el panel de §19 cuenta las palabras antes de que nadie pulse nada.
 
 **Qué se gana.** Lo que hace falta para cerrar DA-06: las tres notas y la media de
 cada intento como puntuaciones, el veredicto del gate, los intentos que costó cada

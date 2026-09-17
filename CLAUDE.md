@@ -187,9 +187,9 @@ Un único `config.json` en la raíz. **Si un número aparece escrito en el códi
 en un prompt sin pasar por este fichero, es un bug.** Las claves:
 `gate.{nota_minima,media_minima,max_intentos}`,
 `contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`,
-`interfaz.puerto`, `lanzador.{comando,permisos}`, `trazas.{activas,entorno}`,
+`interfaz.puerto`, `lanzador.{comando,permisos}`, `trazas.{activas,entorno,texto}`,
 `margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`.
-Dieciséis. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
+Diecisiete. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
 `capitulos_max >= capitulos_min`.
 
 Las credenciales van en un `.env` de la raíz que no se versiona. Un **perfil** es
