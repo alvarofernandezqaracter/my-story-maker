@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.11.0
+version: 1.12.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -548,6 +548,20 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.12.0] — 2026-09-17
+
+**Añadido**
+- §20. Los jueces externos: evaluadores de Langfuse que puntúan un capítulo sin
+  participar en el resultado. Motivo: hasta ahora todas las puntuaciones las
+  ponía el propio sistema, así que un sesgo compartido entre escritor y validador
+  no dejaba rastro. Los dos primeros son `continuidad-externa`, con las mismas
+  anclas de §10 para ser comparable, e `ignora-respetado`.
+- §20. Su prompt vive **solo en Langfuse y no en este repositorio**. Motivo: el
+  escritor tiene `Read` sobre el proyecto, así que una rúbrica guardada aquí
+  quedaría al alcance del examinado. Es la única excepción a que los prompts del
+  sistema se versionen, y se acepta porque lo que protege es la validez de la
+  medida, no la trazabilidad del prompt.
+
 ### [1.11.0] — 2026-09-17
 
 **Añadido**
@@ -867,7 +881,7 @@ el loop de intentos y el bloqueo.
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: sesenta y siete, en dos
+**Tests.** `python -m unittest discover -s tests -t .`: setenta y dos, en dos
 ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
@@ -1214,6 +1228,55 @@ cada intento como puntuaciones, el veredicto del gate, los intentos que costó c
 capítulo y el escalón de VD-08. Y una puntuación más, `gate-cuadra`, que marca los
 intentos donde la fórmula de §8 no da lo que el orquestador escribió: es la
 auditoría de §19 llevada a donde se pueden filtrar y contar.
+
+### La evaluación de calidad
+
+**El problema.** Todas las puntuaciones que hay en Langfuse las pone el propio
+sistema: las tres notas son de los validadores de §9, que son parte del pipeline
+que escribe. Si el escritor y el validador comparten sesgo, el gate lo bendice y
+no queda rastro. `gate-cuadra` vigila la aritmética, no el criterio.
+
+**Qué es un juez.** Un evaluador de Langfuse que puntúa un capítulo **sin
+participar en el resultado**: no entra en el gate, no dispara reintentos y no
+puede bloquear nada. Solo deja su nota al lado de la del validador, para que la
+diferencia se pueda mirar. Los dos primeros son `continuidad-externa`, que usa
+**las mismas anclas** de §10 justamente para ser comparable, y `ignora-respetado`,
+que comprueba si el capítulo respeta lo que una ficha dice que un personaje
+ignora.
+
+**Apuntan a la observación del escritor**, y no a la traza ni al gate. Es una
+restricción de la herramienta y manda sobre el diseño: un evaluador lee la
+entrada, la salida y los metadatos de **su** observación, y no puede mirar ni a
+sus hermanas ni a sus hijas. La del escritor es la única que lleva las dos
+mitades de lo que hay que juzgar, y por eso viajan juntas.
+
+**El prompt del juez no está en este repositorio, y es deliberado.** Vive solo en
+Langfuse. La novela la escribe una sesión de Claude Code cuyo escritor tiene
+herramienta `Read` sobre el proyecto: una rúbrica guardada aquí sería la vara de
+medir dentro del alcance del examinado, y un examinado que lee la vara escribe
+para la vara. Es la única regla de este documento que **pide** que algo no esté
+versionado, y va contra la costumbre de §21 de que los prompts tengan una sola
+fuente de verdad; se acepta porque lo que está en juego no es la trazabilidad del
+prompt sino la validez de la medida. El historial no se pierde: Langfuse versiona
+los evaluadores por su cuenta.
+
+Aquí se escribe **la decisión** —que existen, a qué apuntan, cómo nacen y por qué
+están fuera— y nunca su texto.
+
+**Nacen apagados, siempre.** Un juez encendido puntúa todo lo que entre desde ese
+instante, y deshacerlo es borrar puntuaciones de una en una. Se enciende a mano
+después de mirar lo que puntúa, que es también lo que pide el método: un juez sin
+calibrar contra notas humanas no mide calidad, mide el parecido entre dos
+modelos.
+
+**Lo que esto cuesta y no se ve.** El juez lo corre Langfuse con su propia
+conexión al proveedor, así que **su gasto no aparece en el informe de §22**, que
+solo cuenta lo que trae el hook. Sumarlo sería inventárselo, igual que con lo
+reconstruido.
+
+**Lo que no cierra.** `ignora-respetado` mira el capítulo, y DA-13 pregunta por el
+cronista: son las dos mitades del mismo agujero y esta es la de arriba. Le da
+datos, no la cierra.
 
 ## §21 Orquestación delegada
 

@@ -204,7 +204,7 @@ python -m novela ui                          # interfaz web, solo lectura (§19)
 python -m novela trazar                      # manda a Langfuse el canon reconstruido (§20)
 python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
                                              # sin Langfuse tira del diario local
-python -m unittest discover -s tests -t .    # 67 tests, sin red
+python -m unittest discover -s tests -t .    # 72 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
@@ -256,6 +256,13 @@ por CDN —lo único del repo que necesita red— y degrada.
 **Una traza es una unidad de trabajo cerrada, no el libro.** Ningún fallo de
 observabilidad para una novela, y el hook menos que ninguno: devuelve 0 siempre,
 porque un hook que revienta ensucia la sesión del orquestador.
+
+**Los evaluadores de calidad de §20 no entran en este repositorio.** Viven solo en
+Langfuse, y no por descuido: el escritor tiene `Read` sobre el proyecto, así que
+una rúbrica guardada aquí la puede leer justo quien está siendo evaluado. No los
+versiones, no los copies a un fichero de trabajo dentro del repo y no escribas su
+texto en el spec. Lo que sí va al spec es la decisión: que existen, a qué
+observación apuntan y por qué están fuera.
 
 # Estado actual y cosas abiertas
 
