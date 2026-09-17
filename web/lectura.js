@@ -190,10 +190,10 @@ export function crearLectura(ctx) {
       titulo.textContent = `${String(c.numero).padStart(2, '0')} · ${c.titulo}`;
       const datos = document.createElement('span');
       datos.className = 'indice__datos';
-      // Escenas no existen en el canon; se dice, no se rellena.
+      // Las escenas no existen en el canon (DA-09) y el indice lo repetia seis
+      // veces sin decir nada. Se declara una vez, en el panel de huecos (§19).
       datos.textContent = [
         c.media !== null ? `media ${c.media}` : 'sin nota',
-        'escenas —',
         c.palabras ? `${c.palabras} pal.` : `${c.palabras_objetivo} pal. objetivo`,
       ].join(' · ');
       cuerpo.append(titulo, document.createElement('br'), datos);

@@ -138,6 +138,11 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
 .linea-estado b { color: var(--texto); font-weight: 500; }
 
+/* La fecha del canon es un `.dato`, y `.dato` no parte linea porque en el rail
+   va en fila. Aqui esta dentro de un parrafo de veinte caracteres de ancho, y
+   sin partir se salia del panel. */
+.linea-estado .dato { white-space: normal; }
+
 /* La maquina de estados de §4 en fila: es una secuencia y por eso va numerada.
    `bloqueado` no ocupa un puesto porque es salida lateral, no un paso mas: se
    marca sobre el paso en el que el proyecto se quedo. */
@@ -481,7 +486,7 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
   color: var(--texto-tenue);
 }
 
-.marca-fin::before, .marca-fin::after { content: "—"; margin: 0 .6rem; }
+.marca-fin::before, .marca-fin::after { content: "—"; margin: 0 var(--e2); }
 
 .ficha-lateral section + section {
   margin-top: var(--e5);
@@ -550,7 +555,7 @@ body[data-sala="taller"] .mando {
   height: 100%;
   border: 1px solid var(--linea);
   border-radius: 2px;
-  background: color-mix(in srgb, var(--superficie) 78%, transparent);
+  background: color-mix(in srgb, var(--superficie) 96%, transparent);
   background-image: var(--verjura);
   overflow: hidden;
 }
@@ -593,6 +598,7 @@ body[data-sala="taller"] .mando {
 .grafo__mandos select {
   width: auto;
   min-width: 12rem;
+  max-width: min(22rem, 100%);
   padding: var(--e1) var(--e2);
   font-family: var(--dato);
   font-size: var(--t-caption);
@@ -709,6 +715,7 @@ body[data-sala="taller"] .mando {
 .ficha-nodo__desc {
   margin: 0;
   max-width: var(--medida);
+  overflow-wrap: anywhere;
   font-size: var(--t-cuerpo);
   line-height: 1.55;
   color: var(--texto-tenue);
@@ -737,6 +744,7 @@ body[data-sala="taller"] .mando {
 
 .ficha-nodo li {
   max-width: var(--medida);
+  overflow-wrap: anywhere;
   padding-left: var(--e3);
   font-family: var(--dato);
   font-size: calc(var(--t-caption) * .96);
@@ -766,8 +774,8 @@ body[data-sala="taller"] .mando {
   font-variant-numeric: tabular-nums;
 }
 
-.ficha-nodo__canon dt { color: var(--texto-tenue); }
-.ficha-nodo__canon dd { margin: 0; color: var(--texto); }
+.ficha-nodo__canon dt { min-width: 0; color: var(--texto-tenue); }
+.ficha-nodo__canon dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: var(--texto); }
 
 /* ---------------------------------------------------------------- estrecho */
 

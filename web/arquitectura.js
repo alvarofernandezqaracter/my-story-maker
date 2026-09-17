@@ -662,7 +662,6 @@ export function crearArquitectura(ctx) {
     }).then((instancia) => {
       grafo = instancia;
       if (ultimo) grafo.refrescar(vivosDe(ultimo));
-      grafo.elegir(elegido);
       aplicarRecorrido();
       return instancia;
     }).catch(() => {

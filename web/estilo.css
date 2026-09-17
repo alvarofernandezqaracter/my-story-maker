@@ -318,7 +318,7 @@ button:focus-visible {
   background: var(--superficie-alta);
   border: 1px solid var(--linea);
   border-radius: 999px;
-  font-size: 1rem;
+  font-size: var(--t-cuerpo);
   cursor: pointer;
 }
 
@@ -338,29 +338,6 @@ button:focus-visible {
   border-left: 2px solid var(--qa-naranja);
   border-radius: 2px;
   align-self: start;
-}
-
-/* El relevo de los agentes: quedan marcados los que han dejado rastro en el
-   canon. Es una cadena, no una lista, y por eso va en fila. */
-.relevo { display: flex; flex-wrap: wrap; gap: .3rem; }
-
-.relevo__rol {
-  padding: .2rem .5rem;
-  border: 1px solid var(--linea);
-  border-radius: 2px;
-  font-family: var(--dato);
-  font-size: .68rem;
-  color: var(--texto-tenue);
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
-
-.relevo__rol[data-visto="si"] { color: var(--texto); border-color: var(--texto-tenue); }
-
-.relevo__rol[data-activo="si"] {
-  color: var(--qa-naranja);
-  border-color: var(--qa-naranja);
-  background: color-mix(in srgb, var(--qa-naranja) 14%, transparent);
 }
 
 /* ------------------------------------------------------------- tarjetas */
@@ -588,7 +565,7 @@ body[data-inmersion="si"] #sala-lectura { padding-top: 3rem; }
 }
 
 .rail__siguiente code {
-  padding: .2rem .45rem;
+  padding: var(--e1) var(--e2);
   background: var(--superficie-alta);
   border: 1px solid var(--linea);
   border-radius: 2px;
@@ -636,7 +613,7 @@ body[data-inmersion="si"] #sala-lectura { padding-top: 3rem; }
     position: static;
     width: auto;
     max-height: none;
-    margin: 2rem auto 0;
+    margin: var(--e6) auto 0;
     max-width: 40rem;
   }
 }
