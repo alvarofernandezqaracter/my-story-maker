@@ -834,6 +834,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `41fc644` | 2026-09-17 | docs(spec): 1.11.0, §20 lo que viaja y §12 trazas.texto |
 | `686c31b` | 2026-09-17 | docs(spec): §17 regenerada para 1.11.0 |
 | `78c55b5` | 2026-09-17 | docs(spec): 1.12.0, §20 los jueces externos viven fuera del repositorio |
+| `bb4238e` | 2026-09-17 | docs(spec): §17 regenerada para 1.12.0 |
+| `8510030` | 2026-09-17 | feat(trazas): §20 el rol de cada observacion viaja en sus metadatos |
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
 ```
