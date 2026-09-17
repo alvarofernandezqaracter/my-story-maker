@@ -93,9 +93,13 @@ export async function crearLegajo(canvas, { onFoco } = {}) {
   clave.shadow.bias = -0.0015;
   escena.add(clave);
 
+  // La luz rasante hace de candil: es la unica de la mesa que no esta quieta.
+  // El parpadeo es minimo a proposito -no es una hoguera- y se apaga entero si
+  // el sistema pide menos movimiento.
   const rasante = new THREE.PointLight(COLOR.naranja, 22, 28, 2);
   rasante.position.set(-5, 1.1, 3.5);
   escena.add(rasante);
+  const INTENSIDAD_CANDIL = rasante.intensity;
 
   const relleno = new THREE.DirectionalLight(0xbfd3d8, 0.9);
   relleno.position.set(-3, 2.5, 6);
@@ -329,6 +333,9 @@ export async function crearLegajo(canvas, { onFoco } = {}) {
     if (!quieto) {
       motas.position.y = (Math.sin(t * 0.12) * 0.3) - 0.3;
       motas.rotation.y = t * 0.012;
+      // Dos senos que no casan: la llama no repite el mismo ciclo.
+      rasante.intensity = INTENSIDAD_CANDIL
+        * (1 + Math.sin(t * 2.1) * 0.05 + Math.sin(t * 5.7) * 0.025);
     }
 
     // La camara solo se mueve sola mientras nadie la haya tocado.

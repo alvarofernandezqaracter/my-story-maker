@@ -1,0 +1,516 @@
+/* Ambientación histórica (§19).
+
+   Lo que se escribe aquí son novelas históricas, y la página no lo decía por
+   ningún sitio: era una consola de proceso con una tipografía bonita. Esta hoja
+   le pone el mundo encima sin tocar la identidad, que sigue siendo la de
+   Qaracter: el naranja #FF7932 y el azul pizarra #233441 mandan, y lo histórico
+   entra por debajo, en los neutros, las texturas y los adornos.
+
+   La idea que ordena todo: una mesa de trabajo a oscuras y, sobre ella, papel
+   iluminado. El taller sigue siendo oscuro —comparte luz con la escena WebGL—
+   y lo que se ilumina es lo que en la mesa sería papel: el capítulo que se lee.
+   No es un tema claro; es un objeto claro dentro de un mundo oscuro.
+
+   Nada de esto añade datos. Lo que se ve sigue saliendo del canon. */
+
+:root {
+  /* Vitela: el papel del legajo. Cálido y sucio, nunca blanco de pantalla. */
+  --vitela: #e6dbc2;
+  --vitela-alta: #f1e8d5;
+  --vitela-sombra: #cdbf9f;
+
+  /* Tinta ferrogálica, que envejece a marrón y nunca fue negra del todo. */
+  --tinta: #2a2118;
+  --tinta-tenue: #5c4f3d;
+
+  /* Lacre: el naranja de Qaracter hace de cera de sellar sin cambiar de color. */
+  --lacre: var(--qa-naranja);
+  --sepia: #8a6b45;
+  --oro: #c9a45c;
+
+  /* Ligamento del papel verjurado, en dos tramas cruzadas muy tenues. */
+  --verjura:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .012) 0 1px,
+                              transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .025) 0 1px,
+                              transparent 1px 26px);
+}
+
+/* ---------------------------------------------------------------- el aire */
+
+/* Grano de papel y viñeta de candil sobre toda la mesa. Va por encima de las
+   salas (z-index 1) y por debajo de la barra, el rail y los mandos de lectura
+   (3 y 4): es aire, no interfaz, y ni recibe el ratón ni apaga un control. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 85% at 62% 8%, rgba(255, 121, 50, .05) 0%,
+                    transparent 45%),
+    radial-gradient(130% 110% at 50% 50%, transparent 58%, rgba(4, 9, 13, .35) 100%),
+    var(--verjura);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after { background: none; }
+}
+
+/* --------------------------------------------------------------- paneles */
+
+/* Fichas de archivo: fibra de papel, filo superior entintado y la esquina
+   doblada de quien las ha manejado mucho. */
+.panel, .papeleta, .mando, .ejecucion, .diario {
+  background-image: var(--verjura);
+}
+
+.panel { position: relative; }
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, var(--sepia), transparent 60%);
+  opacity: .5;
+}
+
+.titulo-panel::after {
+  content: "❧";
+  margin-left: .5rem;
+  color: var(--sepia);
+  font-size: .8em;
+  vertical-align: baseline;
+}
+
+.panel--hueco { border-style: dashed; }
+
+/* --------------------------------------------------- conmutador de camino */
+
+/* Los dos caminos de §1. No es una preferencia de vista: es de qué canon se
+   está hablando, y por eso se ve siempre y no se esconde en un menú. */
+.conmutador {
+  display: flex;
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.conmutador button {
+  padding: .22rem .55rem;
+  background: none;
+  border: 0;
+  color: var(--texto-tenue);
+  font-family: var(--dato);
+  font-size: .66rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.conmutador button + button { border-left: 1px solid var(--linea); }
+.conmutador button:hover { color: var(--texto); }
+
+.conmutador button[aria-current="true"] {
+  background: color-mix(in srgb, var(--qa-naranja) 16%, transparent);
+  color: var(--qa-naranja);
+}
+
+/* ------------------------------------------------ la consola del delegado */
+
+/* Por el camino delegado esta página no lanza nada: da el comando exacto y se
+   aparta. Tiene forma de papeleta pegada al borde de la mesa. */
+.consola {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  padding: .8rem .9rem;
+  background: color-mix(in srgb, var(--qa-pizarra) 45%, transparent);
+  border: 1px solid var(--linea);
+  border-left: 2px solid var(--lacre);
+  border-radius: 2px;
+}
+
+.consola__linea {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+}
+
+.consola code {
+  padding: .25rem .5rem;
+  background: rgba(0, 0, 0, .3);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  font-family: var(--dato);
+  font-size: .8rem;
+  color: var(--qa-naranja);
+}
+
+/* ------------------------------------------------------------- subagentes */
+
+/* Los tres validadores van atados por una llave, porque se lanzan en un mismo
+   mensaje y no se ven entre sí (§21). La llave es la forma del camino. */
+.agente[data-paralelo="si"] {
+  border-left: 2px solid color-mix(in srgb, var(--oro) 55%, transparent);
+}
+
+.agente[data-paralelo="si"] .agente__nombre::before {
+  content: "‖ ";
+  color: var(--oro);
+}
+
+/* ----------------------------------------------------------------- sellos */
+
+/* VD-08 es un sello de registro: ok, aviso o bloqueo, en ese orden de gravedad. */
+.vd08 {
+  display: inline-block;
+  padding: .1rem .4rem;
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  font-family: var(--dato);
+  font-size: .62rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.vd08[data-escalon="ok"] { border-color: var(--ok); color: var(--ok); }
+.vd08[data-escalon="aviso"] { border-color: var(--aviso); color: var(--aviso); }
+.vd08[data-escalon="bloqueo"] { border-color: var(--fallo); color: var(--fallo); }
+
+.operacion {
+  font-family: var(--dato);
+  font-size: .68rem;
+  line-height: 1.5;
+  color: var(--texto);
+}
+
+.operacion .dato { color: var(--texto-tenue); font-size: .66rem; white-space: normal; }
+
+.enlace--ruta { font-family: var(--dato); font-size: .7rem; }
+
+.tabla tr[data-discrepa="si"] { background: color-mix(in srgb, var(--fallo) 10%, transparent); }
+
+.discrepa {
+  font-family: var(--dato);
+  font-size: .62rem;
+  color: var(--fallo);
+}
+
+/* ------------------------------------------------------ auditoría del gate */
+
+.auditoria__resumen {
+  margin: 0 0 .6rem;
+  font-size: .82rem;
+  color: var(--texto);
+}
+
+.auditoria__resumen[data-tono="bien"]::before { content: "✓ "; color: var(--ok); }
+.auditoria__resumen[data-tono="mal"]::before { content: "✗ "; color: var(--fallo); }
+
+#auditoria ul { margin: 0; padding-left: 1.1rem; font-size: .76rem; color: var(--texto-tenue); }
+#auditoria li { margin-bottom: .4rem; }
+
+/* ------------------------------------------------------------- cronología */
+
+/* La línea del tiempo de la novela, con el filo entintado de un margen de
+   registro. Los eventos históricos no llevan capítulo y se ven distintos. */
+.cronologia {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.cronologia::before {
+  content: "";
+  position: absolute;
+  left: .28rem;
+  top: .4rem;
+  bottom: .4rem;
+  width: 1px;
+  background: linear-gradient(var(--sepia), var(--linea));
+}
+
+.evento {
+  position: relative;
+  display: grid;
+  grid-template-columns: 5.6rem minmax(0, 1fr);
+  gap: .7rem;
+  cursor: default;
+}
+
+.evento[tabindex] { cursor: pointer; }
+.evento[tabindex]:hover .evento__texto { color: var(--texto); }
+
+.evento::before {
+  content: "";
+  position: absolute;
+  left: -1rem;
+  top: .42rem;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--qa-naranja);
+  box-shadow: 0 0 0 3px var(--fondo);
+}
+
+.evento[data-tipo="historico"]::before { background: var(--oro); }
+
+.evento__fecha {
+  font-family: var(--dato);
+  font-size: .68rem;
+  color: var(--oro);
+  letter-spacing: .02em;
+}
+
+.evento__texto {
+  margin: 0;
+  font-size: .8rem;
+  line-height: 1.5;
+  color: var(--texto-tenue);
+}
+
+.evento__pie {
+  margin: .25rem 0 0;
+  font-family: var(--dato);
+  font-size: .64rem;
+  color: var(--sepia);
+}
+
+/* ---------------------------------------------------------------- reparto */
+
+.reparto {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: .55rem;
+}
+
+/* Fichas de reparto: papel pautado, como las que se clavan en un corcho. */
+.personaje {
+  padding: .6rem .7rem;
+  background: color-mix(in srgb, var(--superficie-alta) 70%, transparent);
+  border: 1px solid var(--linea);
+  border-top: 2px solid var(--sepia);
+  border-radius: 2px;
+}
+
+.personaje[data-rol="protagonista"] { border-top-color: var(--lacre); }
+
+.personaje__alto {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .4rem;
+}
+
+.personaje__nombre {
+  font-family: var(--display);
+  font-size: .95rem;
+  color: var(--texto);
+}
+
+.personaje__donde,
+.personaje__sabe {
+  margin: .35rem 0 0;
+  font-size: .72rem;
+  line-height: 1.45;
+  color: var(--texto-tenue);
+}
+
+.personaje__sabe {
+  font-family: var(--dato);
+  font-size: .66rem;
+  color: var(--sepia);
+  cursor: help;
+}
+
+.pastilla--fina { font-size: .58rem; padding: .05rem .3rem; }
+
+/* ----------------------------------------------------------------- huecos */
+
+.huecos { margin: 0; font-size: .76rem; }
+.huecos dt { font-family: var(--dato); font-size: .68rem; color: var(--aviso); margin-top: .55rem; }
+.huecos dt:first-child { margin-top: 0; }
+.huecos dd { margin: .15rem 0 0; color: var(--texto-tenue); line-height: 1.45; }
+
+/* ----------------------------------------------------------------- trazas */
+
+.trazas {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  padding: .8rem .9rem;
+  background: color-mix(in srgb, var(--superficie) 70%, transparent);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+}
+
+.trazas__alto { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+
+.trazas__plan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .1rem .6rem;
+  margin: 0;
+  font-size: .72rem;
+}
+
+.trazas__plan dt { color: var(--texto-tenue); }
+.trazas__plan dd {
+  margin: 0;
+  font-family: var(--dato);
+  font-size: .7rem;
+  color: var(--texto);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.boton--fino { padding: .4rem .8rem; font-size: .75rem; }
+
+/* ------------------------------------------------------------- tarjetas */
+
+.tarjeta__fecha {
+  font-family: var(--dato);
+  font-size: .64rem;
+  color: var(--oro);
+  letter-spacing: .04em;
+}
+
+.tarjeta__leer { color: var(--qa-naranja); }
+
+.linea-estado__epoca {
+  font-family: var(--dato);
+  font-size: .72rem;
+  color: var(--oro);
+}
+
+/* ------------------------------------------------------- cajón de contexto */
+
+/* El paquete con el que se escribió un capítulo, tal cual quedó en disco. Es un
+   documento, así que se lee como un documento y no como una consola. */
+.cajon {
+  width: min(52rem, 92vw);
+  max-height: 82vh;
+  padding: 0;
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  background: var(--superficie);
+  color: var(--texto);
+}
+
+.cajon::backdrop { background: rgba(4, 9, 13, .72); }
+
+.cajon__alto {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem .8rem;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--linea);
+}
+
+.cajon__alto h3 { margin: .2rem 0 0; font-family: var(--display); font-weight: 400; }
+
+.cajon .pista { margin: .8rem 1.2rem 0; }
+
+.cajon__texto {
+  margin: .8rem 0 0;
+  padding: 1rem 1.2rem 1.4rem;
+  font-family: var(--lectura);
+  font-size: .82rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--texto-tenue);
+}
+
+/* ================================================================ lectura */
+
+/* Aquí es donde la ambientación deja de ser adorno: el capítulo se lee sobre
+   papel, no sobre pantalla oscura. La mesa sigue a oscuras alrededor. */
+
+#sala-lectura .lector {
+  position: relative;
+  padding: clamp(2rem, 5vw, 3.4rem) clamp(1.6rem, 5vw, 3.6rem) 5rem;
+  background:
+    var(--verjura),
+    linear-gradient(175deg, var(--vitela-alta), var(--vitela) 42%, var(--vitela-sombra));
+  color: var(--tinta);
+  border-radius: 1px;
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, .18),
+    0 30px 70px rgba(0, 0, 0, .6);
+}
+
+/* El filo de la hoja, que no está cortado a máquina. */
+#sala-lectura .lector::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 3.5rem rgba(138, 107, 69, .3);
+}
+
+#sala-lectura .lector__cabecera { border-bottom-color: var(--vitela-sombra); }
+#sala-lectura .lector__cabecera .eyebrow { color: var(--sepia); }
+#sala-lectura .lector__titulo,
+#sala-lectura .lector h1 { color: var(--tinta); }
+
+#sala-lectura .lector__texto { color: var(--tinta); }
+
+/* La capitular ya no es del primer párrafo por posición sino del primero que de
+   verdad empieza con letra: lo decide lectura.js, que ve el texto. */
+#sala-lectura .lector__texto p:first-of-type::first-letter { color: inherit; float: none; font-size: inherit; padding: 0; }
+
+#sala-lectura .lector__texto .capitular::first-letter {
+  float: left;
+  font-family: var(--display);
+  font-size: 3.6em;
+  line-height: .78;
+  padding: .04em .1em 0 0;
+  color: var(--lacre);
+}
+
+/* Florón de cambio de escena y cierre del capítulo. */
+#sala-lectura .separador-escena,
+#sala-lectura .marca-fin {
+  margin: 2.2rem 0;
+  text-align: center;
+  font-size: 1.1rem;
+  color: var(--sepia);
+  letter-spacing: .4em;
+}
+
+#sala-lectura .marca-fin { margin-top: 3rem; }
+
+#sala-lectura .lector__pie {
+  border-top-color: var(--vitela-sombra);
+  color: var(--tinta-tenue);
+}
+
+#sala-lectura .metadatos dt { color: var(--sepia); }
+#sala-lectura .metadatos dd { color: var(--tinta); }
+#sala-lectura .metadatos dd[data-vacio="si"] { color: var(--tinta-tenue); }
+
+/* Las notas del gate sobre papel: la nota alta es tinta, la baja es lacre. */
+#sala-lectura .lector__notas .dato { color: var(--tinta-tenue); }
+#sala-lectura .lector__notas .nota { background: var(--sepia); color: var(--vitela-alta); }
+#sala-lectura .lector__notas .nota[data-alta="si"] { background: var(--tinta); }
+
+@media (max-width: 900px) {
+  .evento { grid-template-columns: minmax(0, 1fr); gap: .15rem; }
+}
