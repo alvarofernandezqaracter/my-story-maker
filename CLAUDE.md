@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.1.1.
+de un brief de cinco campos. Versión 1.3.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -240,8 +240,11 @@ todavía», **no se rellena**, y además se declara junto en un panel con el mot
 La paleta es la de Qaracter (`#FF7932` y `#233441`) y manda. La ambientación
 histórica de [web/ambientacion.css](web/ambientacion.css) va **por debajo**: ocupa
 los neutros, las texturas y los adornos, y el naranja hace de lacre sin cambiar de
-valor. La mesa sigue a oscuras; lo que se ilumina es el capítulo, que se lee sobre
-vitela. three.js viaja por CDN —lo único del repo que necesita red— y degrada.
+valor. El cuarto tiene luz de día y va en gris roto; lo único cálido es el
+capítulo, que se lee sobre vitela. Cada color de marca tiene dos variantes,
+relleno y tinta, porque el naranja del logotipo no pasa AA como texto sobre claro.
+La escena WebGL es el fondo del **brief** y de ninguna otra sala: three.js viaja
+por CDN —lo único del repo que necesita red— y degrada.
 
 **Una traza es una unidad de trabajo cerrada, no el libro.** Ningún fallo de
 observabilidad para una novela, y el hook menos que ninguno: devuelve 0 siempre,

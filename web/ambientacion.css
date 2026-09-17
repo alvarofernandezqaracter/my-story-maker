@@ -6,10 +6,10 @@
    Qaracter: el naranja #FF7932 y el azul pizarra #233441 mandan, y lo histórico
    entra por debajo, en los neutros, las texturas y los adornos.
 
-   La idea que ordena todo: una mesa de trabajo a oscuras y, sobre ella, papel
-   iluminado. El taller sigue siendo oscuro —comparte luz con la escena WebGL—
-   y lo que se ilumina es lo que en la mesa sería papel: el capítulo que se lee.
-   No es un tema claro; es un objeto claro dentro de un mundo oscuro.
+   La idea que ordena todo: un cuarto con luz de día y, sobre la mesa, papel.
+   El taller es gris roto y el capítulo se lee sobre vitela con tinta
+   ferrogálica, así que destaca por ser el único objeto cálido del cuarto. No es
+   un tema aparte: es un objeto, y por eso lleva filo y sombra propia.
 
    Nada de esto añade datos. Lo que se ve sigue saliendo del canon. */
 
@@ -26,13 +26,17 @@
   /* Lacre: el naranja de Qaracter hace de cera de sellar sin cambiar de color. */
   --lacre: var(--qa-naranja);
   --sepia: #8a6b45;
+  /* El oro de los adornos, y el mismo oro bajado de valor para cuando le toca
+     ser texto: #c9a45c da 2,2:1 sobre los claros del cuarto. Sobre la vitela de
+     lectura sigue mandando el de arriba, que es donde ese oro era oro. */
   --oro: #c9a45c;
+  --oro-tinta: #8a6a1f;
 
   /* Ligamento del papel verjurado, en dos tramas cruzadas muy tenues. */
   --verjura:
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, .012) 0 1px,
+    repeating-linear-gradient(0deg, rgba(35, 52, 65, .018) 0 1px,
                               transparent 1px 3px),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, .025) 0 1px,
+    repeating-linear-gradient(90deg, rgba(35, 52, 65, .030) 0 1px,
                               transparent 1px 26px);
 }
 
@@ -48,9 +52,9 @@ body::after {
   z-index: 2;
   pointer-events: none;
   background:
-    radial-gradient(120% 85% at 62% 8%, rgba(255, 121, 50, .05) 0%,
+    radial-gradient(120% 85% at 62% 8%, rgba(255, 121, 50, .045) 0%,
                     transparent 45%),
-    radial-gradient(130% 110% at 50% 50%, transparent 58%, rgba(4, 9, 13, .35) 100%),
+    radial-gradient(130% 110% at 50% 50%, transparent 62%, rgba(35, 52, 65, .10) 100%),
     var(--verjura);
 }
 
@@ -96,7 +100,7 @@ body::after {
   flex-direction: column;
   gap: .45rem;
   padding: .8rem .9rem;
-  background: color-mix(in srgb, var(--qa-pizarra) 45%, transparent);
+  background: color-mix(in srgb, var(--qa-pizarra) 6%, var(--superficie-alta));
   border: 1px solid var(--linea);
   border-left: 2px solid var(--lacre);
   border-radius: 2px;
@@ -111,12 +115,12 @@ body::after {
 
 .consola code {
   padding: .25rem .5rem;
-  background: rgba(0, 0, 0, .3);
+  background: color-mix(in srgb, var(--qa-pizarra) 10%, var(--superficie-alta));
   border: 1px solid var(--linea);
   border-radius: 2px;
   font-family: var(--dato);
   font-size: .8rem;
-  color: var(--qa-naranja);
+  color: var(--qa-naranja-tinta);
 }
 
 /* ------------------------------------------------------------- subagentes */
@@ -129,7 +133,7 @@ body::after {
 
 .agente[data-paralelo="si"] .agente__nombre::before {
   content: "‖ ";
-  color: var(--oro);
+  color: var(--oro-tinta);
 }
 
 /* ----------------------------------------------------------------- sellos */
@@ -238,7 +242,7 @@ body::after {
 .evento__fecha {
   font-family: var(--dato);
   font-size: .68rem;
-  color: var(--oro);
+  color: var(--oro-tinta);
   letter-spacing: .02em;
 }
 
@@ -351,16 +355,16 @@ body::after {
 .tarjeta__fecha {
   font-family: var(--dato);
   font-size: .64rem;
-  color: var(--oro);
+  color: var(--oro-tinta);
   letter-spacing: .04em;
 }
 
-.tarjeta__leer { color: var(--qa-naranja); }
+.tarjeta__leer { color: var(--qa-naranja-tinta); }
 
 .linea-estado__epoca {
   font-family: var(--dato);
   font-size: .72rem;
-  color: var(--oro);
+  color: var(--oro-tinta);
 }
 
 /* ------------------------------------------------------- cajón de contexto */
@@ -377,7 +381,7 @@ body::after {
   color: var(--texto);
 }
 
-.cajon::backdrop { background: rgba(4, 9, 13, .72); }
+.cajon::backdrop { background: rgba(35, 52, 65, .55); }
 
 .cajon__alto {
   position: sticky;
@@ -410,7 +414,9 @@ body::after {
 /* ================================================================ lectura */
 
 /* Aquí es donde la ambientación deja de ser adorno: el capítulo se lee sobre
-   papel, no sobre pantalla oscura. La mesa sigue a oscuras alrededor. */
+   papel, no sobre pantalla. Contra el gris roto del cuarto la vitela destaca por
+   cálida, no por clara, así que lleva filo marcado y sombra propia: tiene que
+   leerse como un objeto puesto encima de la mesa y no como un hueco del fondo. */
 
 #sala-lectura .lector {
   position: relative;
@@ -419,10 +425,11 @@ body::after {
     var(--verjura),
     linear-gradient(175deg, var(--vitela-alta), var(--vitela) 42%, var(--vitela-sombra));
   color: var(--tinta);
+  border: 1px solid var(--vitela-sombra);
   border-radius: 1px;
   box-shadow:
-    0 2px 0 rgba(0, 0, 0, .18),
-    0 30px 70px rgba(0, 0, 0, .6);
+    0 2px 0 rgba(90, 70, 40, .22),
+    0 18px 44px rgba(35, 52, 65, .18);
 }
 
 /* El filo de la hoja, que no está cortado a máquina. */

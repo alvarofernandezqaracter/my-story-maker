@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.2.0
+version: 1.3.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -529,6 +529,24 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.3.0] — 2026-09-17
+
+**Cambiado**
+- §19. La página se compromete con un solo mundo visual **claro**: gris roto en
+  el chrome y blanco en el papel. El mundo oscuro existía para compartir luz con
+  una escena WebGL que ocupaba el fondo de las cuatro salas, y esa escena ha
+  dejado de ocuparlo.
+- §19. La escena del legajo es el fondo del **brief** y de ninguna otra sala. Lo
+  que contesta —qué libro es— es la pregunta de esa sala; en el escritorio y en
+  la arquitectura no contestaba nada y le restaba contraste a lo que sí. Se
+  monta al entrar y su bucle se para entero al salir.
+- §19. Cada color de marca se declara en dos variantes, relleno y tinta: el
+  naranja del logotipo da 2,6:1 como texto sobre claro y no pasa AA. Los filos y
+  los rellenos no cambian; lo que se lee usa la variante bajada de valor.
+- §19. La vitela de lectura destaca ahora por cálida y no por clara, así que
+  lleva filo marcado y sombra propia. Sigue siendo un objeto sobre la mesa y no
+  un tema aparte.
+
 ### [1.2.0] — 2026-09-17
 
 **Añadido**
@@ -843,15 +861,21 @@ panel sigue contando el sistema entero.
 
 **Qué valida.** Poco, porque no entra nada: solo el número de capítulo de las rutas que lo llevan. El brief lo comprueba el orquestador antes de escribirlo, con los `VD-xx` de §9, que es donde esa comprobación significa algo.
 
-**Por qué three.js.** La escena dibuja un cuadernillo por capítulo: cuántos son lo dice el brief, el grosor las palabras por capítulo, el color el estado del canon y la luz el tono. Es la parte que no se lee bien en una tabla —seis capítulos de 1.800 palabras es un número; seis cuadernillos sobre la mesa es una novela corta—, y según el orquestador va escribiendo se ve el capítulo en curso levantarse y los aprobados cambiar de color. El resto es HTML corriente. La escena es lo único del repo que necesita red, porque three.js viaja por CDN; si no llega, la interfaz entera sigue funcionando y la mesa se queda en su degradado.
+**Por qué three.js.** La escena dibuja un cuadernillo por capítulo: cuántos son lo dice el brief, el grosor las palabras por capítulo, el color el estado del canon y la luz el tono. Es la parte que no se lee bien en una tabla —seis capítulos de 1.800 palabras es un número; seis cuadernillos sobre la mesa es una novela corta—, y según el orquestador va escribiendo se ve el capítulo en curso levantarse y los aprobados cambiar de color. El resto es HTML corriente.
 
-**Identidad visual.** La paleta sale del logotipo de Qaracter —naranja `#FF7932` y azul pizarra `#233441`—, con los neutros sesgados hacia ese azul, y el logotipo va en la barra superior. La página se compromete con un solo mundo visual oscuro, sin tema claro: comparte paleta y luz con la escena, y mantener dos temas obligaría a pasarle la paleta al render en cada cambio para ganar poco.
+**La escena es el fondo del brief y de ninguna otra sala.** Lo que contesta —qué libro es— es exactamente la pregunta de esa sala; en el escritorio y en la arquitectura no contestaba nada y le restaba contraste a lo que sí. Por eso se monta la primera vez que se entra en el brief y su bucle se para entero al salir, igual que hace el grafo de §19. Es lo único del repo que necesita red, porque three.js viaja por CDN; si no llega, la interfaz entera sigue funcionando y el brief se queda en su degradado.
+
+El reparto de color de la escena se sigue del cuarto: el suelo tiene luz de día, así que el cuadernillo es la masa oscura sobre el claro. El que no se ha empezado va en azul pizarra, que es el único color de la marca que aguanta como masa contra ese suelo, y el naranja queda reservado al capítulo en curso.
+
+**Identidad visual.** La paleta sale del logotipo de Qaracter —naranja `#FF7932` y azul pizarra `#233441`—, con los neutros sesgados hacia ese azul, y el logotipo va en la barra superior. La página se compromete con **un solo mundo visual claro**: gris roto en el chrome y blanco en el papel. Mantener dos temas obligaría a pasarle la paleta al render en cada cambio para ganar poco.
+
+El naranja de marca da 2,6:1 como texto sobre esos claros, que no pasa AA. La hoja declara por eso **dos variantes de cada color de marca**: la de relleno, que es la del logotipo y no se toca, y la de tinta, que es la misma señal bajada de valor. Los rellenos y los filos siguen siendo `#FF7932`; lo que se lee, no. Los tres semánticos —aprobado, aviso, fallo— se usan indistintamente como relleno y como texto, así que mandan las 4,5:1 del texto.
 
 **La escala.** Los espaciados salen de una escala de 4/8/12/16/24/32 y los tamaños de letra de cuatro pasos —título, sección, cuerpo y caption— declarados en `:root`. Lo que necesita otro tamaño lo deriva con `calc()` de uno de ellos, para que siga atado a la escala en vez de escaparse de ella. Los párrafos se cortan a unos 65 caracteres. No es decoración: con veinte medidas sueltas dos tarjetas de la misma fila acababan midiendo distinto, y eso se lee como si a una le faltara algo.
 
 **Ambientación histórica.** Lo que aquí se escribe son novelas históricas y la página no lo decía por ningún sitio: era una consola de proceso con una tipografía bonita. La ambientación entra **por debajo de la identidad, no en su lugar**: mandan los dos colores de Qaracter y lo histórico ocupa los neutros, las texturas y los adornos. El naranja hace además de lacre sin cambiar de valor, que es la coincidencia que permite tener sellos sin inventar un color nuevo.
 
-La idea que lo ordena todo es una mesa a oscuras con papel iluminado encima. El escritorio sigue oscuro —comparte luz con la escena— y lleva grano de papel verjurado, viñeta de candil, filos entintados y un florón en cada título. Lo que se ilumina es lo que en esa mesa sería papel: **el capítulo se lee sobre vitela**, con tinta ferrogálica en vez de texto claro, capitular en lacre y florón de cambio de escena. No contradice el «un solo mundo visual»: no es un tema claro, es un objeto claro dentro del mundo oscuro, y el render no se entera. La capitular la decide el código y no el CSS, porque solo se dibuja bien si el párrafo empieza por letra: una raya de diálogo a cuatro líneas de alto queda peor que sin adorno.
+La idea que lo ordena todo es un cuarto con luz de día y papel encima de la mesa. El escritorio lleva grano de papel verjurado, filos entintados y un florón en cada título. Y **el capítulo se lee sobre vitela**, con tinta ferrogálica, capitular en lacre y florón de cambio de escena: contra el gris roto del cuarto la vitela no destaca por clara sino por **cálida**, así que lleva filo marcado y sombra propia para que se lea como un objeto puesto encima de la mesa y no como un hueco del fondo. No contradice el «un solo mundo visual»: es un objeto, no un tema. La capitular la decide el código y no el CSS, porque solo se dibuja bien si el párrafo empieza por letra: una raya de diálogo a cuatro líneas de alto queda peor que sin adorno.
 
 En la escena, la luz rasante parpadea como un candil con dos senos que no casan, para que la llama no repita ciclo. Es lo primero que se apaga con `prefers-reduced-motion`, igual que las motas de polvo.
 

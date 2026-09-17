@@ -66,12 +66,22 @@ function comandoDe(proyecto) {
 
 // three.js viaja por CDN, que es lo único de este repo que necesita red. Si no
 // llega, la interfaz entera sigue funcionando: la escena es lectura.
-import('./legajo.js')
-  .then(({ crearLegajo }) => crearLegajo($('escena'), { onFoco: alSenalar }))
-  .then((instancia) => { escena = instancia; previsualizar(); })
-  .catch(() => {
-    $('rail-foco').textContent = 'la mesa 3D no ha cargado (sin red)';
-  });
+//
+// Ya no se monta al abrir la página, porque ya no es el fondo de la página: es
+// el fondo del brief. Se carga la primera vez que se entra en esa sala y se
+// para entera al salir, que es lo mismo que hace el grafo de arquitectura.
+let montandoEscena = null;
+
+function montarEscena() {
+  if (montandoEscena) return montandoEscena;
+  montandoEscena = import('./legajo.js')
+    .then(({ crearLegajo }) => crearLegajo($('escena'), { onFoco: alSenalar }))
+    .then((instancia) => { escena = instancia; previsualizar(); })
+    .catch(() => {
+      $('rail-foco').textContent = 'la mesa 3D no ha cargado (sin red)';
+    });
+  return montandoEscena;
+}
 
 function textoDeReposo() {
   const p = estado.proyecto;
@@ -123,6 +133,8 @@ function ir(sala) {
   // El grafo tiene su propio bucle de dibujo y se para cuando no se ve: una
   // pestana oculta no tiene por que seguir gastando GPU.
   arquitectura.mostrar(sala === 'arquitectura');
+  if (sala === 'brief') montarEscena().then(() => escena?.mostrar(true));
+  else escena?.mostrar(false);
   if (sala !== 'lectura') {
     escena?.modoLectura(false, 0);
     document.body.dataset.inmersion = 'no';

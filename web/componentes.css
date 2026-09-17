@@ -14,7 +14,7 @@
   font-weight: 500;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--qa-naranja);
+  color: var(--qa-naranja-tinta);
 }
 
 .panel {
@@ -173,7 +173,7 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 .paso[data-hecho="si"] { color: var(--texto); border-color: var(--texto-tenue); }
 
 .paso[data-actual="si"] {
-  color: var(--qa-naranja);
+  color: var(--qa-naranja-tinta);
   border-color: var(--qa-naranja);
   background: color-mix(in srgb, var(--qa-naranja) 14%, transparent);
 }
@@ -247,7 +247,7 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 .agente[data-visto="si"] .agente__nombre { color: var(--texto); }
 
 .agente[data-activo="si"] { border-color: var(--qa-naranja); }
-.agente[data-activo="si"] .agente__nombre { color: var(--qa-naranja); }
+.agente[data-activo="si"] .agente__nombre { color: var(--qa-naranja-tinta); }
 .agente[data-activo="si"] .agente__tarea { color: var(--texto); }
 
 .agente[data-activo="si"] .agente__luz {
@@ -310,7 +310,7 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
 .veredicto[data-estado="aprobado"] { border-color: var(--ok); color: var(--ok); }
 .veredicto[data-estado="descartado"] { border-color: var(--fallo); color: var(--fallo); }
-.veredicto[data-estado="propuesto"] { border-color: var(--qa-naranja); color: var(--qa-naranja); }
+.veredicto[data-estado="propuesto"] { border-color: var(--qa-naranja); color: var(--qa-naranja-tinta); }
 
 /* ========================================================= taller: ledger */
 
@@ -357,7 +357,7 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
 .archivos time {
   flex: 0 0 auto;
-  color: var(--qa-naranja);
+  color: var(--qa-naranja-tinta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -401,7 +401,7 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 
 .indice__entrada:last-child { border-bottom: 0; }
 .indice__entrada:hover .indice__titulo,
-.indice__entrada[data-actual="si"] .indice__titulo { color: var(--qa-naranja); }
+.indice__entrada[data-actual="si"] .indice__titulo { color: var(--qa-naranja-tinta); }
 
 /* El lomo lleva el mismo codigo de color que los cuadernillos de la mesa. */
 .indice__lomo { background: var(--linea); border-radius: 1px; }
@@ -473,7 +473,7 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
   margin: 2.2em 0;
   text-align: center;
   letter-spacing: .5em;
-  color: var(--qa-naranja);
+  color: var(--qa-naranja-tinta);
 }
 
 .marca-fin {
@@ -710,7 +710,7 @@ body[data-sala="taller"] .mando {
 }
 
 .ficha-nodo__tipo[data-forma="agente"] { border-color: var(--texto-tenue); color: var(--texto); }
-.ficha-nodo__tipo[data-forma="decision"] { border-color: var(--oro); color: var(--oro); }
+.ficha-nodo__tipo[data-forma="decision"] { border-color: var(--oro); color: var(--oro-tinta); }
 
 .ficha-nodo__desc {
   margin: 0;
@@ -730,7 +730,7 @@ body[data-sala="taller"] .mando {
   font-weight: 500;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--qa-naranja);
+  color: var(--qa-naranja-tinta);
 }
 
 .ficha-nodo ul {

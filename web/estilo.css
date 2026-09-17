@@ -4,24 +4,35 @@
    azul pizarra #233441. Los neutros no son grises puros, van sesgados hacia ese
    azul para que el naranja caiga sobre algo suyo y no sobre un gris de fabrica.
 
-   Un solo mundo visual, oscuro, porque la pagina comparte paleta y luz con la
-   escena WebGL: cada color se declara aqui y ninguno se hereda del navegador. */
+   Un solo mundo visual, claro: gris roto en el chrome y blanco en el papel. La
+   sala de lectura es la excepcion y es deliberada -papel tostado con tinta
+   ferrogalica-, porque el capitulo tiene que leerse como un objeto puesto sobre
+   la mesa y no como una pantalla mas. Es el unico objeto calido del cuarto.
+
+   Cada color se declara aqui y ninguno se hereda del navegador. Los que ademas
+   se usan como texto estan elegidos para pasar AA sobre --superficie. */
 
 :root {
   --qa-naranja: #ff7932;
-  --qa-naranja-alto: #ff9257;
+  /* Sobre claro, resaltar es oscurecer: aclarar el naranja lo borra. */
+  --qa-naranja-alto: #e2600f;
+  /* El naranja de marca da 2,6:1 como texto sobre blanco, que no pasa AA. Los
+     rellenos y los filos siguen siendo #ff7932; lo que se lee usa este. */
+  --qa-naranja-tinta: #b04409;
   --qa-pizarra: #233441;
 
-  --fondo: #0d161d;
-  --superficie: #15222c;
-  --superficie-alta: #1d2f3b;
-  --linea: #2b4050;
-  --texto: #eef4f8;
-  --texto-tenue: #8ea5b4;
+  --fondo: #edf0f2;
+  --superficie: #f8fafb;
+  --superficie-alta: #ffffff;
+  --linea: #ccd7de;
+  --texto: #1a2a35;
+  --texto-tenue: #5a7183;
 
-  --ok: #35c08a;
-  --aviso: #f0b429;
-  --fallo: #e8556d;
+  /* Los tres semanticos se usan como relleno y como texto, asi que mandan las
+     4,5:1 del texto: son las mismas senales, bajadas de valor. */
+  --ok: #1a7a57;
+  --aviso: #8a5b00;
+  --fallo: #b5283f;
 
   /* Escala de espaciado, 4/8/12/16/24/32. Ningun hueco de esta hoja ni de
      componentes.css se escribe fuera de ella: si un valor no esta aqui, es que
@@ -55,7 +66,7 @@
   /* Alto util entre la barra y el rail: lo que puede ocupar un lienzo que
      quiera llenar la pantalla sin empujar a ninguno de los dos. */
   --alto-util: calc(100vh - var(--barra-alto) - var(--rail-alto));
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -73,19 +84,26 @@ body {
   overflow: hidden;
 }
 
+/* La escena WebGL es el fondo del brief y de ninguna sala mas. El legajo
+   contesta que libro es -cuantos cuadernillos, de que grosor, de que color-,
+   que es justo la pregunta de esta sala; en el escritorio y en la arquitectura
+   no contestaria nada y restaria contraste a lo que si lo hace. */
 #escena {
-  position: fixed;
+  position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   display: block;
+  z-index: 0;
   /* Suelo mientras la escena arranca, y para siempre si three.js no llega. */
-  background: radial-gradient(120% 90% at 70% 16%, #22333f 0%, #101c24 55%, var(--fondo) 100%);
-  transition: opacity .5s ease, filter .5s ease;
+  background: radial-gradient(120% 90% at 70% 16%,
+    var(--superficie-alta) 0%, #e7ecef 55%, #dbe3e8 100%);
+  transition: opacity .5s ease;
 }
 
-body[data-sala="lectura"] #escena { opacity: .22; filter: blur(3px); }
-body[data-inmersion="si"] #escena { opacity: .12; }
+/* Sobre la mesa, no debajo de ella. El propio lienzo queda fuera: comparte
+   especificidad con la regla de arriba y le pisaria el z-index. */
+#sala-brief > *:not(#escena) { position: relative; z-index: 1; }
 
 /* ========================================================== barra superior */
 
@@ -143,7 +161,7 @@ body[data-inmersion="si"] #escena { opacity: .12; }
 .sala:hover:not([disabled]) { color: var(--texto); }
 
 .sala[aria-current="true"] {
-  color: var(--qa-naranja);
+  color: var(--qa-naranja-tinta);
   border-color: color-mix(in srgb, var(--qa-naranja) 45%, transparent);
   background: color-mix(in srgb, var(--qa-naranja) 10%, transparent);
 }
@@ -185,7 +203,7 @@ body[data-inmersion="si"] #escena { opacity: .12; }
   border: 1px solid var(--linea);
   border-left: 2px solid var(--qa-naranja);
   border-radius: 2px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+  box-shadow: 0 10px 28px rgba(35, 52, 65, .10);
 }
 
 .papeleta__cabecera, .mando__cabecera {
@@ -200,7 +218,7 @@ body[data-inmersion="si"] #escena { opacity: .12; }
   font-size: var(--t-caption);
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--qa-naranja);
+  color: var(--qa-naranja-tinta);
 }
 
 h1, h2 {
@@ -278,7 +296,7 @@ button:focus-visible {
   font-size: var(--t-cuerpo);
   font-weight: 600;
   letter-spacing: .02em;
-  color: #17232b;
+  color: #2a1403;
   background: var(--qa-naranja);
   border: 1px solid var(--qa-naranja);
   border-radius: 2px;
@@ -322,7 +340,7 @@ button:focus-visible {
   cursor: pointer;
 }
 
-.redondo:hover:not([disabled]) { border-color: var(--qa-naranja); color: var(--qa-naranja); }
+.redondo:hover:not([disabled]) { border-color: var(--qa-naranja); color: var(--qa-naranja-tinta); }
 .redondo[disabled] { opacity: .3; cursor: not-allowed; }
 
 /* ================================================================= taller */
@@ -452,7 +470,7 @@ button:focus-visible {
   font-family: var(--lectura);
   font-size: 1.12rem;
   line-height: 1.75;
-  color: #e4ecf1;
+  color: var(--tinta);
 }
 
 .lector__texto p { margin: 0 0 1.35em; text-wrap: pretty; }
@@ -464,7 +482,7 @@ button:focus-visible {
   font-size: 3.4em;
   line-height: .82;
   padding: .06em .12em 0 0;
-  color: var(--qa-naranja);
+  color: var(--qa-naranja-tinta);
 }
 
 .lector__pie {
@@ -500,7 +518,7 @@ button:focus-visible {
   font-weight: 500;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: var(--qa-naranja);
+  color: var(--qa-naranja-tinta);
 }
 
 .ficha-lateral p { margin: 0 0 var(--e3); }
@@ -583,7 +601,7 @@ body[data-inmersion="si"] #sala-lectura { padding-top: 3rem; }
   font-size: var(--t-caption);
 }
 
-.pastilla[data-estado="escribiendo"] { border-color: var(--qa-naranja); color: var(--qa-naranja); }
+.pastilla[data-estado="escribiendo"] { border-color: var(--qa-naranja); color: var(--qa-naranja-tinta); }
 .pastilla[data-estado="escrito"],
 .pastilla[data-estado="editado"] { border-color: var(--ok); color: var(--ok); }
 .pastilla[data-estado="bloqueado"] { border-color: var(--fallo); color: var(--fallo); }

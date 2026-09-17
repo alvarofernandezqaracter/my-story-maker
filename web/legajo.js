@@ -12,30 +12,35 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const MAX_PIEZAS = 48;
 
 // Los mismos colores que estilo.css, que son los de Qaracter.
+//
+// La mesa tiene luz de dia, asi que el cuadernillo es la masa oscura sobre el
+// suelo claro. El que no se ha empezado va en azul pizarra #233441, que es el
+// segundo color de la marca y el unico que aguanta como masa contra ese suelo;
+// el naranja se reserva para el capitulo en curso, que es lo que hay que mirar.
 const COLOR = {
-  mesa: 0x101b23,
-  niebla: 0x18262f,
+  mesa: 0xe4e9ed,
+  niebla: 0xedf0f2,
   naranja: 0xff7932,
-  pendiente: 0x3d5464,
+  pendiente: 0x233441,
   en_curso: 0xff7932,
-  aprobado: 0x35c08a,
-  bloqueado: 0xe8556d,
-  canto: 0xeef4f8,
+  aprobado: 0x1a7a57,
+  bloqueado: 0xb5283f,
+  canto: 0x8a6b45,
 };
 
 // El tono del brief enciende la luz de la mesa. Se busca por palabra suelta; lo
 // que no reconoce cae en el ajuste neutro, que es el de "seco".
 const TONOS = [
   { claves: ['seco', 'sobrio', 'austero', 'contenido'],
-    luz: 0xdfe6ea, intensidad: 2.9, niebla: 0.05, rugosidad: 0.85 },
+    luz: 0xdfe6ea, intensidad: 1.5, niebla: 0.018, rugosidad: 0.85 },
   { claves: ['lirico', 'lírico', 'poetico', 'poético', 'luminoso'],
-    luz: 0xffe9c8, intensidad: 3.3, niebla: 0.032, rugosidad: 0.55 },
+    luz: 0xffe9c8, intensidad: 1.7, niebla: 0.012, rugosidad: 0.55 },
   { claves: ['sombrio', 'sombrío', 'oscuro', 'tragico', 'trágico', 'negro'],
-    luz: 0x9fb4bd, intensidad: 2.1, niebla: 0.09, rugosidad: 0.95 },
+    luz: 0x9fb4bd, intensidad: 1.1, niebla: 0.030, rugosidad: 0.95 },
   { claves: ['epico', 'épico', 'aventura', 'heroico'],
-    luz: 0xffd9a0, intensidad: 3.9, niebla: 0.042, rugosidad: 0.7 },
+    luz: 0xffd9a0, intensidad: 2.0, niebla: 0.015, rugosidad: 0.7 },
   { claves: ['ironico', 'irónico', 'satirico', 'satírico', 'humor'],
-    luz: 0xe8e2ff, intensidad: 3.1, niebla: 0.048, rugosidad: 0.4 },
+    luz: 0xe8e2ff, intensidad: 1.6, niebla: 0.017, rugosidad: 0.4 },
 ];
 
 const NEUTRO = TONOS[0];
@@ -80,7 +85,9 @@ export async function crearLegajo(canvas, { onFoco } = {}) {
   let camaraAutomatica = true;
   mandos.addEventListener('start', () => { camaraAutomatica = false; });
 
-  escena.add(new THREE.HemisphereLight(0x2b3d47, 0x05090b, 0.7));
+  // Cielo claro y rebote del suelo: en un cuarto con luz de dia el ambiente
+  // hace casi todo el trabajo, y la clave solo modela.
+  escena.add(new THREE.HemisphereLight(0xf2f6f8, 0xc8d2d8, 2.2));
 
   const clave = new THREE.DirectionalLight(NEUTRO.luz, NEUTRO.intensidad);
   clave.position.set(4.5, 7.5, 5);
@@ -96,12 +103,12 @@ export async function crearLegajo(canvas, { onFoco } = {}) {
   // La luz rasante hace de candil: es la unica de la mesa que no esta quieta.
   // El parpadeo es minimo a proposito -no es una hoguera- y se apaga entero si
   // el sistema pide menos movimiento.
-  const rasante = new THREE.PointLight(COLOR.naranja, 22, 28, 2);
+  const rasante = new THREE.PointLight(COLOR.naranja, 7, 22, 2);
   rasante.position.set(-5, 1.1, 3.5);
   escena.add(rasante);
   const INTENSIDAD_CANDIL = rasante.intensity;
 
-  const relleno = new THREE.DirectionalLight(0xbfd3d8, 0.9);
+  const relleno = new THREE.DirectionalLight(0xdfe8ec, 0.5);
   relleno.position.set(-3, 2.5, 6);
   escena.add(relleno);
 
@@ -130,7 +137,7 @@ export async function crearLegajo(canvas, { onFoco } = {}) {
     const geometria = new THREE.BufferGeometry();
     geometria.setAttribute('position', new THREE.BufferAttribute(posiciones, 3));
     const puntos = new THREE.Points(geometria, new THREE.PointsMaterial({
-      color: COLOR.canto, size: 0.035, transparent: true, opacity: 0.32,
+      color: COLOR.canto, size: 0.035, transparent: true, opacity: 0.18,
       sizeAttenuation: true, depthWrite: false,
     }));
     escena.add(puntos);
@@ -366,6 +373,13 @@ export async function crearLegajo(canvas, { onFoco } = {}) {
     actualizar,
     elegir,
     modoLectura,
+    // La escena es el fondo de una sola sala: fuera de ella no hay nada que
+    // dibujar y el bucle se para entero.
+    mostrar(si) {
+      if (si === vivo) return;
+      vivo = si;
+      if (si) fotograma();
+    },
     destruir() {
       vivo = false;
       window.removeEventListener('resize', medir);
