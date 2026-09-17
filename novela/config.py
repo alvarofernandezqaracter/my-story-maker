@@ -58,6 +58,7 @@ REGLAS = [
     ('margenes.palabras_bloqueo', _fraccion, 'fraccion en (0, 1)'),
     ('margenes.parrafos_min', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
     ('trazas.activas', lambda v: isinstance(v, bool), 'booleano'),
+    ('trazas.texto', lambda v: isinstance(v, bool), 'booleano'),
     ('trazas.entorno', lambda v: isinstance(v, str) and bool(ENTORNO_DE_TRAZAS.match(v)),
      'minusculas, digitos, guion o guion bajo, sin empezar por "langfuse"'),
 ]

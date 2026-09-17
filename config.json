@@ -25,6 +25,7 @@
   },
   "trazas": {
     "activas": true,
-    "entorno": "desarrollo"
+    "entorno": "desarrollo",
+    "texto": true
   }
 }

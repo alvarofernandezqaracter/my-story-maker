@@ -19,6 +19,11 @@ const FILAS = [
   ['intentos', 'intentos con escritor, VD-08 y gate', (p) => p.intentos],
   ['notas', 'puntuaciones', (p) => p.notas],
   ['retoques', 'retoques del editor global', (p) => p.retoques],
+  // Con `trazas.texto` puesta lo que sale ya no son números: es la novela. Va en
+  // palabras y no en «sí», porque el tamaño es justo la parte que hay que ver.
+  ['texto', 'texto que sale', (p) => (p.texto
+    ? `${p.palabras_fuera.toLocaleString('es-ES')} palabras (capítulos y paquetes)`
+    : 'ninguno: solo el árbol y las notas')],
   ['sesion', 'sesión', (p) => p.sesion],
   ['entorno', 'entorno', (p) => p.entorno],
 ];

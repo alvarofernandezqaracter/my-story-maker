@@ -169,18 +169,27 @@ class CanonCC:
         k = ficha['intento_aprobado']
         return next((i for i in ficha['intentos'] if i.get('intento') == k), None)
 
-    def texto(self, numero):
-        """El texto del intento aprobado, si el fichero sigue donde dice el canon."""
-        aprobado = self.intento_aprobado(numero)
-        if not aprobado or not aprobado.get('ruta'):
+    def texto_de_intento(self, intento):
+        """El texto de un intento cualquiera, aprobado o no.
+
+        Existe separado de `texto()` porque el que interesa comparar casi nunca
+        es solo el aprobado: un juez externo (§20) puntua tambien los intentos
+        que el gate tumbo, y sin ellos no hay con que medir si el validador se
+        indulta a si mismo.
+        """
+        if not intento or not intento.get('ruta'):
             return None, None
-        ruta = Path(aprobado['ruta'])
+        ruta = Path(intento['ruta'])
         if not ruta.is_absolute():
             # Las rutas del canon se escriben desde la raiz del repositorio.
             ruta = Path.cwd() / ruta
         if not ruta.is_file():
-            return None, aprobado['ruta']
-        return ruta.read_text(encoding='utf-8'), aprobado['ruta']
+            return None, intento['ruta']
+        return ruta.read_text(encoding='utf-8'), intento['ruta']
+
+    def texto(self, numero):
+        """El texto del intento aprobado, si el fichero sigue donde dice el canon."""
+        return self.texto_de_intento(self.intento_aprobado(numero))
 
     def contexto(self, numero):
         ruta = self.ruta_contexto(numero)

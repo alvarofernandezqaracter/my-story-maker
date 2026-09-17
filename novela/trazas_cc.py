@@ -56,6 +56,18 @@ def _config_de_trazas(config):
     return {'trazas': (config or {}).get('trazas') or {}}
 
 
+def texto_viaja(config):
+    """Si el capitulo y su paquete de contexto salen dentro de la traza (§12).
+
+    Son lo unico que un evaluador de Langfuse puede leer -no abre ficheros-, asi
+    que sin esto no hay evaluacion de calidad posible. Se deja gobernado por
+    `trazas.texto` porque mandar la novela entera a un servicio de fuera es una
+    decision, no un detalle: quien no la quiera tomar apaga la clave y pierde el
+    juez, no las trazas.
+    """
+    return bool(((config or {}).get('trazas') or {}).get('texto'))
+
+
 def _meta(**extra):
     base = {'camino': 'delegado', 'origen': 'novela-cc', 'reconstruido': True}
     base.update({k: v for k, v in extra.items() if v is not None})
@@ -100,6 +112,20 @@ def plan(canon, config):
         if notas_en_lista(i.get('notas')))
     texto_retoques, _ = canon.retoques()
     estado = canon.estado()
+
+    # Lo que sale deja de ser un arbol de numeros en cuanto `trazas.texto` esta
+    # puesta: sale la novela. Se cuenta antes para que se vea, que es justo lo
+    # que esta funcion existe para hacer.
+    con_texto = texto_viaja(config)
+    palabras_fuera = 0
+    if con_texto:
+        for capitulo in escaleta:
+            paquete, _ = canon.contexto(capitulo['numero'])
+            palabras_fuera += len((paquete or '').split())
+            for i in canon.intentos(capitulo['numero']):
+                texto, _ = canon.texto_de_intento(i)
+                palabras_fuera += len((texto or '').split())
+
     return {
         'sesion': sesion_de(canon.brief()),
         'entorno': ((config or {}).get('trazas') or {}).get('entorno'),
@@ -111,6 +137,8 @@ def plan(canon, config):
         # intentos que costo cada capitulo.
         'notas': puntuados * 5 + len(con_intentos),
         'retoques': len(RETOQUE.findall(texto_retoques or '')),
+        'texto': con_texto,
+        'palabras_fuera': palabras_fuera,
         'reconstruido': True,
     }
 
@@ -148,6 +176,7 @@ def _capitulo(trazas, canon, config, ficha, sesion, modelo=None):
     intentos = canon.intentos(numero)
     if not intentos:
         return 0
+    con_texto = texto_viaja(config)
     estado_ficha = canon.ficha_estado(numero)
     contexto = estado_ficha['contexto'] or {}
     resumen = canon.resumen(numero)
@@ -161,17 +190,22 @@ def _capitulo(trazas, canon, config, ficha, sesion, modelo=None):
         trace_id=traza_de(sesion, 'cap-{:02d}'.format(numero)),
     ) as traza:
         # El paquete de §7 es un retriever: lee el canon y no cambia nada.
+        paquete, _ruta_paquete = canon.contexto(numero) if con_texto else (None, None)
         with trazas.paso('reunir-contexto', tipo='retriever',
                          entrada={'capitulo': numero},
                          metadata=_meta(capitulo=numero)) as paso:
-            paso.actualizar(output={
+            salida = {
                 'ruta': canon.ruta_contexto(numero).as_posix(),
                 'tokens': contexto.get('tokens'),
                 'recortes': contexto.get('recortes') or [],
-            })
+            }
+            if paquete:
+                salida['paquete'] = paquete
+            paso.actualizar(output=salida)
 
         for intento in intentos:
-            _intento(trazas, config, numero, intento, modelo)
+            _intento(trazas, config, numero, intento, modelo,
+                     canon=canon if con_texto else None, paquete=paquete)
 
         if resumen:
             with trazas.paso('cronista', tipo='agent',
@@ -196,17 +230,31 @@ def _capitulo(trazas, canon, config, ficha, sesion, modelo=None):
     return 1
 
 
-def _intento(trazas, config, numero, intento, modelo=None):
+def _intento(trazas, config, numero, intento, modelo=None, canon=None, paquete=None):
     k = intento.get('intento')
     notas = notas_en_lista(intento.get('notas'))
     comun = _meta(capitulo=numero, intento=k,
                   tipo_reintento=intento.get('tipo_reintento'))
 
-    with trazas.paso('escritor', tipo='agent', entrada={'capitulo': numero, 'intento': k},
+    # El paquete que recibio y el capitulo que devolvio, en la misma observacion
+    # y no repartidos entre madre e hija: un evaluador de Langfuse solo lee el
+    # input, el output y la metadata de la observacion a la que apunta, y no
+    # puede mirar ni a sus hermanas ni a sus hijas. Si esto se separa, el juez
+    # se queda sin con que comparar.
+    entrada = {'capitulo': numero, 'intento': k}
+    if paquete:
+        entrada['paquete'] = paquete
+    salida = {'ruta': intento.get('ruta'),
+              'palabras': intento.get('palabras'),
+              'parrafos': intento.get('parrafos')}
+    if canon is not None:
+        texto, _ = canon.texto_de_intento(intento)
+        if texto:
+            salida['texto'] = texto
+
+    with trazas.paso('escritor', tipo='agent', entrada=entrada,
                      metadata=comun, modelo=modelo) as paso:
-        paso.actualizar(output={'ruta': intento.get('ruta'),
-                                'palabras': intento.get('palabras'),
-                                'parrafos': intento.get('parrafos')})
+        paso.actualizar(output=salida)
 
     # VD-08 es uno de los dos puntos donde se decide sin preguntar a nadie (§20).
     with trazas.paso('vd-08-extension', tipo='evaluator',

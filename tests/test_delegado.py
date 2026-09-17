@@ -136,6 +136,21 @@ class TestLector(CanonDelegadoDePrueba):
         self.assertIn('Segunda', texto)
         self.assertTrue(ruta.endswith('cap-01-intento-2.md'))
 
+    def test_tambien_se_lee_el_texto_de_un_intento_descartado(self):
+        # El que el gate tumbo es justo el que hace falta para saber si el
+        # validador se indulta a si mismo (§20), y `texto()` no llega a el.
+        canon = CanonCC()
+        descartado = canon.intentos(1)[0]
+        texto, ruta = canon.texto_de_intento(descartado)
+        self.assertIn('Primera', texto)
+        self.assertTrue(ruta.endswith('cap-01-intento-1.md'))
+
+    def test_un_intento_cuyo_fichero_no_esta_se_lee_como_hueco(self):
+        Path('novela-cc/capitulos/cap-01-intento-1.md').unlink()
+        texto, ruta = CanonCC().texto_de_intento(CanonCC().intentos(1)[0])
+        self.assertIsNone(texto)
+        self.assertTrue(ruta.endswith('cap-01-intento-1.md'))
+
     def test_un_fichero_que_falta_no_tumba_la_lectura(self):
         Path('novela-cc/canon/dossier.json').unlink()
         self.assertEqual(CanonCC().datos(), [])
@@ -340,21 +355,26 @@ class CapaDeMentira:
         self.cerrada = False
         self._pila = []
 
-    def _abrir(self, nombre, tipo, metadata):
+    def _abrir(self, nombre, tipo, metadata, entrada=None):
         capa = self
         padre = capa._pila[-1] if capa._pila else None
+        nodo = {'nombre': nombre, 'tipo': tipo, 'padre': padre,
+                'metadata': metadata or {}, 'entrada': entrada, 'output': None}
 
         class Obs:
-            def actualizar(self, **_):
-                pass
+            # La entrada y la salida se apuntan porque son lo unico que un
+            # evaluador de Langfuse puede leer (§20): si el capitulo no esta
+            # ahi, el juez no tiene nada que puntuar y la traza no se entera.
+            def actualizar(self, output=None, **_):
+                if output is not None:
+                    nodo['output'] = output
 
             def nota(self, nombre_nota, valor, comentario=None, tipo=None):
                 capa.notas.append((nombre, nombre_nota, valor))
 
         class Contexto:
             def __enter__(self):
-                capa.arbol.append({'nombre': nombre, 'tipo': tipo, 'padre': padre,
-                                   'metadata': metadata or {}})
+                capa.arbol.append(nodo)
                 capa._pila.append(nombre)
                 return Obs()
 
@@ -373,11 +393,11 @@ class CapaDeMentira:
         self.etiquetas = etiquetas
         self.trazas_pedidas = getattr(self, 'trazas_pedidas', [])
         self.trazas_pedidas.append((nombre, trace_id))
-        return self._abrir(nombre, tipo, metadata)
+        return self._abrir(nombre, tipo, metadata, entrada)
 
     def paso(self, nombre, tipo='span', entrada=None, metadata=None, modelo=None,
              parametros=None):
-        return self._abrir(nombre, tipo, metadata)
+        return self._abrir(nombre, tipo, metadata, entrada)
 
     def cerrar(self):
         self.cerrada = True
@@ -472,6 +492,42 @@ class TestArbolDeTrazas(CanonDelegadoDePrueba):
     def test_el_buzon_se_vacia_aunque_algo_falle(self):
         self.correr()
         self.assertTrue(self.capa.cerrada)
+
+    def escritores(self):
+        return [o for o in self.capa.arbol if o['nombre'] == 'escritor']
+
+    def test_el_escritor_lleva_el_paquete_que_recibio_y_el_capitulo_que_escribio(self):
+        # Sin las dos cosas en la misma observacion no hay evaluador posible:
+        # un juez de Langfuse lee el input, el output y la metadata de la
+        # observacion a la que apunta, y no abre ficheros ni mira a sus hermanas.
+        self.correr()
+        primero, segundo = self.escritores()
+        self.assertIn('Encargo del capitulo 1', primero['entrada']['paquete'])
+        self.assertIn('Primera', primero['output']['texto'])
+        # Tambien el descartado: es la mitad de la comparacion que interesa.
+        self.assertIn('Segunda', segundo['output']['texto'])
+
+    def test_con_trazas_texto_apagada_la_novela_no_sale_de_casa(self):
+        self.config = {**self.config,
+                       'trazas': {**self.config['trazas'], 'texto': False}}
+        self.correr()
+        for observacion in self.escritores():
+            self.assertNotIn('paquete', observacion['entrada'])
+            self.assertNotIn('texto', observacion['output'])
+        # Y el arbol sigue entero: lo que se apaga es el texto, no las trazas.
+        self.assertEqual(len(self.escritores()), 2)
+
+    def test_el_plan_dice_cuantas_palabras_saldrian(self):
+        # Exportar deja marca fuera, y con el texto puesto lo que sale es la
+        # novela: el panel de §19 lo ensena antes de que nadie pulse nada.
+        con = plan(CanonCC(), self.config)
+        self.assertTrue(con['texto'])
+        # Seis palabras del paquete del capitulo 1 y cuatro de cada intento.
+        self.assertEqual(con['palabras_fuera'], 14)
+        sin = plan(CanonCC(), {**self.config,
+                               'trazas': {**self.config['trazas'], 'texto': False}})
+        self.assertFalse(sin['texto'])
+        self.assertEqual(sin['palabras_fuera'], 0)
 
 
 class TestClavesDeConfig(unittest.TestCase):
