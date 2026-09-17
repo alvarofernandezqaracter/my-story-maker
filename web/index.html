@@ -222,11 +222,25 @@
       <p class="grafo__nota grafo__nota--paso" id="replay-paso"></p>
     </div>
 
+    <!-- Dos leyendas porque son dos preguntas: que es cada caja, y en que punto
+         esta. Lo que se lee del dibujo sin mirar aqui es lo primero; lo segundo
+         hace falta explicarlo una vez. -->
     <div class="leyenda" aria-hidden="true">
-      <span><i data-forma="agente"></i>agente LLM</span>
-      <span><i data-forma="artefacto"></i>dato</span>
-      <span><i data-forma="decision"></i>código del harness</span>
-      <span><i data-forma="realimenta"></i>vuelta atrás del loop</span>
+      <div class="leyenda__grupo">
+        <span class="leyenda__titulo">Qué es</span>
+        <span><i data-forma="agente"></i>agente LLM</span>
+        <span><i data-forma="artefacto"></i>dato</span>
+        <span><i data-forma="decision"></i>código del harness</span>
+        <span><i data-forma="realimenta"></i>vuelta atrás del loop</span>
+      </div>
+      <div class="leyenda__grupo">
+        <span class="leyenda__titulo">Por dónde va</span>
+        <span><i data-estado="pendiente"></i>pendiente</span>
+        <span><i data-estado="activo"></i>activo</span>
+        <span><i data-estado="completado"></i>completado</span>
+        <span><i data-estado="reintento"></i>reintento</span>
+        <span><i data-estado="bloqueado"></i>bloqueado</span>
+      </div>
     </div>
 
     <p class="vacio grafo__aviso" id="grafo-aviso" hidden></p>

@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.7.0
+version: 1.8.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -529,6 +529,20 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.8.0] — 2026-09-17
+
+**Añadido**
+- §19. Leyenda de los cinco estados junto a la de los tipos de nodo, con las
+  muestras pintadas con el mismo color y el mismo filo que el nodo.
+- §19. Foco de teclado visible como anillo por fuera de la silueta, y
+  tabulación en orden topológico —que sale del propio orden de declaración de
+  los nodos— con Enter para abrir la ficha.
+
+**Cambiado**
+- §19. Los mandos del grafo se apilan por debajo de 900px y la leyenda pasa a
+  una columna: el desplegable de capítulos en fila era lo único de esa sala que
+  podía generar scroll horizontal. Comprobado a 1440, 1280 y 390.
+
 ### [1.7.0] — 2026-09-17
 
 **Añadido**
@@ -965,6 +979,14 @@ DAG por capas y le pone el canon encima.
   del borrador, el escalón de VD-08, la nota de esa dimensión con sus
   incidencias, la operación del gate con sus motivos. Cada fila sin dato no se
   pinta.
+- **Dos leyendas, porque son dos preguntas**: qué es cada caja y en qué punto
+  está. Las muestras de estado llevan el mismo color y el mismo filo que el nodo;
+  si la muestra no es el nodo, la leyenda está explicando otra cosa.
+- **El foco del teclado es un anillo por fuera**, no un cambio de borde: cuatro
+  de las cinco siluetas ya tienen el filo de color y en el nodo activo un borde
+  distinto no se distinguiría de su propio estado. El orden de tabulación es el
+  de declaración de los nodos, que va por niveles, así que **recorre el pipeline
+  en orden topológico** sin tener que ordenarlo, y Enter abre la ficha.
 - **La dispersión de las tres notas** sale en la ficha de cada validador. §5
   dice que es lo que hay que vigilar para saber si juzgar las tres dimensiones a
   la vez las estaba correlacionando, y hasta ahora no se medía en ningún sitio.

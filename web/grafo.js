@@ -14,8 +14,8 @@
 // de estos cinco numeros.
 const CAJA = { ancho: 122, alto: 46 };
 const SEPARACION_X = 164;   // entre centros de columna
-const SEPARACION_Y = 72;    // separacion minima garantizada entre centros de fila
-const CARRIL = 38;          // cuanto baja cada vuelta atras por debajo del grafo
+const SEPARACION_Y = 92;    // separacion minima garantizada entre centros de fila
+const CARRIL = 46;          // cuanto baja cada vuelta atras por debajo del grafo
 const SUELO = 12;           // aire entre la ultima caja y el primer carril
 const MARGEN = 30;          // aire alrededor del dibujo dentro del viewBox
 

@@ -741,10 +741,15 @@ body[data-sala="taller"] .mando {
   stroke-width: 2.5;
 }
 
-.grafo__svg .nodo:focus-visible { outline: none; }
-.grafo__svg .nodo:focus-visible .nodo__silueta {
-  stroke: var(--qa-naranja-tinta);
-  stroke-width: 3;
+/* El foco del teclado tiene que verse sobre las cinco siluetas, y cuatro de
+   ellas ya tienen el filo de color: por eso es un anillo por fuera y no un
+   cambio de borde, que en el nodo activo no se distinguiria de su propio estado.
+   El orden de tabulacion es el de declaracion de los nodos, que va por niveles,
+   asi que recorre el pipeline en orden topologico sin tener que ordenarlo. */
+.grafo__svg .nodo:focus-visible {
+  outline: 2px solid var(--qa-naranja-tinta);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
 /* Los mandos flotan sobre el lienzo: el grafo es lo que se mira, y la barra de
@@ -835,16 +840,17 @@ body[data-sala="taller"] .mando {
   color: var(--texto-tenue);
 }
 
-/* Leyenda discreta, abajo a la izquierda: tres formas y nada mas. Si hiciera
-   falta explicar mas cosas seria que el dibujo no se explica solo. */
+/* Leyenda discreta, abajo a la izquierda, en dos grupos: que es cada caja y en
+   que punto esta. Nada mas: si hiciera falta explicar una tercera cosa seria que
+   el dibujo no se explica solo. */
 .leyenda {
   position: absolute;
   left: var(--e3);
   bottom: var(--e3);
   z-index: 2;
   display: flex;
-  flex-direction: column;
-  gap: var(--e1);
+  gap: var(--e5);
+  flex-wrap: wrap;
   padding: var(--e2) var(--e3);
   background: color-mix(in srgb, var(--fondo) 82%, transparent);
   border: 1px solid var(--linea);
@@ -855,10 +861,18 @@ body[data-sala="taller"] .mando {
   pointer-events: none;
 }
 
+.leyenda__grupo { display: flex; flex-direction: column; gap: var(--e1); }
+
+.leyenda__titulo {
+  color: var(--texto);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
 .leyenda span { display: flex; align-items: center; gap: var(--e2); }
 
 .leyenda i {
-  width: 10px;
+  width: 12px;
   height: 10px;
   flex: 0 0 auto;
   background: var(--texto-tenue);
@@ -866,11 +880,40 @@ body[data-sala="taller"] .mando {
 
 .leyenda i[data-forma="agente"] { border-radius: 999px; }
 .leyenda i[data-forma="artefacto"] { border-radius: 2px; height: 8px; }
-.leyenda i[data-forma="decision"] { transform: rotate(45deg); background: var(--oro); }
+.leyenda i[data-forma="decision"] {
+  background: var(--oro);
+  clip-path: polygon(22% 0, 78% 0, 100% 50%, 78% 100%, 22% 100%, 0 50%);
+}
 .leyenda i[data-forma="realimenta"] {
   height: 0;
   border-top: 1px dashed var(--texto-tenue);
   background: none;
+}
+
+/* Los cinco estados con el mismo color y el mismo filo que en el grafo: si la
+   muestra no es el nodo, la leyenda explica otra cosa. */
+.leyenda i[data-estado] {
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid var(--linea);
+  background: var(--fondo);
+}
+.leyenda i[data-estado="pendiente"] { opacity: .58; }
+.leyenda i[data-estado="activo"] {
+  border-color: var(--qa-naranja);
+  background: color-mix(in srgb, var(--qa-naranja) 12%, var(--superficie-alta));
+}
+.leyenda i[data-estado="completado"] {
+  border-color: var(--ok);
+  background: var(--superficie-alta);
+}
+.leyenda i[data-estado="reintento"] {
+  border-color: var(--aviso-vivo);
+  background: color-mix(in srgb, var(--aviso-vivo) 16%, var(--superficie-alta));
+}
+.leyenda i[data-estado="bloqueado"] {
+  border-color: var(--fallo);
+  background: color-mix(in srgb, var(--fallo) 10%, var(--superficie-alta));
 }
 
 .grafo__aviso {
@@ -1042,4 +1085,17 @@ body[data-sala="taller"] .mando {
   #sala-arquitectura {
     padding: var(--barra-alto) var(--e3) var(--rail-alto);
   }
+
+  /* Los mandos se apilan y cada uno se lleva el ancho entero. Puestos en fila
+     el desplegable de capitulos empuja a la derecha y se sale de la caja, que
+     es la unica forma que tiene esta sala de generar scroll horizontal. */
+  .grafo__mandos { flex-direction: column; align-items: stretch; }
+  .grafo__fila { width: 100%; }
+  .grafo__mandos select { flex: 1 1 auto; min-width: 0; max-width: none; }
+  .replay__linea { flex: 1 1 8rem; width: auto; min-width: 0; }
+  .replay__play { min-width: 0; }
+
+  /* La leyenda sigue flotando sobre el grafo -en el flujo se iria debajo del
+     lienzo, que ocupa el alto entero- y se apila en una columna. */
+  .leyenda { flex-direction: column; gap: var(--e2); }
 }
