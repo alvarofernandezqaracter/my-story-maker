@@ -66,8 +66,9 @@ tres**. Cada uno arranca leyendo su fichero de `agentes/` y sus skills de
 fichero del subagente, que solo lleva nombre, descripción, herramientas y modelo.
 
 **El modelo de cada rol vive en el frontmatter de su subagente**, no en
-`config.json`. Esa clave existió mientras las llamadas las hacía código; ahora las
-hace Claude Code, que solo lee el frontmatter.
+`config.json`. Las llamadas las hace Claude Code y solo lee el frontmatter, así
+que un modelo escrito también en `config.json` sería un número que no gobierna
+nada.
 
 ## Las dos reglas que no se rompen
 
@@ -247,8 +248,6 @@ porque un hook que revienta ensucia la sesión del orquestador.
 
 # Estado actual y cosas abiertas
 
-- El harness de Python que hacía todo esto en código salió en 1.0.0. Queda
-  congelado en el tag `harness-python-final`, por si hay que volver a mirarlo.
 - El `.drawio` de [docs/diagrama/](docs/diagrama/) va por detrás del Mermaid: le
   falta el cronista y se regenera a mano. El Mermaid de §4 es el bueno.
 - Decisiones abiertas vivas en §15: DA-02, DA-03, DA-04, DA-05, DA-06, DA-07,

@@ -178,12 +178,3 @@ del gate, la API de la interfaz, el árbol de trazas reconstruido y el hook.
 
 **La orquestación en sí no tiene tests**, y no es un olvido: lo que hace es una
 conversación. Es el precio de este diseño y está escrito en §21 del spec.
-
-## Un apunte de historia
-
-Hasta la versión 0.14.0 este repositorio mantenía **dos implementaciones** del
-mismo sistema a propósito: la orquestación delegada que ves aquí y un harness de
-Python en `novela/flujo.py` que hacía lo mismo en código, para poder comparar las
-dos maneras de resolver el problema. La comparación se hizo. Mantener las dos
-obliga a implementar cada cambio dos veces, así que en 1.0.0 el harness salió del
-repositorio. Queda congelado en el tag `harness-python-final`.

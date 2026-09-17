@@ -1,9 +1,8 @@
 # El canon en ficheros
 
-En el camino de Python el canon es una base SQLite con siete tablas. Aqui no hay
-Python, asi que el canon son ficheros JSON bajo `novela-cc/canon/`. Cambia el
-soporte, no el papel: **sigue siendo la unica fuente de verdad del proyecto**, y
-sigue sin poder escribirlo nadie mas que el orquestador.
+El canon son ficheros JSON bajo `novela-cc/canon/`, uno por cada entidad de la
+seccion 3 del spec. **Es la unica fuente de verdad del proyecto** y no puede
+escribirlo nadie mas que tu.
 
 Todo va bajo `novela-cc/`, incluidos los borradores y los retoques. Es salida y
 no se versiona: lo que se versiona es lo que la produce.
