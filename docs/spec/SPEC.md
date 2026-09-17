@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.9.0
+version: 1.10.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -539,19 +539,7 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
-### [1.9.0] — 2026-09-17
-
-**Añadido**
-- §22. El informe cae al diario local del hook cuando Langfuse no contesta. Sale
-  todo menos el coste, que es lo único que el diario no sabe, y se declara en vez
-  de rellenarse con un cero. Motivo: Langfuse Cloud devolvió 504 en todas las
-  lecturas y el análisis de una novela ya escrita se quedaba sin informe por un
-  servicio de fuera.
-- §22. Las líneas repetidas del diario se descartan por su firma. El diario solo
-  añade, así que un evento entregado dos veces duplicaba todos los números; en la
-  primera pasada eran 83 líneas para 41 llamadas.
-
-### [1.9.0] — 2026-09-17
+### [1.10.0] — 2026-09-17
 
 **Añadido**
 - §19. La sala del brief vuelve a tener los cinco campos de §3 y gana un botón
@@ -566,6 +554,18 @@ repositorio, que es donde se mira si hace falta.
   nada, en una sola ruta y acotado a arrancar al orquestador. **La primera regla
   de §21 no se toca**: en el canon sigue escribiendo el orquestador y nadie más,
   y lo único que ha cambiado es quién le da al interruptor.
+
+### [1.9.0] — 2026-09-17
+
+**Añadido**
+- §22. El informe cae al diario local del hook cuando Langfuse no contesta. Sale
+  todo menos el coste, que es lo único que el diario no sabe, y se declara en vez
+  de rellenarse con un cero. Motivo: Langfuse Cloud devolvió 504 en todas las
+  lecturas y el análisis de una novela ya escrita se quedaba sin informe por un
+  servicio de fuera.
+- §22. Las líneas repetidas del diario se descartan por su firma. El diario solo
+  añade, así que un evento entregado dos veces duplicaba todos los números; en la
+  primera pasada eran 83 líneas para 41 llamadas.
 
 ### [1.8.0] — 2026-09-17
 
@@ -781,7 +781,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `f2a4294` | 2026-09-17 | feat(web): §19 replay del ultimo capitulo y modo en vivo sobre el grafo |
 | `8c2d8ce` | 2026-09-17 | feat(web): §19 leyenda de estados, foco de teclado y repaso a tres anchos |
 | `c6df332` | 2026-09-17 | docs(spec): 1.9.0, §22 el diario local como origen del informe |
-
+| `cc00489` | 2026-09-17 | docs(spec): §17 regenerada para 1.9.0 |
+| `c758826` | 2026-09-17 | feat(web): §19 el brief vuelve a ser formulario y arranca al orquestador |
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
 ```
