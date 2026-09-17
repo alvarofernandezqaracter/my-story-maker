@@ -7,6 +7,7 @@
 import { api } from './api.js';
 import { crearBrief } from './brief.js';
 import { crearTaller } from './taller.js';
+import { crearArquitectura } from './arquitectura.js';
 import { crearLectura } from './lectura.js';
 
 const $ = (id) => document.getElementById(id);
@@ -54,6 +55,7 @@ const ctx = {
 
 const brief = crearBrief(ctx);
 const taller = crearTaller(ctx);
+const arquitectura = crearArquitectura(ctx);
 const lectura = crearLectura(ctx);
 
 function comandoDe(proyecto) {
@@ -115,9 +117,12 @@ function ir(sala) {
   for (const boton of document.querySelectorAll('.sala')) {
     boton.setAttribute('aria-current', boton.dataset.sala === sala ? 'true' : 'false');
   }
-  for (const nombre of ['brief', 'taller', 'lectura']) {
+  for (const nombre of ['brief', 'taller', 'arquitectura', 'lectura']) {
     $(`sala-${nombre}`).hidden = nombre !== sala;
   }
+  // El grafo tiene su propio bucle de dibujo y se para cuando no se ve: una
+  // pestana oculta no tiene por que seguir gastando GPU.
+  arquitectura.mostrar(sala === 'arquitectura');
   if (sala !== 'lectura') {
     escena?.modoLectura(false, 0);
     document.body.dataset.inmersion = 'no';
@@ -227,6 +232,7 @@ async function refrescar() {
 
   brief.pintar(proyecto);
   taller.pintar(proyecto);
+  arquitectura.pintar(proyecto);
   pintarRail();
   previsualizar();
 

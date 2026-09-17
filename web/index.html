@@ -31,6 +31,7 @@
   <nav class="salas" aria-label="Secciones">
     <button type="button" class="sala" data-sala="brief" aria-current="true">Brief</button>
     <button type="button" class="sala" data-sala="taller">Escritorio</button>
+    <button type="button" class="sala" data-sala="arquitectura">Arquitectura</button>
     <button type="button" class="sala" data-sala="lectura" disabled>Lectura</button>
   </nav>
   <div class="barra__estado">
@@ -193,6 +194,35 @@
 
 </main>
 
+<!-- ====================================================== arquitectura -->
+
+<!-- El pipeline de §4, §7, §8 y §9 como grafo por capas. Es la unica sala que
+     tiene algo que decir con el canon vacio: ensena el sistema, no el libro. -->
+<main class="sala-panel" id="sala-arquitectura" hidden>
+  <div class="grafo">
+    <canvas id="lienzo-arquitectura"></canvas>
+
+    <div class="grafo__mandos">
+      <label for="recorrido">Recorrido</label>
+      <select id="recorrido"></select>
+      <p class="grafo__nota" id="grafo-nota"></p>
+    </div>
+
+    <div class="leyenda" aria-hidden="true">
+      <span><i data-forma="agente"></i>esfera — agente LLM</span>
+      <span><i data-forma="artefacto"></i>cilindro — artefacto o estado</span>
+      <span><i data-forma="decision"></i>rombo — decisión</span>
+      <span><i data-forma="realimenta"></i>discontinua — vuelta atrás del loop</span>
+    </div>
+
+    <p class="vacio grafo__aviso" id="grafo-aviso" hidden></p>
+  </div>
+
+  <!-- Misma ficha para los dieciocho nodos: descripción, entradas, salidas y
+       reglas. Comparar dos es leer el mismo sitio dos veces. -->
+  <aside class="ficha-nodo" id="ficha-nodo" aria-live="polite"></aside>
+</main>
+
 <!-- =========================================================== lectura -->
 <main class="sala-panel" id="sala-lectura" hidden>
   <div class="progreso" id="progreso" aria-hidden="true"></div>
@@ -204,6 +234,7 @@
       <p class="eyebrow" id="lector-eyebrow">Capítulo</p>
       <h1 id="lector-titulo">—</h1>
       <dl class="metadatos" id="metadatos"></dl>
+      <p class="pendientes" id="metadatos-pendientes" hidden></p>
       <div class="lector__notas" id="lector-notas"></div>
     </header>
     <div class="lector__texto" id="lector-texto"></div>
@@ -215,6 +246,7 @@
     <section>
       <h3>Ficha del capítulo</h3>
       <dl class="ficha-datos" id="ficha-datos"></dl>
+      <p class="pendientes" id="ficha-pendientes" hidden></p>
       <button class="enlace" type="button" id="ver-contexto">ver el paquete de contexto</button>
     </section>
 
