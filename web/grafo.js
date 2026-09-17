@@ -220,12 +220,22 @@ export async function crearGrafo(svg, { nodos, aristas, onSenalar, onElegir } = 
       'aria-label': nodo.nombre,
     });
     const forma = silueta(nodo.forma);
+    // La marca del nodo completado. Discreta y en el canto, porque lo que tiene
+    // que leerse de un vistazo es el color del borde y no un icono.
+    // La capsula del agente se come la esquina, asi que la marca se mete mas
+    // adentro en esa silueta que en las de canto recto.
+    const sangria = nodo.forma === 'agente' ? 30 : 23;
+    const marca = elemento('path', {
+      class: 'nodo__marca',
+      d: `M ${CAJA.ancho / 2 - sangria} ${-CAJA.alto / 2 + 15}`
+        + ` l 3.4 3.6 l 6.2 -7`,
+    });
     const etiqueta = elemento('text', { class: 'nodo__nombre' });
     // El contador de intentos cuelga por debajo de la caja y solo aparece cuando
     // hay algo que contar: un "0/3" permanente es ruido.
     const pie = elemento('text', { class: 'nodo__pie', y: CAJA.alto / 2 + 15 });
 
-    g.append(forma, etiqueta, pie);
+    g.append(forma, marca, etiqueta, pie);
     capaNodos.append(g);
     piezasNodo.set(nodo.id, { g, etiqueta, pie, nodo });
 
@@ -361,13 +371,37 @@ export async function crearGrafo(svg, { nodos, aristas, onSenalar, onElegir } = 
   reetiquetar();
   encuadrar();
 
+  // Los cinco estados en los que puede estar un nodo, y ninguno mas. Un nodo
+  // tiene exactamente uno: son excluyentes porque describen el mismo momento.
+  const ESTADOS = ['pendiente', 'activo', 'completado', 'reintento', 'bloqueado'];
+
+  // La superficie con la que se gobierna el grafo desde fuera. Deliberadamente
+  // tonta: el grafo no sabe de donde sale el dato -de un canon leido, de una
+  // ejecucion en curso o de un replay- y por eso puede servir a los tres.
+  function setNodeState(id, estado, pie = '') {
+    const pieza = piezasNodo.get(id);
+    if (!pieza) return;
+    if (!ESTADOS.includes(estado)) throw new Error('estado desconocido: ' + estado);
+    pieza.g.dataset.estado = estado;
+    pieza.pie.textContent = pie;
+  }
+
+  function setEdgeActive(id, activa) {
+    const pieza = piezasArista.get(id);
+    if (!pieza) return;
+    pieza.g.classList.toggle('arista--activa', Boolean(activa));
+    pieza.trazo.setAttribute('marker-end', activa ? 'url(#punta-viva)' : 'url(#punta)');
+  }
+
   return {
+    setNodeState,
+    setEdgeActive,
     // Un nodo se enciende cuando el canon dice que ya ha corrido: es el criterio
     // del rastro de §19 -no hay diario, hay lo que quedo escrito- aplicado al
     // dibujo en vez de a una tarjeta.
     refrescar(vivos) {
-      for (const [id, pieza] of piezasNodo) {
-        pieza.g.dataset.estado = vivos[id] ? 'completado' : 'pendiente';
+      for (const id of piezasNodo.keys()) {
+        setNodeState(id, vivos[id] ? 'completado' : 'pendiente');
       }
       reetiquetar();
     },

@@ -620,6 +620,85 @@ body[data-sala="taller"] .mando {
   opacity: .8;
 }
 
+/* ------------------------------------------------- los cinco estados de nodo */
+
+/* Un nodo esta en exactamente uno de estos cinco. La regla que los ordena es que
+   el color y el borde tienen que bastar: la animacion dice "esto esta pasando
+   ahora mismo", pero no es la que distingue un estado de otro. Por eso con
+   prefers-reduced-motion no se pierde informacion, solo urgencia.
+
+   Todos los pulsos son suaves -escala y halo, nunca encendido y apagado- y el
+   mas rapido va a 1,25 Hz, muy por debajo del limite de 3 Hz. */
+
+.nodo[data-estado="pendiente"] .nodo__silueta {
+  fill: var(--fondo);
+  stroke: var(--linea);
+}
+.nodo[data-estado="pendiente"] { opacity: .58; }
+
+.nodo[data-estado="activo"] .nodo__silueta {
+  fill: color-mix(in srgb, var(--qa-naranja) 12%, var(--superficie-alta));
+  stroke: var(--qa-naranja);
+  stroke-width: 2.2;
+  animation: pulso-nodo 1.2s ease-in-out infinite;
+}
+
+.nodo[data-estado="completado"] .nodo__silueta {
+  fill: var(--superficie-alta);
+  stroke: var(--ok);
+  stroke-width: 1.8;
+}
+.nodo[data-estado="completado"] .nodo__marca { opacity: 1; }
+
+.nodo[data-estado="reintento"] .nodo__silueta {
+  fill: color-mix(in srgb, var(--aviso-vivo) 16%, var(--superficie-alta));
+  stroke: var(--aviso-vivo);
+  stroke-width: 2.2;
+  animation: pulso-nodo .8s ease-in-out infinite;
+}
+.nodo[data-estado="reintento"] .nodo__pie { fill: var(--aviso); }
+
+/* El bloqueado no se mueve a proposito: es el unico estado del que no se sale
+   solo, y un pulso lo contaria como si algo siguiera corriendo. */
+.nodo[data-estado="bloqueado"] .nodo__silueta {
+  fill: color-mix(in srgb, var(--fallo) 10%, var(--superficie-alta));
+  stroke: var(--fallo);
+  stroke-width: 2;
+}
+.nodo[data-estado="bloqueado"] .nodo__pie { fill: var(--fallo); }
+
+/* La escala se aplica sobre la silueta y no sobre el grupo: el nombre no se
+   estira, que es lo que lo mantiene legible mientras late. */
+.nodo__silueta {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes pulso-nodo {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+  50% { transform: scale(1.04); filter: drop-shadow(0 0 5px currentColor); }
+}
+
+.nodo[data-estado="activo"] .nodo__silueta { color: var(--qa-naranja); }
+.nodo[data-estado="reintento"] .nodo__silueta { color: var(--aviso-vivo); }
+
+/* La marca del completado: una uve fina en el canto, oculta en los demas. */
+.nodo__marca {
+  fill: none;
+  stroke: var(--ok);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Sin animacion los cinco estados se siguen distinguiendo, que es justo lo que
+   pedia la regla de arriba: el color y el borde no dependian del pulso. */
+@media (prefers-reduced-motion: reduce) {
+  .nodo__silueta { animation: none !important; }
+}
+
 /* Lo que un capitulo no recorrio se apaga, no se esconde: lo que no se uso es
    parte de la respuesta. */
 .nodo--fuera .nodo__silueta,

@@ -33,6 +33,10 @@
   --ok: #1a7a57;
   --aviso: #8a5b00;
   --fallo: #b5283f;
+  /* El ambar de verdad, para lo que no es texto: un filo o un relleno solo tiene
+     que dar 3:1 contra lo que hay al lado, y el --aviso bajado a 4,5:1 se lee
+     marron. Nunca debajo de una letra. */
+  --aviso-vivo: #d18a0d;
 
   /* Escala de espaciado, 4/8/12/16/24/32. Ningun hueco de esta hoja ni de
      componentes.css se escribe fuera de ella: si un valor no esta aqui, es que

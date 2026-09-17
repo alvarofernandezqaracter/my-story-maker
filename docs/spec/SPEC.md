@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.4.0
+version: 1.5.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -529,6 +529,17 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.5.0] — 2026-09-17
+
+**Añadido**
+- §19. Los cinco estados de nodo del grafo —`pendiente`, `activo`,
+  `completado`, `reintento`, `bloqueado`— con la regla de que el color y el
+  borde bastan para distinguirlos y la animación solo dice que algo está
+  corriendo ahora. Con `prefers-reduced-motion` se apaga el pulso sin perder
+  ningún dato.
+- §19. Un ámbar propio para lo que no es texto. El de los avisos está bajado a
+  4,5:1 para poder leerse, y a ese valor se ve marrón en un filo.
+
 ### [1.4.0] — 2026-09-17
 
 **Cambiado**
@@ -873,6 +884,17 @@ DAG por capas y le pone el canon encima.
 - **Las vueltas atrás van aparte**, discontinuas y por un carril a la izquierda:
   los dos reintentos de §8 y el canon que alimenta el paquete del capítulo
   siguiente (§4) son la misma flecha, pero no el mismo viaje.
+- **Cinco estados de nodo, y un nodo está en exactamente uno.** `pendiente`,
+  `activo`, `completado`, `reintento` y `bloqueado`. La regla que los ordena es
+  que **el color y el borde tienen que bastar**: la animación dice «esto está
+  pasando ahora mismo», no distingue un estado de otro. De ahí sale gratis el
+  comportamiento con `prefers-reduced-motion`, donde se apaga el pulso y no se
+  pierde ni un dato. El `bloqueado` no se mueve aunque se pueda: es el único del
+  que no se sale solo, y un pulso lo contaría como si algo siguiera corriendo.
+- **Los pulsos son suaves y lentos**: escala y halo, nunca encendido y apagado.
+  El activo late a 0,83 Hz y el reintento a 1,25 Hz, los dos muy por debajo del
+  límite de 3 Hz que hace peligrosa una animación. La escala se aplica a la
+  silueta y no al grupo, para que el nombre no se estire mientras late.
 - **El recorrido de un capítulo.** Se elige uno y el grafo apaga lo que no
   recorrió y cuenta las veces que pasó por cada nodo. Aquí vuelve a mandar la
   regla de la casa: `/api/proyecto` da el número de intentos de todos los
