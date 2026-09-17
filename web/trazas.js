@@ -1,12 +1,12 @@
 // El panel de observabilidad (§20) en la página.
 //
-// Por el camino del harness no hay nada que pulsar: cada llamada a un agente ya
-// deja traza según ocurre, y este panel solo dice si la capa está viva y por qué
-// no lo está. Por el delegado no hay llamada que interceptar —orquesta otra
-// sesión— así que el árbol se reconstruye del canon y se manda desde aquí.
+// Quien orquesta es otra sesión, así que desde aquí no hay ninguna llamada que
+// interceptar: el árbol se reconstruye del canon y se manda con este botón. Lo
+// que sí lleva tokens, latencia y coste lo manda el hook en vivo (§22), y eso no
+// pasa por esta página.
 //
-// Ninguna de las dos cosas es fuente de verdad: si Langfuse no responde, la
-// novela se escribe igual. Por eso un fallo aquí se cuenta y no interrumpe nada.
+// Nada de esto es fuente de verdad: si Langfuse no responde, la novela se
+// escribe igual. Por eso un fallo aquí se cuenta y no interrumpe nada.
 
 const $ = (id) => document.getElementById(id);
 
@@ -45,7 +45,7 @@ export function crearTrazas(ctx) {
     if (pidiendo) return;
     pidiendo = true;
     try {
-      datos = await ctx.api.trazas(ctx.camino);
+      datos = await ctx.api.trazas();
     } catch (error) {
       datos = { activas: false, lista: false, motivo: error.message, plan: null };
     } finally {
@@ -59,7 +59,7 @@ export function crearTrazas(ctx) {
     const antes = boton.textContent;
     boton.textContent = 'enviando…';
     try {
-      const resultado = await ctx.api.exportarTrazas(ctx.camino);
+      const resultado = await ctx.api.exportarTrazas();
       pista.textContent = resultado.enviado
         ? `${resultado.trazas} trazas enviadas a la sesión ${resultado.sesion}.`
           + ' Son reconstruidas: llevan la etiqueta «reconstruido» y no traen'
@@ -76,7 +76,6 @@ export function crearTrazas(ctx) {
 
   function pintarDatos() {
     if (!datos) return;
-    const delegado = datos.camino === 'delegado';
     estadoChip.textContent = datos.lista ? 'lista' : 'apagada';
     estadoChip.dataset.estado = datos.lista ? 'aprobado' : 'pendiente';
 
@@ -90,26 +89,17 @@ export function crearTrazas(ctx) {
       }
     }
 
-    if (!delegado) {
-      boton.hidden = true;
-      pista.textContent = datos.lista
-        ? `El harness traza mientras corre: cada llamada a un agente sale sola hacia`
-          + ` Langfuse, entorno «${datos.entorno}». Aquí no hay nada que pulsar.`
-        : `Las trazas están apagadas: ${datos.motivo}. La novela se escribe igual.`;
-      return;
-    }
-
     boton.hidden = false;
     boton.disabled = !datos.lista || !datos.plan;
     if (!datos.lista) {
       pista.textContent = `No se puede mandar nada: ${datos.motivo}.`
         + ' Las credenciales van en el .env de la raíz, que no se versiona.';
     } else if (!datos.plan) {
-      pista.textContent = 'sin datos todavía: no hay canon delegado que reconstruir.';
+      pista.textContent = 'sin datos todavía: no hay canon que reconstruir.';
     } else if (!pista.textContent || pista.dataset.inicial === 'si') {
-      pista.textContent = 'Este camino no pasa por la capa de agentes, así que no hay'
-        + ' llamada que interceptar: el árbol de §20 se reconstruye del canon que dejó'
-        + ' el orquestador y se manda marcado como reconstruido.';
+      pista.textContent = 'Desde aquí no hay llamada que interceptar: el árbol de §20'
+        + ' se reconstruye del canon que dejó el orquestador y se manda marcado como'
+        + ` reconstruido, al entorno «${datos.entorno}».`;
     }
     delete pista.dataset.inicial;
 
@@ -126,7 +116,7 @@ export function crearTrazas(ctx) {
       panel.hidden = false;
       // Se pregunta cuando cambia lo que importa, no en cada vuelta del
       // refresco: el estado de la capa no cambia solo y el plan depende del canon.
-      const huella = [proyecto.camino, proyecto.estado,
+      const huella = [proyecto.estado,
         proyecto.capitulos.length, proyecto.actualizado].join('|');
       if (panel.dataset.huella === huella) return;
       panel.dataset.huella = huella;

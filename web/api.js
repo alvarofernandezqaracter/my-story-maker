@@ -1,9 +1,9 @@
 // Capa fina sobre la API de §19. Aqui no hay reglas del sistema: solo fetch,
 // JSON y un error con su codigo para que quien llame decida.
 //
-// Lo unico que anade es el camino (§1): todas las lecturas llevan pegado por
-// cual de los dos canones se pregunta, y la primera va sin el a proposito para
-// que conteste el perfil (§12).
+// Todas las rutas son lecturas menos una. En este canon escribe la sesion de
+// Claude Code que orquesta (§21), asi que la pagina no tiene con que escribir:
+// `exportarTrazas` no toca el canon, manda a Langfuse lo que el canon ya dice.
 
 class ErrorApi extends Error {
   constructor(codigo, mensaje) {
@@ -26,25 +26,16 @@ async function pedir(camino, opciones = {}) {
   return datos;
 }
 
-const enviar = (camino, cuerpo) => pedir(camino, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: cuerpo === undefined ? '' : JSON.stringify(cuerpo),
-});
-
-// `via` a null significa "el que diga el perfil": es como arranca la pagina.
-const con = (ruta, via) => (via ? `${ruta}${ruta.includes('?') ? '&' : '?'}camino=${via}` : ruta);
-
 export const api = {
-  proyecto: (via) => pedir(con('/api/proyecto', via)),
-  guardarBrief: (brief, via) => enviar(con('/api/brief', via), brief),
-  flujo: (desde = 0, via) => pedir(con(`/api/flujo?desde=${desde}`, via)),
-  arrancar: (accion, perfil, via) => enviar(con('/api/flujo', via), { accion, perfil }),
-  capitulo: (numero, via) => pedir(con(`/api/capitulo/${numero}`, via)),
-  contexto: (numero, via) => pedir(con(`/api/contexto/${numero}`, via)),
-  desbloquear: (datos, via) => enviar(con('/api/desbloquear', via), datos),
-  trazas: (via) => pedir(con('/api/trazas', via)),
-  exportarTrazas: (via) => enviar(con('/api/trazas', via)),
+  proyecto: () => pedir('/api/proyecto'),
+  capitulo: (numero) => pedir(`/api/capitulo/${numero}`),
+  contexto: (numero) => pedir(`/api/contexto/${numero}`),
+  trazas: () => pedir('/api/trazas'),
+  exportarTrazas: () => pedir('/api/trazas', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '',
+  }),
 };
 
 export { ErrorApi };

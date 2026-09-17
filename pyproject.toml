@@ -1,20 +1,18 @@
 [project]
 name = "my-story-maker"
-version = "0.14.0"
-description = "Sistema multiagente de novelas historicas"
+version = "1.0.0"
+description = "Sistema multiagente de novelas historicas orquestado por Claude Code"
 requires-python = ">=3.11"
 
-# El modo simulado, que es el de por defecto, no necesita instalar nada: todo
-# sale de la biblioteca estandar (sqlite3, unittest, pathlib). Las dos unicas
-# dependencias son opcionales: el SDK oficial en modo real (§12) y el de
-# Langfuse si se quieren trazas (§20). Sin ninguna de las dos, el repo recien
-# clonado escribe una novela entera.
+# La novela la escribe una sesion de Claude Code (§21), no este paquete. Lo que
+# hay aqui es lo que rodea a esa conversacion: leer el canon en ficheros, servir
+# la interfaz y trazar. Nada de eso necesita instalar dependencias; todo sale de
+# la biblioteca estandar.
 dependencies = []
 
 [project.optional-dependencies]
-real = ["anthropic>=1.6,<2"]
-# Las trazas de §20 tampoco son obligatorias: sin este paquete el harness corre
-# igual y la capa de trazas se queda muda.
+# Las trazas de §20 no son obligatorias: sin este paquete todo corre igual y la
+# capa de trazas se queda muda. Ningun fallo de observabilidad para una novela.
 trazas = ["langfuse>=4.15,<5"]
 
 [project.scripts]

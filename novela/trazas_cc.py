@@ -25,7 +25,7 @@ from pathlib import Path
 
 from .canon_cc import CanonCC, DIMENSIONES, auditar_gate, notas_en_lista
 from .entorno import cargar_entorno
-from .trazas import CLAVES, Trazas, sesion_de
+from .trazas import CLAVES, id_de_traza, sesion_de, Trazas
 
 # Un retoque del editor global es un encabezado `### RET-xx` de retoques.md
 # (§11). Contarlos por el fichero y no por el canon es deliberado: el canon
@@ -35,15 +35,25 @@ RETOQUE = re.compile(r'^###\s+RET-', re.MULTILINE)
 ETIQUETAS = ('delegado', 'reconstruido')
 
 
-def _config_de_trazas(config):
-    """El perfil que ve la capa de §20 cuando traza este camino.
+def traza_de(sesion, tramo):
+    """El id de la traza de un tramo de esta novela (§21).
 
-    `ejecucion.modo` no existe aqui -es del harness (§12)-, asi que se sustituye
-    por `delegado`, que es lo que acaba de etiqueta en Langfuse y lo que separa
-    las trazas de los dos caminos sin tocar nada mas.
+    Lo comparte con el hook de `trazas_hook.py`, y esa es toda la gracia: lo que
+    se observo en vivo y lo que se reconstruye despues del canon acaban en la
+    misma traza del capitulo en vez de en dos paralelas que nadie sabe
+    juntar. Cada fuente se distingue por su etiqueta.
     """
-    return {'trazas': (config or {}).get('trazas') or {},
-            'ejecucion': {'modo': 'delegado'}}
+    return id_de_traza('{}|{}'.format(sesion or 'sin-sesion', tramo))
+
+
+def _config_de_trazas(config):
+    """El perfil que ve la capa de §20, que es solo el bloque de trazas.
+
+    Sigue existiendo como funcion, y no como acceso directo al bloque, porque es
+    el unico sitio por el que pasan los tres que trazan -la reconstruccion, el
+    hook y el informe- y conviene que sigan compartiendolo.
+    """
+    return {'trazas': (config or {}).get('trazas') or {}}
 
 
 def _meta(**extra):
@@ -116,7 +126,8 @@ def _preparar(trazas, canon, sesion):
 
     verificados = sum(1 for d in datos if d.get('estado') == 'verificado')
     with trazas.traza('preparar-novela', entrada=canon.brief(), sesion=sesion,
-                      etiquetas=ETIQUETAS, metadata=_meta()) as traza:
+                      etiquetas=ETIQUETAS, metadata=_meta(),
+                      trace_id=traza_de(sesion, 'preparar')) as traza:
         with trazas.paso('investigador', tipo='agent', entrada=canon.brief(),
                          metadata=_meta(datos=len(datos))) as paso:
             paso.actualizar(output={'datos': len(datos), 'verificados': verificados,
@@ -147,6 +158,7 @@ def _capitulo(trazas, canon, config, ficha, sesion, modelo=None):
                  'objetivo': ficha.get('objetivo')},
         sesion=sesion, etiquetas=ETIQUETAS,
         metadata=_meta(capitulo=numero, acto=ficha.get('acto')),
+        trace_id=traza_de(sesion, 'cap-{:02d}'.format(numero)),
     ) as traza:
         # El paquete de §7 es un retriever: lee el canon y no cambia nada.
         with trazas.paso('reunir-contexto', tipo='retriever',
@@ -249,7 +261,7 @@ def _cerrar(trazas, canon, sesion, modelo=None):
         return 0
     total = len(RETOQUE.findall(texto))
     with trazas.traza('cerrar-novela', sesion=sesion, etiquetas=ETIQUETAS,
-                      metadata=_meta()) as traza:
+                      metadata=_meta(), trace_id=traza_de(sesion, 'cerrar')) as traza:
         with trazas.paso('editor_global', tipo='agent',
                          entrada={'capitulos': len(canon.resumenes())},
                          metadata=_meta(retoques=total), modelo=modelo) as paso:

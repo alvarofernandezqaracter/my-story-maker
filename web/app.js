@@ -1,8 +1,9 @@
 // El orquestador de la interfaz (§19): guarda el estado que llega del servidor,
 // lo reparte a las tres salas y decide cada cuánto vuelve a preguntar.
 //
-// Ninguna regla del sistema vive aquí. Lo que se ve es lo que el canon dice, y
-// el canon es uno de los dos de §1 según el camino elegido.
+// Ninguna regla del sistema vive aquí. Lo que se ve es lo que el canon de
+// novela-cc/ dice, y esta página no escribe en él: lo escribe la sesión de
+// Claude Code que orquesta (§21).
 import { api } from './api.js';
 import { crearBrief } from './brief.js';
 import { crearTaller } from './taller.js';
@@ -10,49 +11,28 @@ import { crearLectura } from './lectura.js';
 
 const $ = (id) => document.getElementById(id);
 
-// El comando que toca según por dónde vaya el proyecto. Cada camino tiene el
-// suyo porque son dos orquestadores distintos: uno es Python y el otro es una
-// sesión de Claude Code leyendo la skill.
+// Lo que toca hacer según por dónde vaya el proyecto. Siempre es un comando que
+// se teclea en otro sitio: quien orquesta es una sesión de Claude Code leyendo
+// la skill, y esta página no tiene ningún botón que lo haga por ella.
 const COMANDO = {
-  harness: {
-    borrador: 'python -m novela preparar',
-    investigado: 'python -m novela preparar',
-    estructurado: 'python -m novela escribir',
-    escribiendo: 'python -m novela escribir',
-    escrito: 'python -m novela cerrar',
-    editado: 'python -m novela estado',
-    bloqueado: 'python -m novela desbloquear --capitulo N',
-  },
-  delegado: {
-    borrador: '/orquestar-novela preparar',
-    investigado: '/orquestar-novela preparar',
-    estructurado: '/orquestar-novela escribir',
-    escribiendo: '/orquestar-novela continuar',
-    escrito: '/orquestar-novela cerrar',
-    editado: '/orquestar-novela',
-    bloqueado: '/orquestar-novela desbloquear el capítulo N',
-  },
+  borrador: '/orquestar-novela preparar',
+  investigado: '/orquestar-novela preparar',
+  estructurado: '/orquestar-novela escribir',
+  escribiendo: '/orquestar-novela continuar',
+  escrito: '/orquestar-novela cerrar',
+  editado: '/orquestar-novela',
+  bloqueado: '/orquestar-novela desbloquear el capítulo N',
 };
 
-// El camino delegado no tiene motor que escuchar: el canon cambia cuando la
-// sesión de Claude Code escribe un fichero, y eso se ve releyendo el disco.
-const RITMO_VIVO = 900;
+// No hay motor que escuchar: el canon cambia cuando la sesión de Claude Code
+// escribe un fichero, y eso solo se ve releyendo el disco.
+const RITMO_TRABAJANDO = 2500;
 const RITMO_QUIETO = 4000;
-const RITMO_DELEGADO = 2500;
-
-const FLUJO_VACIO = {
-  corriendo: false, diario: [], total: 0, error: null, detalles: [], sin_motor: true,
-};
 
 const estado = {
-  // null hasta la primera respuesta: la primera pregunta va sin camino para
-  // que conteste `interfaz.camino` del perfil (§12).
-  camino: null,
   proyecto: null,
-  flujo: { ...FLUJO_VACIO },
   sala: 'brief',
   capitulo: null,
-  vistos: 0,
 };
 
 let escena = null;
@@ -62,7 +42,6 @@ const ctx = {
   api,
   estado,
   get escena() { return escena; },
-  get camino() { return estado.camino; },
   refrescar,
   ir,
   abrirLectura,
@@ -71,7 +50,6 @@ const ctx = {
   previsualizar,
   verContexto,
   comandoDe,
-  perfilElegido: () => brief.perfil(),
 };
 
 const brief = crearBrief(ctx);
@@ -79,9 +57,7 @@ const taller = crearTaller(ctx);
 const lectura = crearLectura(ctx);
 
 function comandoDe(proyecto) {
-  const tabla = COMANDO[estado.camino] || COMANDO.harness;
-  return tabla[proyecto?.estado] || (estado.camino === 'delegado'
-    ? '/orquestar-novela' : 'python -m novela estado');
+  return COMANDO[proyecto?.estado] || '/orquestar-novela';
 }
 
 // ------------------------------------------------------------------ escena
@@ -175,33 +151,6 @@ function inmersion() {
   $('inmersion').textContent = dentro ? 'inmersión' : 'salir';
 }
 
-// ------------------------------------------------------------------ camino
-
-// Cambiar de camino es cambiar de canon, no de vista: se tira todo lo que había
-// en pantalla y se vuelve a preguntar. Mezclar los dos sería lo peor que podría
-// hacer esta página, porque los dos hablan de la misma novela.
-function cambiarCamino(camino) {
-  if (camino === estado.camino) return;
-  estado.camino = camino;
-  estado.proyecto = null;
-  estado.flujo = { ...FLUJO_VACIO };
-  estado.capitulo = null;
-  estado.vistos = 0;
-  document.body.dataset.camino = camino;
-  pintarConmutador();
-  refrescar();
-}
-
-function pintarConmutador() {
-  for (const boton of $('conmutador-camino').children) {
-    boton.setAttribute('aria-current', boton.dataset.camino === estado.camino ? 'true' : 'false');
-  }
-}
-
-for (const boton of $('conmutador-camino').children) {
-  boton.addEventListener('click', () => cambiarCamino(boton.dataset.camino));
-}
-
 // -------------------------------------------------- paquete de contexto (§7)
 
 const cajon = $('cajon-contexto');
@@ -212,13 +161,10 @@ async function verContexto(numero) {
   $('cajon-pista').textContent = '';
   if (!cajon.open) cajon.showModal();
   try {
-    const paquete = await api.contexto(numero, estado.camino);
+    const paquete = await api.contexto(numero);
     $('cajon-texto').textContent = paquete.texto;
-    $('cajon-pista').textContent = paquete.origen === 'guardado'
-      ? `${paquete.ruta} — es el paquete con el que se escribió, tal cual quedó en disco.`
-      : 'Regenerado ahora con el canon de este momento: no es exactamente el que vio'
-        + ` el escritor. ${paquete.tokens} tokens estimados`
-        + `${paquete.recortes.length ? `, recortado: ${paquete.recortes.join(', ')}` : ''}.`;
+    $('cajon-pista').textContent =
+      `${paquete.ruta} — es el paquete con el que se escribió, tal cual quedó en disco.`;
   } catch (error) {
     $('cajon-texto').textContent = error.message;
   }
@@ -234,9 +180,6 @@ function pintarRail() {
   const pastilla = $('pastilla-estado');
   pastilla.textContent = p?.estado || 'sin brief';
   pastilla.dataset.estado = p?.estado || '';
-  $('dato-modo').textContent = p?.camino === 'delegado'
-    ? 'orquesta Claude Code' : `modo ${p?.modo || '—'}`;
-  $('dato-perfil').textContent = `perfil ${estado.flujo?.perfil || p?.perfil || '—'}`;
   $('barra-run').textContent = p?.canon || 'sin canon';
   $('siguiente-comando').textContent = comandoDe(p);
 
@@ -275,31 +218,15 @@ $('copiar').addEventListener('click', async () => {
 async function refrescar() {
   let proyecto;
   try {
-    proyecto = await api.proyecto(estado.camino);
+    proyecto = await api.proyecto();
   } catch {
     programar();
     return;
   }
   estado.proyecto = proyecto;
-  // La primera respuesta es la que dice por qué camino se abrió.
-  if (estado.camino !== proyecto.camino) {
-    estado.camino = proyecto.camino;
-    document.body.dataset.camino = proyecto.camino;
-    pintarConmutador();
-  }
-
-  try {
-    const flujo = await api.flujo(estado.vistos, estado.camino);
-    estado.vistos = flujo.total;
-    estado.flujo = flujo;
-    taller.pintarDiario(flujo);
-    taller.pintarAhora(flujo);
-  } catch {
-    // Sin motor no hay diario, pero el resto de la página sigue viva.
-  }
 
   brief.pintar(proyecto);
-  taller.pintar(proyecto, estado.flujo);
+  taller.pintar(proyecto);
   pintarRail();
   previsualizar();
 
@@ -311,13 +238,10 @@ async function refrescar() {
 
 function programar() {
   clearTimeout(temporizador);
-  let ritmo = estado.flujo.corriendo ? RITMO_VIVO : RITMO_QUIETO;
-  // Por el camino delegado el canon cambia sin avisar, porque lo escribe otra
-  // sesión: se relee a ritmo fijo mientras la novela no esté cerrada.
-  if (estado.camino === 'delegado') {
-    ritmo = ['editado', null, undefined].includes(estado.proyecto?.estado)
-      ? RITMO_QUIETO : RITMO_DELEGADO;
-  }
+  // El canon cambia sin avisar, porque lo escribe otra sesión: se relee a ritmo
+  // fijo mientras la novela no esté cerrada, y más despacio cuando ya lo está.
+  const ritmo = ['editado', null, undefined].includes(estado.proyecto?.estado)
+    ? RITMO_QUIETO : RITMO_TRABAJANDO;
   temporizador = setTimeout(() => { if (!document.hidden) refrescar(); else programar(); }, ritmo);
 }
 

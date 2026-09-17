@@ -27,6 +27,18 @@ CREDENCIALES = re.compile(
 
 TAPADO = '[CREDENCIAL_OCULTA]'
 
+# Nombre de la generacion de cada rol (§20). Verbo delante y sin el numero de
+# capitulo dentro: el nombre identifica la operacion, no una ejecucion suya, y
+# si lleva el numero deja de poder agruparse.
+GENERACIONES = {
+    'investigador': 'investigar-epoca',
+    'arquitecto': 'disenar-escaleta',
+    'escritor': 'redactar-capitulo',
+    'validador': 'revisar-capitulo',
+    'cronista': 'resumir-capitulo',
+    'editor_global': 'proponer-retoques',
+}
+
 
 def enmascarar(*, data, **_):
     """Mask de Langfuse: corre sobre cada entrada y salida antes de salir."""
@@ -44,6 +56,55 @@ def enmascarar(*, data, **_):
         return json.loads(limpio)
     except ValueError:
         return limpio
+
+
+def reparto_de_tokens(bruto):
+    """Traduce el gasto de una llamada al reparto que espera Langfuse (§20).
+
+    Las cubetas no se solapan: `input_tokens` de Anthropic ya viene sin lo que
+    se leyo o se escribio en cache, asi que cada token cae en una sola clave y
+    el coste no se cuenta dos veces. Lo que no venga, no se inventa.
+
+    Vive aqui y no en la capa de agentes porque tiene dos clientes: la llamada
+    del harness (§5) y el hook del camino delegado (§21), que recibe el mismo
+    reparto del tool `Agent`.
+    """
+    if not bruto:
+        return None
+    if isinstance(bruto, dict):
+        def leer(campo):
+            return bruto.get(campo)
+    else:
+        def leer(campo):
+            return getattr(bruto, campo, None)
+
+    reparto = {}
+    for clave in ('input_tokens', 'output_tokens',
+                  'cache_read_input_tokens', 'cache_creation_input_tokens'):
+        valor = leer(clave)
+        if isinstance(valor, int) and not isinstance(valor, bool) and valor > 0:
+            # Langfuse llama input y output a lo que el SDK llama *_tokens.
+            reparto[{'input_tokens': 'input',
+                     'output_tokens': 'output'}.get(clave, clave)] = valor
+    return reparto or None
+
+
+def id_de_traza(semilla):
+    """Id de traza deterministo a partir de una semilla (§21).
+
+    El harness abre la traza y la cierra en el mismo proceso, asi que nunca
+    necesito esto. El camino delegado no: cada llamada a un subagente la observa
+    un proceso distinto -el hook- y la reconstruccion desde el canon llega mucho
+    despues. Sembrando el id con "sesion|tramo", todos ellos escriben en la
+    misma traza sin tener que pasarse nada.
+    """
+    if not semilla:
+        return None
+    try:
+        from langfuse import Langfuse
+        return Langfuse.create_trace_id(seed=semilla)
+    except Exception:
+        return None
 
 
 def sesion_de(proyecto):
@@ -123,7 +184,11 @@ class Trazas:
     def __init__(self, config, aviso=None):
         bloque = (config or {}).get('trazas') or {}
         self.entorno = bloque.get('entorno') or 'desarrollo'
-        self.modo = ((config or {}).get('ejecucion') or {}).get('modo') or 'simulado'
+        # La etiqueta que lleva toda traza de este repositorio. Hubo un tiempo
+        # en que distinguia el modo de ejecucion del harness; ahora solo hay un
+        # camino y se deja fija, porque en Langfuse conviven proyectos y esto es
+        # lo que separa los de aqui de los de cualquier otro.
+        self.modo = 'delegado'
         self.aviso = aviso
         self._cliente = None
         self._roto = False
@@ -168,6 +233,16 @@ class Trazas:
     def activa(self):
         return self._cliente is not None and not self._roto
 
+    @property
+    def api(self):
+        """El cliente REST de Langfuse, para leer de vuelta lo que se mando.
+
+        Sigue siendo esta la unica capa que sabe que Langfuse existe: quien
+        quiere leer pide el cliente aqui en vez de construirse el suyo con la
+        credencial por su cuenta.
+        """
+        return getattr(self._cliente, 'api', None) if self._cliente else None
+
     def averiado(self, error):
         """Un fallo de observabilidad no para la novela: se apaga y se cuenta.
 
@@ -185,11 +260,17 @@ class Trazas:
     # ---- observaciones
 
     @contextmanager
-    def traza(self, nombre, entrada=None, sesion=None, etiquetas=None, metadata=None):
+    def traza(self, nombre, entrada=None, sesion=None, etiquetas=None, metadata=None,
+              tipo='span', trace_id=None, nombre_traza=None):
         """Una traza: una unidad de trabajo cerrada (§20).
 
         Son tres en este sistema -preparar, un capitulo y cerrar- y la sesion
         es lo que las junta en un libro.
+
+        `trace_id` la fija desde fuera, para los escritores de §21 que no
+        comparten proceso; `nombre_traza` mantiene el nombre estable aunque la
+        raiz la abra uno u otro, y `tipo` permite que la observacion de mas
+        arriba no sea un `span` cuando quien escribe es un solo agente.
         """
         if not self.activa:
             yield MUDA
@@ -206,9 +287,13 @@ class Trazas:
                 tags=list(etiquetas or []) + [self.modo],
                 version=__version__,
                 metadata=metadata or None,
+                trace_name=nombre_traza or nombre,
             ))
-            obs = pila.enter_context(self._cliente.start_as_current_observation(
-                as_type='span', name=nombre, input=entrada))
+            campos = {'as_type': tipo, 'name': nombre, 'input': entrada}
+            if trace_id:
+                campos['trace_context'] = {'trace_id': trace_id}
+            obs = pila.enter_context(
+                self._cliente.start_as_current_observation(**campos))
         except Exception as e:
             pila.close()
             self.averiado(e)

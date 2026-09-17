@@ -3,15 +3,19 @@ __pycache__/
 .venv/
 .env
 config.real.json
+
+# El canon de una novela no se versiona: lo escribe el orquestador y es salida,
+# no fuente. Vive entero bajo novela-cc/, incluidos los borradores y retoques.
+novela-cc/
+
+# Salida de pasadas viejas.
+*.viejo.md
+
+# Restos del harness de Python que se retiro en 1.0.0. Siguen en disco de quien
+# lo uso y no se versionan: no son fuente de nada.
 canon.db
 canon.db-journal
 canon.db-wal
 canon.db-shm
-capitulos/*.md
-retoques.md
-novela-cc/
-
-# Salida de pasadas viejas, no se versiona (igual que canon.db y capitulos/)
-*.viejo.db
-*.viejo.md
-capitulos.viejo/
+/capitulos/
+/retoques.md

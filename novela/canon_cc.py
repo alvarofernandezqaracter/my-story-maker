@@ -10,8 +10,18 @@
 import json
 from pathlib import Path
 
-from .gate import media as promedio
 from .util import redondear
+
+
+def promedio(valores):
+    """La media de la formula de §8. Vivia en el gate del harness y se queda
+    aqui porque es la unica cuenta que sobrevivio de aquel modulo: auditar la
+    suma que hizo el orquestador (§21) es lo unico que se calcula de este lado.
+    """
+    if not valores:
+        return 0
+    return sum(valores) / len(valores)
+
 
 RAIZ = 'novela-cc'
 

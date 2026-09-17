@@ -62,7 +62,7 @@ body::after {
 
 /* Fichas de archivo: fibra de papel, filo superior entintado y la esquina
    doblada de quien las ha manejado mucho. */
-.panel, .papeleta, .mando, .ejecucion, .diario {
+.panel, .papeleta, .mando, .ejecucion {
   background-image: var(--verjura);
 }
 
@@ -87,41 +87,10 @@ body::after {
 
 .panel--hueco { border-style: dashed; }
 
-/* --------------------------------------------------- conmutador de camino */
+/* ------------------------------------------------------------- la consola */
 
-/* Los dos caminos de §1. No es una preferencia de vista: es de qué canon se
-   está hablando, y por eso se ve siempre y no se esconde en un menú. */
-.conmutador {
-  display: flex;
-  border: 1px solid var(--linea);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.conmutador button {
-  padding: .22rem .55rem;
-  background: none;
-  border: 0;
-  color: var(--texto-tenue);
-  font-family: var(--dato);
-  font-size: .66rem;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.conmutador button + button { border-left: 1px solid var(--linea); }
-.conmutador button:hover { color: var(--texto); }
-
-.conmutador button[aria-current="true"] {
-  background: color-mix(in srgb, var(--qa-naranja) 16%, transparent);
-  color: var(--qa-naranja);
-}
-
-/* ------------------------------------------------ la consola del delegado */
-
-/* Por el camino delegado esta página no lanza nada: da el comando exacto y se
-   aparta. Tiene forma de papeleta pegada al borde de la mesa. */
+/* Esta página no lanza nada: da el comando exacto y se aparta. Tiene forma de
+   papeleta pegada al borde de la mesa. */
 .consola {
   display: flex;
   flex-direction: column;
@@ -153,7 +122,7 @@ body::after {
 /* ------------------------------------------------------------- subagentes */
 
 /* Los tres validadores van atados por una llave, porque se lanzan en un mismo
-   mensaje y no se ven entre sí (§21). La llave es la forma del camino. */
+   mensaje y no se ven entre sí (§21). La llave es la forma del sistema. */
 .agente[data-paralelo="si"] {
   border-left: 2px solid color-mix(in srgb, var(--oro) 55%, transparent);
 }

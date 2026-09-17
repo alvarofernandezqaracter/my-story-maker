@@ -1,14 +1,13 @@
-// Sala del escritorio: ver trabajar a los agentes y ver lo que dejan escrito.
+// Sala del escritorio: ver lo que los subagentes han dejado escrito.
 //
-// Las tarjetas son el estado del canon. Por el camino del harness el relato es
-// el diario que imprime la CLI, evento a evento; por el delegado no hay diario
-// que servir —el relato está en la conversación de Claude Code— y lo que cuenta
-// lo que ha pasado son los ficheros del canon.
+// Las tarjetas son el estado del canon. No hay relato evento a evento porque no
+// hay motor que lo emita: lo que ha pasado esta en la conversacion de Claude
+// Code, y lo que queda de ello son los ficheros del canon. Esta pagina lee esos
+// ficheros y no inventa nada que no este en ellos.
 import { crearTrazas } from './trazas.js';
 
 // Los ocho subagentes de §21: los seis roles de §5 con el validador partido en
-// tres. Por el camino del harness los tres validadores son el mismo rol, así que
-// se colapsan en uno y la pista de abajo lo dice.
+// tres, porque los tres se lanzan a la vez y en un mismo mensaje.
 const SUBAGENTES = [
   { id: 'investigador', rol: 'investigador', nombre: 'investigador' },
   { id: 'arquitecto', rol: 'arquitecto', nombre: 'arquitecto' },
@@ -19,15 +18,6 @@ const SUBAGENTES = [
   { id: 'cronista', rol: 'cronista', nombre: 'cronista' },
   { id: 'editor_global', rol: 'editor_global', nombre: 'editor global' },
 ];
-
-const NOMBRE_ROL = {
-  investigador: 'investigador',
-  arquitecto: 'arquitecto',
-  escritor: 'escritor',
-  validador: 'validador',
-  cronista: 'cronista',
-  editor_global: 'editor',
-};
 
 const QUE_HACE = {
   investigador: 'levantando el dossier de la época',
@@ -65,16 +55,15 @@ const QUE_TOCA = {
 
 // Lo que esta página pediría y el canon no guarda (§19). Se enseña el hueco en
 // vez de rellenarlo: un número inventado esconde dónde falta modelo de datos.
+// Lo que esta página pediría y el canon no guarda (§19). Se enseña el hueco en
+// vez de rellenarlo: un número inventado esconde dónde falta modelo de datos.
 const HUECOS = [
   ['cuota del día', 'no hay contabilidad de llamadas ni límite configurado en ningún sitio'],
   ['escenas', 'la unidad de escritura es el capítulo entero mientras DA-09 siga abierta'],
   ['focalizador', 'la ficha de capítulo de §3 no guarda punto de vista'],
   ['gancho final', 'tampoco lo guarda: se lee en el texto y no está como dato'],
-];
-
-const HUECOS_DELEGADO = [
   ['coste y tokens', 'el canon en ficheros no guarda lo que costó cada llamada; las trazas'
-    + ' reconstruidas tampoco lo inventan'],
+    + ' reconstruidas tampoco lo inventan, y las del hook viven en Langfuse (§22)'],
   ['citas de las incidencias', 'estado.json guarda la nota y el aviso, no el bloque entero'
     + ' de revisión del validador'],
 ];
@@ -101,57 +90,10 @@ function celda(texto, clase) {
   return td;
 }
 
-// Cada evento del diario, a una línea. El texto sigue al de la CLI a propósito:
-// quien mire las dos cosas tiene que reconocer lo mismo.
-function linea(e) {
-  switch (e.tipo) {
-    case 'agente':
-      return { marca: '›', texto: `${NOMBRE_ROL[e.rol] || e.rol} — ${QUE_HACE[e.rol] || 'trabajando'}`
-        + (e.vuelta > 1 ? ` (vuelta ${e.vuelta})` : '') };
-    case 'dossier':
-      return { marca: '•', texto: `dossier: ${e.datos} datos`, tono: 'bien' };
-    case 'escaleta':
-      return { marca: '•', texto: `escaleta: ${e.capitulos} capítulos, ${e.personajes} personajes`,
-        tono: 'bien' };
-    case 'recorte':
-      return { marca: '•', texto: `cap. ${e.capitulo}: contexto recortado (${e.bloques.join(', ')})` };
-    case 'vd08':
-      return { marca: '!', texto: `cap. ${e.capitulo} intento ${e.intento}: VD-08 — ${e.detalles.join('; ')}`,
-        tono: 'mal' };
-    case 'gate':
-      return {
-        marca: e.aprueba ? '✓' : '✗',
-        tono: e.aprueba ? 'bien' : 'mal',
-        texto: `cap. ${e.capitulo} intento ${e.intento}: notas ${e.notas.join('/')}`
-          + ` media ${e.media} → ${e.aprueba ? 'aprobado' : `rechazado (${e.motivos.join('; ')})`}`,
-      };
-    case 'canon':
-      return { marca: '•', texto: `cap. ${e.capitulo}: canon actualizado (+${e.hilos_abiertos} hilos,`
-        + ` -${e.hilos_cerrados}, ${e.eventos} eventos)`, tono: 'bien' };
-    case 'bloqueado':
-      return { marca: '✗', tono: 'mal', texto: `cap. ${e.capitulo} BLOQUEADO: ${e.motivo}` };
-    case 'parada':
-      return { marca: '✗', tono: 'mal', texto: `parada: ${e.motivo}` };
-    case 'trazas':
-      // Aviso, no error: sin observabilidad la novela se escribe igual (§20).
-      return { marca: '!', texto: `trazas: ${e.motivo}` };
-    case 'retoques':
-      return { marca: '✓', tono: 'bien', texto: `${e.total} retoques en ${e.ruta}` };
-    default:
-      return { marca: '•', texto: e.tipo };
-  }
-}
-
 export function crearTaller(ctx) {
-  const lista = $('diario');
-  const caja = $('diario-caja');
   const tarjetas = $('tarjetas');
   const agentes = $('agentes');
-  const aviso = $('aviso-flujo');
-  const arrancar = $('arrancar');
   const trazas = crearTrazas(ctx);
-  let ultimoRolVisto = null;
-  const rolesVistos = new Set();
 
   // Una tarjeta por subagente, en el orden en que trabajan. Los tres
   // validadores van juntos porque se lanzan en un mismo mensaje (§21).
@@ -176,40 +118,6 @@ export function crearTaller(ctx) {
     agentes.append(tarjeta);
   }
 
-  $('plegar-diario').addEventListener('click', () => {
-    const plegado = caja.dataset.plegado === 'si';
-    caja.dataset.plegado = plegado ? 'no' : 'si';
-    $('plegar-diario').textContent = plegado ? 'plegar' : 'desplegar';
-  });
-
-  function decir(mensaje, tono) {
-    aviso.hidden = !mensaje;
-    aviso.textContent = mensaje || '';
-    if (tono) aviso.dataset.tono = tono; else delete aviso.dataset.tono;
-  }
-
-  async function lanzar(accion) {
-    decir('');
-    try {
-      await ctx.api.arrancar(accion, ctx.perfilElegido(), ctx.camino);
-      lista.textContent = '';
-      rolesVistos.clear();
-      ultimoRolVisto = null;
-      await ctx.refrescar();
-    } catch (error) {
-      decir(error.message);
-    }
-  }
-
-  arrancar.addEventListener('click', () => lanzar(siguienteAccion()));
-  $('que-toca').addEventListener('click', () => {
-    const estado = ctx.estado.proyecto?.estado;
-    decir(QUE_TOCA[estado] || 'Todavía no hay brief: empieza por ahí.', 'bien');
-  });
-  $('solo-preparar').addEventListener('click', () => lanzar('preparar'));
-  $('reanudar').addEventListener('click', () => lanzar('reanudar'));
-  $('cerrar').addEventListener('click', () => lanzar('cerrar'));
-
   $('consola-copiar').addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText($('consola-comando').textContent);
@@ -220,73 +128,20 @@ export function crearTaller(ctx) {
     }
   });
 
-  // Qué hace el botón grande depende de por dónde va el proyecto. Es la misma
-  // decisión que toma un humano leyendo "novela estado".
-  function siguienteAccion() {
-    const estado = ctx.estado.proyecto?.estado;
-    if (!estado || estado === 'borrador') return 'todo';
-    if (estado === 'bloqueado') return 'reanudar';
-    if (estado === 'escrito') return 'cerrar';
-    if (estado === 'editado') return 'cerrar';
-    return 'todo';
-  }
-
-  const ETIQUETA_ACCION = {
-    todo: 'Lanzar agentes',
-    reanudar: 'Reanudar donde se quedó',
-    cerrar: 'Cerrar con el editor global',
-  };
-
-  function pintarDiario(flujo) {
-    for (const evento of flujo.diario) {
-      const { marca, texto, tono } = linea(evento);
-      const li = document.createElement('li');
-      li.dataset.marca = marca;
-      if (tono) li.dataset.tono = tono;
-      li.append(document.createTextNode(texto));
-      lista.append(li);
-      if (evento.tipo === 'agente') {
-        ultimoRolVisto = evento.rol;
-        rolesVistos.add(evento.rol);
-      }
-    }
-    if (flujo.diario.length) lista.scrollTop = lista.scrollHeight;
-  }
-
-  function pintarAhora(flujo) {
-    const ahora = $('ahora');
-    ahora.hidden = !flujo.corriendo || !ultimoRolVisto;
-    if (!ahora.hidden) {
-      $('ahora-rol').textContent = NOMBRE_ROL[ultimoRolVisto] || ultimoRolVisto;
-      $('ahora-que').textContent = QUE_HACE[ultimoRolVisto] || '';
-    }
-  }
-
-  // ------------------------------------------------------- componentes
-
-  function pintarAgentes(proyecto, flujo) {
-    const delegado = proyecto.camino === 'delegado';
+  function pintarAgentes(proyecto) {
     for (const nodo of agentes.children) {
       const rol = nodo.dataset.rol;
-      // Con el harness corriendo, el diario dice quién trabaja ahora mismo. Sin
-      // él, lo único honesto es decir quién ha dejado rastro en el canon.
-      const activo = flujo.corriendo && rol === ultimoRolVisto;
-      const trabajado = delegado
-        ? Boolean(RASTRO[rol]?.(proyecto))
-        : rolesVistos.has(rol);
-      nodo.dataset.activo = activo ? 'si' : 'no';
+      // No hay diario que diga quién trabaja ahora mismo, así que lo único que
+      // se puede afirmar es quién ha dejado rastro en el canon.
+      const trabajado = Boolean(RASTRO[rol]?.(proyecto));
+      nodo.dataset.activo = 'no';
       nodo.dataset.visto = trabajado ? 'si' : 'no';
-      nodo.querySelector('.agente__tarea').textContent = activo
-        ? QUE_HACE[rol]
-        : (trabajado
-          ? (delegado ? 'ha dejado su rastro en el canon' : 'ha trabajado en esta pasada')
-          : 'en reposo');
+      nodo.querySelector('.agente__tarea').textContent = trabajado
+        ? 'ha dejado su rastro en el canon' : 'en reposo';
     }
-    $('agentes-pista').textContent = delegado
-      ? 'Los tres validadores se lanzan en un mismo mensaje y no se ven entre sí: esa'
-        + ' independencia es lo que permite que un texto brillante caiga por continuidad.'
-      : 'El harness llama a un solo validador salvo que el perfil ponga'
-        + ' validador.modo en «separado»; los tres nombres son sus tres dimensiones.';
+    $('agentes-pista').textContent = 'Los tres validadores se lanzan en un mismo'
+      + ' mensaje y no se ven entre sí: esa independencia es lo que permite que un'
+      + ' texto brillante caiga por continuidad.';
   }
 
   function pintarPipeline(proyecto) {
@@ -354,11 +209,7 @@ export function crearTaller(ctx) {
   }
 
   function pintarConsola(proyecto) {
-    const consola = $('consola');
-    const delegado = proyecto.camino === 'delegado';
-    consola.hidden = !delegado;
-    $('mandos-harness').hidden = delegado;
-    if (!delegado) return;
+    $('consola').hidden = false;
     $('consola-comando').textContent = ctx.comandoDe(proyecto);
     $('consola-pista').textContent = proyecto.brief
       ? QUE_TOCA[proyecto.estado] || 'Abre Claude Code en este repositorio y pega el comando.'
@@ -475,9 +326,7 @@ export function crearTaller(ctx) {
   }
 
   function pintarAuditoria(proyecto) {
-    const panel = $('panel-auditoria');
     const caja = $('auditoria');
-    panel.hidden = !proyecto.auditoria;
     caja.textContent = '';
     if (!proyecto.auditoria) return;
     const { revisados, discrepancias } = proyecto.auditoria;
@@ -619,33 +468,15 @@ export function crearTaller(ctx) {
     }
   }
 
-  function pintarHuecos(proyecto) {
+  function pintarHuecos() {
     const caja = $('huecos');
     caja.textContent = '';
-    const todos = proyecto.camino === 'delegado'
-      ? [...HUECOS, ...HUECOS_DELEGADO] : HUECOS;
-    for (const [nombre, porque] of todos) {
+    for (const [nombre, porque] of HUECOS) {
       const dt = document.createElement('dt');
       dt.textContent = nombre;
       const dd = document.createElement('dd');
       dd.textContent = porque;
       caja.append(dt, dd);
-    }
-  }
-
-  function pintarOrigen(proyecto, flujo) {
-    const caja = $('origen-eventos');
-    if (proyecto.camino === 'delegado') {
-      caja.textContent = 'el relato de esta pasada está en la sesión de Claude Code;'
-        + ' aquí se ve lo que quedó escrito';
-      return;
-    }
-    if (flujo.corriendo) {
-      caja.textContent = `flujo en marcha: ${flujo.accion}`;
-    } else if (proyecto.en_curso && !flujo.total) {
-      caja.textContent = 'hay un capítulo en curso lanzado fuera de esta interfaz: aquí no hay stream';
-    } else {
-      caja.textContent = flujo.total ? 'última pasada' : 'sin eventos todavía';
     }
   }
 
@@ -718,23 +549,6 @@ export function crearTaller(ctx) {
 
       tarjeta.append(alto, titulo, fecha, pie);
 
-      if (c.estado === 'bloqueado' && proyecto.camino === 'harness') {
-        const desbloquear = document.createElement('span');
-        desbloquear.className = 'enlace';
-        desbloquear.textContent = 'desbloquear y reintentar';
-        desbloquear.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          try {
-            await ctx.api.desbloquear({ capitulo: c.numero, modo: 'reintentar' }, ctx.camino);
-            await ctx.refrescar();
-            decir(`Capítulo ${c.numero} desbloqueado. Dale a reanudar.`, 'bien');
-          } catch (error) {
-            decir(error.message);
-          }
-        });
-        tarjeta.append(desbloquear);
-      }
-
       tarjeta.addEventListener('click', () => {
         ctx.elegirCapitulo(c.numero);
         if (c.legible) ctx.abrirLectura(c.numero);
@@ -744,60 +558,23 @@ export function crearTaller(ctx) {
   }
 
   return {
-    pintar(proyecto, flujo) {
+    pintar(proyecto) {
       pintarTarjetas(proyecto);
       pintarPipeline(proyecto);
       pintarLineaEstado(proyecto);
       pintarConsola(proyecto);
-      pintarAgentes(proyecto, flujo);
+      pintarAgentes(proyecto);
       pintarIntentos(proyecto);
       pintarAuditoria(proyecto);
       pintarCronologia(proyecto);
       pintarReparto(proyecto);
       pintarLedger(proyecto);
       pintarArchivos(proyecto);
-      pintarHuecos(proyecto);
-      pintarOrigen(proyecto, flujo);
+      pintarHuecos();
       trazas.pintar(proyecto);
 
-      const delegado = proyecto.camino === 'delegado';
-      const accion = siguienteAccion();
-      arrancar.textContent = ETIQUETA_ACCION[accion] || 'Lanzar agentes';
-      const sinBrief = !proyecto.brief;
-      arrancar.disabled = flujo.corriendo || sinBrief;
-      for (const id of ['solo-preparar', 'reanudar', 'cerrar']) {
-        $(id).disabled = flujo.corriendo || sinBrief;
-      }
-
-      $('mando-eyebrow').textContent = delegado
-        ? 'Escritorio · orquesta Claude Code' : 'Escritorio · orquesta el harness';
-      $('mando-titulo').textContent = flujo.corriendo ? 'Los agentes trabajando'
-        : (proyecto.estado === 'editado' ? 'Novela terminada'
-          : (delegado ? 'Los ocho subagentes' : 'Los seis agentes'));
-      $('mando-texto').textContent = delegado
-        ? 'Investigador y arquitecto preparan el libro; luego, capítulo a capítulo, el'
-          + ' escritor redacta, los tres validadores puntúan a la vez, el gate decide y'
-          + ' el cronista escribe en el canon. Ninguno escribe el canon: escribe el'
-          + ' orquestador con la propuesta ya comprobada delante.'
-        : 'Investigador y arquitecto preparan el libro; luego, capítulo a capítulo, el'
-          + ' escritor redacta, el validador puntúa, el gate decide y el cronista'
-          + ' escribe en el canon.';
-
-      if (delegado) {
-        decir(proyecto.brief ? '' : 'Todavía no hay canon delegado. Abre Claude Code en'
-          + ' este repositorio y lanza /orquestar-novela: te pedirá los cinco campos.');
-      } else if (sinBrief) {
-        decir('Primero el brief: sin él, el investigador no tiene de qué tirar.');
-      } else if (flujo.error) {
-        decir(`${flujo.error}${flujo.detalles.length ? ` — ${flujo.detalles.join('; ')}` : ''}`);
-      } else if (!flujo.corriendo && proyecto.estado === 'editado') {
-        decir('Novela terminada. Los retoques se aplican a mano, y los capítulos se'
-          + ' leen en la pestaña de lectura.', 'bien');
-      } else {
-        decir('');
-      }
+      $('mando-titulo').textContent = proyecto.estado === 'editado'
+        ? 'Novela terminada' : 'Los ocho subagentes';
     },
-    pintarDiario,
-    pintarAhora,
   };
 }

@@ -34,89 +34,41 @@
     <button type="button" class="sala" data-sala="lectura" disabled>Lectura</button>
   </nav>
   <div class="barra__estado">
-    <!-- Los dos caminos de §1 sobre el mismo repositorio: se cambia de canon
-         sin reiniciar nada, que es lo que permite compararlos. -->
-    <div class="conmutador" id="conmutador-camino" role="group" aria-label="Camino">
-      <button type="button" data-camino="delegado" title="Canon en ficheros, orquesta Claude Code">delegado</button>
-      <button type="button" data-camino="harness" title="Canon SQLite, orquesta novela/flujo.py">harness</button>
-    </div>
     <span class="dato barra__run" id="barra-run" title="Canon activo">sin canon</span>
     <span class="pastilla" id="pastilla-estado">sin brief</span>
-    <span class="dato" id="dato-modo">—</span>
-    <span class="dato" id="dato-perfil">perfil —</span>
+    <span class="dato" id="dato-modo">orquesta Claude Code</span>
   </div>
 </header>
 
 <!-- ============================================================ brief -->
 <main class="sala-panel" id="sala-brief">
-  <form class="papeleta" id="papeleta" novalidate>
+  <section class="papeleta" id="papeleta">
     <header class="papeleta__cabecera">
       <p class="eyebrow">Brief — los cinco campos</p>
-      <h1>Empieza una novela</h1>
+      <h1 id="papeleta-titulo">El brief de esta novela</h1>
       <p class="entradilla">
-        Esto es todo lo que se escribe a mano. Con estos cinco campos el
-        investigador arma el dossier de época y el arquitecto la escaleta; el
-        resto se levanta capítulo a capítulo.
+        Con estos cinco campos el investigador arma el dossier de época y el
+        arquitecto la escaleta; el resto se levanta capítulo a capítulo. Los
+        escribe el orquestador, no esta página: aquí se leen.
       </p>
     </header>
 
-    <div class="campo">
-      <label for="epoca">Época y lugar</label>
-      <input id="epoca" name="epoca" type="text" autocomplete="off"
-             placeholder="Ciudad, año y el rincón concreto donde pasa">
-      <p class="pista">Cuanto más estrecho, mejor investiga: un barrio y una institución, no un siglo.</p>
-    </div>
-
-    <div class="campo">
-      <label for="premisa">Premisa</label>
-      <textarea id="premisa" name="premisa" rows="3"
-                placeholder="Quién quiere qué y qué se lo impide"></textarea>
-    </div>
-
-    <div class="campo">
-      <label for="tono">Tono</label>
-      <input id="tono" name="tono" type="text" list="tonos" autocomplete="off" placeholder="seco">
-      <datalist id="tonos">
-        <option value="seco"></option>
-        <option value="lírico"></option>
-        <option value="sombrío"></option>
-        <option value="épico"></option>
-        <option value="irónico"></option>
-        <option value="contenido"></option>
-      </datalist>
-      <p class="pista">El tono viaja a la skill de prosa y también enciende la luz de la mesa.</p>
-    </div>
-
-    <div class="campo campo--par">
-      <div>
-        <label for="capitulos">Capítulos</label>
-        <input id="capitulos" name="capitulos" type="number" min="1" step="1" inputmode="numeric">
-      </div>
-      <div>
-        <label for="palabras_por_capitulo">Palabras por capítulo</label>
-        <input id="palabras_por_capitulo" name="palabras_por_capitulo" type="number"
-               min="1" step="50" inputmode="numeric">
-      </div>
-    </div>
-
-    <div class="campo">
-      <label for="perfil">Perfil de ejecución</label>
-      <select id="perfil" name="perfil"></select>
-      <p class="pista">Cada perfil es un <code>config*.json</code> de la raíz: de ahí salen los umbrales y los modelos.</p>
-    </div>
+    <dl class="brief-leido" id="brief-leido"></dl>
 
     <p class="aviso" id="aviso-brief" role="status" hidden></p>
 
-    <div class="acciones">
-      <button class="boton" type="submit" id="crear-y-lanzar">Crear y lanzar agentes</button>
-      <button class="enlace" type="button" id="guardar">Solo crear</button>
-      <button class="enlace" type="button" id="vaciar">Vaciar</button>
+    <div class="consola">
+      <span class="eyebrow">Para empezar una novela</span>
+      <div class="consola__linea">
+        <code>/orquestar-novela</code>
+        <button class="enlace" type="button" id="brief-copiar">copiar</button>
+      </div>
+      <p class="pista">
+        En Claude Code, dentro de este repositorio. Te pedirá los cinco campos y
+        no se los inventará.
+      </p>
     </div>
-
-    <p class="nota-ejemplo" id="nota-ejemplo">
-      Va precargado un ejemplo para que la mesa no arranque vacía. Cámbialo.
-    </p>
-  </form>
+  </section>
 
   <section class="ejecuciones" id="ejecuciones">
     <h2 class="titulo-panel">Ejecuciones en este repositorio</h2>
@@ -139,8 +91,8 @@
 
     <p class="linea-estado" id="linea-estado">sin datos todavía</p>
 
-    <!-- Camino delegado: aquí no se lanza nada. Quien orquesta es una sesión de
-         Claude Code, así que lo que ofrece la página es el comando exacto. -->
+    <!-- Aquí no se lanza nada: quien orquesta es una sesión de Claude Code, así
+         que lo que ofrece la página es el comando exacto. -->
     <div class="consola" id="consola" hidden>
       <span class="eyebrow">En la sesión de Claude Code</span>
       <div class="consola__linea">
@@ -150,26 +102,9 @@
       <p class="pista" id="consola-pista"></p>
     </div>
 
-    <div class="acciones acciones--columna" id="mandos-harness">
-      <button class="boton boton--grande" type="button" id="arrancar">Lanzar agentes</button>
-      <div class="acciones">
-        <button class="enlace" type="button" id="que-toca">¿Qué toca ahora?</button>
-        <button class="enlace" type="button" id="solo-preparar">solo preparar</button>
-        <button class="enlace" type="button" id="reanudar">reanudar</button>
-        <button class="enlace" type="button" id="cerrar">cerrar</button>
-      </div>
-    </div>
-
-    <p class="aviso" id="aviso-flujo" role="status" hidden></p>
-
-    <div class="ahora" id="ahora" hidden>
-      <span class="ahora__pulso" aria-hidden="true"></span>
-      <span class="ahora__rol" id="ahora-rol">—</span>
-      <span class="ahora__que" id="ahora-que"></span>
-    </div>
-
-    <!-- §20 y §21: por el camino delegado no hay llamada que interceptar, así
-         que el árbol se reconstruye del canon y se manda desde aquí. -->
+    <!-- §20: no hay llamada que interceptar desde aquí, así que el árbol se
+         reconstruye del canon y se manda. Lo que sí lleva tokens y latencia lo
+         manda el hook en vivo (§22). -->
     <section class="trazas" id="trazas" aria-label="Trazas de Langfuse">
       <header class="trazas__alto">
         <span class="eyebrow">Trazas · Langfuse</span>
@@ -214,13 +149,13 @@
       </div>
     </section>
 
-    <!-- Camino delegado: la suma del gate la hace un modelo (§21). Esto la
-         rehace con la fórmula de §8 y enseña si cuadra. -->
-    <section class="panel" id="panel-auditoria" aria-label="Auditoría del gate" hidden>
+    <!-- La suma del gate la hace un modelo (§21). Esto la rehace con la
+         fórmula de §8 y enseña si cuadra. -->
+    <section class="panel" id="panel-auditoria" aria-label="Auditoría del gate">
       <h2 class="titulo-panel">Auditoría del gate</h2>
       <p class="pista">
-        En este camino la aritmética de §8 la hace un modelo. La página rehace la
-        cuenta con los umbrales del perfil y compara veredictos.
+        La aritmética de §8 la hace un modelo. La página rehace la cuenta con
+        los umbrales de config.json y compara veredictos.
       </p>
       <div id="auditoria"></div>
     </section>
@@ -256,14 +191,6 @@
     </section>
   </div>
 
-  <section class="diario" id="diario-caja">
-    <header class="diario__cabecera">
-      <span class="eyebrow">Eventos</span>
-      <span class="dato" id="origen-eventos"></span>
-      <button class="enlace" type="button" id="plegar-diario">plegar</button>
-    </header>
-    <ol class="diario__lista" id="diario"></ol>
-  </section>
 </main>
 
 <!-- =========================================================== lectura -->

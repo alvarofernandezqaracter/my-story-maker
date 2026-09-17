@@ -1,4 +1,4 @@
-/* Interfaz del harness (§19).
+/* Interfaz web (§19).
 
    Paleta de Qaracter, sacada de su logotipo oficial: el naranja #FF7932 y el
    azul pizarra #233441. Los neutros no son grises puros, van sesgados hacia ese
@@ -187,42 +187,37 @@ h2 { font-size: clamp(1.5rem, 3.5vw, 2rem); }
   font-size: .9rem;
 }
 
-.campo { display: flex; flex-direction: column; gap: .4rem; }
+/* Los cinco campos del brief, en lectura. Fueron un formulario mientras hubo
+   un orquestador al que mandarselos; ahora los escribe la sesion de Claude Code
+   y aqui solo se leen, asi que son una lista de definicion y no inputs. */
+.brief-leido {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: .5rem 1.4rem;
+  margin: 0;
+  align-items: baseline;
+}
 
-.campo--par { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.campo--par > div { display: flex; flex-direction: column; gap: .4rem; min-width: 0; }
-
-label {
-  font-size: .78rem;
-  font-weight: 500;
-  letter-spacing: .06em;
+.brief-leido dt {
+  font-family: var(--dato);
+  font-size: .7rem;
+  letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--texto-tenue);
 }
 
-input, textarea {
-  width: 100%;
-  padding: .6rem .7rem;
+.brief-leido dd {
+  margin: 0;
   color: var(--texto);
-  background: var(--fondo);
-  border: 1px solid var(--linea);
-  border-radius: 2px;
-  font-family: var(--texto-ui);
-  font-size: .95rem;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
-input[type="number"] { font-family: var(--dato); font-variant-numeric: tabular-nums; }
-textarea { resize: vertical; min-height: 4.5rem; }
-input::placeholder, textarea::placeholder { color: #566a78; }
-input:focus, textarea:focus { border-color: var(--qa-naranja); }
-
-input:focus-visible, textarea:focus-visible, button:focus-visible {
+button:focus-visible {
   outline: 2px solid var(--qa-naranja);
   outline-offset: 2px;
 }
 
-.pista, .nota-ejemplo { margin: 0; font-size: .78rem; color: var(--texto-tenue); }
+.pista { margin: 0; font-size: .78rem; color: var(--texto-tenue); }
 
 .aviso {
   margin: 0;
@@ -240,7 +235,6 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 /* ================================================================ botones */
 
 .acciones { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.acciones--columna { flex-direction: column; align-items: stretch; gap: .75rem; }
 
 .boton {
   padding: .65rem 1.4rem;
@@ -310,38 +304,8 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
   align-self: start;
 }
 
-/* Quien trabaja ahora mismo. El pulso solo late mientras hay flujo vivo. */
-.ahora {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  padding: .6rem .7rem;
-  background: var(--superficie-alta);
-  border: 1px solid color-mix(in srgb, var(--qa-naranja) 40%, transparent);
-  border-radius: 2px;
-  font-family: var(--dato);
-  font-size: .78rem;
-}
-
-.ahora__pulso {
-  width: .5rem;
-  height: .5rem;
-  flex: 0 0 auto;
-  background: var(--qa-naranja);
-  border-radius: 999px;
-  animation: latido 1.4s ease-in-out infinite;
-}
-
-@keyframes latido {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: .35; transform: scale(.7); }
-}
-
-.ahora__rol { color: var(--qa-naranja); text-transform: uppercase; letter-spacing: .06em; }
-.ahora__que { color: var(--texto-tenue); }
-
-/* El relevo de los seis agentes: se enciende el que trabaja y quedan marcados
-   los que ya han pasado. Es una cadena, no una lista, y por eso va en fila. */
+/* El relevo de los agentes: quedan marcados los que han dejado rastro en el
+   canon. Es una cadena, no una lista, y por eso va en fila. */
 .relevo { display: flex; flex-wrap: wrap; gap: .3rem; }
 
 .relevo__rol {
@@ -435,50 +399,6 @@ input:focus-visible, textarea:focus-visible, button:focus-visible {
 
 .nota[data-alta="si"] { background: var(--ok); }
 .nota[data-baja="si"] { background: var(--fallo); }
-
-/* -------------------------------------------------------------- diario */
-
-.diario {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  max-height: 13rem;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--fondo) 90%, transparent);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--linea);
-  border-radius: 2px;
-}
-
-.diario[data-plegado="si"] .diario__lista { display: none; }
-
-.diario__cabecera {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: .5rem .8rem;
-  border-bottom: 1px solid var(--linea);
-}
-
-.diario__lista {
-  margin: 0;
-  padding: .5rem .8rem;
-  list-style: none;
-  min-height: 0;
-  overflow-y: auto;
-  font-family: var(--dato);
-  font-size: .75rem;
-  line-height: 1.7;
-}
-
-.diario__lista li { display: flex; gap: .6rem; color: var(--texto-tenue); }
-.diario__lista li::before { content: attr(data-marca); color: var(--qa-naranja); flex: 0 0 auto; }
-.diario__lista li[data-tono="bien"] { color: var(--texto); }
-.diario__lista li[data-tono="bien"]::before { color: var(--ok); }
-.diario__lista li[data-tono="mal"] { color: var(--texto); }
-.diario__lista li[data-tono="mal"]::before { color: var(--fallo); }
 
 /* ================================================================ lectura */
 

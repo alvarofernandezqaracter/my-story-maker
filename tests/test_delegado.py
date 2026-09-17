@@ -10,7 +10,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from novela.canon import Canon
 from novela.canon_cc import CanonCC, auditar_gate, operacion
 from novela.config import cargar_config, validar_config, ErrorConfig
 from novela.servidor import RAIZ_WEB, responder
@@ -110,17 +109,14 @@ class CanonDelegadoDePrueba(unittest.TestCase):
         _escribir(raiz / 'contexto' / 'cap-01.md', '# Encargo del capitulo 1\n\nObjetivo.')
         _escribir(raiz / 'capitulos' / 'cap-01-intento-1.md', '# El carcelaje\n\nPrimera.')
         _escribir(raiz / 'capitulos' / 'cap-01-intento-2.md', '# El carcelaje\n\nSegunda.')
-        self.canon = Canon(str(Path(self.dir) / 'canon.db'))
 
     def tearDown(self):
-        self.canon.cerrar()
         os.chdir(self.cwd)
         shutil.rmtree(self.dir, ignore_errors=True)
 
     def pedir(self, metodo, ruta, cuerpo=None):
         datos = json.dumps(cuerpo).encode('utf-8') if cuerpo is not None else b''
-        codigo, _, salida = responder(metodo, ruta, datos, self.canon, self.config,
-                                      None, RAIZ_WEB)
+        codigo, _, salida = responder(metodo, ruta, datos, self.config, RAIZ_WEB)
         return codigo, json.loads(salida)
 
 
@@ -182,7 +178,7 @@ class TestAuditoriaDelGate(CanonDelegadoDePrueba):
         self.assertFalse(cuenta['aprueba'])
         self.assertTrue(cuenta['aprueba_canon'])
 
-        _, cuerpo = self.pedir('GET', '/api/proyecto?camino=delegado')
+        _, cuerpo = self.pedir('GET', '/api/proyecto')
         self.assertEqual(len(cuerpo['auditoria']['discrepancias']), 1)
         self.assertEqual(cuerpo['auditoria']['discrepancias'][0]['capitulo'], 1)
 
@@ -199,13 +195,10 @@ class TestAuditoriaDelGate(CanonDelegadoDePrueba):
 
 class TestApiDelegada(CanonDelegadoDePrueba):
     def test_el_proyecto_sale_del_canon_en_ficheros(self):
-        codigo, cuerpo = self.pedir('GET', '/api/proyecto?camino=delegado')
+        codigo, cuerpo = self.pedir('GET', '/api/proyecto')
         self.assertEqual(codigo, 200)
-        self.assertEqual(cuerpo['camino'], 'delegado')
         self.assertEqual(cuerpo['orquestador'], 'Claude Code')
         self.assertEqual(cuerpo['estado'], 'escribiendo')
-        self.assertIsNone(cuerpo['modo'])
-        self.assertFalse(cuerpo['editable'])
         self.assertEqual(len(cuerpo['capitulos']), 2)
         self.assertEqual(cuerpo['capitulos'][0]['notas'], [4, 5, 4])
         self.assertEqual(cuerpo['capitulos'][0]['media'], 4.33)
@@ -215,7 +208,7 @@ class TestApiDelegada(CanonDelegadoDePrueba):
         self.assertEqual(len(cuerpo['reparto']), 1)
 
     def test_el_capitulo_aprobado_trae_texto_resumen_e_hilos(self):
-        codigo, cuerpo = self.pedir('GET', '/api/capitulo/1?camino=delegado')
+        codigo, cuerpo = self.pedir('GET', '/api/capitulo/1')
         self.assertEqual(codigo, 200)
         self.assertIn('Segunda', cuerpo['texto'])
         self.assertEqual(cuerpo['intento'], 2)
@@ -223,40 +216,42 @@ class TestApiDelegada(CanonDelegadoDePrueba):
         self.assertEqual(cuerpo['hilos_abiertos'], RESUMEN['hilos_abiertos'])
 
     def test_un_capitulo_sin_aprobar_no_se_lee(self):
-        self.assertEqual(self.pedir('GET', '/api/capitulo/2?camino=delegado')[0], 409)
+        self.assertEqual(self.pedir('GET', '/api/capitulo/2')[0], 409)
 
     def test_el_paquete_guardado_es_el_que_se_uso(self):
-        codigo, cuerpo = self.pedir('GET', '/api/contexto/1?camino=delegado')
+        codigo, cuerpo = self.pedir('GET', '/api/contexto/1')
         self.assertEqual(codigo, 200)
         self.assertEqual(cuerpo['origen'], 'guardado')
         self.assertIn('Encargo del capitulo 1', cuerpo['texto'])
 
     def test_sin_paquete_guardado_se_dice_y_no_se_regenera(self):
-        self.assertEqual(self.pedir('GET', '/api/contexto/2?camino=delegado')[0], 404)
+        self.assertEqual(self.pedir('GET', '/api/contexto/2')[0], 404)
 
-    def test_la_interfaz_no_escribe_en_el_canon_delegado(self):
-        self.assertEqual(self.pedir('POST', '/api/brief?camino=delegado', BRIEF)[0], 409)
-        self.assertEqual(
-            self.pedir('POST', '/api/flujo?camino=delegado', {'accion': 'todo'})[0], 409)
-        self.assertEqual(
-            self.pedir('POST', '/api/desbloquear?camino=delegado', {'capitulo': 1})[0], 409)
+    def test_la_interfaz_no_escribe_en_el_canon(self):
+        # En este canon escribe el orquestador y nadie mas (§21). Las rutas que
+        # escribian murieron con el harness, y las que quedan solo leen: contra
+        # la API, cualquier metodo que no sea GET se contesta con el porque.
+        for ruta in ('/api/brief', '/api/flujo', '/api/desbloquear'):
+            codigo, cuerpo = self.pedir('POST', ruta, BRIEF)
+            self.assertEqual(codigo, 409)
+            self.assertIn('orquestar-novela', cuerpo['error'])
 
-    def test_el_diario_delegado_viene_vacio_y_lo_dice(self):
-        codigo, cuerpo = self.pedir('GET', '/api/flujo?camino=delegado')
+    def test_la_raiz_sirve_la_pagina(self):
+        codigo, _, salida = responder('GET', '/', b'', self.config, RAIZ_WEB)
         self.assertEqual(codigo, 200)
-        self.assertTrue(cuerpo['sin_motor'])
-        self.assertEqual(cuerpo['diario'], [])
+        self.assertIn(b'<!doctype html>', salida[:64].lower())
 
-    def test_un_camino_que_no_existe_se_rechaza(self):
-        self.assertEqual(self.pedir('GET', '/api/proyecto?camino=inventado')[0], 400)
+    def test_no_se_sale_de_web(self):
+        codigo, _, _ = responder(
+            'GET', '/../config.json', b'', self.config, RAIZ_WEB)
+        self.assertEqual(codigo, 404)
 
-    def test_sin_parametro_manda_el_perfil(self):
-        config = {**self.config,
-                  'interfaz': {**self.config['interfaz'], 'camino': 'delegado'}}
-        codigo, _, salida = responder('GET', '/api/proyecto', b'', self.canon, config,
-                                      None, RAIZ_WEB)
-        self.assertEqual(codigo, 200)
-        self.assertEqual(json.loads(salida)['camino'], 'delegado')
+    def test_una_ruta_de_api_desconocida_es_404(self):
+        self.assertEqual(self.pedir('GET', '/api/inventada')[0], 404)
+
+    def test_la_pagina_no_acepta_otros_metodos(self):
+        codigo, _, _ = responder('POST', '/', b'', self.config, RAIZ_WEB)
+        self.assertEqual(codigo, 405)
 
 
 class TestTrazasDelegadas(CanonDelegadoDePrueba):
@@ -272,9 +267,9 @@ class TestTrazasDelegadas(CanonDelegadoDePrueba):
         self.assertTrue(resumen['reconstruido'])
         self.assertTrue(resumen['sesion'].startswith('novela-'))
 
-    def test_la_sesion_es_la_misma_que_la_del_harness_con_el_mismo_brief(self):
-        # Las dos orquestaciones del mismo brief caen en la misma sesion de
-        # Langfuse, que es lo que permite compararlas (§20).
+    def test_la_sesion_sale_del_brief_y_no_de_ningun_id(self):
+        # El canon no guarda ningun id de proyecto -es fila unica-, asi que la
+        # sesion se deriva del brief: misma novela, misma sesion (§20).
         from novela.trazas import sesion_de
         self.assertEqual(plan(CanonCC(), self.config)['sesion'], sesion_de(BRIEF))
 
@@ -288,7 +283,7 @@ class TestTrazasDelegadas(CanonDelegadoDePrueba):
         shutil.rmtree('novela-cc')
         resultado = exportar(self.config)
         self.assertFalse(resultado['enviado'])
-        self.assertIn('no hay canon delegado', resultado['motivo'])
+        self.assertIn('no hay canon', resultado['motivo'])
 
     def test_la_disponibilidad_no_construye_cliente_y_da_el_motivo(self):
         self.assertEqual(disponibilidad(self.config),
@@ -296,19 +291,11 @@ class TestTrazasDelegadas(CanonDelegadoDePrueba):
                           'motivo': 'trazas.activas esta a false en el perfil'})
 
     def test_el_panel_de_trazas_ensena_el_plan(self):
-        codigo, cuerpo = self.pedir('GET', '/api/trazas?camino=delegado')
+        codigo, cuerpo = self.pedir('GET', '/api/trazas')
         self.assertEqual(codigo, 200)
         self.assertTrue(cuerpo['reconstruido'])
         self.assertFalse(cuerpo['activas'])
         self.assertEqual(cuerpo['plan']['capitulos'], 1)
-
-    def test_el_harness_no_reconstruye_nada(self):
-        codigo, cuerpo = self.pedir('GET', '/api/trazas?camino=harness')
-        self.assertEqual(codigo, 200)
-        self.assertFalse(cuerpo['reconstruido'])
-        self.assertIsNone(cuerpo['plan'])
-        self.assertEqual(self.pedir('POST', '/api/trazas?camino=harness')[0], 409)
-
 
 class CapaDeMentira:
     """Una capa de §20 que apunta en una lista en vez de hablar con Langfuse.
@@ -350,10 +337,16 @@ class CapaDeMentira:
 
         return Contexto()
 
-    def traza(self, nombre, entrada=None, sesion=None, etiquetas=None, metadata=None):
+    def traza(self, nombre, entrada=None, sesion=None, etiquetas=None, metadata=None,
+              tipo='span', trace_id=None, nombre_traza=None):
+        # La firma sigue a la de la capa de verdad, incluidos los tres
+        # argumentos que usa el camino delegado para que el hook y la
+        # reconstruccion caigan en la misma traza (§21).
         self.sesion = sesion
         self.etiquetas = etiquetas
-        return self._abrir(nombre, 'span', metadata)
+        self.trazas_pedidas = getattr(self, 'trazas_pedidas', [])
+        self.trazas_pedidas.append((nombre, trace_id))
+        return self._abrir(nombre, tipo, metadata)
 
     def paso(self, nombre, tipo='span', entrada=None, metadata=None, modelo=None,
              parametros=None):
@@ -454,28 +447,24 @@ class TestArbolDeTrazas(CanonDelegadoDePrueba):
         self.assertTrue(self.capa.cerrada)
 
 
-class TestClaveDeCamino(unittest.TestCase):
-    """`interfaz.camino` es una clave de §12 y se valida como las demas."""
+class TestClavesDeConfig(unittest.TestCase):
+    """Los umbrales de §12 se validan enteros al arrancar, y las claves que se
+    fueron con el harness ya no los estorban: sobran, no faltan."""
 
     def setUp(self):
         self.base = cargar_config('config.json')
 
-    def test_solo_acepta_los_dos_caminos(self):
-        for valor in ('delegado', 'harness'):
-            with self.subTest(valor=valor):
-                validar_config({**self.base,
-                                'interfaz': {**self.base['interfaz'], 'camino': valor}})
+    def test_el_perfil_del_repositorio_vale(self):
+        self.assertEqual(sorted(self.base),
+                         ['contexto', 'gate', 'interfaz', 'margenes', 'trazas'])
 
-    def test_un_camino_inventado_para_el_arranque(self):
-        for valor in ('sqlite', '', None, 1):
-            with self.subTest(valor=valor):
-                with self.assertRaisesRegex(ErrorConfig, 'interfaz.camino'):
-                    validar_config({**self.base,
-                                    'interfaz': {**self.base['interfaz'], 'camino': valor}})
+    def test_un_umbral_fuera_de_rango_no_arranca(self):
+        with self.assertRaisesRegex(ErrorConfig, 'gate.nota_minima'):
+            validar_config({**self.base, 'gate': {**self.base['gate'], 'nota_minima': 9}})
 
-    def test_sin_la_clave_no_arranca(self):
-        with self.assertRaisesRegex(ErrorConfig, 'interfaz.camino'):
-            validar_config({**self.base, 'interfaz': {'puerto': 8787}})
+    def test_sin_una_clave_no_arranca(self):
+        with self.assertRaisesRegex(ErrorConfig, 'interfaz.puerto'):
+            validar_config({**self.base, 'interfaz': {}})
 
 
 if __name__ == '__main__':

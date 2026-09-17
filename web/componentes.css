@@ -333,7 +333,6 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
 .archivos span { overflow: hidden; text-overflow: ellipsis; color: var(--texto-tenue); }
 
-.diario__cabecera .dato { margin-left: auto; }
 
 /* ======================================================== lectura: indice */
 
@@ -482,11 +481,6 @@ body[data-sala="taller"] #escena { opacity: .5; }
 
 body[data-sala="taller"] .panel,
 body[data-sala="taller"] .tarjeta,
-body[data-sala="taller"] .mando,
-body[data-sala="taller"] .diario {
+body[data-sala="taller"] .mando {
   background: color-mix(in srgb, var(--superficie) 96%, transparent);
-}
-
-body[data-sala="taller"] .diario {
-  background: color-mix(in srgb, var(--fondo) 96%, transparent);
 }

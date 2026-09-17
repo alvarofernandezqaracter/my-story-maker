@@ -24,7 +24,7 @@ function aHtml(markdown) {
   return markdown
     .replace(/\r\n/g, '\n')
     // El escritor deja marcas en comentario HTML cuando reescribe sobre las
-    // incidencias del intento anterior: son notas del harness para el propio
+    // incidencias del intento anterior: son notas del orquestador para el propio
     // agente, no prosa de la novela.
     .replace(/<!--[\s\S]*?-->/g, '')
     .split(/\n{2,}/)
@@ -33,7 +33,7 @@ function aHtml(markdown) {
       if (!t) return '';
       // El titulo del capitulo ya va en la cabecera del lector.
       if (t.startsWith('# ')) return '';
-      // Separador de escena, si el escritor lo puso: el harness no obliga a
+      // Separador de escena, si el escritor lo puso: nadie obliga a
       // ninguno porque la unidad de escritura es el capitulo entero (DA-09).
       if (/^(\*\s*){3,}$|^-{3,}$|^_{3,}$/.test(t)) {
         return '<p class="separador-escena" aria-hidden="true">❦</p>';
@@ -239,7 +239,7 @@ export function crearLectura(ctx) {
 
   async function abrir(numero) {
     try {
-      capitulo = await ctx.api.capitulo(numero, ctx.camino);
+      capitulo = await ctx.api.capitulo(numero);
     } catch (error) {
       texto.innerHTML = `<p>${escapar(error.message)}</p>`;
       return;

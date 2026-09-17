@@ -1,6 +1,11 @@
-# §12 Configuracion. Un unico config.json en la raiz. El harness lo carga al
-# arrancar, lo valida entero y para si falta una clave o un valor cae fuera de
-# rango: una errata en un umbral sale mas barata descubierta al arrancar.
+# §12 Configuracion. Un unico config.json en la raiz. Se carga al arrancar, se
+# valida entero y se para si falta una clave o un valor cae fuera de rango: una
+# errata en un umbral sale mas barata descubierta al arrancar.
+#
+# **Todo lo que hay aqui lo lee tambien el orquestador**, que no es codigo sino
+# una sesion de Claude Code (§21): la skill imprime estos numeros y los obedece.
+# Por eso un umbral escrito a mano en un prompt sigue siendo un bug aunque ya no
+# haya harness que lo lea.
 import json
 import math
 import re
@@ -11,13 +16,8 @@ import re
 # donde se las busca.
 ENTORNO_DE_TRAZAS = re.compile(r'^(?!langfuse)[a-z0-9_\-]{1,40}$')
 
-ROLES = [
-    'investigador', 'arquitecto', 'escritor', 'validador', 'cronista', 'editor_global',
-]
-
-
 class ErrorConfig(Exception):
-    """config.json no sirve. El harness para antes de hacer nada."""
+    """config.json no sirve. Se para antes de hacer nada."""
 
 
 def _entero(v):
@@ -33,29 +33,16 @@ def _fraccion(v):
     return _numero(v) and 0 < v < 1
 
 
-def _modelos_por_rol(v):
-    return isinstance(v, dict) and all(
-        isinstance(v.get(rol), str) and v.get(rol) for rol in ROLES
-    )
-
-
 # (clave, predicado, que se espera)
 REGLAS = [
-    ('ejecucion.modo', lambda v: v in ('simulado', 'real', 'claude_code'),
-     '"simulado", "real" o "claude_code"'),
     ('gate.nota_minima', lambda v: _entero(v) and 1 <= v <= 5, 'entero entre 1 y 5'),
     ('gate.media_minima', lambda v: _numero(v) and 1 <= v <= 5, 'numero entre 1 y 5'),
     ('gate.max_intentos', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
     ('contexto.tope_contexto', lambda v: _entero(v) and v > 0, 'entero > 0'),
     ('contexto.ventana_resumenes', lambda v: _entero(v) and v >= 0, 'entero >= 0'),
     ('contexto.palabras_enganche', lambda v: _entero(v) and v >= 0, 'entero >= 0'),
-    ('validador.modo', lambda v: v in ('unico', 'separado'), '"unico" o "separado"'),
     ('interfaz.puerto', lambda v: _entero(v) and 1024 <= v <= 65535,
      'entero entre 1024 y 65535'),
-    # Por cual de los dos caminos mira la interfaz al abrirse (§19, §21). No
-    # cierra el otro: la pagina puede cambiar de canon sin reiniciar nada.
-    ('interfaz.camino', lambda v: v in ('delegado', 'harness'),
-     '"delegado" o "harness"'),
     ('margenes.capitulos_min', lambda v: _numero(v) and 0 < v <= 1, 'numero en (0, 1]'),
     ('margenes.capitulos_max', lambda v: _numero(v) and v >= 1, 'numero >= 1'),
     ('margenes.palabras_aviso', _fraccion, 'fraccion en (0, 1)'),
@@ -64,8 +51,6 @@ REGLAS = [
     ('trazas.activas', lambda v: isinstance(v, bool), 'booleano'),
     ('trazas.entorno', lambda v: isinstance(v, str) and bool(ENTORNO_DE_TRAZAS.match(v)),
      'minusculas, digitos, guion o guion bajo, sin empezar por "langfuse"'),
-    ('modelo_por_rol', _modelos_por_rol, 'un modelo por cada rol de §5'),
-    ('busqueda_web', lambda v: isinstance(v, bool), 'booleano'),
 ]
 
 _AUSENTE = object()
