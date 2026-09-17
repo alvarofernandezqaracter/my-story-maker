@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.8.0
+version: 1.9.0
 estado: vigente
 actualizado: 2026-09-17
 ---
@@ -528,6 +528,18 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.9.0] — 2026-09-17
+
+**Añadido**
+- §22. El informe cae al diario local del hook cuando Langfuse no contesta. Sale
+  todo menos el coste, que es lo único que el diario no sabe, y se declara en vez
+  de rellenarse con un cero. Motivo: Langfuse Cloud devolvió 504 en todas las
+  lecturas y el análisis de una novela ya escrita se quedaba sin informe por un
+  servicio de fuera.
+- §22. Las líneas repetidas del diario se descartan por su firma. El diario solo
+  añade, así que un evento entregado dos veces duplicaba todos los números; en la
+  primera pasada eran 83 líneas para 41 llamadas.
 
 ### [1.8.0] — 2026-09-17
 
@@ -1215,6 +1227,24 @@ análisis heredaría el error sin poder verlo.
 **Solo lo directo cuenta gasto.** Las trazas del hook llevan tokens y coste; las
 reconstruidas de §20 no, y sumarlas sería inventárselos. El informe las separa por
 esa marca y lo dice.
+
+**Si Langfuse no contesta, queda el diario.** El hook escribe cada llamada además
+en un diario local, y el informe cae a él cuando el servicio no responde o no
+tiene nada de esa sesión. Sale lo mismo —llamadas, roles, capítulos, intentos,
+tokens, caché y duración— **menos el dinero**, porque el coste no lo mide nadie
+aquí: lo calcula Langfuse cruzando modelo y tokens con su lista de precios. Donde
+iría dinero va una raya y el informe se marca con su procedencia, en vez de un
+cero que se lee como gratis. Es la misma regla que §19 aplica a la pantalla: lo
+que no se sabe se declara, no se rellena.
+
+Dos cosas que el diario obliga a hacer y Langfuse no. **Las líneas repetidas se
+descartan**: el diario solo añade, así que un evento entregado dos veces deja la
+misma llamada dos veces, y en Langfuse eso no se nota porque la observación lleva
+id y se solapa. La firma que las distingue es rol, dimensión, capítulo, intento,
+milisegundos y tokens: dos llamadas distintas no comparten las seis. Y **el
+informe no cambia de forma** según de dónde venga, porque el diario se traduce a
+la misma pieza que devuelve Langfuse y se agrega por el mismo sitio: dos maneras
+de contar lo mismo acabarían dando dos números distintos.
 
 ### Dónde se acumula lo que se aprende
 
