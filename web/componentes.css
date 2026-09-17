@@ -8,9 +8,9 @@
    relleno con un valor inventado. */
 
 .titulo-panel {
-  margin: 0 0 .6rem;
+  margin: 0 0 var(--e3);
   font-family: var(--dato);
-  font-size: .68rem;
+  font-size: var(--t-seccion);
   font-weight: 500;
   letter-spacing: .12em;
   text-transform: uppercase;
@@ -18,7 +18,7 @@
 }
 
 .panel {
-  padding: 1rem;
+  padding: var(--e4);
   background: color-mix(in srgb, var(--superficie) 88%, transparent);
   backdrop-filter: blur(10px);
   border: 1px solid var(--linea);
@@ -27,7 +27,8 @@
 
 .vacio {
   margin: 0;
-  font-size: .8rem;
+  max-width: var(--medida);
+  font-size: var(--t-caption);
   font-style: italic;
   color: var(--texto-tenue);
 }
@@ -35,7 +36,7 @@
 .columna-taller {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--e4);
   min-width: 0;
 }
 
@@ -69,8 +70,8 @@
 
 .ejecuciones {
   width: min(27rem, 100%);
-  margin-top: 1rem;
-  padding: 1rem;
+  margin-top: var(--e4);
+  padding: var(--e4);
   background: color-mix(in srgb, var(--superficie) 88%, transparent);
   backdrop-filter: blur(10px);
   border: 1px solid var(--linea);
@@ -80,9 +81,9 @@
 .ejecucion {
   display: flex;
   flex-direction: column;
-  gap: .5rem;
+  gap: var(--e2);
   width: 100%;
-  padding: .75rem;
+  padding: var(--e3);
   text-align: left;
   color: inherit;
   background: none;
@@ -98,26 +99,26 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: .5rem;
+  gap: var(--e2);
 }
 
-.ejecucion__premisa { font-size: .85rem; line-height: 1.45; }
+.ejecucion__premisa { max-width: var(--medida); font-size: var(--t-cuerpo); line-height: 1.45; }
 
 .ejecucion__ruta, .ejecucion__cuenta {
   font-family: var(--dato);
-  font-size: .7rem;
+  font-size: var(--t-caption);
   color: var(--texto-tenue);
 }
 
 select {
   width: 100%;
-  padding: .6rem .7rem;
+  padding: var(--e2) var(--e3);
   color: var(--texto);
   background: var(--fondo);
   border: 1px solid var(--linea);
   border-radius: 2px;
   font-family: var(--texto-ui);
-  font-size: .95rem;
+  font-size: var(--t-cuerpo);
 }
 
 select:focus { border-color: var(--qa-naranja); }
@@ -128,8 +129,9 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
 .linea-estado {
   margin: 0;
+  max-width: var(--medida);
   font-family: var(--dato);
-  font-size: .75rem;
+  font-size: var(--t-caption);
   line-height: 1.6;
   color: var(--texto-tenue);
 }
@@ -143,7 +145,7 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: .3rem;
+  gap: var(--e1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -152,16 +154,16 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 .paso {
   display: flex;
   align-items: center;
-  gap: .4rem;
-  padding: .25rem .55rem;
+  gap: var(--e1);
+  padding: var(--e1) var(--e2);
   border: 1px solid var(--linea);
   border-radius: 2px;
   font-family: var(--dato);
-  font-size: .7rem;
+  font-size: var(--t-caption);
   color: var(--texto-tenue);
 }
 
-.paso::before { content: attr(data-orden); font-size: .64rem; opacity: .6; }
+.paso::before { content: attr(data-orden); font-size: calc(var(--t-caption) * .9); opacity: .6; }
 
 .paso[data-hecho="si"] { color: var(--texto); border-color: var(--texto-tenue); }
 
@@ -181,24 +183,25 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
 .agentes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: .5rem;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: var(--e2);
+  align-items: stretch;
 }
 
 .agente {
   display: flex;
   flex-direction: column;
-  gap: .25rem;
-  padding: .55rem .65rem;
+  gap: var(--e1);
+  padding: var(--e3);
   border: 1px solid var(--linea);
   border-radius: 2px;
 }
 
-.agente__alto { display: flex; align-items: center; gap: .4rem; }
+.agente__alto { display: flex; align-items: center; gap: var(--e1); }
 
 .agente__luz {
-  width: .45rem;
-  height: .45rem;
+  width: var(--e2);
+  height: var(--e2);
   flex: 0 0 auto;
   background: var(--linea);
   border-radius: 999px;
@@ -206,13 +209,34 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
 .agente__nombre {
   font-family: var(--dato);
-  font-size: .7rem;
+  font-size: var(--t-caption);
   letter-spacing: .05em;
   text-transform: uppercase;
   color: var(--texto-tenue);
 }
 
-.agente__tarea { font-size: .72rem; line-height: 1.4; color: var(--texto-tenue); }
+/* Lo que produce: fijo por subagente y distinto en cada uno, porque es lo que
+   separa una tarjeta de otra cuando ninguna ha corrido todavia. */
+.agente__tarea { font-size: var(--t-caption); line-height: 1.4; color: var(--texto-tenue); }
+
+/* Lo que lleva hecho en este canon. Cada linea es un dato real; la que no
+   tiene dato no se pinta, que es distinto de pintarla vacia. */
+.agente__cuenta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  margin-top: auto;
+  padding-top: var(--e2);
+  font-family: var(--dato);
+  font-size: calc(var(--t-caption) * .92);
+  color: var(--texto-tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.agente__cuenta b { color: var(--texto); font-weight: 500; }
+
+.agente[data-visto="no"] .agente__cuenta { font-style: italic; }
 
 .agente[data-visto="si"] .agente__luz { background: var(--texto-tenue); }
 .agente[data-visto="si"] .agente__nombre { color: var(--texto); }
@@ -229,18 +253,19 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 /* ======================================================= taller: intentos */
 
 .umbrales {
-  margin: 0 0 .6rem;
+  margin: 0 0 var(--e3);
+  max-width: var(--medida);
   font-family: var(--dato);
-  font-size: .7rem;
+  font-size: var(--t-caption);
   color: var(--texto-tenue);
 }
 
 .tabla-caja { overflow-x: auto; }
 
-.tabla { width: 100%; border-collapse: collapse; font-size: .75rem; }
+.tabla { width: 100%; border-collapse: collapse; font-size: var(--t-caption); }
 
 .tabla th, .tabla td {
-  padding: .4rem .5rem;
+  padding: var(--e2);
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--linea);
@@ -248,7 +273,7 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
 .tabla th {
   font-family: var(--dato);
-  font-size: .66rem;
+  font-size: var(--t-caption);
   font-weight: 500;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -263,18 +288,18 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
 .tabla td:nth-child(2) {
   font-family: var(--dato);
-  font-size: .7rem;
+  font-size: var(--t-caption);
   color: var(--texto-tenue);
 }
 
 .tabla td:nth-child(4) { color: var(--texto-tenue); }
 
 .veredicto {
-  padding: .1rem .4rem;
+  padding: var(--e1) var(--e2);
   border: 1px solid var(--linea);
   border-radius: 999px;
   font-family: var(--dato);
-  font-size: .66rem;
+  font-size: var(--t-caption);
   white-space: nowrap;
 }
 
@@ -284,24 +309,24 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
 /* ========================================================= taller: ledger */
 
-.chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--e1); }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: .35rem;
-  padding: .2rem .5rem;
+  gap: var(--e1);
+  padding: var(--e1) var(--e2);
   border: 1px solid var(--linea);
   border-radius: 999px;
   font-family: var(--dato);
-  font-size: .68rem;
+  font-size: var(--t-caption);
   color: var(--texto-tenue);
 }
 
 .chip::before {
   content: "";
-  width: .4rem;
-  height: .4rem;
+  width: var(--e2);
+  height: var(--e2);
   border-radius: 999px;
   background: var(--texto-tenue);
 }
@@ -315,15 +340,15 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 .archivos {
   display: flex;
   flex-direction: column;
-  gap: .25rem;
+  gap: var(--e1);
   margin: 0;
   padding: 0;
   list-style: none;
   font-family: var(--dato);
-  font-size: .72rem;
+  font-size: var(--t-caption);
 }
 
-.archivos li { display: flex; align-items: baseline; gap: .6rem; }
+.archivos li { display: flex; align-items: baseline; gap: var(--e2); }
 
 .archivos time {
   flex: 0 0 auto;
@@ -344,7 +369,7 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
   width: 14rem;
   max-height: 64vh;
   overflow-y: auto;
-  padding: .8rem;
+  padding: var(--e3);
   background: color-mix(in srgb, var(--superficie) 92%, transparent);
   backdrop-filter: blur(12px);
   border: 1px solid var(--linea);
@@ -357,9 +382,9 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 .indice__entrada {
   display: grid;
   grid-template-columns: 3px 1fr;
-  gap: .55rem;
+  gap: var(--e2);
   width: 100%;
-  padding: .4rem 0;
+  padding: var(--e2) 0;
   text-align: left;
   color: inherit;
   background: none;
@@ -379,11 +404,11 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 .indice__entrada[data-estado="en_curso"] .indice__lomo { background: var(--qa-naranja); }
 .indice__entrada[data-estado="bloqueado"] .indice__lomo { background: var(--fallo); }
 
-.indice__titulo { font-size: .8rem; line-height: 1.3; }
+.indice__titulo { font-size: var(--t-cuerpo); line-height: 1.3; }
 
 .indice__datos {
   font-family: var(--dato);
-  font-size: .64rem;
+  font-size: calc(var(--t-caption) * .92);
   color: var(--texto-tenue);
   font-variant-numeric: tabular-nums;
 }
@@ -392,10 +417,10 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 
 .metadatos, .ficha-datos {
   display: grid;
-  gap: .15rem .7rem;
+  gap: var(--e1) var(--e3);
   margin: 0;
   font-family: var(--dato);
-  font-size: .7rem;
+  font-size: var(--t-caption);
 }
 
 .metadatos {
@@ -408,11 +433,10 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 .ficha-datos {
   grid-template-columns: 1fr;
   gap: 0;
-  font-size: .72rem;
-  margin-bottom: .5rem;
+  margin-bottom: var(--e2);
 }
 
-.ficha-datos dt { margin-top: .5rem; }
+.ficha-datos dt { margin-top: var(--e2); }
 .ficha-datos dt:first-child { margin-top: 0; }
 
 .metadatos dt, .ficha-datos dt {
@@ -426,6 +450,20 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 .metadatos dd[data-vacio="si"],
 .ficha-datos dd[data-vacio="si"] { color: var(--texto-tenue); font-style: italic; }
 
+/* Lo que el canon no guarda se sigue diciendo (§19), pero una vez y en corto:
+   cuatro «sin datos todavia» seguidos tapaban los dos campos que si tenian
+   valor. El detalle de cuales son se lee al pasar por encima. */
+.pendientes {
+  margin: var(--e2) 0 0;
+  font-family: var(--dato);
+  font-size: calc(var(--t-caption) * .92);
+  font-style: italic;
+  color: var(--texto-tenue);
+  border-top: 1px dotted var(--linea);
+  padding-top: var(--e2);
+  cursor: help;
+}
+
 .separador-escena {
   margin: 2.2em 0;
   text-align: center;
@@ -434,9 +472,9 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 }
 
 .marca-fin {
-  margin: 2rem 0 0;
+  margin: var(--e6) 0 0;
   font-family: var(--dato);
-  font-size: .68rem;
+  font-size: var(--t-caption);
   letter-spacing: .14em;
   text-transform: uppercase;
   text-align: center;
@@ -446,13 +484,13 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 .marca-fin::before, .marca-fin::after { content: "—"; margin: 0 .6rem; }
 
 .ficha-lateral section + section {
-  margin-top: 1.2rem;
-  padding-top: 1.2rem;
+  margin-top: var(--e5);
+  padding-top: var(--e5);
   border-top: 1px solid var(--linea);
 }
 
-.controles { margin: 0; padding-left: 1.1rem; font-size: .75rem; }
-.controles li { margin-bottom: .25rem; }
+.controles { margin: 0; padding-left: var(--e4); font-size: var(--t-caption); }
+.controles li { margin-bottom: var(--e1); }
 .controles b { color: var(--texto); font-weight: 500; }
 
 /* ================================================================ estrecho */
@@ -467,7 +505,7 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
     width: auto;
     max-width: 40rem;
     max-height: none;
-    margin: 0 auto 2rem;
+    margin: 0 auto var(--e6);
   }
 }
 
@@ -476,11 +514,273 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 }
 
 /* El taller se ha llenado de paneles y la mesa queda detras de todos ellos:
-   se atenua para que el texto gane, sin tocar nada de la escena. */
+   se atenua para que el texto gane, sin tocar nada de la escena. La sala de
+   arquitectura tiene ademas su propio lienzo delante, asi que la mesa baja mas:
+   dos escenas WebGL compitiendo por la misma pantalla no se leen ni una. */
 body[data-sala="taller"] #escena { opacity: .5; }
+body[data-sala="arquitectura"] #escena { opacity: .22; }
 
 body[data-sala="taller"] .panel,
 body[data-sala="taller"] .tarjeta,
 body[data-sala="taller"] .mando {
   background: color-mix(in srgb, var(--superficie) 96%, transparent);
+}
+
+/* ========================================================== arquitectura */
+
+/* La cuarta sala: el pipeline de §4 y §8 dibujado como grafo por capas. No
+   ensena la novela, ensena el sistema que la escribe, y por eso es la unica
+   pantalla que sigue teniendo algo que decir con el canon vacio.
+
+   Ocupa el alto util entero y no scrollea: el lienzo se encuadra solo y lo que
+   crece es el panel de la derecha, que lleva su propio scroll. */
+#sala-arquitectura {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: var(--e4);
+  height: 100%;
+  padding: var(--barra-alto) var(--e4) var(--rail-alto);
+  overflow: hidden;
+}
+
+.grafo {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--superficie) 78%, transparent);
+  background-image: var(--verjura);
+  overflow: hidden;
+}
+
+#lienzo-arquitectura {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+
+#lienzo-arquitectura:active { cursor: grabbing; }
+
+/* Los mandos flotan sobre el lienzo: el grafo es lo que se mira, y la barra de
+   arriba solo tiene que estar ahi cuando se la busca. */
+.grafo__mandos {
+  position: absolute;
+  top: var(--e3);
+  left: var(--e3);
+  right: var(--e3);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  flex-wrap: wrap;
+  pointer-events: none;
+}
+
+.grafo__mandos > * { pointer-events: auto; }
+
+.grafo__mandos label {
+  font-family: var(--dato);
+  font-size: var(--t-caption);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.grafo__mandos select {
+  width: auto;
+  min-width: 12rem;
+  padding: var(--e1) var(--e2);
+  font-family: var(--dato);
+  font-size: var(--t-caption);
+  background: color-mix(in srgb, var(--fondo) 90%, transparent);
+}
+
+.grafo__nota {
+  margin: 0;
+  max-width: var(--medida);
+  font-family: var(--dato);
+  font-size: calc(var(--t-caption) * .92);
+  color: var(--texto-tenue);
+}
+
+/* Leyenda discreta, abajo a la izquierda: tres formas y nada mas. Si hiciera
+   falta explicar mas cosas seria que el dibujo no se explica solo. */
+.leyenda {
+  position: absolute;
+  left: var(--e3);
+  bottom: var(--e3);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  padding: var(--e2) var(--e3);
+  background: color-mix(in srgb, var(--fondo) 82%, transparent);
+  border: 1px solid var(--linea);
+  border-radius: 2px;
+  font-family: var(--dato);
+  font-size: calc(var(--t-caption) * .92);
+  color: var(--texto-tenue);
+  pointer-events: none;
+}
+
+.leyenda span { display: flex; align-items: center; gap: var(--e2); }
+
+.leyenda i {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  background: var(--texto-tenue);
+}
+
+.leyenda i[data-forma="agente"] { border-radius: 999px; }
+.leyenda i[data-forma="artefacto"] { border-radius: 2px; height: 8px; }
+.leyenda i[data-forma="decision"] { transform: rotate(45deg); background: var(--oro); }
+.leyenda i[data-forma="realimenta"] {
+  height: 0;
+  border-top: 1px dashed var(--texto-tenue);
+  background: none;
+}
+
+.grafo__aviso {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: var(--e5);
+  text-align: center;
+}
+
+/* ------------------------------------------------- panel derecho del nodo */
+
+/* Misma estructura para los quince nodos: descripcion, ENTRADAS, SALIDAS y
+   REGLAS, siempre y en ese orden. Lo que cambia entre un nodo y otro es lo que
+   pone dentro, nunca la forma, para que comparar dos sea leer el mismo sitio. */
+.ficha-nodo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e3);
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--e4);
+  background: color-mix(in srgb, var(--superficie) 92%, transparent);
+  background-image: var(--verjura);
+  border: 1px solid var(--linea);
+  border-left: 2px solid var(--qa-naranja);
+  border-radius: 2px;
+}
+
+.ficha-nodo__alto {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e2);
+}
+
+.ficha-nodo h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: calc(var(--t-cuerpo) * 1.35);
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--texto);
+}
+
+.ficha-nodo__tipo {
+  flex: 0 0 auto;
+  padding: var(--e1) var(--e2);
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  font-family: var(--dato);
+  font-size: calc(var(--t-caption) * .92);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.ficha-nodo__tipo[data-forma="agente"] { border-color: var(--texto-tenue); color: var(--texto); }
+.ficha-nodo__tipo[data-forma="decision"] { border-color: var(--oro); color: var(--oro); }
+
+.ficha-nodo__desc {
+  margin: 0;
+  max-width: var(--medida);
+  font-size: var(--t-cuerpo);
+  line-height: 1.55;
+  color: var(--texto-tenue);
+}
+
+.ficha-nodo section { display: flex; flex-direction: column; gap: var(--e2); }
+
+.ficha-nodo h4 {
+  margin: 0;
+  font-family: var(--dato);
+  font-size: var(--t-seccion);
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--qa-naranja);
+}
+
+.ficha-nodo ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+
+.ficha-nodo li {
+  max-width: var(--medida);
+  padding-left: var(--e3);
+  font-family: var(--dato);
+  font-size: calc(var(--t-caption) * .96);
+  line-height: 1.5;
+  color: var(--texto-tenue);
+  text-indent: calc(var(--e3) * -1);
+}
+
+.ficha-nodo li::before { content: "· "; color: var(--sepia); }
+.ficha-nodo li b { color: var(--texto); font-weight: 500; }
+
+/* Lo que este canon dice de este nodo. Es el unico bloque que puede faltar:
+   con el canon vacio no hay nada que contar y no se pinta un hueco. */
+.ficha-nodo__canon {
+  padding: var(--e3);
+  background: color-mix(in srgb, var(--qa-pizarra) 40%, transparent);
+  border-left: 2px solid var(--sepia);
+}
+
+.ficha-nodo__canon dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--e1) var(--e3);
+  margin: 0;
+  font-family: var(--dato);
+  font-size: calc(var(--t-caption) * .96);
+  font-variant-numeric: tabular-nums;
+}
+
+.ficha-nodo__canon dt { color: var(--texto-tenue); }
+.ficha-nodo__canon dd { margin: 0; color: var(--texto); }
+
+/* ---------------------------------------------------------------- estrecho */
+
+@media (max-width: 900px) {
+  #sala-arquitectura {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: 100%;
+    overflow-y: auto;
+    padding: calc(var(--barra-alto) + var(--e4)) var(--e4) calc(var(--rail-alto) + var(--e4));
+  }
+
+  .grafo { height: 56vh; }
+
+  .ficha-nodo { height: auto; overflow: visible; }
 }
