@@ -8,13 +8,7 @@ config.real.json
 # no fuente. Vive entero bajo novela-cc/, incluidos los borradores y retoques.
 novela-cc/
 
-# Salida de pasadas viejas.
-*.viejo.md
-
 # Salida suelta en la raiz: no es fuente de nada. El informe de trazas se
 # regenera con un comando, y ademas lleva dentro el gasto de una pasada
 # concreta: lo que se versiona es lo que se aprende de el, en docs/spec/TRAZAS.md
-/informe.md
 /informe*.md
-/capitulos/
-/retoques.md
