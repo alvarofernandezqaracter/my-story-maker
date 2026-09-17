@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 0.12.0
+version: 0.13.0
 estado: borrador
 actualizado: 2026-09-17
 ---
@@ -13,7 +13,21 @@ Sistema que escribe una novela histórica capítulo a capítulo a partir de un b
 
 **Principio rector.** Lo determinista vive en código del harness: selección de contexto, cálculo del gate, control de reintentos, escritura en el canon y máquina de estados. Lo generativo vive en agentes: investigar, estructurar, redactar, revisar, resumir y editar. Ningún agente escribe en el canon; propone, y el harness decide.
 
-**Dos orquestaciones.** Ese principio describe el harness de Python, que es lo que especifican §1 a §20. Desde 0.12.0 hay un segundo camino, y es el principal del repositorio: **orquesta Claude Code** y lo determinista deja de ser código para ser instrucciones que una sesión padre obedece (§21). Comparten prompts, skills y umbrales; no comparten canon, transporte ni observabilidad. Lo que se gana y lo que se paga está en §21, y el harness vive en la rama `harness-python`.
+**Dos orquestaciones, un solo diseño.** Ese principio rector se puede cumplir de dos maneras, y este documento especifica las dos. El **camino principal** es la orquestación delegada (§21): orquesta una sesión de Claude Code y lo determinista deja de ser código para ser instrucciones que esa sesión obedece. El **segundo camino** es el harness de Python, que hace lo mismo escrito en `novela/` y vive en la rama `harness-python`.
+
+Comparten los prompts de `agentes/`, las skills de §10 y los umbrales de §12, y no los duplican. No comparten canon, transporte ni observabilidad.
+
+**Qué sección habla de qué.** Es lo primero que hay que saber para leer el resto:
+
+| Secciones | Qué describen | Para quién valen |
+|---|---|---|
+| §2–§11, §13, §15 | Glosario, canon, máquina de estados, agentes, paquete de contexto, gate, validadores, skills, editor global, operación y decisiones abiertas | **El diseño.** Valen igual para los dos caminos: la skill de §21 no inventa un gate, obedece el de §8 |
+| §12 | Configuración | El diseño, menos `ejecucion.modo` y `validador.modo`, que son del harness |
+| §21 | Orquestación delegada | **El camino principal** |
+| §14, §18, §19, §20 | Roadmap, estructura y comandos, interfaz web y observabilidad | Solo el harness |
+| §16, §17 | Historial y log de commits | El documento |
+
+Cuando este documento dice «el harness» sin más, habla del camino de Python. Cuando dice «el orquestador», habla de quien manda en cada caso.
 
 **Qué produce.** Un canon consultable, un fichero por capítulo aprobado y una lista final de retoques. No maqueta el libro ni aplica esos retoques por sí mismo.
 
@@ -465,6 +479,9 @@ La interfaz de §19 llama **perfil** a cada `config*.json` de la raíz y deja el
 
 ## §14 Roadmap por fases
 
+> **Camino del harness.** Esta sección describe solo el camino de Python, que vive en la rama `harness-python`. El camino principal del repositorio es la orquestación delegada de §21, que no pasa por aquí.
+
+
 Cada fase deja algo que funciona de punta a punta. El criterio de salida es lo que tiene que pasar para empezar la siguiente, no una fecha.
 
 | Fase | Qué entra | Criterio de salida |
@@ -497,10 +514,28 @@ DA-06 no se cierra con F8, pero deja de estar a ciegas: §20 manda las tres nota
 | DA-09 | Unidad de escritura: capítulo entero o escena a escena | Si la prosa se degrada en capítulos largos, el loop cambia de grano | Durante F2 |
 | DA-10 | Qué hacer si la escaleta se queda corta o larga a mitad de libro | Replanificar toca el canon en caliente; forzarla estropea el final | Durante F4 |
 | DA-12 | Qué hacer con el coste, ahora que se conoce | §20 sabe lo que cuesta cada capítulo, pero nadie lo mira: el harness no tiene tope ni cuota, y es el hueco que §19 pinta como «sin datos todavía» | Después de F8 |
+| DA-13 | Si un validador debe vigilar que el cronista respete los «Ignora» de una ficha | Ninguno de los once `VD-xx` lo mira, así que un conocimiento que el gate acaba de vetar puede entrar en el canon por la propuesta del cronista. VD-09 solo comprueba que los presentes sean subconjunto de la ficha, no lo que aprenden | Antes de calibrar DA-06 |
+| DA-14 | Cómo se retracta un «Ignora» de `sabe` | El campo solo acumula, así que cuando un personaje aprende lo que su ficha decía que ignoraba, la ficha acaba afirmando y negando lo mismo, y el paquete de §7 arrastra las dos líneas. Hace falta decidir si `sabe` se parte en dos campos, si los «Ignora» caducan o si el cronista puede retirar líneas | Antes de F4 |
 
 ## §16 Historial de cambios
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección tocada y el motivo del cambio.
+
+### [0.13.0] — 2026-09-17
+
+**Cambiado**
+- §1. Deja de presentar el harness como *el* sistema y pasa a ser el router del documento: una tabla dice qué secciones describen el diseño —que vale para los dos caminos— y cuáles son de uno concreto. El motivo es que doce de las veintiuna secciones ya especificaban los dos caminos sin decirlo: la skill de §21 no inventa un gate, obedece el de §8.
+- §21. Pasa de resumen a sección principal: los ocho subagentes con sus contratos, el canon en ficheros, lo que se conserva, lo que se paga y la evidencia de la primera pasada completa. Es la sección del camino por defecto y ahora tiene el tamaño que le toca.
+- §14, §18, §19 y §20 llevan una marca al principio que dice que son solo del harness. Sin ella, quien entra por §18 se lleva la impresión de que los comandos de `python -m novela` son la forma de usar el sistema.
+
+**Añadido**
+- §15. DA-13 y DA-14, los dos huecos del modelo de datos que la primera pasada del camino delegado sacó a la luz y que **tiene también el harness**: ningún `VD-xx` vigila que el cronista respete un «Ignora» de una ficha, y `sabe` solo acumula sin forma de retractar uno.
+
+**Eliminado**
+- §18. `canon.viejo.db`, `capitulos.viejo/` y `retoques.viejo.md` salen del control de versiones. Son la salida de un test de humo de 494 palabras, y §18 ya decía que la salida no se versiona; las variantes `.viejo` se habían colado por el lado. El `.gitignore` las cubre ahora por patrón.
+
+**Contexto**
+- Los configs no se han movido a una carpeta aunque estorben en la raíz: §12 y §19 definen un perfil como un `config*.json` **de la raíz**, y `novela/servidor.py` los busca ahí con un glob. Moverlos sería cambiar el comportamiento del selector de la interfaz, no ordenar ficheros.
 
 ### [0.12.0] — 2026-09-17
 
@@ -840,6 +875,9 @@ git log --reverse --pretty='| `%h` | %ad | %s |' --date=short -- docs/spec/
 
 ## §18 Estructura del repo y comandos
 
+> **Camino del harness.** Esta sección describe solo el camino de Python, que vive en la rama `harness-python`. El camino principal del repositorio es la orquestación delegada de §21, que no pasa por aquí.
+
+
 **Stack.** Python 3.13 (mínimo 3.11) con `sqlite3` y `unittest`, los dos de la biblioteca estándar. Cierra DA-01. La razón de peso es la misma que cerró DA-01 en su día y no ha cambiado: el canon de §3 pide SQLite y el runtime ya lo trae, así que el modo `simulado` —que es el de por defecto y el que corren los tests— no necesita instalar nada. El modo `real` es la única parte con dependencia: el SDK oficial de Anthropic, importado de forma perezosa, de modo que un repo recién clonado escribe una novela entera sin red y sin `pip install`. El modo `claude_code` de §12 tampoco añade paquete alguno, porque habla con la CLI por `subprocess`: lo que pide no se instala con `pip` sino que es tener la CLI de Claude Code en el `PATH`.
 
 La interfaz de §19 tampoco añade paquete: el servidor es `http.server` de la biblioteca estándar. Lo que sí añade es la única dependencia de red del repo, y es del navegador, no del harness: three.js viaja por CDN y, si no llega, el formulario sigue funcionando entero.
@@ -887,6 +925,9 @@ Los tests se lanzan con `python -m unittest discover -s tests -t .`: setenta y c
 
 ## §19 Interfaz web
 
+> **Camino del harness.** Esta sección describe solo el camino de Python, que vive en la rama `harness-python`. El camino principal del repositorio es la orquestación delegada de §21, que no pasa por aquí.
+
+
 **Qué es.** Una página local, `python -m novela ui`, desde la que se hace el ciclo entero: escribir el brief de §3, lanzar a los agentes, ver el proceso mientras corre y leer los capítulos aprobados. Escucha solo en `127.0.0.1` y no necesita nada instalado, porque el servidor es `http.server` de la biblioteca estándar. La CLI de §18 sigue siendo el otro camino completo, no un camino de repuesto.
 
 **Cómo convive con el invariante de §8.** Dentro del harness no corre nada en paralelo, y eso no cambia: el flujo vive en **un único hilo de trabajo** y el servidor rechaza con 409 cualquier intento de arrancar otro mientras hay uno vivo. Que el servidor siga atendiendo peticiones mientras tanto no es paralelismo del sistema —es HTTP—, y lo que esas peticiones hacen es leer un canon que ya está escrito. El orden de capítulos tampoco cambia: el bucle es el mismo del comando `escribir`, uno detrás de otro, porque el N+1 depende del canon que dejó el N.
@@ -931,6 +972,9 @@ Cuando no hay capítulo en el loop, la tabla de intentos enseña el último cap�
 
 ## §20 Observabilidad
 
+> **Camino del harness.** Esta sección describe solo el camino de Python, que vive en la rama `harness-python`. El camino principal del repositorio es la orquestación delegada de §21, que no pasa por aquí.
+
+
 **Qué es.** El harness manda a [Langfuse](https://langfuse.com) lo que hace cada agente: qué se le pidió, qué contestó, con qué modelo, cuántos tokens gastó y cuánto costó. Es la respuesta a la única pregunta que ni el canon ni el diario contestan: **por qué el modelo contestó lo que contestó**. El canon guarda el resultado y el diario guarda el relato; las trazas guardan el contexto exacto que tenía el agente al decidir.
 
 **Nada de esto es fuente de verdad.** El estado sigue viviendo en el canon (§13) y el gate sigue decidiendo en código (§8). Las trazas solo observan, así que **ningún fallo de observabilidad puede parar una novela**: si falta el SDK, falta la credencial o Langfuse no responde, la capa se apaga, lo dice una vez y el libro se escribe igual. Es la regla de §13 al revés: allí se para porque el fallo afecta al libro; aquí no afecta, así que se sigue.
@@ -955,20 +999,61 @@ Los nombres se tratan como una API y no llevan números dentro: el capítulo y e
 
 ## §21 Orquestación delegada
 
-**Qué es.** Un segundo camino de ejecución en el que **quien orquesta es Claude Code**, no `novela/`. Una sesión padre lee la skill `orquestar-novela`, lanza los seis roles de §5 como subagentes y escribe el canon ella misma. No hay código: la máquina de estados de §4, el generador de §7 y las comprobaciones de §9 pasan de ser Python a ser instrucciones que el padre obedece.
+**Camino principal del repositorio.** Aquí no orquesta código: orquesta una sesión de Claude Code que lee la skill `orquestar-novela`, lanza los seis roles de §5 como subagentes y escribe el canon ella misma. La máquina de estados de §4, el generador de §7 y las comprobaciones de §9 dejan de ser Python y pasan a ser instrucciones que esa sesión obedece.
 
-**Por qué está.** Porque la pregunta que el harness no contesta es cuánta de su rigidez es necesaria. §1 a §20 describen un sistema que no deja decidir nada al modelo; este camino deja que lo decida casi todo y hace visible la diferencia. Es el camino principal del repo por decisión del autor.
+**Por qué existe.** §2 a §13 describen un sistema que no deja decidir nada al modelo. La pregunta que nadie había contestado es cuánta de esa rigidez hace falta de verdad. Este camino deja que el modelo decida casi todo, con el mismo diseño y los mismos prompts delante, y así la diferencia se puede medir en lugar de discutirla.
 
-**Qué comparte y qué no.** Comparte lo que vale para los dos: los prompts de `agentes/`, las skills de §10 y los umbrales de `config.json`. Cada subagente lee su fichero de rol al arrancar, así que **los prompts no se duplican** y tocar uno cambia los dos caminos. No comparte transporte, ni canon, ni observabilidad.
+**Qué comparte.** Los prompts de `agentes/`, las skills de §10 y los umbrales de §12. Cada subagente arranca leyendo su fichero de rol, así que **los prompts no se duplican** y tocar uno cambia los dos caminos. Lo que no comparte: canon, transporte y observabilidad.
 
-**El canon es de ficheros.** SQLite es una biblioteca de Python y aquí no hay Python, así que el canon de §3 se vuelve JSON bajo `novela-cc/canon/`: `estado.json`, `brief.json`, `dossier.json`, `personajes.json`, `escaleta.json`, `hilos.json`, `timeline.json` y un `resumenes/cap-NN.json` por capítulo. Vive aparte de `canon.db` a propósito: los dos caminos corren sobre el mismo repositorio sin pisarse y se comparan después.
+### Los ocho subagentes
 
-**Lo que se conserva.** Ningún subagente escribe en el canon —escribe el padre, con la propuesta ya comprobada delante—, un capítulo cada vez, VD-08 antes del validador, el reintento del último desde cero, el bloqueo como salida con mano humana, el estado en disco y los retoques aplicados a mano.
+| Subagente | Rol de §5 | Herramientas | Devuelve |
+|---|---|---|---|
+| `novela-investigador` | investigador | Read | `{ datos }` |
+| `novela-arquitecto` | arquitecto | Read | `{ personajes, capitulos }` |
+| `novela-escritor` | escritor | Read, Write | `{ ruta, faltantes }` |
+| `novela-validador-continuidad` | validador | Read | un bloque de revisión |
+| `novela-validador-anacronismos` | validador | Read | un bloque de revisión |
+| `novela-validador-logica-ritmo` | validador | Read | un bloque de revisión |
+| `novela-cronista` | cronista | Read | la propuesta de §6 |
+| `novela-editor-global` | editor_global | Read | `{ retoques }` |
 
-**Lo que se pierde, y es el precio.** El gate de §8 deja de ser código: la fórmula está escrita y el padre tiene que imprimir la operación, pero la suma la hace un modelo. El paquete de §7 deja de ser determinista: los filtros son mecánicos y el conteo va por `wc`, pero el ensamblado lo hace un modelo, así que el invariante de que mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a instruido. Y no hay ni tests sin red ni trazas de §20, porque §20 cuelga de la capa de §5 y este camino no pasa por ella.
+Seis roles y ocho subagentes porque **el validador va partido en tres**. En el harness eso es la opción `validador.modo: "separado"`; aquí es la forma del camino y no se puede apagar.
 
-**El validador va siempre separado.** Los tres bloques de §5 son tres subagentes que el padre lanza en un mismo mensaje. No es una opción de configuración como `validador.modo`: es la forma del camino, y la razón es la de §5 —tres cabezas que no se ven dan tres notas que no se contagian—.
+Los subagentes reciben **rutas, no contenido**. Es lo que mantiene el canon fuera de la ventana del orquestador: el escritor lee su paquete de un fichero y deja el capítulo en otro, y solo devuelve la ruta. Un capítulo de mil ochocientas palabras por tres intentos y por seis capítulos no cabe en una conversación.
 
-**Dónde vive.** `.claude/agents/novela-*.md`, ocho ficheros —los seis roles, con el validador partido en tres—, y `.claude/skills/orquestar-novela/`, con el `SKILL.md` que es la máquina de estados y tres referencias: el canon en ficheros, el paquete de contexto y las comprobaciones con el gate. Todo Markdown.
+### El canon en ficheros
 
-**Dónde vive el harness.** En la rama `harness-python`, que es este mismo repositorio sin `.claude/agents/` ni la skill. §1 a §20 siguen describiéndolo y siguen siendo verdad: el harness no se ha borrado de `main`, ha dejado de ser el camino por defecto.
+SQLite es una biblioteca de Python y aquí no hay Python, así que las siete tablas de §3 se vuelven JSON bajo `novela-cc/canon/`: `estado.json`, `brief.json`, `dossier.json`, `personajes.json`, `escaleta.json`, `hilos.json`, `timeline.json` y un `resumenes/cap-NN.json` por capítulo. Al lado, `contexto/cap-NN.md` con el paquete con el que se escribió cada capítulo, y `capitulos/` con los borradores.
+
+Vive aparte de `canon.db` a propósito: los dos caminos corren sobre el mismo repositorio sin pisarse y se comparan después. No se versiona, por la misma razón que §18 no versiona `canon.db`.
+
+**`estado.json` es lo que hace esto reanudable**, y por eso se escribe en cuanto algo cambia y no al final de la pasada. Guarda las notas y los motivos de **todos** los intentos, también los que fracasaron: sin ellos no hay con qué calibrar DA-06.
+
+### Lo que se conserva
+
+Ningún subagente escribe en el canon —escribe el orquestador, con la propuesta ya comprobada delante, y de una vez—, un capítulo cada vez, VD-08 antes del validador, el reintento del último desde cero, la política de §13 de parar tras dos fallos seguidos, el bloqueo como salida con mano humana, el estado en disco y los retoques aplicados a mano.
+
+La excepción a la primera regla es el borrador del escritor, que no es canon: es un fichero suelto que solo entra a través del cronista y solo si el gate lo aprobó.
+
+### Lo que se paga
+
+- **El gate de §8 deja de ser código.** La fórmula está escrita y el orquestador tiene que imprimir la operación entera —los tres números, el mínimo, la media a dos decimales y el recuento de graves—, pero la suma la hace un modelo. Es el punto más débil del camino.
+- **El paquete de §7 deja de ser determinista.** Los filtros son mecánicos y el conteo va por `wc`, pero el ensamblado lo hace un modelo: que mismo capítulo y mismo canon den el mismo paquete pasa de garantizado a instruido.
+- **No hay tests sin red ni trazas.** §20 nace en `novela/agentes.py` y este camino no pasa por ahí, así que no hay dónde instrumentar sin inventarse un punto único que aquí no existe.
+
+Se acepta a sabiendas. La contrapartida es que el camino cabe en doce ficheros de Markdown y se cambia editando prosa.
+
+### Evidencia de la primera pasada
+
+Seis capítulos, 11.341 palabras, los ocho subagentes en Haiku 4.5. Cuatro capítulos aprobados al primer intento y dos al segundo; los dos rechazos fueron por continuidad y los dos por contradecir un «Ignora» de una ficha. El capítulo 6 cayó con media 3,67 contra un mínimo de 3,70: habría caído por tres centésimas aunque no hubiera habido incidencia grave, que es exactamente el comportamiento que §8 describe.
+
+Se ejercitaron los dos escalones de VD-08, los tres cierres de hilo por coincidencia literal y el reintento quirúrgico frente al reintento desde cero. Once de catorce hilos cerrados; los tres vivos lo están porque el encargo del último capítulo los quería vivos.
+
+**La pasada sacó a la luz dos huecos que no son de este camino sino del modelo de datos, y que por tanto tiene también el harness.** El primero: ningún `VD-xx` comprueba que el cronista respete un «Ignora» de una ficha, así que un conocimiento que el gate acaba de vetar puede entrar en el canon por la puerta de al lado. El segundo: `sabe` solo acumula y no hay forma de retractar un «Ignora», de modo que una ficha termina afirmando y negando lo mismo. Los dos van a §15.
+
+### Dónde vive
+
+`.claude/agents/novela-*.md`, ocho ficheros, y `.claude/skills/orquestar-novela/` con el `SKILL.md` que es la máquina de estados y tres referencias: el canon en ficheros, el paquete de contexto y las comprobaciones con el gate. Todo Markdown, sin una línea de código.
+
+El harness no se ha borrado de `main`: ha dejado de ser el camino por defecto, y tiene además su propia rama, `harness-python`, que es este repositorio sin `.claude/agents/` ni la skill.
