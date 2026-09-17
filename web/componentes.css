@@ -48,26 +48,6 @@
   color: var(--texto);
 }
 
-.cuota { display: flex; flex-direction: column; gap: .35rem; }
-
-.cuota--chip {
-  flex-direction: row;
-  align-items: center;
-  gap: .4rem;
-  font-family: var(--dato);
-  font-size: .72rem;
-  color: var(--texto-tenue);
-}
-
-.cuota__etiqueta { text-transform: uppercase; letter-spacing: .08em; }
-
-.cuota__alto {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: .5rem;
-}
-
 .barra-progreso {
   height: 4px;
   background: var(--linea);
@@ -493,7 +473,7 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 }
 
 @media (max-width: 640px) {
-  .barra__run, #dato-perfil, .cuota--chip { display: none; }
+  .barra__run, #dato-perfil { display: none; }
 }
 
 /* El taller se ha llenado de paneles y la mesa queda detras de todos ellos:

@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Taller de novelas</title>
+<title>Escritorio de novelas</title>
 <link rel="icon" href="/qaracter.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,400;7..72,600;7..72,700&display=swap">
 <link rel="stylesheet" href="/estilo.css">
 <link rel="stylesheet" href="/componentes.css">
+<link rel="stylesheet" href="/ambientacion.css">
 <script type="importmap">
 {
   "imports": {
@@ -29,18 +30,20 @@
   </a>
   <nav class="salas" aria-label="Secciones">
     <button type="button" class="sala" data-sala="brief" aria-current="true">Brief</button>
-    <button type="button" class="sala" data-sala="taller">Taller</button>
+    <button type="button" class="sala" data-sala="taller">Escritorio</button>
     <button type="button" class="sala" data-sala="lectura" disabled>Lectura</button>
   </nav>
   <div class="barra__estado">
-    <span class="dato barra__run" id="barra-run" title="Canon activo">sin run</span>
+    <!-- Los dos caminos de §1 sobre el mismo repositorio: se cambia de canon
+         sin reiniciar nada, que es lo que permite compararlos. -->
+    <div class="conmutador" id="conmutador-camino" role="group" aria-label="Camino">
+      <button type="button" data-camino="delegado" title="Canon en ficheros, orquesta Claude Code">delegado</button>
+      <button type="button" data-camino="harness" title="Canon SQLite, orquesta novela/flujo.py">harness</button>
+    </div>
+    <span class="dato barra__run" id="barra-run" title="Canon activo">sin canon</span>
     <span class="pastilla" id="pastilla-estado">sin brief</span>
+    <span class="dato" id="dato-modo">—</span>
     <span class="dato" id="dato-perfil">perfil —</span>
-    <span class="dato" id="dato-modo">modo —</span>
-    <span class="cuota cuota--chip" id="cuota-chip">
-      <span class="cuota__etiqueta">cuota</span>
-      <span class="cuota__cifra" id="cuota-cifra">sin datos todavía</span>
-    </span>
   </div>
 </header>
 
@@ -52,8 +55,8 @@
       <h1>Empieza una novela</h1>
       <p class="entradilla">
         Esto es todo lo que se escribe a mano. Con estos cinco campos el
-        investigador arma el dossier y el arquitecto la escaleta; el resto lo
-        levanta el harness capítulo a capítulo.
+        investigador arma el dossier de época y el arquitecto la escaleta; el
+        resto se levanta capítulo a capítulo.
       </p>
     </header>
 
@@ -99,7 +102,7 @@
     <div class="campo">
       <label for="perfil">Perfil de ejecución</label>
       <select id="perfil" name="perfil"></select>
-      <p class="pista">Cada perfil es un <code>config*.json</code> de la raíz: lo que cambia es el modo y los modelos.</p>
+      <p class="pista">Cada perfil es un <code>config*.json</code> de la raíz: de ahí salen los umbrales y los modelos.</p>
     </div>
 
     <p class="aviso" id="aviso-brief" role="status" hidden></p>
@@ -121,22 +124,33 @@
   </section>
 </main>
 
-<!-- ============================================================ taller -->
+<!-- ========================================================= escritorio -->
 <main class="sala-panel" id="sala-taller" hidden>
   <section class="mando">
     <header class="mando__cabecera">
-      <p class="eyebrow">Taller</p>
-      <h2 id="mando-titulo">Los seis agentes</h2>
+      <p class="eyebrow" id="mando-eyebrow">Escritorio</p>
+      <h2 id="mando-titulo">Los ocho subagentes</h2>
       <p class="entradilla" id="mando-texto">
         Investigador y arquitecto preparan el libro; luego, capítulo a capítulo,
-        el escritor redacta, el validador puntúa, el gate decide y el cronista
-        escribe en el canon.
+        el escritor redacta, tres validadores puntúan a la vez, el gate decide y
+        el cronista escribe en el canon.
       </p>
     </header>
 
     <p class="linea-estado" id="linea-estado">sin datos todavía</p>
 
-    <div class="acciones acciones--columna">
+    <!-- Camino delegado: aquí no se lanza nada. Quien orquesta es una sesión de
+         Claude Code, así que lo que ofrece la página es el comando exacto. -->
+    <div class="consola" id="consola" hidden>
+      <span class="eyebrow">En la sesión de Claude Code</span>
+      <div class="consola__linea">
+        <code id="consola-comando">/orquestar-novela</code>
+        <button class="enlace" type="button" id="consola-copiar">copiar</button>
+      </div>
+      <p class="pista" id="consola-pista"></p>
+    </div>
+
+    <div class="acciones acciones--columna" id="mandos-harness">
       <button class="boton boton--grande" type="button" id="arrancar">Lanzar agentes</button>
       <div class="acciones">
         <button class="enlace" type="button" id="que-toca">¿Qué toca ahora?</button>
@@ -154,14 +168,20 @@
       <span class="ahora__que" id="ahora-que"></span>
     </div>
 
-    <div class="cuota" id="cuota-panel">
-      <div class="cuota__alto">
-        <span class="eyebrow">Cuota del día</span>
-        <span class="dato" id="cuota-panel-cifra">sin datos todavía</span>
+    <!-- §20 y §21: por el camino delegado no hay llamada que interceptar, así
+         que el árbol se reconstruye del canon y se manda desde aquí. -->
+    <section class="trazas" id="trazas" aria-label="Trazas de Langfuse">
+      <header class="trazas__alto">
+        <span class="eyebrow">Trazas · Langfuse</span>
+        <span class="pastilla" id="trazas-estado">—</span>
+      </header>
+      <p class="pista" id="trazas-pista">sin datos todavía</p>
+      <dl class="trazas__plan" id="trazas-plan"></dl>
+      <div class="acciones">
+        <button class="boton boton--fino" type="button" id="trazas-enviar">Reconstruir y enviar</button>
+        <span class="dato" id="trazas-ultimo"></span>
       </div>
-      <div class="barra-progreso" aria-hidden="true"><span style="width:0"></span></div>
-      <p class="pista">El harness no contabiliza llamadas ni tiene límite configurado.</p>
-    </div>
+    </section>
   </section>
 
   <div class="columna-taller">
@@ -170,21 +190,23 @@
       <ol class="pipeline" id="pipeline"></ol>
     </section>
 
-    <section class="panel" aria-label="Agentes">
-      <h2 class="titulo-panel">Agentes</h2>
+    <section class="panel" aria-label="Subagentes">
+      <h2 class="titulo-panel">Subagentes</h2>
       <div class="agentes" id="agentes"></div>
+      <p class="pista" id="agentes-pista"></p>
     </section>
 
     <section class="tarjetas" id="tarjetas" aria-label="Capítulos"></section>
 
-    <section class="panel" aria-label="Intentos del capítulo en curso">
-      <h2 class="titulo-panel">Intentos del capítulo en curso</h2>
+    <section class="panel" aria-label="Intentos del capítulo">
+      <h2 class="titulo-panel">Intentos del capítulo</h2>
       <p class="umbrales" id="umbrales">sin datos todavía</p>
       <div class="tabla-caja">
         <table class="tabla" id="tabla-intentos">
           <thead>
             <tr>
-              <th>Iteración</th><th>Archivo</th><th>Media</th><th>Regla aplicada</th><th>Veredicto</th>
+              <th>Intento</th><th>Borrador</th><th>VD-08</th><th>Notas</th>
+              <th>Operación del gate</th><th>Veredicto</th>
             </tr>
           </thead>
           <tbody id="cuerpo-intentos"></tbody>
@@ -192,15 +214,45 @@
       </div>
     </section>
 
+    <!-- Camino delegado: la suma del gate la hace un modelo (§21). Esto la
+         rehace con la fórmula de §8 y enseña si cuadra. -->
+    <section class="panel" id="panel-auditoria" aria-label="Auditoría del gate" hidden>
+      <h2 class="titulo-panel">Auditoría del gate</h2>
+      <p class="pista">
+        En este camino la aritmética de §8 la hace un modelo. La página rehace la
+        cuenta con los umbrales del perfil y compara veredictos.
+      </p>
+      <div id="auditoria"></div>
+    </section>
+
+    <section class="panel" aria-label="Cronología de la novela">
+      <h2 class="titulo-panel">Cronología</h2>
+      <p class="pista">Los eventos del canon, por día de ficción. Los históricos no llevan capítulo.</p>
+      <ol class="cronologia" id="cronologia"></ol>
+    </section>
+
+    <section class="panel" aria-label="Reparto">
+      <h2 class="titulo-panel">Reparto</h2>
+      <p class="pista">Las fichas del arquitecto, con lo que el cronista les ha ido cambiando.</p>
+      <div class="reparto" id="reparto"></div>
+    </section>
+
     <section class="panel" aria-label="Ledger de pistas">
-      <h2 class="titulo-panel">Ledger de pistas</h2>
-      <p class="pista">Los datos del dossier, con su estado de verificación.</p>
+      <h2 class="titulo-panel">Dossier de época</h2>
+      <p class="pista">Los datos del investigador, con su estado de verificación (VD-04).</p>
       <div class="chips" id="ledger"></div>
     </section>
 
     <section class="panel" aria-label="Últimos archivos de trabajo">
       <h2 class="titulo-panel">Últimos archivos de trabajo</h2>
       <ol class="archivos" id="archivos"></ol>
+    </section>
+
+    <!-- Lo que esta página pediría y el canon no guarda. Se enseña el hueco en
+         vez de rellenarlo: un número inventado esconde dónde falta modelo. -->
+    <section class="panel panel--hueco" aria-label="Huecos del modelo de datos">
+      <h2 class="titulo-panel">Lo que el canon no guarda</h2>
+      <dl class="huecos" id="huecos"></dl>
     </section>
   </div>
 
@@ -228,7 +280,7 @@
       <div class="lector__notas" id="lector-notas"></div>
     </header>
     <div class="lector__texto" id="lector-texto"></div>
-    <p class="marca-fin" id="marca-fin" hidden>fin del capítulo</p>
+    <p class="marca-fin" id="marca-fin" hidden>❧</p>
     <footer class="lector__pie" id="lector-pie"></footer>
   </article>
 
@@ -236,6 +288,7 @@
     <section>
       <h3>Ficha del capítulo</h3>
       <dl class="ficha-datos" id="ficha-datos"></dl>
+      <button class="enlace" type="button" id="ver-contexto">ver el paquete de contexto</button>
     </section>
 
     <section>
@@ -255,7 +308,7 @@
         <li><b>Rueda</b> — acercar y alejar</li>
         <li><b>← →</b> — capítulo anterior y siguiente</li>
         <li><b>Clic en un cuadernillo</b> — saltar a ese capítulo</li>
-        <li><b>f</b> — modo inmersión · <b>Esc</b> — volver al taller</li>
+        <li><b>f</b> — modo inmersión · <b>Esc</b> — volver al escritorio</li>
       </ul>
     </section>
   </aside>
@@ -268,12 +321,26 @@
   </nav>
 </main>
 
+<!-- El paquete con el que se escribió un capítulo. En el camino delegado está
+     guardado en disco y es la única forma de auditar por qué salió lo que salió. -->
+<dialog class="cajon" id="cajon-contexto">
+  <header class="cajon__alto">
+    <div>
+      <p class="eyebrow">Paquete de contexto</p>
+      <h3 id="cajon-titulo">—</h3>
+    </div>
+    <button class="enlace" type="button" id="cajon-cerrar">cerrar</button>
+  </header>
+  <p class="pista" id="cajon-pista"></p>
+  <pre class="cajon__texto" id="cajon-texto"></pre>
+</dialog>
+
 <footer class="rail" id="rail">
   <div class="rail__capitulos" id="rail-capitulos"></div>
   <span class="dato" id="rail-foco">el legajo está en blanco</span>
   <div class="rail__siguiente">
     <span class="dato">consola</span>
-    <code id="siguiente-comando">python -m novela estado</code>
+    <code id="siguiente-comando">/orquestar-novela</code>
     <button class="enlace" type="button" id="copiar">copiar</button>
   </div>
 </footer>

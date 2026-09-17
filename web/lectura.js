@@ -36,12 +36,22 @@ function aHtml(markdown) {
       // Separador de escena, si el escritor lo puso: el harness no obliga a
       // ninguno porque la unidad de escritura es el capitulo entero (DA-09).
       if (/^(\*\s*){3,}$|^-{3,}$|^_{3,}$/.test(t)) {
-        return '<p class="separador-escena">* * *</p>';
+        return '<p class="separador-escena" aria-hidden="true">❦</p>';
       }
       if (/^#{2,6} /.test(t)) return `<h3>${escapar(t.replace(/^#+\s*/, ''))}</h3>`;
       return `<p>${escapar(t).replace(/\n/g, '<br>')}</p>`;
     })
     .join('');
+}
+
+// La capitular va sobre el primer párrafo de verdad del capítulo, y solo si
+// empieza por letra: una raya de diálogo o unas comillas no se dibujan bien a
+// cuatro líneas de alto y quedarían peor que sin adorno.
+function ponerCapitular(caja) {
+  const primero = caja.querySelector('p:not(.separador-escena)');
+  if (primero && /^[\p{L}]/u.test(primero.textContent.trim())) {
+    primero.classList.add('capitular');
+  }
 }
 
 // Lo que el canon no sabe se dice, no se rellena. Escenas, focalizador y
@@ -110,6 +120,19 @@ export function crearLectura(ctx) {
         const li = document.createElement('li');
         li.textContent = h.texto;
         if (h.cerrado) li.className = 'hilo-cerrado';
+        ul.append(li);
+      }
+      caja.append(titulo, ul);
+    }
+    // El canon delegado no guarda el bloque entero de revisión, solo la nota y
+    // los avisos que el orquestador arrastró. Se enseña lo que hay.
+    if (datos.avisos?.length) {
+      const titulo = document.createElement('p');
+      titulo.innerHTML = '<strong>Avisos del gate</strong>';
+      const ul = document.createElement('ul');
+      for (const a of datos.avisos) {
+        const li = document.createElement('li');
+        li.textContent = a;
         ul.append(li);
       }
       caja.append(titulo, ul);
@@ -216,7 +239,7 @@ export function crearLectura(ctx) {
 
   async function abrir(numero) {
     try {
-      capitulo = await ctx.api.capitulo(numero);
+      capitulo = await ctx.api.capitulo(numero, ctx.camino);
     } catch (error) {
       texto.innerHTML = `<p>${escapar(error.message)}</p>`;
       return;
@@ -225,6 +248,7 @@ export function crearLectura(ctx) {
       + (capitulo.fecha ? ` · ${capitulo.fecha}` : '');
     $('lector-titulo').textContent = capitulo.titulo;
     texto.innerHTML = aHtml(capitulo.texto);
+    ponerCapitular(texto);
     pintarNotas(capitulo);
     pintarMetadatos(capitulo);
     pintarFichaDatos(capitulo);
@@ -258,6 +282,12 @@ export function crearLectura(ctx) {
     const fraccion = recorrido > 0 ? sala.scrollTop / recorrido : 0;
     $('progreso').style.width = `${(fraccion * 100).toFixed(1)}%`;
     ctx.escena?.modoLectura(true, fraccion);
+  });
+
+  // El paquete con el que se escribió: es lo único que explica después por qué
+  // el escritor escribió lo que escribió (§7, §21).
+  $('ver-contexto').addEventListener('click', () => {
+    if (capitulo) ctx.verContexto(capitulo.numero);
   });
 
   $('anterior').addEventListener('click', () => saltar(-1));

@@ -64,14 +64,14 @@ export function crearBrief(ctx) {
     crearYLanzar.disabled = true;
     decir('');
     try {
-      await ctx.api.guardarBrief(leer());
+      await ctx.api.guardarBrief(leer(), ctx.camino);
       tocado = false;
       notaEjemplo.hidden = true;
       if (lanzar) {
-        await ctx.api.arrancar('todo', ctx.perfilElegido());
-        decir('Brief guardado y agentes lanzados. Al taller.', 'bien');
+        await ctx.api.arrancar('todo', ctx.perfilElegido(), ctx.camino);
+        decir('Brief guardado y agentes lanzados. Al escritorio.', 'bien');
       } else {
-        decir('Brief guardado. En el taller se lanza a los agentes cuando quieras.', 'bien');
+        decir('Brief guardado. En el escritorio se lanza a los agentes cuando quieras.', 'bien');
       }
       await ctx.refrescar();
       setTimeout(() => ctx.ir('taller'), lanzar ? 300 : 700);
@@ -176,12 +176,24 @@ export function crearBrief(ctx) {
         escribir(EJEMPLO);
         notaEjemplo.hidden = false;
       }
+      // Por el camino delegado nunca es editable: en ese canon escribe el
+      // orquestador y nadie mas (§21). Por el del harness solo deja de serlo
+      // cuando el libro ya esta en marcha.
+      const delegado = proyecto?.camino === 'delegado';
       if (proyecto && proyecto.editable === false) {
         guardar.disabled = true;
         crearYLanzar.disabled = true;
         for (const campo of CAMPOS) $(campo).disabled = true;
-        decir('El canon ya tiene una novela en marcha, así que la interfaz no toca el'
-          + ' brief. Para rehacerlo a sabiendas: "python -m novela brief <fichero>".');
+        decir(delegado
+          ? 'Este brief lo escribe el orquestador, no la página: aquí se lee. Para'
+            + ' empezar una novela, abre Claude Code y lanza /orquestar-novela; te'
+            + ' pedirá los cinco campos y no se los inventará.'
+          : 'El canon ya tiene una novela en marcha, así que la interfaz no toca el'
+            + ' brief. Para rehacerlo a sabiendas: "python -m novela brief <fichero>".');
+      } else if (proyecto) {
+        guardar.disabled = false;
+        crearYLanzar.disabled = false;
+        for (const campo of CAMPOS) $(campo).disabled = false;
       }
     },
     leer,
