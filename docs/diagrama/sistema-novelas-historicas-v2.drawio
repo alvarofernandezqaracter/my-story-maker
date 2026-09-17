@@ -86,7 +86,7 @@
         <mxCell id="lg3" value="Datos / memoria" style="rounded=1;arcSize=20;whiteSpace=wrap;html=1;fillColor=#E1F5EE;strokeColor=#0F6E56;fontColor=#04342C;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="450" y="1000" width="175" height="34" as="geometry" />
         </mxCell>
-        <mxCell id="lg4" value="Código del harness" style="rounded=1;arcSize=20;whiteSpace=wrap;html=1;fillColor=#F1EFE8;strokeColor=#5F5E5A;fontColor=#2C2C2A;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="lg4" value="Código del maquinaria" style="rounded=1;arcSize=20;whiteSpace=wrap;html=1;fillColor=#F1EFE8;strokeColor=#5F5E5A;fontColor=#2C2C2A;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="645" y="1000" width="175" height="34" as="geometry" />
         </mxCell>
 

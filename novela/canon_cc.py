@@ -5,7 +5,7 @@
 # sola clave, y no por pudor: la regla de §21 dice que en ese canon escribe el
 # orquestador y nadie mas, y la interfaz no es el orquestador.
 #
-# Su trabajo es dar a §19 la misma forma de datos que `canon.py` saca de SQLite,
+# Su trabajo es dar a §19 la forma de datos que espera la pagina,
 # para que la pagina no tenga que saber por cual de los dos caminos mira.
 import json
 from pathlib import Path
@@ -14,9 +14,10 @@ from .util import redondear
 
 
 def promedio(valores):
-    """La media de la formula de §8. Vivia en el gate del harness y se queda
-    aqui porque es la unica cuenta que sobrevivio de aquel modulo: auditar la
-    suma que hizo el orquestador (§21) es lo unico que se calcula de este lado.
+    """La media de la formula de §8.
+
+    Es la unica aritmetica que hace este lado: auditar la suma que escribio el
+    orquestador (§21), no decidir nada con ella.
     """
     if not valores:
         return 0

@@ -5,7 +5,7 @@
 # **Todo lo que hay aqui lo lee tambien el orquestador**, que no es codigo sino
 # una sesion de Claude Code (§21): la skill imprime estos numeros y los obedece.
 # Por eso un umbral escrito a mano en un prompt sigue siendo un bug aunque ya no
-# haya harness que lo lea.
+# nadie de este paquete lo lea.
 import json
 import math
 import re

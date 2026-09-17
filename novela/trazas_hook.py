@@ -9,11 +9,12 @@
 # hook `PostToolUse` de Claude Code sobre el tool `Agent`: por ahi pasan las
 # ocho llamadas a subagentes y ninguna otra cosa. El resultado del tool trae el
 # prompt entero, la respuesta, el modelo que resolvio, la duracion y el reparto
-# de tokens con su cache. Es la misma informacion que el harness saca de la
-# respuesta del proveedor, obtenida en el otro camino.
+# de tokens con su cache: todo lo que hace falta para saber lo que costo una
+# llamada, sin tener que ser quien la hizo.
 #
 # **Nada de esto puede parar una novela**, que es la regla de §20 y aqui pesa
-# mas que en el harness: un hook que revienta ensucia la sesion del orquestador.
+# mas que en ningun otro sitio: un hook que revienta ensucia la sesion del
+# orquestador.
 # Por eso todo va envuelto, la salida siempre es 0 y cada llamada deja ademas su
 # linea en un diario local, que sobrevive aunque Langfuse no conteste.
 import json
@@ -35,7 +36,7 @@ TOOL = 'Agent'
 
 # Los ocho de §21 traducidos a los seis roles de §5, que es como los nombra §20.
 # Los tres validadores comparten nombre de observacion y se distinguen por su
-# dimension, igual que en el harness: asi una nota de continuidad se compara
+# dimension, como en §20: asi una nota de continuidad se compara
 # entre los dos caminos sin tener que traducir nada.
 ROLES = {
     'novela-investigador': ('investigador', None),
@@ -127,7 +128,7 @@ def _perfil(ruta='config.json'):
     """El perfil, leido con tolerancia.
 
     `cargar_config` valida entero y para si algo no cuadra (§12), que es lo
-    correcto para el harness y lo contrario de lo que quiere un hook: aqui una
+    correcto para un comando y lo contrario de lo que quiere un hook: aqui una
     coma de mas en un umbral que no me incumbe no puede tumbar la observacion.
     """
     try:
@@ -212,7 +213,7 @@ def procesar(payload, raiz=RAIZ, ruta_config='config.json', momento=None):
     }
     metadata = {k: v for k, v in metadata.items() if v is not None}
 
-    # El arbol es el mismo que levanta el harness en §20: una observacion `agent`
+    # El arbol es el mismo de §20: una observacion `agent`
     # -el rol trabajando- con una `generation` dentro -la invocacion del modelo-.
     # No es simetria por gusto: Langfuse solo contabiliza modelo, tokens y coste
     # en una `generation`, y colgarlos de la `agent` los tira sin avisar.

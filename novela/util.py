@@ -17,7 +17,7 @@ def redondear(valor, decimales=2):
 def numero_corto(valor):
     """4.0 se imprime 4, y 3.67 se imprime 3.67.
 
-    Lo que el harness escribe son umbrales y notas, no medidas: un ".0" colgando
+    Lo que se escribe son umbrales y notas, no medidas: un ".0" colgando
     solo estorba al leerlo.
     """
     return int(valor) if float(valor).is_integer() else valor

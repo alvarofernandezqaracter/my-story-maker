@@ -1,6 +1,6 @@
 # §20 + §21 Trazas del camino delegado.
 #
-# El harness instrumenta en un solo sitio porque toda llamada pasa por la capa
+# El hook de §22 instrumenta en vivo porque ve cada llamada al pasar por la capa
 # de agentes de §5. El camino delegado no pasa por ahi -orquesta una sesion de
 # Claude Code- y §21 daba eso por perdido: "no hay donde instrumentar sin
 # inventarse un punto unico que aqui no existe".
@@ -15,9 +15,9 @@
 # ni tokens, ni coste, ni el prompt exacto: eso solo lo tiene quien hizo la
 # llamada. Lo que si hay es el arbol, las notas, los veredictos y la auditoria
 # del gate, que es de lo que salen los datos de DA-06. Cada traza va etiquetada
-# `reconstruido` para que no se confunda con una del harness.
+# `reconstruido` para que no se confunda con una que si trae gasto.
 #
-# Como el resto del harness, esto no sabe que Langfuse existe: habla con la capa
+# Como el resto del paquete, esto no sabe que Langfuse existe: habla con la capa
 # de §20 (`trazas.py`), que es la unica que lo sabe.
 import os
 import re

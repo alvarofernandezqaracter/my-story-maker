@@ -1,7 +1,7 @@
 # §20 Observabilidad. Capa unica de trazas contra Langfuse, con la misma regla
 # que la capa de agentes de §5: de aqui hacia arriba nadie sabe si hay trazas.
 # Cuando estan apagadas, o cuando falta el SDK o la credencial, todo lo de este
-# fichero devuelve objetos mudos y el harness corre exactamente igual.
+# fichero devuelve objetos mudos y todo lo demas corre exactamente igual.
 #
 # Las trazas NO son fuente de verdad de nada. El estado vive en el canon (§13),
 # el gate decide en codigo (§8) y lo de aqui solo observa. Si Langfuse no
@@ -66,7 +66,7 @@ def reparto_de_tokens(bruto):
     el coste no se cuenta dos veces. Lo que no venga, no se inventa.
 
     Vive aqui y no en la capa de agentes porque tiene dos clientes: la llamada
-    del harness (§5) y el hook del camino delegado (§21), que recibe el mismo
+    de §5 y el hook de §22, que recibe el mismo
     reparto del tool `Agent`.
     """
     if not bruto:
@@ -92,7 +92,7 @@ def reparto_de_tokens(bruto):
 def id_de_traza(semilla):
     """Id de traza deterministo a partir de una semilla (§21).
 
-    El harness abre la traza y la cierra en el mismo proceso, asi que nunca
+    La traza se abre y se cierra en el mismo proceso, asi que nunca
     necesito esto. El camino delegado no: cada llamada a un subagente la observa
     un proceso distinto -el hook- y la reconstruccion desde el canon llega mucho
     despues. Sembrando el id con "sesion|tramo", todos ellos escriben en la
@@ -143,7 +143,7 @@ MUDA = _Muda()
 class _Viva:
     """Envoltorio de una observacion de Langfuse.
 
-    Existe para que el resto del harness hable en los terminos de este repo y
+    Existe para que el resto del paquete hable en los terminos de este repo y
     para que un fallo de la red no suba nunca al flujo.
     """
 
@@ -185,9 +185,8 @@ class Trazas:
         bloque = (config or {}).get('trazas') or {}
         self.entorno = bloque.get('entorno') or 'desarrollo'
         # La etiqueta que lleva toda traza de este repositorio. Hubo un tiempo
-        # en que distinguia el modo de ejecucion del harness; ahora solo hay un
-        # camino y se deja fija, porque en Langfuse conviven proyectos y esto es
-        # lo que separa los de aqui de los de cualquier otro.
+        # En Langfuse conviven proyectos: esta etiqueta es lo que separa las
+        # trazas de este repositorio de las de cualquier otro.
         self.modo = 'delegado'
         self.aviso = aviso
         self._cliente = None

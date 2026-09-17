@@ -229,7 +229,7 @@ class TestApiDelegada(CanonDelegadoDePrueba):
 
     def test_la_interfaz_no_escribe_en_el_canon(self):
         # En este canon escribe el orquestador y nadie mas (§21). Las rutas que
-        # escribian murieron con el harness, y las que quedan solo leen: contra
+        # escribian ya no existen, y las que quedan solo leen: contra
         # la API, cualquier metodo que no sea GET se contesta con el porque.
         for ruta in ('/api/brief', '/api/flujo', '/api/desbloquear'):
             codigo, cuerpo = self.pedir('POST', ruta, BRIEF)
@@ -449,7 +449,7 @@ class TestArbolDeTrazas(CanonDelegadoDePrueba):
 
 class TestClavesDeConfig(unittest.TestCase):
     """Los umbrales de §12 se validan enteros al arrancar, y las claves que se
-    fueron con el harness ya no los estorban: sobran, no faltan."""
+    unicas que hay son las que alguien lee."""
 
     def setUp(self):
         self.base = cargar_config('config.json')

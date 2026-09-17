@@ -11,11 +11,6 @@ novela-cc/
 # Salida de pasadas viejas.
 *.viejo.md
 
-# Restos del harness de Python que se retiro en 1.0.0. Siguen en disco de quien
-# lo uso y no se versionan: no son fuente de nada.
-canon.db
-canon.db-journal
-canon.db-wal
-canon.db-shm
+# Salida suelta en la raiz: no es fuente de nada.
 /capitulos/
 /retoques.md
