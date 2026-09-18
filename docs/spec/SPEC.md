@@ -1028,6 +1028,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `4634275` | 2026-09-18 | fix(afinado): una vuelta abierta no desvia las trazas de una novela ajena |
 | `85e3b9c` | 2026-09-18 | docs(spec): §17 regenerada para 1.23.0 |
 | `76bdda0` | 2026-09-18 | docs(spec): 1.24.0, §21 un intento se guarda entero y §20 que el capitulo viaje |
+| `4262920` | 2026-09-18 | docs(spec): §17 regenerada para 1.24.0, y el § tambien se rompe al redirigir |
+| `7d9370d` | 2026-09-18 | feat(afinado): 0.2.0, la vuelta 1 mide el validador y no promueve |
 
 ```
 git -c i18n.logOutputEncoding=UTF-8 log --reverse \n    --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
