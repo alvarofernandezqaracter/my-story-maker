@@ -10,6 +10,8 @@
 import json
 from pathlib import Path
 
+from . import biblioteca
+
 from decimal import Decimal, ROUND_HALF_UP
 
 
@@ -35,7 +37,6 @@ def promedio(valores):
     return sum(valores) / len(valores)
 
 
-RAIZ = 'novela-cc'
 
 # Las tres dimensiones de §8, siempre en este orden. Las notas viajan como
 # diccionario en estado.json y como lista en la API, y el orden es el contrato.
@@ -67,15 +68,19 @@ def _notas_en_lista(notas):
 
 
 class CanonCC:
-    """El canon de `novela-cc/`, de solo lectura.
+    """El canon de una novela de la biblioteca (§21), de solo lectura.
 
     Se construye barato y lee de disco en cada consulta: el orquestador escribe
     esos ficheros desde otra sesion mientras la pagina mira, asi que cachear
     seria ensenar el canon de hace un minuto.
+
+    Sin `raiz` coge la novela en curso. No hay carpeta de trabajo fija: cada
+    novela vive en la suya desde que nace, y la de ahora es la que se toco
+    ultima.
     """
 
-    def __init__(self, raiz=RAIZ):
-        self.raiz = Path(raiz)
+    def __init__(self, raiz=None):
+        self.raiz = Path(raiz or biblioteca.actual() or biblioteca.RAIZ)
 
     # ---- rutas
 
@@ -179,13 +184,21 @@ class CanonCC:
         """
         if not intento or not intento.get('ruta'):
             return None, None
-        ruta = Path(intento['ruta'])
+        guardada = intento['ruta']
+        ruta = Path(guardada)
         if not ruta.is_absolute():
             # Las rutas del canon se escriben desde la raiz del repositorio.
             ruta = Path.cwd() / ruta
         if not ruta.is_file():
-            return None, intento['ruta']
-        return ruta.read_text(encoding='utf-8'), intento['ruta']
+            # La ruta guardada dice donde estaba el fichero el dia que se
+            # escribio, y una novela se puede mover o renombrar. El borrador vive
+            # bajo la carpeta de su propia novela, asi que se busca ahi por su
+            # nombre antes de darlo por perdido.
+            vecino = self.raiz / 'capitulos' / Path(guardada).name
+            if not vecino.is_file():
+                return None, guardada
+            return vecino.read_text(encoding='utf-8'), guardada
+        return ruta.read_text(encoding='utf-8'), guardada
 
     def texto(self, numero):
         """El texto del intento aprobado, si el fichero sigue donde dice el canon."""

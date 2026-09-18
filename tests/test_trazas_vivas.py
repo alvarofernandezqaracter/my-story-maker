@@ -25,6 +25,8 @@ BRIEF = {
     'palabras_por_capitulo': 600,
 }
 
+NOVELA = 'biblioteca/2026-09-17-sevilla-1587'
+
 USO = {'input_tokens': 4, 'output_tokens': 120,
        'cache_read_input_tokens': 30000, 'cache_creation_input_tokens': 500}
 
@@ -50,12 +52,12 @@ class SituarLaLlamada(unittest.TestCase):
     """De que capitulo y de que intento es cada llamada (§21)."""
 
     def test_el_capitulo_sale_de_la_ruta_del_paquete(self):
-        sitio = situar('escritor', 'Lee novela-cc/contexto/cap-04.md y escribe.')
+        sitio = situar('escritor', 'Lee biblioteca/2026-09-17-sevilla-1587/contexto/cap-04.md y escribe.')
         self.assertEqual(sitio['capitulo'], 4)
         self.assertEqual(sitio['tramo'], 'cap-04')
 
     def test_el_intento_sale_de_la_ruta_del_borrador(self):
-        sitio = situar('escritor', 'Arregla novela-cc/capitulos/cap-06-intento-2.md')
+        sitio = situar('escritor', 'Arregla biblioteca/2026-09-17-sevilla-1587/capitulos/cap-06-intento-2.md')
         self.assertEqual((sitio['capitulo'], sitio['intento']), (6, 2))
 
     def test_los_dos_roles_de_preparacion_no_tienen_capitulo(self):
@@ -83,7 +85,7 @@ class LoQueElHookNoTraza(unittest.TestCase):
                                      encoding='utf-8')
 
     def _procesar(self, datos):
-        return procesar(datos, raiz=os.path.join(self.dir, 'novela-cc'),
+        return procesar(datos, raiz=os.path.join(self.dir, NOVELA),
                         ruta_config=self.perfil)
 
     def test_otro_tool_no_se_traza(self):
@@ -107,7 +109,7 @@ class ElDiarioLocal(unittest.TestCase):
 
     def setUp(self):
         self.dir = tempfile.mkdtemp()
-        self.raiz = os.path.join(self.dir, 'novela-cc')
+        self.raiz = os.path.join(self.dir, NOVELA)
         os.makedirs(os.path.join(self.raiz, 'canon'))
         Path(self.raiz, 'canon', 'brief.json').write_text(
             json.dumps(BRIEF), encoding='utf-8')
@@ -175,8 +177,8 @@ class AgregarElInforme(unittest.TestCase):
             observacion('redactar-capitulo', 'generation', 'hook', 1, self.uso, 0.5,
                         'claude-opus-5'),
             observacion('escritor', 'agent', 'hook', 1, self.uso, 0.5, 'claude-opus-5'),
-            observacion('escritor', 'agent', 'novela-cc', 1),
-            observacion('gate', 'evaluator', 'novela-cc', 1),
+            observacion('escritor', 'agent', 'biblioteca', 1),
+            observacion('gate', 'evaluator', 'biblioteca', 1),
         ]
 
     def test_solo_cuenta_la_generacion_observada_en_vivo(self):
@@ -222,7 +224,7 @@ class ElInformeSinLangfuse(unittest.TestCase):
 
     def setUp(self):
         self.dir = tempfile.mkdtemp()
-        self.raiz = os.path.join(self.dir, 'novela-cc')
+        self.raiz = os.path.join(self.dir, NOVELA)
         os.makedirs(os.path.join(self.raiz, 'trazas'))
 
     def _diario(self, apuntes):

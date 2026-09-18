@@ -19,7 +19,7 @@ ellas, mandan ellas.
 ## Lo que recibes
 
 El orquestador te pasa el brief en el propio encargo, o la ruta del fichero
-`novela-cc/canon/brief.json`. Nada mas. No busques mas contexto en el repositorio.
+`biblioteca/<novela>/canon/brief.json`. Nada mas. No busques mas contexto en el repositorio.
 
 ## Lo que devuelves
 

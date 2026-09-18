@@ -18,8 +18,8 @@ Si algo de este fichero choca con ellas, mandan ellas.
 
 Dos rutas, que lees tu mismo:
 
-- `novela-cc/canon/brief.json`
-- `novela-cc/canon/dossier.json`
+- `biblioteca/<novela>/canon/brief.json`
+- `biblioteca/<novela>/canon/dossier.json`
 
 El dossier no se toca: es la verdad de epoca contra la que se va a juzgar cada
 capitulo. Si algo que quieres contar choca con un dato `verificado`, cambia lo

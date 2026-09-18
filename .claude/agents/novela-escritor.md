@@ -19,13 +19,13 @@ Si algo de este fichero choca con ellas, mandan ellas.
 
 El orquestador te da en el encargo:
 
-- La ruta del paquete de contexto, `novela-cc/contexto/cap-NN.md`.
-- La ruta donde tienes que dejar el capitulo, `novela-cc/capitulos/cap-NN-intento-K.md`.
+- La ruta del paquete de contexto, `biblioteca/<novela>/contexto/cap-NN.md`.
+- La ruta donde tienes que dejar el capitulo, `biblioteca/<novela>/capitulos/cap-NN-intento-K.md`.
 - Si es un reintento, o bien la ruta de tu texto anterior mas una lista de
   incidencias, o bien solo las incidencias.
 
 **El paquete es todo lo que vas a ver del canon.** Lo que no esta en el paquete
-no existe para ti. No abras `novela-cc/canon/`, no abras `capitulos/` y no leas
+no existe para ti. No abras `biblioteca/<novela>/canon/`, no abras `capitulos/` y no leas
 otros capitulos: si lo haces, rompes la unica garantia que tiene este sistema
 sobre lo que sabias al escribir. No hay canal de vuelta y no preguntas a nadie.
 
@@ -51,7 +51,7 @@ Tu mensaje final es **un unico objeto JSON y nada mas**. No metas el texto del
 capitulo: ya esta en disco y repetirlo aqui solo gasta la ventana del orquestador.
 
 ```
-{ "ruta": "novela-cc/capitulos/cap-NN-intento-K.md",
+{ "ruta": "biblioteca/<novela>/capitulos/cap-NN-intento-K.md",
   "faltantes": ["Que detalle de epoca eche en falta y para que escena"] }
 ```
 

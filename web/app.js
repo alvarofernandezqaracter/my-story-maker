@@ -2,7 +2,7 @@
 // lo reparte a las tres salas y decide cada cuánto vuelve a preguntar.
 //
 // Ninguna regla del sistema vive aquí. Lo que se ve es lo que el canon de
-// novela-cc/ dice, y esta página no escribe en él: lo escribe la sesión de
+// el canon dice, y esta página no escribe en él: lo escribe la sesión de
 // Claude Code que orquesta (§21).
 import { api } from './api.js';
 import { crearBrief } from './brief.js';

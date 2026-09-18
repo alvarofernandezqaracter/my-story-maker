@@ -1,16 +1,36 @@
 # El canon en ficheros
 
-El canon son ficheros JSON bajo `novela-cc/canon/`, uno por cada entidad de la
+## Que es `<novela>`
+
+Cada novela vive en su propia carpeta dentro de `biblioteca/`, con un nombre
+como `biblioteca/2026-09-18-sevilla-1587`. **No hay carpeta de trabajo fija.**
+En estas paginas, `<novela>/` significa la carpeta de la novela que tienes entre
+manos, y la sacas asi:
+
+1. Si quien te arranco te dijo cual es -el mensaje de arranque la nombra antes
+   que el brief-, esa y ninguna otra.
+2. Si te piden reanudar, continuar o cerrar sin decirte cual, es la de
+   `biblioteca/` cuyo `canon/estado.json` se escribio mas recientemente. Si hay
+   varias a medias, **pregunta** en vez de elegir tu.
+3. Si te piden una novela nueva y nadie te dio carpeta, creala tu:
+   `biblioteca/<fecha de hoy>-<epoca en minusculas y con guiones>`, por ejemplo
+   `biblioteca/2026-09-18-cadiz-1812`. Si ese nombre ya existe, no escribas
+   dentro: anade `-2`.
+
+**Nunca escribas en la carpeta de otra novela.** Es la unica forma de que
+empezar un libro no se lleve por delante el anterior.
+
+El canon son ficheros JSON bajo `<novela>/canon/`, uno por cada entidad de la
 seccion 3 del spec. **Es la unica fuente de verdad del proyecto** y no puede
 escribirlo nadie mas que tu.
 
-Todo va bajo `novela-cc/`, incluidos los borradores y los retoques. Es salida y
+Todo va bajo `<novela>/`, incluidos los borradores y los retoques. Es salida y
 no se versiona: lo que se versiona es lo que la produce.
 
 ## El arbol
 
 ```
-novela-cc/
+<novela>/
   canon/
     estado.json         el estado del proyecto y de cada capitulo
     brief.json          los cinco campos, se escribe una vez y no se toca

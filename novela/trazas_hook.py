@@ -24,7 +24,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from .canon_cc import CanonCC, RAIZ
+from .biblioteca import actual as novela_actual
+from .canon_cc import CanonCC
 from .trazas import (
     GENERACIONES, id_de_traza, reparto_de_tokens, sesion_de, Trazas)
 from .trazas_cc import _config_de_trazas
@@ -137,7 +138,7 @@ def _perfil(ruta='config.json'):
         return {}
 
 
-def procesar(payload, raiz=RAIZ, ruta_config='config.json', momento=None):
+def procesar(payload, raiz=None, ruta_config='config.json', momento=None):
     """Una llamada a un subagente, observada. Devuelve que se hizo y por que no.
 
     `momento` es cuando termino la llamada. En vivo es ahora y no hace falta
@@ -247,7 +248,7 @@ def desde_stdin(flujo=None, raiz=None, ruta_config='config.json'):
     try:
         crudo = (flujo or sys.stdin).read()
         payload = json.loads(crudo) if crudo.strip() else {}
-        raiz = raiz or os.environ.get('NOVELA_RAIZ_CC') or RAIZ
+        raiz = raiz or os.environ.get('NOVELA_RAIZ_CC') or novela_actual()
         resultado = procesar(payload, raiz=raiz, ruta_config=ruta_config)
         # Sale por stdout, que en un PostToolUse va al log de depuracion y no a
         # la conversacion: se puede leer con --debug sin ensuciar la sesion.

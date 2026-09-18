@@ -93,12 +93,13 @@ export function crearBrief(ctx) {
 
       aviso.hidden = !proyecto?.brief;
       if (proyecto?.brief) {
-        aviso.textContent = 'Este canon ya tiene novela. Lanzar de nuevo no la'
-          + ' empieza otra vez: la sesión lee el estado del canon y sigue por'
-          + ' donde se quedó, que es lo que hace reanudable el libro.';
+        aviso.textContent = 'Abajo está el brief de la novela en curso, por si'
+          + ' quieres partir de él. Lanzar empieza una novela nueva en su propia'
+          + ' carpeta y no toca esta. Para seguir una a medias, pídeselo a'
+          + ' Claude Code: «reanuda la novela».';
       }
       $('papeleta-titulo').textContent = proyecto?.brief
-        ? 'El brief de esta novela' : 'Empieza una novela';
+        ? 'El brief de la novela en curso' : 'Empieza una novela';
       pintarEjecuciones(proyecto);
       if (!corriendo) mirarLanzamiento();
     },

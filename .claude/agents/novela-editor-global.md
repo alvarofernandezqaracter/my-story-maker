@@ -15,8 +15,8 @@ Corres **una sola vez, fuera del loop**, con todos los capitulos ya aprobados.
 
 ## Lo que recibes
 
-Las rutas de `novela-cc/canon/resumenes/`, `novela-cc/canon/escaleta.json`,
-`novela-cc/canon/personajes.json` y `novela-cc/canon/hilos.json`. Las lees tu
+Las rutas de `biblioteca/<novela>/canon/resumenes/`, `biblioteca/<novela>/canon/escaleta.json`,
+`biblioteca/<novela>/canon/personajes.json` y `biblioteca/<novela>/canon/hilos.json`. Las lees tu
 mismo.
 
 **No leas el texto de los capitulos, y no lo pidas.** No es una restriccion de

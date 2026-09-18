@@ -34,7 +34,7 @@ que recuerdes.
 **1. Ningun subagente escribe en el canon.** Solo tu. Ellos devuelven una
 propuesta en JSON, tu la compruebas y tu la escribes. La unica excepcion es el
 borrador del escritor, que no es canon: es un fichero suelto en
-`novela-cc/capitulos/` que solo entra en el canon a traves del cronista, y solo
+`<novela>/capitulos/` que solo entra en el canon a traves del cronista, y solo
 si el gate lo aprobo.
 
 **2. Un capitulo a la vez, y de uno en uno.** El capitulo N+1 se escribe con el
@@ -61,7 +61,7 @@ borrador -> investigado -> estructurado -> escribiendo -> escrito -> editado
                                               +--> bloqueado  (salida lateral)
 ```
 
-El estado vive en `novela-cc/canon/estado.json`, **nunca en tu cabeza ni en esta
+El estado vive en `<novela>/canon/estado.json`, **nunca en tu cabeza ni en esta
 conversacion**. Lo lees al empezar y lo escribes en cuanto cambia. Esa es la
 razon de que se pueda reanudar en otra sesion: si lo llevas solo en el contexto,
 se pierde al compactar y la novela se queda sin saber donde iba.
@@ -70,11 +70,17 @@ se pierde al compactar y la novela se queda sin saber donde iba.
 
 ## Arrancar de cero
 
-Si no existe `novela-cc/canon/`, creala junto con `canon/resumenes/`, `contexto/`
-y `capitulos/`, y escribe `estado.json` con `estado: "borrador"` y `capitulos` en
-blanco.
+**Lo primero es saber en que carpeta trabajas.** Cada novela vive en la suya
+dentro de `biblioteca/` y no hay carpeta de trabajo compartida: de eso depende
+que empezar un libro no pise el anterior. Como se averigua cual es, en
+`references/canon-en-ficheros.md`; en resumen, te la dan al arrancar, o la creas
+tu como `biblioteca/<fecha>-<epoca>` si es nueva.
 
-El brief son cinco campos y lo escribes en `novela-cc/canon/brief.json`:
+Dentro de esa carpeta, si no existe `<novela>/canon/`, creala junto con
+`canon/resumenes/`, `contexto/` y `capitulos/`, y escribe `estado.json` con
+`estado: "borrador"` y `capitulos` en blanco.
+
+El brief son cinco campos y lo escribes en `<novela>/canon/brief.json`:
 
 ```json
 {
@@ -97,14 +103,14 @@ explica que eso exige empezar una pasada nueva.
 
 ## Tramo 1: preparar
 
-Requiere estado `borrador` y `novela-cc/canon/brief.json` escrito.
+Requiere estado `borrador` y `<novela>/canon/brief.json` escrito.
 
 1. Lanza `novela-investigador` con el brief.
 2. Comprueba su JSON: forma, obligatorios y **VD-04** (todo dato con fuente y
    estado; un `verificado` con fuente `modelo` es invalido).
 3. Si falla, vuelve a lanzarlo **una vez** diciendole que fallo. Si falla la
    segunda, para y escribe el motivo. No hay tercera.
-4. Escribe `novela-cc/canon/dossier.json`. Estado a `investigado`.
+4. Escribe `<novela>/canon/dossier.json`. Estado a `investigado`.
 5. Lanza `novela-arquitecto`.
 6. Comprueba: forma, obligatorios, **VD-03** (ids existentes) y **VD-07**
    (numero de capitulos dentro del margen). Misma politica de un reintento.
@@ -115,7 +121,7 @@ Requiere estado `borrador` y `novela-cc/canon/brief.json` escrito.
 Este es el loop, y es donde esta casi todo el diseno. Para el capitulo N:
 
 1. **Arma el paquete de contexto** siguiendo `references/paquete-de-contexto.md`
-   y escribelo en `novela-cc/contexto/cap-NN.md`. Lo escribes en disco aunque
+   y escribelo en `<novela>/contexto/cap-NN.md`. Lo escribes en disco aunque
    parezca un rodeo: es lo unico que explica despues por que el escritor escribio
    lo que escribio, y es lo que leen los validadores para juzgar con su misma
    informacion.
@@ -163,7 +169,7 @@ Al aprobar el ultimo capitulo, estado a `escrito`.
 ## Tramo 3: cerrar
 
 Requiere estado `escrito`. Lanza `novela-editor-global`, comprueba forma y
-obligatorios, y vuelca los retoques en `novela-cc/retoques.md` ordenados por
+obligatorios, y vuelca los retoques en `<novela>/retoques.md` ordenados por
 severidad. Estado a `editado`.
 
 Los retoques **se aplican a mano**. No los apliques tu y no ofrezcas aplicarlos:

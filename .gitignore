@@ -4,13 +4,11 @@ __pycache__/
 .env
 config.real.json
 
-# El canon de una novela no se versiona: lo escribe el orquestador y es salida,
-# no fuente. Vive entero bajo novela-cc/, incluidos los borradores y retoques.
-novela-cc/
-
-# Las novelas ya terminadas, por lo mismo: son libros, no codigo. Este
-# repositorio es el sistema que los escribe y no la estanteria donde se guardan.
-novelas/
+# Las novelas no se versionan: las escribe el orquestador y son salida, no
+# fuente. Cada una vive en su carpeta de biblioteca/, con su canon, sus
+# borradores y sus retoques. Este repositorio es el sistema que las escribe y no
+# la estanteria donde se guardan.
+biblioteca/
 
 # Salida suelta en la raiz: no es fuente de nada. El informe de trazas se
 # regenera con un comando, y ademas lleva dentro el gasto de una pasada

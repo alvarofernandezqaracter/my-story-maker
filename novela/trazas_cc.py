@@ -69,7 +69,7 @@ def texto_viaja(config):
 
 
 def _meta(**extra):
-    base = {'camino': 'delegado', 'origen': 'novela-cc', 'reconstruido': True}
+    base = {'camino': 'delegado', 'origen': 'biblioteca', 'reconstruido': True}
     base.update({k: v for k, v in extra.items() if v is not None})
     return base
 

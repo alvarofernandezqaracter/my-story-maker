@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from .config import cargar_config, ErrorConfig
-from .archivo import archivar, ErrorArchivo, listar as listar_novelas, plan as plan_archivo
+from .biblioteca import actual, ErrorBiblioteca, listar as listar_novelas
 from .entorno import cargar_entorno
 from .informe import construir as construir_informe, texto as texto_informe
 from .servidor import arrancar as arrancar_interfaz
@@ -23,14 +23,13 @@ novela — utilidades del sistema de novelas historicas
 La novela se escribe desde Claude Code: abre el repositorio y lanza
 /orquestar-novela (§21). Lo de aqui es lo que mira ese trabajo por fuera.
 
-  novela ui [--puerto N]           interfaz web en el navegador (§19). Mira el
-                                   canon de novela-cc/ y no escribe en el
-  novela trazar [--modelo M]       manda a Langfuse el canon de novela-cc/,
-                                   reconstruido (§20)
-  novela archivar [--nombre N]     copia la novela de novela-cc/ a novelas/,
-                                   para que la siguiente no la pise (§21). No
-                                   borra nada: vaciar novela-cc/ lo haces tu
-  novela novelas                   lista las novelas ya archivadas
+  novela ui [--puerto N]           interfaz web en el navegador (§19). Mira la
+                                   novela en curso y no escribe en ella
+  novela trazar [--novela N] [--modelo M]
+                                   manda a Langfuse el canon de una novela,
+                                   reconstruido (§20). Sin --novela, la en curso
+  novela biblioteca                lista las novelas, de la mas reciente a la
+                                   mas antigua (§21)
   novela hook-traza                lee un PostToolUse por stdin y traza la
                                    llamada al subagente. Lo llama el hook (§22)
   novela informe-trazas [--sesion S] [--salida F] [--json]
@@ -93,8 +92,10 @@ def _ejecutar(comando, posicionales, opciones, config):
         # lo otro: las notas del gate, el veredicto y el escalon de VD-08, que
         # no son llamadas a ningun subagente y solo estan en el canon.
         modelo = opciones.get('modelo')
+        cual = opciones.get('novela')
         resultado = exportar_trazas_cc(
-            config, modelo=modelo if isinstance(modelo, str) else None, aviso=_aviso)
+            config, raiz=actual(nombre=cual) if isinstance(cual, str) else None,
+            modelo=modelo if isinstance(modelo, str) else None, aviso=_aviso)
         resumen = resultado.get('plan') or {}
         if not resultado['enviado']:
             _log('no se mando nada: {}'.format(resultado['motivo']))
@@ -105,32 +106,26 @@ def _ejecutar(comando, posicionales, opciones, config):
             resumen.get('entorno')))
         _log('  reconstruido del canon: sin latencia, sin tokens y sin coste')
 
-    elif comando == 'archivar':
-        # Copiar y no mover, a proposito: borrar el canon es irreversible y lo
-        # decide quien opera la maquina, no un comando que hace dos cosas.
-        nombre = opciones.get('nombre')
-        datos = archivar(nombre=nombre if isinstance(nombre, str) else None)
-        _log('archivada en {}'.format(datos['destino']))
-        _log('  {} de {} capitulos aprobados, {} palabras, estado {}'.format(
-            datos['aprobados'], datos['capitulos'], datos['palabras'], datos['estado']))
-        _log('')
-        _log('El original sigue en {}/. Para empezar otra novela, borra esa'
-             ' carpeta: la copia ya esta a salvo.'.format(datos['origen']))
-
-    elif comando == 'novelas':
-        archivadas = listar_novelas()
-        if not archivadas:
-            _log('no hay ninguna novela archivada todavia.')
-            pendiente = plan_archivo()
-            if pendiente.get('puede'):
-                _log('La de novela-cc/ se archivaria como {}.'.format(pendiente['nombre']))
+    elif comando == 'biblioteca':
+        novelas = listar_novelas()
+        if not novelas:
+            _log('la biblioteca esta vacia. Se escribe una novela desde la pagina'
+                 ' de §19 o lanzando /orquestar-novela en Claude Code.')
             return
-        for novela in archivadas:
-            _log('{}  {} cap. aprobados de {}, {} palabras'.format(
-                novela['nombre'], novela.get('aprobados', '?'),
-                novela.get('capitulos', '?'), novela.get('palabras', '?')))
-            if novela.get('epoca'):
-                _log('   {}'.format(novela['epoca']))
+        from .canon_cc import CanonCC
+        for i, novela in enumerate(novelas):
+            canon = CanonCC(novela['ruta'])
+            escaleta = canon.escaleta()
+            aprobados = sum(1 for c in escaleta if canon.intento_aprobado(c['numero']))
+            _log('{} {}'.format('*' if i == 0 else ' ', novela['nombre']))
+            if not novela['empezada']:
+                _log('    apartada, sin brief todavia')
+                continue
+            _log('    {} | {} de {} capitulos aprobados'.format(
+                canon.estado() or 'sin estado', aprobados, len(escaleta)))
+            _log('    {}'.format((canon.brief() or {}).get('epoca') or ''))
+        _log('')
+        _log('El * es la novela en curso: la que se toco ultima.')
 
     elif comando == 'informe-trazas':
         sesion = opciones.get('sesion')
@@ -183,8 +178,8 @@ def main(argv=None):
     try:
         config = cargar_config(opciones.get('config') or 'config.json')
         _ejecutar(comando, posicionales, opciones, config)
-    except ErrorArchivo as e:
-        sys.stderr.write('\nno se archivo nada: {}\n'.format(e))
+    except ErrorBiblioteca as e:
+        sys.stderr.write('\n{}\n'.format(e))
         return 1
     except ErrorConfig as e:
         sys.stderr.write('\n{}\n\nSe para al arrancar: una errata en un umbral sale'

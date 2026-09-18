@@ -1,5 +1,5 @@
 # §19 Interfaz web. Servidor local de la biblioteca estandar: sirve web/ y
-# expone una API pequena sobre el canon de `novela-cc/`.
+# expone una API pequena sobre el canon de la novela en curso (§21).
 #
 # **En el canon escribe el orquestador y nadie mas** (§21). Aqui no hay motor ni
 # hilo de flujo, y ninguna ruta toca un fichero del canon: lo que hay es un

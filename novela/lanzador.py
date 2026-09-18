@@ -15,6 +15,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from .biblioteca import crear as crear_novela, RAIZ as BIBLIOTECA
+
 CAMPOS = ('epoca', 'premisa', 'tono', 'capitulos', 'palabras_por_capitulo')
 
 # Los modos de permiso que entiende Claude Code. `acceptEdits` es el que trae el
@@ -74,13 +76,22 @@ def validar(bruto):
     return brief
 
 
-def prompt(brief):
-    """El mensaje con el que arranca la sesion: la skill y los cinco campos.
+def prompt(brief, destino):
+    """El mensaje con el que arranca la sesion: donde escribir, y los cinco campos.
+
+    La carpeta va delante porque es lo primero que el orquestador necesita saber:
+    no hay carpeta de trabajo fija, cada novela vive en la suya desde que nace
+    (§21), y esa es la razon de que empezar un libro ya no pise el anterior.
 
     Va como un solo argumento de la linea de ordenes, nunca por un shell, asi que
     lo que se teclee en la pagina no puede convertirse en otra orden.
     """
-    lineas = ['/orquestar-novela preparar y escribir la novela entera con este brief:']
+    lineas = ['/orquestar-novela preparar y escribir la novela entera.',
+              '',
+              'La carpeta de esta novela es {}. Escribe ahi el canon, los'
+              ' capitulos y el paquete de contexto, y no en ninguna otra.'.format(destino),
+              '',
+              'Brief:']
     for campo in CAMPOS:
         lineas.append('{}: {}'.format(campo, brief[campo]))
     return '\n'.join(lineas)
@@ -104,21 +115,26 @@ def lanzar(bruto, config, raiz='.'):
 
     if _vivo():
         raise ErrorLanzador(
-            'ya hay una sesion corriendo (pid {}). Un capitulo a la vez y una'
-            ' novela a la vez: dos sesiones sobre el mismo canon se pisarian'
-            ' (§21)'.format(_proceso.pid))
+            'ya hay una sesion corriendo (pid {}). Una novela a la vez: son'
+            ' muchas llamadas y dos a la vez se estorban en cuota antes que en'
+            ' disco (§21)'.format(_proceso.pid))
 
     brief = validar(bruto)
+
+    # La novela nace ya en su sitio definitivo. Aqui se aparta la carpeta y nada
+    # mas: dentro escribe el orquestador y nadie mas, que es la primera regla de
+    # §21, y un directorio vacio no es canon.
+    raiz = Path(raiz).resolve()
+    novela = crear_novela(brief, raiz=(raiz / BIBLIOTECA).as_posix())
+    destino = Path(novela['ruta'])
+
     ajustes = config.get('lanzador', {})
     orden = [
         ajustes.get('comando', 'claude'),
-        '-p', prompt(brief),
+        '-p', prompt(brief, '{}/{}'.format(BIBLIOTECA, novela['nombre'])),
         '--permission-mode', ajustes.get('permisos', 'acceptEdits'),
     ]
 
-    raiz = Path(raiz).resolve()
-    destino = raiz / 'novela-cc'
-    destino.mkdir(parents=True, exist_ok=True)
     ruta_log = destino / LOG
 
     # En Windows, el servidor y el hijo comparten grupo de procesos: un Ctrl+C
@@ -143,6 +159,8 @@ def lanzar(bruto, config, raiz='.'):
     _ultimo = {
         'pid': _proceso.pid,
         'brief': brief,
+        'novela': novela['nombre'],
+        'carpeta': novela['ruta'],
         'log': os.path.relpath(ruta_log, raiz).replace('\\', '/'),
         'permisos': orden[-1],
     }

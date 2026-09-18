@@ -31,7 +31,7 @@ Markdown y sin una línea de código. Los ocho subagentes están en
 [`.claude/agents/`](.claude/agents/) y cada uno arranca leyendo su encargo de
 `agentes/`, que es la única fuente de verdad de los prompts.
 
-El canon queda en `novela-cc/`: los JSON del estado, el paquete de contexto con
+El canon queda en la carpeta de la novela, dentro de `biblioteca/`: los JSON del estado, el paquete de contexto con
 el que se escribió cada capítulo, un Markdown por intento y `retoques.md`. Es
 salida y no se versiona.
 
@@ -112,7 +112,7 @@ El hook trae el gasto y ninguna nota. La otra mitad la trae esto:
 python -m novela trazar   # del canon: las notas, el veredicto del gate y VD-08
 ```
 
-Levanta el árbol entero desde `novela-cc/` con **todas las puntuaciones** —las
+Levanta el árbol entero desde el canon de la novela con **todas las puntuaciones** —las
 tres notas de cada intento, la media, el veredicto y una extra que dice si la
 suma del gate cuadra con la fórmula— y va marcado como reconstruido, porque no
 trae tokens ni coste. Hace falta porque lo que el orquestador decide solo no es
@@ -162,7 +162,7 @@ Opción global: `--config <ruta>`.
 | `skills/` | Las skills de §10, que cada subagente carga al arrancar |
 | `novela/` | El Python que mira: canon, interfaz, trazas e informe |
 | `web/` | La interfaz: las tres salas, la escena three.js y la ambientación |
-| `novela-cc/` | El canon en ficheros. Es salida y no se versiona |
+| `biblioteca/` | Las novelas, una carpeta cada una con su canon. Es salida y no se versiona |
 | `tests/` | Tests del Python de `novela/`, sin red |
 | `docs/spec/` | El spec, y el documento de análisis de trazas |
 

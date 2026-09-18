@@ -91,8 +91,8 @@ no cumple lo basico, se reintenta sin gastar las tres llamadas.
 Cuenta con comandos, nunca a ojo:
 
 ```bash
-wc -w < novela-cc/capitulos/cap-01-intento-1.md
-awk 'BEGIN { RS = ""; n = 0 } !/^#{1,6}[ \t]/ { n++ } END { print n }' novela-cc/capitulos/cap-01-intento-1.md
+wc -w < <novela>/capitulos/cap-01-intento-1.md
+awk 'BEGIN { RS = ""; n = 0 } !/^#{1,6}[ \t]/ { n++ } END { print n }' <novela>/capitulos/cap-01-intento-1.md
 ```
 
 El primero da las palabras. El segundo da los parrafos, contando bloques

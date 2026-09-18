@@ -5,8 +5,8 @@ nada mas, y esa restriccion es el motor de calidad del sistema entero: obliga a
 que lo que el capitulo sabe sea exactamente lo que el canon guarda, y no lo que
 se quedo flotando en una conversacion.
 
-Lo armas tu, leyendo `novela-cc/canon/`, y lo escribes en
-`novela-cc/contexto/cap-NN.md` antes de llamar al escritor.
+Lo armas tu, leyendo `<novela>/canon/`, y lo escribes en
+`<novela>/contexto/cap-NN.md` antes de llamar al escritor.
 
 ## La regla que sostiene todo lo demas
 
@@ -147,7 +147,7 @@ Las ultimas `contexto.palabras_enganche` palabras literales del capitulo anterio
 **aprobado**. Sacalas con el comando, no a ojo:
 
 ```bash
-tr -s '[:space:]' '\n' < novela-cc/capitulos/cap-06-intento-2.md | tail -400 | tr '\n' ' '
+tr -s '[:space:]' '\n' < <novela>/capitulos/cap-06-intento-2.md | tail -400 | tr '\n' ' '
 ```
 
 Cambia el `400` por el valor real de `config.json`. Va citado:
@@ -164,7 +164,7 @@ El tope es `contexto.tope_contexto` **tokens**, estimados como el numero de
 caracteres del paquete dividido entre 4, redondeando hacia arriba. Cuentalos con:
 
 ```bash
-wc -c < novela-cc/contexto/cap-07.md
+wc -c < <novela>/contexto/cap-07.md
 ```
 
 Si te pasas, recorta quitando elementos **por el final** de cada bloque, y en

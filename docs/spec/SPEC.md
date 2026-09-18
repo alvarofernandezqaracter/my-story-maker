@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.14.0
+version: 1.15.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -66,7 +66,7 @@ El §14 está muerto. Los números de sección no se reutilizan.
 
 ## §3 Modelo de datos del canon
 
-**Decisión de almacenamiento.** El canon son ficheros JSON bajo `novela-cc/canon/` —uno por entidad de la tabla de abajo— y, al lado, un Markdown por intento de capítulo en `novela-cc/capitulos/`. Ficheros porque quien escribe el canon es una sesión de Claude Code (§21) y lo que sabe hacer es leer y escribir ficheros: una base de datos exigiría un intermediario que volvería a ser código. El texto largo queda fuera del JSON, que es donde tampoco ganaba nada. §21 detalla el árbol.
+**Decisión de almacenamiento.** El canon son ficheros JSON bajo `<novela>/canon/` —uno por entidad de la tabla de abajo— y, al lado, un Markdown por intento de capítulo en `<novela>/capitulos/`, donde `<novela>` es la carpeta de esa novela dentro de `biblioteca/` (§21). Ficheros porque quien escribe el canon es una sesión de Claude Code (§21) y lo que sabe hacer es leer y escribir ficheros: una base de datos exigiría un intermediario que volvería a ser código. El texto largo queda fuera del JSON, que es donde tampoco ganaba nada. §21 detalla el árbol.
 
 Las «tablas» de aquí son entidades lógicas, no tablas de ningún motor: cada una es un fichero. Todas llevan `id` de texto salvo donde el número de capítulo ya es clave.
 
@@ -501,7 +501,7 @@ Con esto la tabla tiene **diecisiete** claves, y ninguna sobra: cada una la lee 
 
 ## §13 Operación: fallos y reanudación
 
-**Qué pasa cuando algo falla a mitad.** El estado vive en el canon, nunca en memoria del proceso, así que un corte de red, un error del proveedor o un Ctrl+C no pierden más que el intento en curso. Como el canon solo se toca después del gate y en una única escritura validada del cronista, no existe el estado a medias: o el capítulo entró entero o no entró. Lo peor que deja una caída es un Markdown huérfano en `novela-cc/capitulos/` sin su intento en `estado.json`, que al relanzar se descarta. Ante un error de un subagente se reintenta la llamada una vez; si vuelve a fallar, el proceso para y deja el estado escrito en lugar de insistir. No hay política de backoff ni de reintentos finos en el alcance inicial, y es deliberado: con un solo usuario, parar y mirar sale más barato que automatizar la recuperación.
+**Qué pasa cuando algo falla a mitad.** El estado vive en el canon, nunca en memoria del proceso, así que un corte de red, un error del proveedor o un Ctrl+C no pierden más que el intento en curso. Como el canon solo se toca después del gate y en una única escritura validada del cronista, no existe el estado a medias: o el capítulo entró entero o no entró. Lo peor que deja una caída es un Markdown huérfano en `<novela>/capitulos/` sin su intento en `estado.json`, que al relanzar se descarta. Ante un error de un subagente se reintenta la llamada una vez; si vuelve a fallar, el proceso para y deja el estado escrito en lugar de insistir. No hay política de backoff ni de reintentos finos en el alcance inicial, y es deliberado: con un solo usuario, parar y mirar sale más barato que automatizar la recuperación.
 
 **Reanudación.** Una sola instrucción, sin argumentos: lee el estado del proyecto, localiza el primer capítulo no aprobado y sigue desde ahí. Relanzar con el proyecto ya `escrito` no reescribe nada, solo vuelve a ofrecer el editor global. El par capítulo e intento identifica cada fichero, así que repetir un intento sobrescribe en lugar de duplicar. Reanudar no desbloquea: mientras el proyecto siga en `bloqueado`, el comando vuelve a parar en el mismo capítulo hasta que se tome una de las tres salidas manuales de §8.
 
@@ -548,13 +548,22 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
-### [1.14.0] — 2026-09-18
+### [1.15.0] — 2026-09-18
+
+**Cambiado**
+- §21, §3, §18, §19. **Desaparece la carpeta de trabajo.** Cada novela vive en
+  `biblioteca/<fecha>-<época>/` desde que nace, y la página la crea y se la
+  nombra a la sesión al arrancarla. Motivo: una ruta fija donde se escribe
+  siempre obligaba a copiar y borrar a mano antes de cada libro para que el
+  nuevo no pisara al anterior, y eso es trabajo manual que existía solo por una
+  decisión de almacenamiento. Escribir el brief y olvidarse es el caso normal.
+- §21. La novela en curso se deduce de la fecha de su `estado.json` en vez de
+  apuntarse en un puntero. Un puntero es un segundo sitio donde vive el estado y
+  se queda desfasado; la fecha no miente.
 
 **Añadido**
-- §21, §18. `novelas/` y los comandos `archivar` y `novelas`. Motivo: el
-  orquestador escribe siempre en `novela-cc/`, así que empezar un libro encima
-  del anterior lo pisaba, y la única defensa era acordarse de copiarlo a mano.
-  Copia y no mueve: borrar es irreversible y no lo decide un comando.
+- §18. `biblioteca` lista las novelas y marca la que está en curso, y `trazar`
+  acepta `--novela` para trabajar sobre una que no sea esa.
 
 ### [1.13.0] — 2026-09-18
 
@@ -876,8 +885,7 @@ desde fuera.
 | `skills/` | Las skills de §10, una carpeta por skill |
 | `novela/` | Python: el lector del canon, la interfaz de §19, las trazas de §20 y el informe de §22 |
 | `web/` | La página de §19: las tres salas, la escena three.js, la ambientación y el logotipo |
-| `novela-cc/` | El canon en ficheros (§21). Es salida y no se versiona |
-| `novelas/` | Las novelas ya terminadas, una carpeta cada una. Tampoco se versiona: son libros, no código |
+| `biblioteca/` | Las novelas, una carpeta cada una con su canon (§21). Es salida y no se versiona |
 | `tests/` | Tests del Python de `novela/`, sin red |
 
 **Los prompts tienen una sola fuente de verdad.** Un subagente de `.claude/agents/`
@@ -908,16 +916,15 @@ el loop de intentos y el bloqueo.
 | Comando | Qué hace |
 |---|---|
 | `ui [--puerto N]` | Abre la interfaz en el navegador (§19). Mira y no escribe |
-| `trazar [--modelo M]` | Manda a Langfuse el canon reconstruido (§20) |
-| `archivar [--nombre N]` | Copia la novela de `novela-cc/` a `novelas/<fecha>-<época>/`. **No borra** el original (§21) |
-| `novelas` | Lista lo que hay archivado, de lo más nuevo a lo más viejo |
+| `trazar [--novela N] [--modelo M]` | Manda a Langfuse el canon reconstruido (§20). Sin `--novela`, la que esté en curso |
+| `biblioteca` | Lista las novelas, de la más reciente a la más antigua, y marca la que está en curso (§21) |
 | `hook-traza` | Lee un `PostToolUse` por stdin y traza la llamada al subagente. Lo llama el hook, no una persona (§22) |
 | `informe-trazas [--sesion S] [--salida F] [--json]` | Lee de vuelta las trazas de una novela y agrega el gasto (§22) |
 | `ui.bat` | Lo mismo que `ui` en Windows, buscando el intérprete por su cuenta |
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ochenta y siete, en tres
+**Tests.** `python -m unittest discover -s tests -t .`: ochenta y nueve, en tres
 ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
@@ -987,7 +994,7 @@ De ahí salen las tres decisiones que lo rodean:
 
 Lo que el brief teclee viaja como **un solo argumento** de la línea de órdenes y
 nunca por un shell, así que no puede convertirse en otra orden. Lo que la sesión
-imprima va a `novela-cc/lanzamiento.log`, que no es canon y que nada vuelve a
+imprima va a `<novela>/lanzamiento.log`, que no es canon y que nada vuelve a
 leer como dato: está para poder mirar por qué no arrancó algo que no arrancó.
 
 Y la página sigue dando **el comando exacto** para hacerlo a mano en una sesión
@@ -1019,7 +1026,7 @@ llamada que esta página no ha visto.
 | `GET /*` | Los ficheros de `web/`, y nada de fuera de esa carpeta |
 | Cualquier otro método contra `/api/` | 409 con el porqué y el comando que sí escribe |
 
-**Por qué el paquete de contexto tiene ruta propia.** Es lo único que explica después por qué el escritor escribió lo que escribió, y sin verlo la tabla de intentos es una lista de notas sin causa. Está en disco —`novela-cc/contexto/cap-NN.md`, que el orquestador escribe justo para esto— y es literalmente el que se usó, no una reconstrucción con el canon de ahora. La respuesta lo dice, porque confundir las dos cosas convierte una auditoría en una suposición.
+**Por qué el paquete de contexto tiene ruta propia.** Es lo único que explica después por qué el escritor escribió lo que escribió, y sin verlo la tabla de intentos es una lista de notas sin causa. Está en disco —`<novela>/contexto/cap-NN.md`, que el orquestador escribe justo para esto— y es literalmente el que se usó, no una reconstrucción con el canon de ahora. La respuesta lo dice, porque confundir las dos cosas convierte una auditoría en una suposición.
 
 **Qué se ve, y de dónde sale.** Nada de la pantalla es un dato propio de la interfaz: todo se lee del canon o se recalcula con las reglas de este documento. El estado de cada capítulo aparece en tres sitios a la vez —tarjeta, escena y barra inferior— porque son tres preguntas distintas: en qué anda este, cómo va el libro y cuánto queda.
 
@@ -1036,7 +1043,7 @@ llamada que esta página no ha visto.
 | Cronología | Los eventos de §3 por día de ficción; los históricos, sin capítulo (VD-05) |
 | Reparto | Las fichas de personaje, con la ubicación y el `sabe` que lleva el cronista |
 | Deuda narrativa | Hilos abiertos que ningún capítulo cerró, los mismos de §7 |
-| Paquete de contexto | `novela-cc/contexto/cap-NN.md`, tal cual se usó |
+| Paquete de contexto | `<novela>/contexto/cap-NN.md`, tal cual se usó |
 | Trazas | El estado de la capa de §20 y el recuento de lo que se mandaría |
 | Últimos archivos de trabajo | Los Markdown y JSON del canon activo, por fecha de modificación |
 
@@ -1354,17 +1361,30 @@ Los subagentes reciben **rutas, no contenido**. Es lo que mantiene el canon fuer
 
 ### El canon en ficheros
 
-Las siete entidades de §3 son ficheros JSON bajo `novela-cc/canon/`: `estado.json`, `brief.json`, `dossier.json`, `personajes.json`, `escaleta.json`, `hilos.json`, `timeline.json` y un `resumenes/cap-NN.json` por capítulo. Al lado, `contexto/cap-NN.md` con el paquete con el que se escribió cada capítulo, y `capitulos/` con los borradores.
+Las siete entidades de §3 son ficheros JSON bajo `<novela>/canon/`: `estado.json`, `brief.json`, `dossier.json`, `personajes.json`, `escaleta.json`, `hilos.json`, `timeline.json` y un `resumenes/cap-NN.json` por capítulo. Al lado, `contexto/cap-NN.md` con el paquete con el que se escribió cada capítulo, y `capitulos/` con los borradores.
 
-No se versiona: es salida, no fuente. Todo cuelga de `novela-cc/`, así que borrar esa carpeta deja el repositorio limpio y listo para otra novela.
+No se versiona: es salida, no fuente.
 
-**Y ahí está el filo: `novela-cc/` es de una novela.** El orquestador escribe
-siempre en la misma ruta, así que empezar la siguiente encima de la anterior la
-pisa. `archivar` copia el canon entero a `novelas/<fecha>-<época>/` antes de que
-eso pase, y se niega si ese nombre ya existe. **Copia y no mueve**: borrar es
-irreversible y lo decide quien opera la máquina, no un comando que hace dos cosas
-y deja la mala a medias. El nombre sale del brief y no de un contador porque un
-`novela-3/` no dice nada seis meses después.
+**No hay carpeta de trabajo.** Cada novela vive desde que nace en la suya,
+`biblioteca/<fecha>-<época>/`, y ninguna se escribe nunca donde hay otra. La
+alternativa —una ruta fija donde se escribe siempre— parecía más simple y era la
+fuente de todo lo manual: empezar un libro pisaba el anterior, así que había que
+acordarse de copiarlo y de borrarlo antes de arrancar. Una novela que nace en su
+sitio definitivo no necesita que nadie la ponga a salvo después.
+
+El nombre sale del brief y no de un contador porque un `novela-3/` no dice nada
+seis meses después; si ya existe, se numera en vez de escribir dentro.
+
+**Cuál es la novela en curso** se deduce, no se apunta: es aquella cuyo
+`estado.json` se escribió más recientemente. Un puntero guardado en un fichero
+sería un segundo sitio donde vive el estado, y se quedaría desfasado el día que
+alguien mueva una carpeta. La fecha del estado no miente. Quien quiera otra la
+nombra: `--novela`.
+
+**Quien crea la carpeta no escribe canon.** La página de §19 aparta el directorio
+y arranca la sesión diciéndole cuál es; dentro escribe el orquestador y nadie
+más. Un directorio vacío no es canon, así que la primera regla de este documento
+sigue entera.
 
 **`estado.json` es lo que hace esto reanudable**, y por eso se escribe en cuanto algo cambia y no al final de la pasada. Guarda las notas y los motivos de **todos** los intentos, también los que fracasaron: sin ellos no hay con qué calibrar DA-06.
 
@@ -1385,7 +1405,7 @@ Se acepta a sabiendas. La contrapartida es que el sistema cabe en doce ficheros 
 
 ### El mirador
 
-Una conversación no deja panel, así que lo pone la interfaz de §19: lee `novela-cc/` y desde ahí **solo mira**. La primera regla de arriba dice que en este canon escribe el orquestador y nadie más, y una interfaz que escribiera lo rompería por la puerta de atrás.
+Una conversación no deja panel, así que lo pone la interfaz de §19: lee la novela en curso y desde ahí **solo mira**. La primera regla de arriba dice que en este canon escribe el orquestador y nadie más, y una interfaz que escribiera lo rompería por la puerta de atrás.
 
 Tres cosas que solo tienen sentido aquí:
 

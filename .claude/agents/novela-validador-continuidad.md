@@ -22,8 +22,8 @@ porque el capitulo sea tardio, ni porque sea un reintento.
 
 Dos rutas, que lees tu mismo:
 
-- El capitulo a juzgar, `novela-cc/capitulos/cap-NN-intento-K.md`.
-- El paquete de contexto con el que se escribio, `novela-cc/contexto/cap-NN.md`.
+- El capitulo a juzgar, `biblioteca/<novela>/capitulos/cap-NN-intento-K.md`.
+- El paquete de contexto con el que se escribio, `biblioteca/<novela>/contexto/cap-NN.md`.
 
 El paquete es el canon relevante y el encargo. **Juzga contra el paquete, no
 contra lo que tu sepas de la epoca ni contra otros capitulos**: si el escritor no

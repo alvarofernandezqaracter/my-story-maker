@@ -16,6 +16,10 @@ from novela.config import cargar_config, validar_config, ErrorConfig
 from novela.servidor import RAIZ_WEB, responder
 from novela.trazas_cc import disponibilidad, exportar, plan
 
+# Cada novela vive en su propia carpeta de `biblioteca/` (§21): no hay carpeta de
+# trabajo fija, y el lector coge por defecto la que se toco ultima.
+NOVELA = 'biblioteca/2026-09-17-sevilla-1587'
+
 BRIEF = {
     'epoca': 'Sevilla, 1587',
     'premisa': 'Un registro falsificado hunde a un cargador de Indias.',
@@ -43,13 +47,13 @@ ESTADO = {
             'estado': 'aprobado', 'intento_aprobado': 2,
             'intentos': [
                 {'intento': 1, 'estado': 'descartado',
-                 'ruta': 'novela-cc/capitulos/cap-01-intento-1.md',
+                 'ruta': 'biblioteca/2026-09-17-sevilla-1587/capitulos/cap-01-intento-1.md',
                  'palabras': 580, 'parrafos': 20, 'vd08': 'ok',
                  'notas': {'continuidad': 1, 'anacronismos': 5, 'logica_ritmo': 4},
                  'minima': 1, 'media': 3.33, 'graves': 1, 'aprueba': False,
                  'motivos': ['nota minima 1 por debajo de 3']},
                 {'intento': 2, 'estado': 'aprobado',
-                 'ruta': 'novela-cc/capitulos/cap-01-intento-2.md',
+                 'ruta': 'biblioteca/2026-09-17-sevilla-1587/capitulos/cap-01-intento-2.md',
                  'palabras': 612, 'parrafos': 22, 'vd08': 'ok',
                  'notas': {'continuidad': 4, 'anacronismos': 5, 'logica_ritmo': 4},
                  'minima': 4, 'media': 4.33, 'graves': 0, 'aprueba': True,
@@ -81,7 +85,7 @@ def _escribir(ruta, valor):
 
 
 class CanonDelegadoDePrueba(unittest.TestCase):
-    """Un `novela-cc/` de juguete en su propio directorio.
+    """Una novela de juguete en su propia biblioteca temporal.
 
     El lector resuelve las rutas del canon desde el cwd, igual que el
     orquestador las escribe, asi que cada test necesita su carpeta.
@@ -91,9 +95,9 @@ class CanonDelegadoDePrueba(unittest.TestCase):
         self.cwd = os.getcwd()
         self.config = cargar_config(str(Path(self.cwd) / 'config.json'))
         self.config = {**self.config, 'trazas': {**self.config['trazas'], 'activas': False}}
-        self.dir = tempfile.mkdtemp(prefix='novela-cc-')
+        self.dir = tempfile.mkdtemp(prefix='biblioteca-')
         os.chdir(self.dir)
-        raiz = Path(self.dir) / 'novela-cc'
+        raiz = Path(self.dir) / NOVELA
         _escribir(raiz / 'canon' / 'brief.json', BRIEF)
         _escribir(raiz / 'canon' / 'estado.json', ESTADO)
         _escribir(raiz / 'canon' / 'escaleta.json', ESCALETA)
@@ -146,17 +150,17 @@ class TestLector(CanonDelegadoDePrueba):
         self.assertTrue(ruta.endswith('cap-01-intento-1.md'))
 
     def test_un_intento_cuyo_fichero_no_esta_se_lee_como_hueco(self):
-        Path('novela-cc/capitulos/cap-01-intento-1.md').unlink()
+        Path(NOVELA + '/capitulos/cap-01-intento-1.md').unlink()
         texto, ruta = CanonCC().texto_de_intento(CanonCC().intentos(1)[0])
         self.assertIsNone(texto)
         self.assertTrue(ruta.endswith('cap-01-intento-1.md'))
 
     def test_un_fichero_que_falta_no_tumba_la_lectura(self):
-        Path('novela-cc/canon/dossier.json').unlink()
+        Path(NOVELA + '/canon/dossier.json').unlink()
         self.assertEqual(CanonCC().datos(), [])
 
     def test_un_json_roto_se_lee_como_hueco(self):
-        Path('novela-cc/canon/hilos.json').write_text('{roto', encoding='utf-8')
+        Path(NOVELA + '/canon/hilos.json').write_text('{roto', encoding='utf-8')
         self.assertEqual(CanonCC().hilos_vivos(), [])
 
     def test_los_hilos_vivos_son_los_que_nadie_cerro(self):
@@ -165,10 +169,10 @@ class TestLector(CanonDelegadoDePrueba):
         self.assertIsNone(vivos[0]['cerrado_en'])
 
     def test_no_escribe_nada_en_el_canon(self):
-        antes = {p: p.read_bytes() for p in Path('novela-cc').rglob('*') if p.is_file()}
+        antes = {p: p.read_bytes() for p in Path(NOVELA + '').rglob('*') if p.is_file()}
         canon = CanonCC()
         canon.estado(); canon.escaleta(); canon.resumenes(); canon.texto(1); canon.contexto(1)
-        despues = {p: p.read_bytes() for p in Path('novela-cc').rglob('*') if p.is_file()}
+        despues = {p: p.read_bytes() for p in Path(NOVELA + '').rglob('*') if p.is_file()}
         self.assertEqual(antes, despues)
 
 
@@ -185,9 +189,9 @@ class TestAuditoriaDelGate(CanonDelegadoDePrueba):
     def test_un_veredicto_que_no_sale_de_la_formula_se_delata(self):
         # El orquestador da por aprobado un intento con una nota por debajo del
         # minimo: el canon manda, pero la discrepancia tiene que verse.
-        estado = json.loads(Path('novela-cc/canon/estado.json').read_text(encoding='utf-8'))
+        estado = json.loads(Path(NOVELA + '/canon/estado.json').read_text(encoding='utf-8'))
         estado['capitulos']['1']['intentos'][0]['aprueba'] = True
-        _escribir(Path('novela-cc/canon/estado.json'), estado)
+        _escribir(Path(NOVELA + '/canon/estado.json'), estado)
 
         cuenta = auditar_gate(CanonCC().intentos(1)[0], self.config['gate'])
         self.assertFalse(cuenta['cuadra'])
@@ -270,13 +274,16 @@ class TestApiDelegada(CanonDelegadoDePrueba):
         self.assertEqual(codigo, 200)
         self.assertFalse(cuerpo['corriendo'])
 
-    def test_el_prompt_lleva_la_skill_y_los_cinco_campos(self):
+    def test_el_prompt_lleva_la_skill_los_cinco_campos_y_la_carpeta(self):
         # Va como un solo argumento y nunca por un shell, asi que lo que se
         # teclee en la pagina no puede convertirse en otra orden.
-        texto = lanzador.prompt(lanzador.validar(BRIEF))
+        texto = lanzador.prompt(lanzador.validar(BRIEF), NOVELA)
         self.assertTrue(texto.startswith('/orquestar-novela'))
         for campo in lanzador.CAMPOS:
             self.assertIn(campo + ':', texto)
+        # Sin la carpeta delante, el orquestador no sabe donde escribir y no hay
+        # carpeta de trabajo por defecto a la que caer (§21).
+        self.assertIn(NOVELA, texto)
 
     def test_la_raiz_sirve_la_pagina(self):
         codigo, _, salida = responder('GET', '/', b'', self.config, RAIZ_WEB)
@@ -322,7 +329,7 @@ class TestTrazasDelegadas(CanonDelegadoDePrueba):
         self.assertEqual(resultado['plan']['intentos'], 2)
 
     def test_sin_canon_delegado_no_hay_nada_que_reconstruir(self):
-        shutil.rmtree('novela-cc')
+        shutil.rmtree(NOVELA)
         resultado = exportar(self.config)
         self.assertFalse(resultado['enviado'])
         self.assertIn('no hay canon', resultado['motivo'])
@@ -479,9 +486,9 @@ class TestArbolDeTrazas(CanonDelegadoDePrueba):
         self.assertIn(('escribir-capitulo', 'intentos', 2), self.capa.notas)
 
     def test_un_gate_que_no_cuadra_deja_su_propia_puntuacion(self):
-        estado = json.loads(Path('novela-cc/canon/estado.json').read_text(encoding='utf-8'))
+        estado = json.loads(Path(NOVELA + '/canon/estado.json').read_text(encoding='utf-8'))
         estado['capitulos']['1']['intentos'][0]['aprueba'] = True
-        _escribir(Path('novela-cc/canon/estado.json'), estado)
+        _escribir(Path(NOVELA + '/canon/estado.json'), estado)
         self.correr()
         self.assertIn(('gate', 'gate-cuadra', False), self.capa.notas)
 
