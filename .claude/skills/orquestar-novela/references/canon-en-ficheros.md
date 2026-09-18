@@ -65,19 +65,51 @@ no al final de la pasada.
       "estado": "aprobado",
       "intento_aprobado": 2,
       "intentos": [
-        { "intento": 1, "estado": "descartado", "palabras": 1740,
+        { "intento": 1, "estado": "descartado",
+          "ruta": "biblioteca/2026-09-18-cadiz-1812/capitulos/cap-01-intento-1.md",
+          "palabras": 1740, "parrafos": 22, "vd08": "aviso",
           "notas": { "continuidad": 3, "anacronismos": 4, "logica_ritmo": 3 },
-          "media": 3.33, "aprueba": false,
-          "motivos": ["media 3.33 por debajo de 3.7"] },
-        { "intento": 2, "estado": "aprobado", "palabras": 1812,
+          "media": 3.33, "minima": 3, "graves": 0, "aprueba": false,
+          "motivos": ["media 3.33 por debajo de 3.7"],
+          "avisos": ["1740 palabras, por debajo del objetivo"],
+          "tipo_reintento": null },
+        { "intento": 2, "estado": "aprobado",
+          "ruta": "biblioteca/2026-09-18-cadiz-1812/capitulos/cap-01-intento-2.md",
+          "palabras": 1812, "parrafos": 24, "vd08": "ok",
           "notas": { "continuidad": 4, "anacronismos": 4, "logica_ritmo": 4 },
-          "media": 4.0, "aprueba": true, "motivos": [] }
+          "media": 4.0, "minima": 4, "graves": 0, "aprueba": true,
+          "motivos": [], "avisos": [], "tipo_reintento": "quirurgico" }
       ]
     },
     "2": { "estado": "pendiente", "intento_aprobado": null, "intentos": [] }
   }
 }
 ```
+
+### Los campos de un intento, y ninguno sobra
+
+**Escribelos todos, tambien en los intentos que fracasaron.** Cada uno lo lee
+alguien despues, y el que falta no se nota hasta que se busca:
+
+| Campo | Que es | Quien se queda sin nada si falta |
+|---|---|---|
+| `intento` | El numero de vuelta, desde 1 | Todo |
+| `estado` | `propuesto`, `aprobado` o `descartado` | La interfaz y el cierre |
+| `ruta` | **Donde dejo el fichero el escritor**, desde la raiz del repositorio | El juez externo: sin ella el capitulo no viaja a las trazas y no hay nada que puntuar |
+| `palabras`, `parrafos` | Lo que conto VD-08 | VD-08 en la interfaz, y el aviso de extension |
+| `vd08` | El escalon: `ok`, `aviso` o `bloqueo` | La puntuacion `vd-08` de las trazas |
+| `notas` | Las tres dimensiones, en su orden | El gate y todas las metricas |
+| `media`, `minima`, `graves` | Los tres numeros con los que salio la cuenta | La auditoria del gate: sin ellos no se puede rehacer la operacion |
+| `aprueba` | El veredicto que escribiste | La auditoria, que compara tu veredicto con el suyo |
+| `motivos` | Por que cayo, en frases cortas | Saber que hay que arreglar |
+| `avisos` | Lo que no bloqueo pero se arrastro | El contexto del reintento |
+| `tipo_reintento` | `quirurgico`, `desde_cero` o `null` en el primero | Medir si el reintento desde cero sirve de algo |
+
+`ruta` es la que mas cuesta echar de menos y la mas facil de olvidar, porque el
+fichero esta en disco y parece que con eso basta. No basta: quien lee el canon
+despues no adivina el nombre, busca esta clave. **Escribela en cuanto el escritor
+te devuelva su ruta**, en el mismo momento, y no al aprobar el capitulo: un
+intento descartado tambien tiene que llevarla.
 
 `estado` del proyecto: `borrador`, `investigado`, `estructurado`, `escribiendo`,
 `bloqueado`, `escrito`, `editado`.
