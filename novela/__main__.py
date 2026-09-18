@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from .config import cargar_config, ErrorConfig
+from .archivo import archivar, ErrorArchivo, listar as listar_novelas, plan as plan_archivo
 from .entorno import cargar_entorno
 from .informe import construir as construir_informe, texto as texto_informe
 from .servidor import arrancar as arrancar_interfaz
@@ -26,6 +27,10 @@ La novela se escribe desde Claude Code: abre el repositorio y lanza
                                    canon de novela-cc/ y no escribe en el
   novela trazar [--modelo M]       manda a Langfuse el canon de novela-cc/,
                                    reconstruido (§20)
+  novela archivar [--nombre N]     copia la novela de novela-cc/ a novelas/,
+                                   para que la siguiente no la pise (§21). No
+                                   borra nada: vaciar novela-cc/ lo haces tu
+  novela novelas                   lista las novelas ya archivadas
   novela hook-traza                lee un PostToolUse por stdin y traza la
                                    llamada al subagente. Lo llama el hook (§22)
   novela informe-trazas [--sesion S] [--salida F] [--json]
@@ -100,6 +105,33 @@ def _ejecutar(comando, posicionales, opciones, config):
             resumen.get('entorno')))
         _log('  reconstruido del canon: sin latencia, sin tokens y sin coste')
 
+    elif comando == 'archivar':
+        # Copiar y no mover, a proposito: borrar el canon es irreversible y lo
+        # decide quien opera la maquina, no un comando que hace dos cosas.
+        nombre = opciones.get('nombre')
+        datos = archivar(nombre=nombre if isinstance(nombre, str) else None)
+        _log('archivada en {}'.format(datos['destino']))
+        _log('  {} de {} capitulos aprobados, {} palabras, estado {}'.format(
+            datos['aprobados'], datos['capitulos'], datos['palabras'], datos['estado']))
+        _log('')
+        _log('El original sigue en {}/. Para empezar otra novela, borra esa'
+             ' carpeta: la copia ya esta a salvo.'.format(datos['origen']))
+
+    elif comando == 'novelas':
+        archivadas = listar_novelas()
+        if not archivadas:
+            _log('no hay ninguna novela archivada todavia.')
+            pendiente = plan_archivo()
+            if pendiente.get('puede'):
+                _log('La de novela-cc/ se archivaria como {}.'.format(pendiente['nombre']))
+            return
+        for novela in archivadas:
+            _log('{}  {} cap. aprobados de {}, {} palabras'.format(
+                novela['nombre'], novela.get('aprobados', '?'),
+                novela.get('capitulos', '?'), novela.get('palabras', '?')))
+            if novela.get('epoca'):
+                _log('   {}'.format(novela['epoca']))
+
     elif comando == 'informe-trazas':
         sesion = opciones.get('sesion')
         informe, motivo = construir_informe(
@@ -151,6 +183,9 @@ def main(argv=None):
     try:
         config = cargar_config(opciones.get('config') or 'config.json')
         _ejecutar(comando, posicionales, opciones, config)
+    except ErrorArchivo as e:
+        sys.stderr.write('\nno se archivo nada: {}\n'.format(e))
+        return 1
     except ErrorConfig as e:
         sys.stderr.write('\n{}\n\nSe para al arrancar: una errata en un umbral sale'
                          ' mas barata descubierta ahora que tres capitulos'
