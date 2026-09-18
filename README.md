@@ -148,6 +148,9 @@ el cuestionario para que todas las pasadas pregunten lo mismo.
 | `trazar [--modelo M]` | Manda a Langfuse las notas y los veredictos del canon |
 | `informe-trazas [--sesion S] [--salida F] [--json]` | Agrega el gasto de una novela |
 | `hook-traza` | Lo llama el hook, no una persona |
+| `objetivos` | Lo que el banco sabe optimizar y con cuántos casos cuenta |
+| `sembrar --objetivo O` | Saca los casos de las novelas escritas y los sube al dataset |
+| `aprender --objetivo O [--rondas N] [--seco]` | El loop del banco. Lo único que escribe en el repositorio |
 | `ui.bat` | `ui` en Windows, buscando el intérprete por su cuenta |
 
 Opción global: `--config <ruta>`.
@@ -163,8 +166,25 @@ Opción global: `--config <ruta>`.
 | `novela/` | El Python que mira: canon, interfaz, trazas e informe |
 | `web/` | La interfaz: las tres salas, la escena three.js y la ambientación |
 | `biblioteca/` | Las novelas, una carpeta cada una con su canon. Es salida y no se versiona |
+| `autoaprendizaje/` | El banco: el encargo del optimizador y los objetivos. Las rondas son salida |
 | `tests/` | Tests del Python de `novela/`, sin red |
-| `docs/spec/` | El spec, y el documento de análisis de trazas |
+| `docs/spec/` | Los tres specs: el sistema, el análisis de trazas y el autoaprendizaje |
+
+## El banco: mejorar el prompt de un agente
+
+```bash
+python -m novela sembrar --objetivo investigador-barato
+python -m novela aprender --objetivo investigador-barato --seco
+```
+
+Coge el prompt vigente de un rol, deja que otro agente proponga variantes, las
+mide todas contra los mismos casos y **escribe encima del prompt si el ganador
+mejora por el margen** sin que ninguna guardia caiga. Con `--seco` mide y no
+promueve, que es como se estrena un objetivo.
+
+Lo que promueve es un commit de un solo fichero con el número que ganó en el
+mensaje: se deshace revirtiéndolo. El diseño entero está en
+[`docs/spec/AUTOAPRENDIZAJE.md`](docs/spec/AUTOAPRENDIZAJE.md).
 
 ## Tests
 
@@ -172,8 +192,9 @@ Opción global: `--config <ruta>`.
 python -m unittest discover -s tests -t .
 ```
 
-Cincuenta y seis, sin red y sin coste. Cubren el lector del canon, la auditoría
-del gate, la API de la interfaz, el árbol de trazas reconstruido y el hook.
+Ciento veintiocho, sin red y sin coste. Cubren el lector del canon, la auditoría
+del gate, la API de la interfaz, el árbol de trazas reconstruido, el hook, y la
+aritmética del banco con sus reglas de parada.
 
 **La orquestación en sí no tiene tests**, y no es un olvido: lo que hace es una
 conversación. Es el precio de este diseño y está escrito en §21 del spec.

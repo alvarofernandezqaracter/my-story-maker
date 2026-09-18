@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.16.0
+version: 1.17.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -30,6 +30,7 @@ informe de §22. Nada de eso escribe novelas.
 | §18, §21 | Cómo está montado: el repositorio y sus comandos, y la orquestación en sí |
 | §19, §20, §22 | Lo que mira el sistema desde fuera: la interfaz, las trazas y su análisis |
 | §23 | **Los objetivos medibles.** Qué número tiene que subir o bajar, desde dónde y hasta dónde |
+| §24 | Lo único que se cambia a sí mismo: el banco que reescribe el prompt de un rol |
 | §16, §17 | Historial y log de commits del documento |
 
 El §14 está muerto. Los números de sección no se reutilizan.
@@ -468,6 +469,15 @@ evitar. DA-02 se decide en ese frontmatter.
 | `margenes.palabras_aviso` | 0,15 | Desvío sobre `palabras_objetivo` que genera aviso (VD-08) |
 | `margenes.palabras_bloqueo` | 0,4 | Desvío que descarta el intento sin llamar al validador (VD-08) |
 | `margenes.parrafos_min` | 3 | Mínimo de párrafos de un capítulo redactado (VD-08) |
+| `autoaprendizaje.rondas_max` | 3 | Vueltas del banco antes de rendirse (§24) |
+| `autoaprendizaje.candidatos_por_ronda` | 3 | Variantes del prompt por ronda |
+| `autoaprendizaje.margen_mejora` | 0,10 | Mejora mínima para promover un prompt |
+| `autoaprendizaje.casos_minimos` | 3 | Suelo de casos de reserva para que una promoción valga |
+| `autoaprendizaje.gasto_max` | 5,0 | Tope en dólares de un loop del banco |
+| `autoaprendizaje.paciencia` | 2 | Rondas seguidas sin acercarse antes de parar |
+| `autoaprendizaje.corridas_en_paralelo` | 3 | Llamadas a la vez del banco |
+| `autoaprendizaje.tope_segundos` | 600 | Lo que puede tardar una corrida antes de darla por perdida |
+| `autoaprendizaje.repeticiones` | 1 | Veces que se corre cada caso, para promediar el ruido |
 
 El puerto de la interfaz vive aquí y no en el código por la misma regla que el resto: es un número que se toca sin tocar código, y en una máquina con el 8787 ocupado hay que poder cambiarlo. `python -m novela ui --puerto N` lo pisa para un arranque suelto, igual que `--config`.
 
@@ -492,7 +502,15 @@ apunta, y no abre ficheros—, pero mandar el libro a un servicio de fuera es un
 decisión de quien opera la máquina y no un detalle de implementación. Quien la
 apaga pierde el juez y conserva las trazas, las notas y el gasto.
 
-Con esto la tabla tiene **diecisiete** claves, y ninguna sobra: cada una la lee alguien.
+Con esto la tabla tiene **veintiséis** claves, y ninguna sobra: cada una la lee alguien.
+
+**Las nueve del banco gobiernan un loop que commitea solo** (§24), así que están
+aquí por la misma razón que las demás y con más motivo: un margen de promoción
+escondido en el código sería un número que decide cambios en el repositorio sin
+que nadie pueda verlo al lado de los otros. El banco además trae su propio
+perfil, `config.banco.json`, que no es una excepción a nada: es este mismo
+fichero con otro `trazas.entorno`, para que sus corridas no se cuenten como
+gasto de una novela.
 
 **Por qué dos márgenes de palabras.** VD-08 tiene que distinguir el capítulo que se queda corto del que no sirve. Dentro de `palabras_aviso` el texto vale y la desviación viaja como aviso al reintento; pasado `palabras_bloqueo` no se gasta la llamada al validador y se reintenta la generación. Con un solo umbral había que elegir entre no filtrar nada o tirar capítulos aprovechables.
 
@@ -548,6 +566,31 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.17.0] — 2026-09-18
+
+**Añadido**
+- §24, §1. **El banco**: el prompt de un rol se mejora solo contra una métrica,
+  con un dataset delante, y se escribe encima si el candidato gana por un
+  margen. Aquí va solo lo que este documento gobierna —que toca
+  `agentes/<rol>.md` y nada más, que no toca el canon, y la forma del commit que
+  lo hace reversible—; el diseño entero vive en `AUTOAPRENDIZAJE.md`, que tiene
+  su propia versión. Motivo: es el único sitio del sistema donde algo cambia el
+  repositorio sin una persona delante, y eso no podía quedar escrito solo en un
+  documento de al lado.
+- §24. La relación con §23: un objetivo de gasto solo es legítimo con sus
+  guardias, que es la misma regla que allí impide perseguir el coste por sí solo.
+- §12. Nueve claves nuevas de `autoaprendizaje.*`, que llevan la tabla de
+  diecisiete a veintiséis, y el perfil `config.banco.json`. Motivo: gobiernan un
+  loop que commitea solo, así que ninguna puede vivir escrita en el código.
+- §18. Los tres comandos del banco —`objetivos`, `sembrar` y `aprender`—, la
+  carpeta `autoaprendizaje/` y qué de ella se versiona. `aprender` es el único
+  comando de este paquete que escribe en el repositorio.
+
+**Cambiado**
+- §18. Los tests pasan de ochenta y nueve a ciento veintiocho, en cuatro
+  ficheros. Del banco se prueba la aritmética y las reglas de parada, que es lo
+  único suyo que se puede probar sin gastar dinero.
 
 ### [1.16.0] — 2026-09-18
 
@@ -903,6 +946,7 @@ desde fuera.
 | `novela/` | Python: el lector del canon, la interfaz de §19, las trazas de §20 y el informe de §22 |
 | `web/` | La página de §19: las tres salas, la escena three.js, la ambientación y el logotipo |
 | `biblioteca/` | Las novelas, una carpeta cada una con su canon (§21). Es salida y no se versiona |
+| `autoaprendizaje/` | El banco de §24: el encargo del optimizador y los objetivos, que sí se versionan, y las rondas y el espejo de casos, que no |
 | `tests/` | Tests del Python de `novela/`, sin red |
 
 **Los prompts tienen una sola fuente de verdad.** Un subagente de `.claude/agents/`
@@ -937,12 +981,15 @@ el loop de intentos y el bloqueo.
 | `biblioteca` | Lista las novelas, de la más reciente a la más antigua, y marca la que está en curso (§21) |
 | `hook-traza` | Lee un `PostToolUse` por stdin y traza la llamada al subagente. Lo llama el hook, no una persona (§22) |
 | `informe-trazas [--sesion S] [--salida F] [--json]` | Lee de vuelta las trazas de una novela y agrega el gasto (§22) |
+| `objetivos` | Lo que el banco sabe optimizar y con cuántos casos cuenta (§24) |
+| `sembrar --objetivo O` | Saca los casos de las novelas escritas y los sube al dataset (§24) |
+| `aprender --objetivo O [--rondas N] [--seco]` | El loop del banco. **Es el único comando de este paquete que escribe en el repositorio**, y solo en `agentes/<rol>.md` (§24) |
 | `ui.bat` | Lo mismo que `ui` en Windows, buscando el intérprete por su cuenta |
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ochenta y nueve, en tres
-ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
+**Tests.** `python -m unittest discover -s tests -t .`: ciento veintiocho, en
+cuatro ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
 hook de §22. Los dos últimos corren contra una capa de mentira
@@ -951,6 +998,13 @@ qué y qué puntuaciones salen—, que es justo lo que rompe un fallo de
 reconstrucción. Cada test corre en su propio directorio temporal, y todos apagan
 las trazas a mano en lugar de fiarse de que el entorno esté limpio: un test que
 manda trazas al Langfuse de quien lo lanza ha dejado de ser un test sin red.
+
+**Del banco de §24 se prueba la aritmética y las reglas de parada**, que es la
+única parte suya que se puede probar: las métricas, la regla de promoción con
+sus guardias, el tope de gasto y la partición del dataset. Ninguno de esos tests
+arranca una sesión ni gasta un céntimo. Que el loop produzca prompts mejores no
+lo dice ningún test —lo dice la siguiente novela—, y eso está escrito en su
+propio spec.
 
 **La orquestación en sí no tiene tests**, y no es un olvido: lo que hace es una
 conversación, y no hay capa simulada que ponerle delante. Es el precio de este
@@ -1608,3 +1662,49 @@ Una vez por novela terminada, en la pasada de análisis de §22, y el resultado 
 apunta en `TRAZAS.md` junto al resto de la pasada. **Aquel documento mide, este
 decide**: cuando una meta se alcanza de forma estable o se demuestra equivocada,
 se cambia aquí y allí queda la referencia cruzada.
+
+## §24 El banco: el prompt de un rol se mejora solo
+
+**Qué es.** Un loop que coge el prompt vigente de un rol, deja que un agente
+proponga variantes, las corre contra un conjunto fijo de casos, mide con números
+y **escribe encima del prompt si el ganador mejora por un margen**. Su diseño
+entero vive en un tercer spec, [`AUTOAPRENDIZAJE.md`](AUTOAPRENDIZAJE.md), con
+su propia versión. Aquí va solo lo que este documento tiene que saber, que es lo
+que el banco toca de lo que él gobierna.
+
+**Toca `agentes/<rol>.md` y nada más.** No toca `.claude/agents/`, porque las
+herramientas y el modelo de un rol son decisiones de diseño y viven donde dice
+§12; no toca `skills/`, porque una skill la comparten varios roles y moverla
+dentro de un loop cambiaría en silencio lo que mide otro; y **no toca el canon
+de ninguna novela**, que sigue siendo cosa del orquestador y de nadie más (§21).
+
+**Es el único sitio de este sistema donde algo cambia el repositorio sin que
+haya una persona delante.** Lo que lo hace aceptable no es el margen sino la
+forma del cambio: un solo fichero, un commit propio que no lleva ninguna otra
+cosa, y el número que ganó escrito en el mensaje. Deshacerlo es revertir ese
+commit. Por eso el banco se niega a arrancar si hay trabajo sin commitear en el
+fichero que va a pisar: con cambios a medias dentro, revertir ya no devuelve el
+repositorio a donde estaba.
+
+**Mide arrancando el mismo camino delegado de §21**, con el prompt del rol
+dentro de una sesión sin interactivo, y **fuera del repositorio**: en un
+directorio temporal, para que ni el `CLAUDE.md` del proyecto entre en lo que se
+está midiendo ni el candidato pueda leer aquello con lo que se le juzga. Es la
+misma regla de §20 sobre los jueces, aplicada al examinado en vez de al examen.
+
+**Qué relación tiene con §23.** Los `OB-xx` son objetivos del sistema entero y se
+miden sobre novelas escritas; los del banco son de un rol aislado y se miden
+sobre casos. No compiten: el banco es una de las palancas con las que se mueve un
+`OB-xx`, y la única que se puede accionar sin escribir un libro entero.
+
+De ahí sale además la regla que hace legítimo un objetivo de coste aquí. §23 dice
+que **bajar el coste por sí solo no es un objetivo**, porque se cumple trivialmente
+con un modelo peor. En el banco eso se traduce en que ningún objetivo de gasto se
+acepta sin sus guardias: «que el investigador gaste menos» no es un objetivo, y
+«que gaste menos sin bajar de doce datos, con las cuatro categorías y sin un solo
+fallo de VD-04» sí lo es. Un objetivo sin guardias es un atajo esperando a que
+alguien lo tome.
+
+**Lo que no cierra.** El banco mide un rol aislado, así que no ve lo que una
+promoción le hace al rol siguiente. DA-02 sigue abierta y el banco le da
+números, no una respuesta.

@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.16.0.
+de un brief de cinco campos. Versión 1.17.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -190,9 +190,10 @@ en un prompt sin pasar por este fichero, es un bug.** Las claves:
 `gate.{nota_minima,media_minima,max_intentos}`,
 `contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`,
 `interfaz.puerto`, `lanzador.{comando,permisos}`, `trazas.{activas,entorno,texto}`,
-`margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`.
-Diecisiete. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
-`capitulos_max >= capitulos_min`.
+`margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`,
+`autoaprendizaje.{rondas_max,candidatos_por_ronda,margen_mejora,casos_minimos,gasto_max,paciencia,corridas_en_paralelo,tope_segundos,repeticiones}`.
+Veintiséis. Reglas cruzadas: `palabras_bloqueo > palabras_aviso`,
+`capitulos_max >= capitulos_min` y `paciencia <= rondas_max`.
 
 Las credenciales van en un `.env` de la raíz que no se versiona. Un **perfil** es
 un `config*.json` de la raíz, nada más.
@@ -207,7 +208,10 @@ python -m novela trazar                      # manda a Langfuse el canon reconst
 python -m novela biblioteca                  # las novelas, y cuál está en curso (§21)
 python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
                                              # sin Langfuse tira del diario local
-python -m unittest discover -s tests -t .    # 89 tests, sin red
+python -m novela objetivos                   # lo que el banco sabe optimizar (§24)
+python -m novela sembrar --objetivo O        # saca los casos de las novelas escritas
+python -m novela aprender --objetivo O       # el loop. Con --seco no promueve nada
+python -m unittest discover -s tests -t .    # 128 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
@@ -227,6 +231,9 @@ python -m unittest discover -s tests -t .    # 89 tests, sin red
 | [novela/informe.py](novela/informe.py) | Lee las trazas de vuelta y agrega el gasto; sin Langfuse, del diario local | §22 |
 | [novela/biblioteca.py](novela/biblioteca.py) | Dónde vive cada novela y cuál es la de ahora. **No escribe canon** | §21 |
 | [novela/entorno.py](novela/entorno.py) | Lector del `.env` | §12, §20 |
+| [novela/banco.py](novela/banco.py) | El banco: corre, compara y promueve. **Lo único que escribe en el repositorio** | §24 |
+| [novela/metricas.py](novela/metricas.py) | Lo que se mide de la salida de un rol, reutilizando los `VD-xx` | §24 |
+| [novela/casos.py](novela/casos.py) | El dataset del banco: taller y reserva, en Langfuse con espejo local | §24 |
 | [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada** | §18 |
 
 ## Interfaz web (§19) y observabilidad (§20)
@@ -281,12 +288,37 @@ perfectos y lo que se pide es que no bajen.
 No son objetivos, y está escrito por qué: bajar el coste por sí solo, subir las
 notas del validador, y bajar `media_minima`.
 
+## El banco: el autoaprendizaje (§24)
+
+Un loop que mejora el prompt de **un rol a la vez** contra **una métrica**, con
+guardias que no pueden empeorar. Su diseño entero está en
+[`docs/spec/AUTOAPRENDIZAJE.md`](docs/spec/AUTOAPRENDIZAJE.md), que tiene su
+propia versión; aquí lo que no se puede olvidar:
+
+- **Es lo único que escribe en el repositorio sin nadie delante.** Toca
+  `agentes/<rol>.md` y nada más, en un commit propio con el número que ganó en el
+  mensaje. Se deshace revirtiendo ese commit, y por eso el banco se niega a
+  arrancar si ese fichero tiene cambios sin commitear.
+- **No toca el canon de ninguna novela**, ni `.claude/agents/`, ni `skills/`.
+- **Corre fuera del repositorio**, en un directorio temporal: así ni este
+  CLAUDE.md entra en lo que se mide ni el candidato puede leer con qué se le
+  juzga. Misma idea que los evaluadores de §20.
+- **Los casos viven en Langfuse**, en dos datasets por rol, taller y reserva. El
+  optimizador no ve la reserva jamás; con ella se decide la promoción.
+- **Un objetivo de gasto sin guardias no es un objetivo**: es la regla de §23
+  —el coste no se persigue solo— aplicada aquí.
+
 # Estado actual y cosas abiertas
 
 - El `.drawio` de [docs/diagrama/](docs/diagrama/) va por detrás del Mermaid: le
   falta el cronista y se regenera a mano. El Mermaid de §4 es el bueno.
 - Decisiones abiertas vivas en §15: DA-02, DA-03, DA-04, DA-05, DA-06, DA-07,
   DA-08, DA-09, DA-10, DA-12, DA-13, DA-14, DA-15.
+- El banco tiene dos objetivos definidos, `investigador-barato` y
+  `escritor-longitud`, y decisiones abiertas propias `AA-01`–`AA-07`. La más
+  seria es AA-06: dos corridas idénticas dieron 6.211 y 2.569 tokens, así que
+  con tres casos de reserva y una repetición una promoción es indicativa y no
+  concluyente.
 - La búsqueda web del investigador no existe: su subagente tiene `tools: Read`.
   Para que entre hay que cambiarle las herramientas, no una clave de config.
 - **Dos huecos del modelo de datos**, que salieron en la primera pasada completa:
