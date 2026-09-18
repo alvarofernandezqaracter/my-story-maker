@@ -1015,13 +1015,20 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `67ecd9f` | 2026-09-18 | docs(spec): 1.22.0, §21 y §22 el subagente que no carga y la llamada que el hook no reconoce |
 | `d65fa29` | 2026-09-18 | docs(spec): §17 regenerada para 1.22.0 |
 | `4634275` | 2026-09-18 | fix(afinado): una vuelta abierta no desvia las trazas de una novela ajena |
+| `85e3b9c` | 2026-09-18 | docs(spec): §17 regenerada para 1.23.0 |
+| `76bdda0` | 2026-09-18 | docs(spec): 1.24.0, §21 un intento se guarda entero y §20 que el capitulo viaje |
 
 ```
 git -c i18n.logOutputEncoding=UTF-8 log --reverse \n    --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
 ```
 
 La opción de codificación no es adorno: sin ella, en Windows el `§` de los
-asuntos sale roto y la tabla entra con basura dentro.
+asuntos sale roto y la tabla entra con basura dentro. **Y no siempre basta**: si
+la salida se redirige a un fichero desde una shell de Windows, el `§` se vuelve a
+romper por el camino aunque git lo emita bien. Lo que no falla es leer la salida
+de git en bytes y decodificarla en UTF-8 a mano antes de pegarla. El commit
+guarda el carácter correcto en los dos casos, así que lo que hay que revisar es
+la tabla, no el historial: si aparece un `�`, se regenera.
 
 ## §18 Estructura del repo y comandos
 
