@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.13.0.
+de un brief de cinco campos. Versión 1.14.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -97,7 +97,9 @@ novela-cc/
   retoques.md
 ```
 
-No se versiona: es salida, no fuente.
+No se versiona: es salida, no fuente. **Y es de una novela**: el orquestador
+escribe siempre ahí, así que antes de empezar otra hay que pasar la anterior a
+`novelas/` con `python -m novela archivar`, o se pierde.
 
 ## Lo que este diseño no tiene
 
@@ -110,7 +112,7 @@ Y conviene no olvidarlo, porque es el precio:
   conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de que
   mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
   instruido.
-- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 73
+- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 87
   tests que hay cubren el Python de `novela/`, que mira el canon y arranca al
   orquestador, pero no escribe novelas.
 
@@ -202,9 +204,12 @@ No escribe novelas: mira lo que escribió el orquestador.
 ```bash
 python -m novela ui                          # interfaz web, solo lectura (§19)
 python -m novela trazar                      # manda a Langfuse el canon reconstruido (§20)
+python -m novela archivar                    # guarda la novela en novelas/ para
+                                             # que la siguiente no la pise (§21)
+python -m novela novelas                     # lo que ya hay archivado
 python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
                                              # sin Langfuse tira del diario local
-python -m unittest discover -s tests -t .    # 73 tests, sin red
+python -m unittest discover -s tests -t .    # 87 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
@@ -222,6 +227,7 @@ python -m unittest discover -s tests -t .    # 73 tests, sin red
 | [novela/trazas_cc.py](novela/trazas_cc.py) | Reconstruye el árbol de §20 desde el canon | §20 |
 | [novela/trazas_hook.py](novela/trazas_hook.py) | El hook `PostToolUse`: traza cada llamada en vivo, con su gasto | §22 |
 | [novela/informe.py](novela/informe.py) | Lee las trazas de vuelta y agrega el gasto; sin Langfuse, del diario local | §22 |
+| [novela/archivo.py](novela/archivo.py) | Copia la novela de `novela-cc/` a `novelas/`. **Copia, nunca mueve** | §21 |
 | [novela/entorno.py](novela/entorno.py) | Lector del `.env` | §12, §20 |
 | [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada** | §18 |
 

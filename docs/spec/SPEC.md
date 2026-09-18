@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.13.0
+version: 1.14.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -548,6 +548,14 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.14.0] — 2026-09-18
+
+**Añadido**
+- §21, §18. `novelas/` y los comandos `archivar` y `novelas`. Motivo: el
+  orquestador escribe siempre en `novela-cc/`, así que empezar un libro encima
+  del anterior lo pisaba, y la única defensa era acordarse de copiarlo a mano.
+  Copia y no mueve: borrar es irreversible y no lo decide un comando.
+
 ### [1.13.0] — 2026-09-18
 
 **Añadido**
@@ -867,6 +875,7 @@ desde fuera.
 | `novela/` | Python: el lector del canon, la interfaz de §19, las trazas de §20 y el informe de §22 |
 | `web/` | La página de §19: las tres salas, la escena three.js, la ambientación y el logotipo |
 | `novela-cc/` | El canon en ficheros (§21). Es salida y no se versiona |
+| `novelas/` | Las novelas ya terminadas, una carpeta cada una. Tampoco se versiona: son libros, no código |
 | `tests/` | Tests del Python de `novela/`, sin red |
 
 **Los prompts tienen una sola fuente de verdad.** Un subagente de `.claude/agents/`
@@ -898,13 +907,15 @@ el loop de intentos y el bloqueo.
 |---|---|
 | `ui [--puerto N]` | Abre la interfaz en el navegador (§19). Mira y no escribe |
 | `trazar [--modelo M]` | Manda a Langfuse el canon reconstruido (§20) |
+| `archivar [--nombre N]` | Copia la novela de `novela-cc/` a `novelas/<fecha>-<época>/`. **No borra** el original (§21) |
+| `novelas` | Lista lo que hay archivado, de lo más nuevo a lo más viejo |
 | `hook-traza` | Lee un `PostToolUse` por stdin y traza la llamada al subagente. Lo llama el hook, no una persona (§22) |
 | `informe-trazas [--sesion S] [--salida F] [--json]` | Lee de vuelta las trazas de una novela y agrega el gasto (§22) |
 | `ui.bat` | Lo mismo que `ui` en Windows, buscando el intérprete por su cuenta |
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: setenta y tres, en dos
+**Tests.** `python -m unittest discover -s tests -t .`: ochenta y siete, en tres
 ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
@@ -1344,6 +1355,14 @@ Los subagentes reciben **rutas, no contenido**. Es lo que mantiene el canon fuer
 Las siete entidades de §3 son ficheros JSON bajo `novela-cc/canon/`: `estado.json`, `brief.json`, `dossier.json`, `personajes.json`, `escaleta.json`, `hilos.json`, `timeline.json` y un `resumenes/cap-NN.json` por capítulo. Al lado, `contexto/cap-NN.md` con el paquete con el que se escribió cada capítulo, y `capitulos/` con los borradores.
 
 No se versiona: es salida, no fuente. Todo cuelga de `novela-cc/`, así que borrar esa carpeta deja el repositorio limpio y listo para otra novela.
+
+**Y ahí está el filo: `novela-cc/` es de una novela.** El orquestador escribe
+siempre en la misma ruta, así que empezar la siguiente encima de la anterior la
+pisa. `archivar` copia el canon entero a `novelas/<fecha>-<época>/` antes de que
+eso pase, y se niega si ese nombre ya existe. **Copia y no mueve**: borrar es
+irreversible y lo decide quien opera la máquina, no un comando que hace dos cosas
+y deja la mala a medias. El nombre sale del brief y no de un contador porque un
+`novela-3/` no dice nada seis meses después.
 
 **`estado.json` es lo que hace esto reanudable**, y por eso se escribe en cuanto algo cambia y no al final de la pasada. Guarda las notas y los motivos de **todos** los intentos, también los que fracasaron: sin ellos no hay con qué calibrar DA-06.
 
