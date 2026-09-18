@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.23.0
+version: 1.24.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -558,6 +558,22 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.24.0] — 2026-09-18
+
+**Corregido**
+- §21, §20. **Un intento de `estado.json` se guarda entero**, con la `ruta` del
+  borrador entre sus claves. Motivo: la primera novela escrita sin ella mandó a
+  Langfuse la observación del escritor con el paquete y sin el capítulo, y los
+  dos jueces de §20 no llegaron a ejecutarse —un evaluador al que le falta una
+  variable mapeada no falla, no puntúa—. La causa estaba en el ejemplo que copia
+  el orquestador, que no la traía.
+
+**Añadido**
+- §20. La reconstrucción repone el borrador por la convención de nombres del
+  canon cuando el intento no guarda su `ruta`. Motivo: rescata las novelas ya
+  escritas sin esa clave, cuyos ficheros siguen en disco. Es una red, y la clave
+  se sigue escribiendo.
 
 ### [1.23.0] — 2026-09-18
 
@@ -1418,6 +1434,15 @@ que juzgar. Los intentos descartados viajan por la misma razón por la que
 `estado.json` los guarda: son la mitad de la comparación que interesa, porque sin
 ellos no se ve si el validador se indulta a sí mismo.
 
+**Que el capítulo viaje depende de una clave del canon**, y por eso se dice aquí:
+la salida de la observación del escritor sale del borrador, que se localiza por la
+`ruta` que §21 guarda en cada intento. Sin ella el paquete viaja solo, el
+evaluador se queda sin la mitad que tiene que juzgar y **no llega a ejecutarse**:
+no falla, simplemente no puntúa, que es la peor forma de romperse. Como el nombre
+de un borrador es una convención fija de este canon, la reconstrucción lo repone
+cuando la clave falta, en vez de dar el intento por perdido. Es una red y no un
+permiso: la clave se escribe igual.
+
 Esto es lo más parecido al prompt exacto que esta reconstrucción puede dar, y no
 es poco: el paquete es literalmente lo que el escritor tuvo delante, guardado en
 `contexto/cap-NN.md` justo para esto. Pero sigue sin ser la llamada. Y como con
@@ -1547,6 +1572,17 @@ más. Un directorio vacío no es canon, así que la primera regla de este docume
 sigue entera.
 
 **`estado.json` es lo que hace esto reanudable**, y por eso se escribe en cuanto algo cambia y no al final de la pasada. Guarda las notas y los motivos de **todos** los intentos, también los que fracasaron: sin ellos no hay con qué calibrar DA-06.
+
+**Un intento se guarda entero o no sirve**, y esto se aprendió por las malas. El
+registro de cada intento lleva su número y su estado, la **`ruta` del borrador**,
+`palabras` y `parrafos`, el escalón `vd08`, las tres `notas`, la `media`, la
+`minima`, los `graves`, el veredicto `aprueba`, los `motivos`, los `avisos` y el
+`tipo_reintento`. Ninguno es decorativo: cada uno lo lee después la interfaz de
+§19, la reconstrucción de §20 o la auditoría del gate, y el que falta no da la
+cara hasta que alguien lo busca. La primera novela escrita sin `ruta` conservó
+sus borradores en disco y perdió, sin ruido, el texto que el juez externo tenía
+que puntuar. La lista completa vive en la referencia de la skill, que es lo que
+el orquestador copia.
 
 ### Lo que se conserva
 
