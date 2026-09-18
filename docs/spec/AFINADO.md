@@ -1,6 +1,6 @@
 ---
 doc: spec-afinado-de-prompts
-version: 0.1.0
+version: 0.2.0
 estado: borrador
 actualizado: 2026-09-18
 ---
@@ -227,11 +227,23 @@ Los ids no se reutilizan.
 | AF-01 | Si el disparo automático al cerrar una novela debe pedir permiso o correr solo | Con el gasto de dos o tres vueltas medido |
 | AF-02 | Si la métrica objetivo debe ser `deteccion` o la caída emparejada de la nota entre el caso limpio y el sembrado | Con el ruido de la vuelta 1 delante |
 | AF-03 | Qué rol entra en el segundo loop. El cronista es el candidato: empata en coste por capítulo y emite 3.995 tokens de salida por resumen | Cuando el primero haya cerrado dos vueltas |
-| AF-04 | Si las guardias deben poder vetar por sí solas o sumar en un único veredicto | Cuando una guardia impida una promoción que la métrica objetivo pedía |
+| AF-04 | Si las guardias deben poder vetar por sí solas o sumar en un único veredicto | Cuando una guardia impida una promoción que la métrica objetivo pedía. **Ya ha pasado**: §14 |
+| AF-05 | Cómo se reparten los casos entre taller y reserva | La vuelta 1 repartió por novela y salió un taller de casos difíciles (0,20 de detección) contra una reserva de casos fáciles (0,75). Con esa diferencia, la reserva no mide lo mismo que el taller y la decisión de promover depende de en qué lado cayó cada caso | Antes de la vuelta 2 |
+| AF-06 | Quién vuelca las respuestas del subagente | Hoy lo hace la misma sesión que propone el candidato, así que ve la reserva por fuerza. Es el agujero de «el examinado no ve el examen» por el otro lado: no lo ve el examinado, lo ve el examinador | Antes de que una vuelta promueva algo |
 
 ## §12 Historial de cambios
 
 Formato Keep a Changelog.
+
+### [0.2.0] — 2026-09-18
+
+**Añadido**
+- §14. Vuelta 1, la primera con números reales: el vigente ve el 85% de los
+  anacronismos sembrados y el gate solo bloquea el 44%, y el candidato que cierra
+  ese hueco no promueve porque el ruido de la reserva (0,50) es mayor que la
+  mejora que cabe en ella.
+- §11. AF-05, el reparto entre taller y reserva, y AF-06, que quien vuelca las
+  respuestas es hoy quien propone el candidato y por tanto ve la reserva.
 
 ### [0.1.0] — 2026-09-18
 
@@ -244,3 +256,75 @@ Formato Keep a Changelog.
 
 Una por sección, numeradas a partir de §14. No se reescribe una anterior, por la
 misma regla que las pasadas de `TRAZAS.md`.
+
+## §14 Vuelta 1 — 2026-09-18, validador de anacronismos
+
+108 llamadas, 3.346.810 tokens, **0,6608 $** y 0,0061 $ por llamada, todas al
+entorno `afinado` y ninguna dentro de la sesión de una novela. 18 casos —nueve
+capítulos aprobados, cada uno limpio y con un anacronismo sembrado— por tres
+pasadas, para el prompt vigente y para un candidato.
+
+**Veredicto: NO PROMUEVE.** Y es el resultado correcto, aunque el candidato
+mejore mucho.
+
+### Lo que hace mal el prompt vigente
+
+| | Vigente |
+|---|---:|
+| Anacronismos sembrados que **ve** (deja alguna incidencia) | 23 de 27 = **85%** |
+| Anacronismos sembrados que **el gate bloquea** | 12 de 27 = **44%** |
+
+**El validador no es que no vea los anacronismos: es que no los cobra.** Los
+marca `aviso` con nota 3, 4 o 5, y con eso el gate deja pasar el capítulo. El
+hueco entre el 85% y el 44% es toda la mejora disponible, y no hay que enseñarle
+historia para cobrarla: hay que decirle cuándo una incidencia es grave.
+
+### El candidato, y lo que costó
+
+Un solo cambio en `agentes/validador.md`: que un objeto, una institución o una
+práctica **posterior a la fecha del brief** sea `grave`, con el motivo escrito
+—el dossier enumera lo que había, nunca lo que no había, así que un anacronismo
+así no contradice ningún dato y se cuela por esa grieta—.
+
+| Métrica | Vigente | Candidato |
+|---|---:|---:|
+| Detección, todos los casos | 0,444 | **0,741** |
+| Detección, reserva | 0,750 | **1,000** |
+| Falsos positivos sobre capítulos limpios | 0,000 | 0,037 |
+| Forma de la respuesta | 1,000 | 1,000 |
+
+Sube la detección dos tercios y no rompe la forma. Y aun así no entra, por dos
+motivos que conviene no confundir.
+
+### Por qué no entra, y cuál de los dos motivos es real
+
+```
+reserva: mejora 0,25 <= umbral 0,50 (ruido 0,50 x factor 1,0); guardia rota: falsos_positivos
+```
+
+**El ruido.** Tres pasadas idénticas del vigente sobre la reserva dieron 1,00,
+0,75 y 0,50: medio punto de recorrido sin que cambiara nada. Con cuatro casos
+sembrados en la reserva, la métrica solo puede valer 0, 0,25, 0,5, 0,75 o 1, y el
+umbral de promoción sale más grande que la subida máxima posible. **Contra esta
+reserva no hay candidato que pueda promover, por buena que sea la idea.** El
+límite no es el prompt: es el tamaño del conjunto.
+
+**La guardia.** El candidato marcó grave un capítulo limpio —una referencia
+geográfica que le pareció mal fechada— una vez de doce. El vigente lo hizo cero
+de doce, así que la guardia «no sube» se rompe con un solo caso. Es exactamente
+el fallo contra el que avisa §2: **una guardia fijada en cero no protege, impide**,
+porque cualquier resultado distinto de la perfección la rompe y ningún candidato
+puede demostrar que no ha empeorado algo que estaba en el mínimo posible.
+
+### Lo que hay que cambiar antes de la vuelta 2
+
+| Qué | Por qué | Cuánto cuesta |
+|---|---|---|
+| Más casos sembrados, varios por capítulo | Con 4 en la reserva el umbral es mayor que la mejora posible. Con 20 baja a ~0,1 | Escribirlos; medir sube en proporción |
+| Repartir taller y reserva por dificultad y no por novela (AF-05) | El taller salió en 0,20 de detección y la reserva en 0,75: no miden lo mismo | Nada |
+| Que la guardia de falsos positivos admita un margen medido y no un cero (§2) | Hoy veta con un caso de doce, que está dentro del ruido de la propia guardia | Nada |
+| Separar quien vuelca las respuestas de quien propone (AF-06) | El examinador ve la reserva | Una sesión aparte |
+
+**Lo que no hay que cambiar**: la idea del candidato es buena y el número lo
+dice. Se vuelve a presentar en la vuelta 2 contra un conjunto que pueda medirla.
+

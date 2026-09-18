@@ -164,6 +164,23 @@ def leer_bloque(bruto):
     return bloque
 
 
+def _bloquearia_el_gate(bloque, suelo):
+    """Si con este bloque el gate de SPEC.md §8 pararia el capitulo.
+
+    Son dos caminos y hay que mirar los dos, porque el gate mira los dos: la
+    nota por debajo del suelo, **o** una sola incidencia grave, que veta por si
+    sola pase lo que pase con las notas. Mirar solo la nota daria por no
+    detectado un anacronismo que el validador vio y marco como grave, que es
+    justo lo contrario de lo que esta metrica quiere contar.
+    """
+    if bloque['nota'] < suelo:
+        return True
+    for incidencia in bloque.get('incidencias') or []:
+        if isinstance(incidencia, dict) and incidencia.get('severidad') == 'grave':
+            return True
+    return False
+
+
 def _respuestas(numero, prompt):
     """Las respuestas de un prompt, agrupadas por pasada.
 
@@ -218,7 +235,7 @@ def medir_pasada(config, clave, respuestas, particion=None):
             # contestar. Cuenta en `forma`, que es su guardia.
             continue
         validas += 1
-        bloquea = bloque['nota'] < suelo
+        bloquea = _bloquearia_el_gate(bloque, suelo)
         if ficha['tipo'] == 'sembrado':
             sembrados += 1
             aciertos += 1 if bloquea else 0

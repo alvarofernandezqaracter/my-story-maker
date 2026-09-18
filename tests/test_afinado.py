@@ -105,6 +105,30 @@ class TestLasCuentas(_Temporal):
         self.assertEqual(medida['deteccion'], 1.0)
         self.assertEqual(medida['forma'], 0.75)
 
+    def test_una_incidencia_grave_cuenta_como_deteccion_aunque_la_nota_sea_alta(self):
+        # El gate de §8 veta por una grave sola, pase lo que pase con las notas.
+        grave = {'revisiones': [{'dimension': afinado.DIMENSION, 'nota': 5,
+                                 'incidencias': [{'cita': '...', 'severidad': 'grave',
+                                                  'sugerencia': '...'}]}]}
+        medida = afinado.medir_pasada(self.config, self.clave, {
+            'caso-01': grave, 'caso-02': _respuesta(5),
+            'caso-03': _respuesta(5), 'caso-04': _respuesta(5)})
+        self.assertEqual(medida['deteccion'], 0.5)
+        self.assertEqual(medida['falsos_positivos'], 0.0)
+
+    def test_una_grave_sobre_un_capitulo_limpio_es_un_falso_positivo(self):
+        grave = {'revisiones': [{'dimension': afinado.DIMENSION, 'nota': 5,
+                                 'incidencias': [{'severidad': 'grave'}]}]}
+        medida = afinado.medir_pasada(self.config, self.clave, {
+            'caso-03': grave, 'caso-04': _respuesta(5)})
+        self.assertEqual(medida['falsos_positivos'], 0.5)
+
+    def test_un_aviso_no_basta_para_bloquear(self):
+        aviso = {'revisiones': [{'dimension': afinado.DIMENSION, 'nota': 4,
+                                 'incidencias': [{'severidad': 'aviso'}]}]}
+        medida = afinado.medir_pasada(self.config, self.clave, {'caso-01': aviso})
+        self.assertEqual(medida['deteccion'], 0.0)
+
     def test_la_particion_filtra(self):
         self.clave['caso-01']['particion'] = 'taller'
         medida = afinado.medir_pasada(self.config, self.clave, {

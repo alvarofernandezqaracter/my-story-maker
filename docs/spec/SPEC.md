@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.24.0
+version: 1.25.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -559,6 +559,17 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.25.0] — 2026-09-18
+
+**Añadido**
+- §18. Tres tests más en `tests/test_afinado.py`: el gate bloquea también por una
+  incidencia grave, así que la detección los cuenta, y un aviso solo no basta.
+- §23. **OB-08**, los anacronismos sembrados que el gate bloquea, con línea base
+  de 0,44 medida en la vuelta 1 de [`AFINADO.md`](AFINADO.md) §14. Entra el
+  primero de los objetivos cuya respuesta correcta no se la pone el sistema, sino
+  quien construyó el caso: mientras OB-01 no tenga base, es el único de la tabla
+  que no mide autoestima.
+
 ### [1.24.0] — 2026-09-18
 
 **Corregido**
@@ -1087,7 +1098,7 @@ el loop de intentos y el bloqueo.
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ciento veintiocho, en
+**Tests.** `python -m unittest discover -s tests -t .`: ciento treinta y tres, en
 cinco ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
@@ -1754,6 +1765,7 @@ coste se da por incumplida contra una base sucia.**
 | **OB-04** | El gate cuadra | `gate-cuadra`: la fórmula de §8 rehecha contra lo que escribió el orquestador | 100% (8 de 8) | 100%, sin excepción |
 | **OB-05** | Aprovechamiento de caché | Tokens leídos de caché ÷ tokens de entrada, del informe de §22 | 100,0% | ≥ 99% |
 | **OB-06** | Coste por mil palabras aprobadas | Coste de la sesión ÷ palabras de los intentos aprobados | 0,0758 $ — **base sucia**, subestimada | Primero una base limpia; luego no subir de ella |
+| **OB-08** | Anacronismos sembrados que el gate bloquea | Detección del validador de anacronismos sobre casos con un anacronismo metido a propósito ([AFINADO.md](AFINADO.md) §14) | 0,44 — y **ve el 85%**: el hueco es que los marca `aviso` | ≥ 0,85, con los falsos positivos sobre capítulos limpios por debajo de 0,05 |
 | **OB-07** | Margen del capítulo más justo | `media` del intento aprobado menos `media_minima` | 0,30 sobre 5 | Ninguno por debajo de 0,10 |
 
 ### Por qué estos y en este orden
@@ -1771,6 +1783,13 @@ cuesta aproximadamente un capítulo entero en tokens, porque el reintento del
 por contradecir un «Ignora» de una ficha, que es el hueco de DA-13. Bajar OB-03
 baja OB-02, y bajar OB-02 baja el coste **sin tocar ningún umbral**: es la única
 palanca que mejora calidad y precio a la vez.
+
+**OB-08 es el único que no se lo pone el propio sistema.** La respuesta
+correcta la escribe una persona al sembrar el anacronismo, así que no depende de
+que el validador y el escritor compartan sesgo. Mientras OB-01 siga sin línea
+base, es la única nota de esta tabla que mide algo de fuera. Su línea base dice
+además dónde está la mejora: el validador **ve** el 85% de lo sembrado y el gate
+solo bloquea el 44%, así que lo que falta no es criterio histórico sino severidad.
 
 **OB-04 y OB-05 son de guardia, no de mejora.** Están al 100% y lo que se pide es
 que no bajen. El gate lo suma un modelo (§21), así que su aritmética es el punto
