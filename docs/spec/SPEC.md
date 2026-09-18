@@ -907,6 +907,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `db7b10f` | 2026-09-18 | docs(spec): §17 regenerada para 1.18.0 |
 | `2c148ad` | 2026-09-18 | docs(autoaprendizaje): 0.5.0, §3 antes de elegir la metrica, mirar donde esta el dinero |
 | `ac013a5` | 2026-09-18 | docs(spec): 1.18.1, §24 elegir el objetivo es antes que medirlo |
+| `fdf04e4` | 2026-09-18 | docs(spec): §17 regenerada para 1.18.1 |
+| `9f6b7b4` | 2026-09-18 | feat(novela): §24 fuera el banco de autoaprendizaje entero |
 
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
