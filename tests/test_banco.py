@@ -8,6 +8,7 @@
 import json
 import os
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,7 +16,8 @@ from pathlib import Path
 from novela import casos as casos_mod
 from novela.banco import (
     comparar, componer, ErrorBanco, Gasto, cargar_objetivo, listar_objetivos,
-    mejora, merece_la_reserva, resumir, sin_frontmatter)
+    arbol_sucio, mejora, merece_la_reserva, promover, resumir,
+    sin_frontmatter)
 from novela.config import validar_config, ErrorConfig
 from novela.metricas import (
     agregar, json_de, medir, MEDIDAS, palabras, parrafos, tokens_estimados)
@@ -297,6 +299,66 @@ class TopeDeGasto(unittest.TestCase):
         gasto = Gasto(1.0)
         gasto.suma(None)
         self.assertEqual(gasto.total, 0.0)
+
+
+class Promocion(unittest.TestCase):
+    """La promocion escribe un fichero y lo commitea, y eso se prueba de verdad.
+
+    En un repositorio de mentira, creado y tirado aqui mismo: es el unico camino
+    del banco que cambia el repositorio, y probarlo solo por la aritmetica que
+    lleva delante seria dejar sin red justo lo que la necesita.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        for orden in (['init', '-q'], ['config', 'user.email', 'banco@pruebas'],
+                      ['config', 'user.name', 'banco'], ['commit', '--allow-empty',
+                                                         '-q', '-m', 'raiz']):
+            subprocess.run(['git', '-C', self.dir] + orden, capture_output=True)
+        destino = Path(self.dir, 'agentes')
+        destino.mkdir()
+        (destino / 'investigador.md').write_text('Prompt vigente.' + SALTO,
+                                                 encoding='utf-8')
+        subprocess.run(['git', '-C', self.dir, 'add', '-A'], capture_output=True)
+        subprocess.run(['git', '-C', self.dir, 'commit', '-q', '-m', 'prompt'],
+                       capture_output=True)
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def _log(self):
+        return subprocess.run(['git', '-C', self.dir, 'log', '--pretty=%s'],
+                              capture_output=True, text=True).stdout
+
+    def test_escribe_el_prompt_y_lo_deja_en_un_commit_propio(self):
+        comparacion = {'metrica': 'tokens_rol', 'ganancia': 0.31, 'casos_reserva': 6}
+        salida = promover(OBJETIVO, {'nombre': '01', 'texto': 'Prompt nuevo.'},
+                          comparacion, 'ronda-de-prueba', raiz=self.dir)
+        self.assertTrue(salida['commit'], salida['salida'])
+        self.assertEqual(Path(self.dir, 'agentes', 'investigador.md').read_text(
+            encoding='utf-8'), 'Prompt nuevo.' + SALTO)
+        # El mensaje lleva el numero que gano y la ronda: sin eso, revertir el
+        # commit dentro de un mes es adivinar cual fue.
+        cabeza = self._log().splitlines()[0]
+        self.assertIn('investigador', cabeza)
+        self.assertIn('tokens_rol', cabeza)
+
+    def test_el_commit_no_arrastra_nada_mas(self):
+        # Si barriera el arbol, revertirlo se llevaria por delante trabajo ajeno.
+        Path(self.dir, 'otra-cosa.txt').write_text('a medias', encoding='utf-8')
+        promover(OBJETIVO, {'nombre': '01', 'texto': 'Prompt nuevo.'},
+                 {'metrica': 'tokens_rol', 'ganancia': 0.2, 'casos_reserva': 6},
+                 'ronda', raiz=self.dir)
+        tocados = subprocess.run(
+            ['git', '-C', self.dir, 'show', '--name-only', '--pretty=', 'HEAD'],
+            capture_output=True, text=True).stdout.split()
+        self.assertEqual(tocados, ['agentes/investigador.md'])
+
+    def test_el_arbol_sucio_se_ve_antes_de_gastar_nada(self):
+        self.assertFalse(arbol_sucio(OBJETIVO, raiz=self.dir))
+        Path(self.dir, 'agentes', 'investigador.md').write_text('a medias',
+                                                                encoding='utf-8')
+        self.assertTrue(arbol_sucio(OBJETIVO, raiz=self.dir))
 
 
 class Casos(unittest.TestCase):
