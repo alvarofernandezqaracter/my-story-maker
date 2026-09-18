@@ -15,7 +15,8 @@ pones el orden, las comprobaciones y la memoria.
 falta para lanzarlo. Si cambias un encargo, cambialo en `agentes/`.
 
 El Python que hay en `novela/` no escribe novelas: mira lo que tu escribes. No lo
-llames para nada de esto.
+llames para nada de esto, con una sola excepcion: el `trazar` del final del
+Tramo 3, que manda a Langfuse lo que tu ya dejaste escrito.
 
 ## Antes de empezar
 
@@ -174,6 +175,36 @@ severidad. Estado a `editado`.
 
 Los retoques **se aplican a mano**. No los apliques tu y no ofrezcas aplicarlos:
 son el segundo punto fijo de intervencion humana del sistema.
+
+### Exportar las trazas, y solo aqui
+
+Con el estado ya en `editado`, lanza:
+
+```bash
+python -m novela trazar --novela <nombre-de-la-carpeta-de-la-novela>
+```
+
+Es lo unico del Python de `novela/` que llamas tu. Manda a Langfuse lo que el
+hook de trazas no puede ver porque no es una llamada a ningun subagente: las tres
+notas de cada intento, la media, el veredicto del gate, el escalon de VD-08 y la
+observacion del escritor con el paquete de entrada y el capitulo de salida. Sin
+ese paso, de una novela se sabe lo que costo y nada de lo que vale.
+
+Tres reglas, y ninguna es negociable:
+
+- **Despues de `editado`, nunca antes.** El estado es lo que manda y esto solo
+  observa: si falla, el cierre ya ocurrio igual.
+- **Una sola vez por novela, en la transicion `escrito` -> `editado`.** Si
+  reanudas una novela que **ya** esta en `editado`, no lo lances. Esa es la unica
+  garantia de que no se duplica: `trazar` exporta la novela entera y las
+  observaciones hijas no llevan id sembrado, asi que una segunda exportacion mete
+  los mismos spans otra vez dentro de la misma traza.
+- **No bloquea nada.** Si el comando falla, o dice que no mando nada, escribe una
+  linea con el motivo y sigue. No reintentes, no pares el cierre y no dejes el
+  estado a medias: ningun fallo de observabilidad para una novela.
+
+Cuando salga bien, cuenta lo que el propio comando imprime: cuantas trazas, en
+que sesion, y los intentos, notas y retoques que fueron.
 
 ## Reanudar
 
