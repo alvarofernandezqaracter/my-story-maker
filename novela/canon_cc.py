@@ -91,6 +91,10 @@ class CanonCC:
     def ruta_contexto(self, numero):
         return self.raiz / 'contexto' / 'cap-{:02d}.md'.format(numero)
 
+    def ruta_intento(self, numero, k):
+        """Donde deja el escritor un borrador, por convencion del canon."""
+        return self.raiz / 'capitulos' / 'cap-{:02d}-intento-{}.md'.format(numero, k)
+
     def ruta_retoques(self):
         return self.raiz / 'retoques.md'
 
@@ -174,17 +178,32 @@ class CanonCC:
         k = ficha['intento_aprobado']
         return next((i for i in ficha['intentos'] if i.get('intento') == k), None)
 
-    def texto_de_intento(self, intento):
+    def texto_de_intento(self, intento, numero=None):
         """El texto de un intento cualquiera, aprobado o no.
 
         Existe separado de `texto()` porque el que interesa comparar casi nunca
         es solo el aprobado: un juez externo (§20) puntua tambien los intentos
         que el gate tumbo, y sin ellos no hay con que medir si el validador se
         indulta a si mismo.
+
+        Con `numero` se puede reponer un intento al que el orquestador no le
+        escribio la `ruta`. Pasa, y no se nota: el fichero esta en disco, la
+        interfaz lo encuentra por otro camino y lo unico que se queda vacio es
+        la salida de la observacion del escritor, que es justo lo que el juez
+        externo necesita leer. El nombre de un borrador es una convencion fija
+        de este canon, asi que se puede rehacer.
         """
-        if not intento or not intento.get('ruta'):
+        if not intento:
             return None, None
-        guardada = intento['ruta']
+        guardada = intento.get('ruta')
+        if not guardada:
+            k = intento.get('intento')
+            if numero is None or k is None:
+                return None, None
+            convenida = self.ruta_intento(numero, k)
+            if not convenida.is_file():
+                return None, convenida.as_posix()
+            return convenida.read_text(encoding='utf-8'), convenida.as_posix()
         ruta = Path(guardada)
         if not ruta.is_absolute():
             # Las rutas del canon se escriben desde la raiz del repositorio.
@@ -202,7 +221,7 @@ class CanonCC:
 
     def texto(self, numero):
         """El texto del intento aprobado, si el fichero sigue donde dice el canon."""
-        return self.texto_de_intento(self.intento_aprobado(numero))
+        return self.texto_de_intento(self.intento_aprobado(numero), numero)
 
     def contexto(self, numero):
         ruta = self.ruta_contexto(numero)

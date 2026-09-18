@@ -132,7 +132,7 @@ def plan(canon, config):
             paquete, _ = canon.contexto(capitulo['numero'])
             palabras_fuera += len((paquete or '').split())
             for i in canon.intentos(capitulo['numero']):
-                texto, _ = canon.texto_de_intento(i)
+                texto, _ = canon.texto_de_intento(i, capitulo['numero'])
                 palabras_fuera += len((texto or '').split())
 
     return {
@@ -257,7 +257,7 @@ def _intento(trazas, config, numero, intento, modelo=None, canon=None, paquete=N
               'palabras': intento.get('palabras'),
               'parrafos': intento.get('parrafos')}
     if canon is not None:
-        texto, _ = canon.texto_de_intento(intento)
+        texto, _ = canon.texto_de_intento(intento, numero)
         if texto:
             salida['texto'] = texto
 

@@ -155,6 +155,26 @@ class TestLector(CanonDelegadoDePrueba):
         self.assertIsNone(texto)
         self.assertTrue(ruta.endswith('cap-01-intento-1.md'))
 
+    def test_un_intento_sin_ruta_se_repone_por_convencion(self):
+        # El orquestador puede olvidarse de escribir `ruta`, y entonces el
+        # capitulo no viaja a las trazas y el juez externo de §20 se queda sin
+        # nada que puntuar. El nombre del borrador es una convencion fija, asi
+        # que se rehace en vez de darlo por perdido.
+        canon = CanonCC()
+        sin_ruta = dict(canon.intentos(1)[0])
+        sin_ruta.pop('ruta', None)
+        texto, ruta = canon.texto_de_intento(sin_ruta, 1)
+        self.assertIn('Primera', texto)
+        self.assertTrue(ruta.endswith('cap-01-intento-1.md'))
+
+    def test_un_intento_sin_ruta_y_sin_capitulo_sigue_siendo_hueco(self):
+        # Sin el numero de capitulo no hay convencion que aplicar, y aqui
+        # inventarse un fichero seria peor que devolver el hueco.
+        canon = CanonCC()
+        sin_ruta = dict(canon.intentos(1)[0])
+        sin_ruta.pop('ruta', None)
+        self.assertEqual(canon.texto_de_intento(sin_ruta), (None, None))
+
     def test_un_fichero_que_falta_no_tumba_la_lectura(self):
         Path(NOVELA + '/canon/dossier.json').unlink()
         self.assertEqual(CanonCC().datos(), [])
