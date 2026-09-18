@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.19.0
+version: 1.20.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -549,6 +549,27 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.20.0] — 2026-09-18
+
+**Añadido**
+- §20, §21, §18. **La exportación de trazas la lanza la skill al cerrar**: el
+  último paso del Tramo 3, con el estado ya en `editado`, es
+  `python -m novela trazar`. Motivo: sin ella Langfuse solo tiene el gasto que
+  trae el hook de §22 y ninguna puntuación, y los evaluadores de calidad de §20
+  no tienen a qué apuntar porque la observación del escritor —la única con el
+  paquete de entrada y el capítulo de salida— nace en esa reconstrucción. OB-01 y
+  OB-03 dependían de que alguien se acordase de escribir un comando.
+- §20. Por qué va en esa transición y no en otro sitio: es el único momento en
+  que la novela está entera y deja de cambiar, y es un paso que ocurre una sola
+  vez. Va después de `editado` porque el estado manda y la observación no puede
+  deshacer un cierre.
+
+**Cambiado**
+- §20. La reconstrucción ya no «se solapa en lugar de duplicarse»: solapan la
+  sesión y las trazas, que llevan id sembrado, pero no sus observaciones hijas.
+  Motivo: la frase daba por idempotente la exportación entera, y la única
+  garantía real es dispararla una sola vez.
+
 ### [1.19.0] — 2026-09-18
 
 **Eliminado**
@@ -961,7 +982,7 @@ el loop de intentos y el bloqueo.
 | Comando | Qué hace |
 |---|---|
 | `ui [--puerto N]` | Abre la interfaz en el navegador (§19). Mira y no escribe |
-| `trazar [--novela N] [--modelo M]` | Manda a Langfuse el canon reconstruido (§20). Sin `--novela`, la que esté en curso |
+| `trazar [--novela N] [--modelo M]` | Manda a Langfuse el canon reconstruido (§20). **Lo lanza la skill al cerrar**; a mano solo para reexportar. Sin `--novela`, la que esté en curso |
 | `biblioteca` | Lista las novelas, de la más reciente a la más antigua, y marca la que está en curso (§21) |
 | `hook-traza` | Lee un `PostToolUse` por stdin y traza la llamada al subagente. Lo llama el hook, no una persona (§22) |
 | `informe-trazas [--sesion S] [--salida F] [--json]` | Lee de vuelta las trazas de una novela y agrega el gasto (§22) |
@@ -1277,16 +1298,34 @@ orquestador decide por su cuenta no es una llamada a nadie, así que el hook no 
 ve. Sin esta pieza, Langfuse diría lo que cuesta una novela y nada de lo que vale,
 y DA-06 seguiría sin datos que mirar.
 
-Se lanza con `python -m novela trazar`, o con un botón en el panel de trazas de
-§19 que antes enseña el recuento de lo que saldría. Exportar deja marca en un
-servicio de fuera, así que no ocurre solo: se ve primero el tamaño y luego se
-pulsa.
+**La lanza la skill al cerrar, y ese es su sitio.** El último paso del Tramo 3 de
+§21 —con los retoques ya volcados y el estado ya en `editado`— es
+`python -m novela trazar`. Va ahí y no en otro momento porque es el único en que
+la novela está entera y deja de cambiar: antes faltan capítulos, y después no
+queda ninguna transición que aprovechar. Va **después** de `editado` porque el
+estado es lo que manda y esto solo observa: si el comando falla, el cierre ya
+ocurrió igual, se dice en una línea y se sigue. No se reintenta.
+
+**Que sea una transición y no un estado es toda la idempotencia que hay.**
+`trazar` exporta la novela entera, y de los ids solo viaja sembrado el de la
+traza: sus observaciones hijas se crean nuevas cada vez. Dos exportaciones de la
+misma novela caen por eso en la misma sesión y en las mismas tres trazas, pero
+meten los mismos spans otra vez dentro. Por eso el disparo cuelga del paso
+`escrito` → `editado`, que ocurre una sola vez, y reanudar una novela que ya está
+en `editado` no lo repite.
+
+Se sigue pudiendo lanzar a mano, con `python -m novela trazar` o con el botón del
+panel de trazas de §19 que antes enseña el recuento de lo que saldría: para una
+novela cerrada antes de que este paso existiera, o para volver a mandarla a
+sabiendas de lo anterior. Por esas dos vías no ocurre solo —exportar deja marca
+en un servicio de fuera—: se ve primero el tamaño y luego se pulsa.
 
 **El árbol es el mismo de la tabla de arriba**, con una diferencia que sale de la
 forma del sistema: los tres validadores van como tres observaciones `agent`
 separadas, porque en §21 eso no es una opción de configuración sino cómo se lanzan.
 La sesión se deriva del brief, así que dos exportaciones de la misma novela caen
-en la misma sesión y se solapan en lugar de duplicarse.
+en la misma sesión y en las mismas trazas; lo que cuelga de ellas no se solapa,
+y de ahí la regla de arriba de exportar una sola vez.
 
 **Qué se pierde, y se dice.** No hay latencia, ni tokens, ni coste: eso solo lo
 tiene quien hizo la llamada, y esta reconstrucción no estaba allí. Las marcas de
@@ -1435,7 +1474,9 @@ sigue entera.
 
 ### Lo que se conserva
 
-Ningún subagente escribe en el canon —escribe el orquestador, con la propuesta ya comprobada delante, y de una vez—, un capítulo cada vez, VD-08 antes del validador, el reintento del último desde cero, la política de §13 de parar tras dos fallos seguidos, el bloqueo como salida con mano humana, el estado en disco y los retoques aplicados a mano.
+Ningún subagente escribe en el canon —escribe el orquestador, con la propuesta ya comprobada delante, y de una vez—, un capítulo cada vez, VD-08 antes del validador, el reintento del último desde cero, la política de §13 de parar tras dos fallos seguidos, el bloqueo como salida con mano humana, el estado en disco y los retoques aplicados a mano. El cierre acaba mandando las
+trazas a Langfuse (§20), que es observación y no canon: ocurre después de
+`editado` y ningún fallo suyo deshace el cierre.
 
 La excepción a la primera regla es el borrador del escritor, que no es canon: es un fichero suelto que solo entra a través del cronista y solo si el gate lo aprobó.
 
@@ -1470,7 +1511,9 @@ Se ejercitaron los dos escalones de VD-08, los tres cierres de hilo por coincide
 
 `.claude/agents/novela-*.md`, ocho ficheros, y `.claude/skills/orquestar-novela/` con el `SKILL.md` que es la máquina de estados y tres referencias: el canon en ficheros, el paquete de contexto y las comprobaciones con el gate. Todo Markdown, sin una línea de código.
 
-El Python de `novela/` no participa: mira el canon cuando ya está escrito (§18).
+El Python de `novela/` no participa en escribir la novela: mira el canon cuando ya
+está escrito (§18). La skill lo llama una sola vez, y no para escribir nada: el
+`trazar` con el que cierra el Tramo 3 (§20).
 
 ## §22 Trazas en vivo y análisis del gasto
 
