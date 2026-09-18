@@ -1,6 +1,6 @@
 ---
 doc: spec-autoaprendizaje
-version: 0.2.0
+version: 0.3.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -99,17 +99,25 @@ charlatán de uno que no trabaja, así que el JSON se rescata de debajo del
 preámbulo para medir lo que trae, y la desobediencia se cuenta en su propia
 métrica, que es VD-01.
 
-Tres objetivos de ejemplo, que son los que dan forma al resto del documento:
+Los tres objetivos que hay definidos:
 
 | Objetivo | Rol | Métrica objetivo | Guardias |
 |---|---|---|---|
-| `investigador-barato` | investigador | Tokens de la llamada | VD-04 sin fallos; nº de datos usables sobre su suelo; las cuatro categorías representadas; nota del juez de dossier no peor que la del vigente |
-| `escritor-longitud` | escritor | Desvío relativo sobre `palabras_objetivo` | VD-08 sin bloqueo; párrafos sobre `margenes.parrafos_min`; las tres notas del validador no peores que las del vigente |
-| `validador-estable` | validador | Dispersión de la nota entre dos corridas del mismo capítulo | VD-10 sin fallos; las notas no se desplazan en bloque hacia arriba |
+| `investigador-barato` | investigador | `tokens_rol` | VD-04 sin fallos; doce datos de media; las cuatro categorías en todos los casos; la forma no empeora |
+| `investigador-formato` | investigador | `vd01`, la fracción de veces que no obedece el contrato de salida | Las tres anteriores, y el gasto no sube más de un cuarto |
+| `escritor-longitud` | escritor | `desvio_palabras` sobre `palabras_objetivo` | VD-08 sin bloqueo; párrafos sobre `margenes.parrafos_min`; un suelo de palabras |
 
-El tercero es el que explica por qué la métrica objetivo no siempre es dinero:
-un validador que puntúa distinto el mismo texto dos veces seguidas rompe el gate
-sin que ninguna traza lo delate.
+El segundo enseña dos cosas. Una, que **la métrica objetivo no siempre es
+dinero**: que el investigador devuelva a veces el dossier con un párrafo de
+cortesía delante no cuesta casi nada y rompe el contrato de §5. Y otra, que los
+objetivos salen de haber medido: este existe porque las dos primeras rondas de
+`investigador-barato` no encontraron lo que buscaban y encontraron esto.
+
+**Una guardia puede llevar tolerancia**, y por eso este objetivo deja subir el
+gasto un 25%. Sin holgura, una guardia es binaria y rechaza cualquier canje:
+arreglar la forma cuesta algunas palabras más de instrucción, y sin margen no
+entraría ningún candidato aunque el cambio compense. Quien pone la tolerancia
+dice cuánto está dispuesto a pagar, y lo dice en el objetivo, donde se ve.
 
 ## §4 El dataset: taller y reserva
 
@@ -409,6 +417,25 @@ banco; todo impide dar por buena una promoción sin mirarla.
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección
 tocada y el motivo.
 
+### [0.3.0] — 2026-09-18
+
+**Añadido**
+- §14. Lo que han enseñado las primeras rondas, con sus números. Cuatro rondas,
+  3,46 $, ninguna promoción, y las dos cosas que eso enseñó: que el prompt
+  vigente del investigador es difícil de batir en gasto, y que una mejora del
+  100% en el taller puede desaparecer entera en la reserva. Sección nueva a
+  partir del historial, como hace `TRAZAS.md`: los números de sección no se
+  reutilizan y el historial se queda donde estaba.
+- §3. `investigador-formato`, el tercer objetivo, que existe porque las rondas
+  de `investigador-barato` encontraron de paso algo que su métrica no podía ver.
+  Y la tolerancia de una guardia, que es lo que permite un canje: sin ella una
+  guardia es binaria y tumba cualquier mejora que cueste algo.
+
+**Cambiado**
+- §3. La tabla de objetivos pasa a ser la de los objetivos que hay, y no tres de
+  ejemplo. `validador-estable` sale de ella: no hay extractor de casos para el
+  validador que se haya probado, y un objetivo sin dataset es una intención.
+
 ### [0.2.0] — 2026-09-18
 
 El documento pasa de borrador a vigente: el banco existe y lo que sigue es lo
@@ -450,3 +477,69 @@ que hace, no lo que se pensaba hacer.
   autoaprendizaje cambia prompts que están bajo `SPEC.md`, así que necesita sus
   reglas escritas antes de la primera línea de código, no después de la primera
   promoción.
+
+## §14 Lo que han enseñado las primeras rondas
+
+Una sección por tanda, que no se reescribe. Aquí no se decide nada: se anota lo
+medido, igual que hace `TRAZAS.md` con las novelas. Lo que se convierta en un
+cambio de diseño sube a las secciones de arriba y aquí queda la referencia.
+
+### Tanda 1 — 2026-09-18, `investigador-barato`, tres rondas, 2,54 $ contados
+
+**Ninguna promovió, y el prompt vigente salió reforzado.** Los nueve candidatos
+de las tres rondas fueron **más caros** que él, entre un 18% y un 129%. No es que
+dieran más a cambio: daban menos. En la última ronda el vigente sacó 15,0 datos
+por 4.535 tokens —302 tokens por dato— y los tres candidatos 13,0–13,7 datos por
+6.299–10.373 tokens, entre 485 y 759 por dato. **El prompt que hay es
+difícil de batir en gasto**, y eso también es un resultado.
+
+**El optimizador tiende a alargar.** Sus tres ideas fueron siempre más
+instrucción: rangos explícitos, ejemplos de lo que no hay que hacer, topes por
+campo. Eso sube el número por los dos lados, porque un encargo más detallado
+también produce una respuesta más larga. La primera ronda corrió sin que se le
+dijera qué contaba la métrica y fue la peor; decírselo mejoró el resultado pero
+no invirtió la tendencia.
+
+**Pero encontró algo que el objetivo no miraba.** El vigente incumple el
+contrato de salida en uno de cada tres casos —devuelve el dossier con texto
+alrededor— y **los nueve candidatos lo arreglaron**, sin excepción. La mejora
+estaba ahí y la métrica del objetivo no podía verla. De ahí sale
+`investigador-formato`, y de ahí sale la regla general: **cuando todos los
+candidatos coinciden en arreglar algo que no se les pidió, ese algo es el
+objetivo siguiente**.
+
+**Dos fallos del banco, los dos encontrados corriéndolo y no leyéndolo.** Gastaba
+la reserva midiendo candidatos que ya habían perdido en el taller —seis llamadas
+por ronda tiradas—, y las guardias eran binarias, así que rechazaban cualquier
+canje aunque compensara.
+
+### Tanda 2 — 2026-09-18, `investigador-formato`, una ronda, 0,92 $
+
+**La reserva hizo exactamente aquello para lo que existe.** En el taller, el
+prompt vigente incumplía el contrato de salida en uno de cada tres casos y los
+tres candidatos lo arreglaban entero: una mejora del 100%, la mejor cifra que ha
+dado el banco. En la reserva, el vigente sacó **0,0** —obedeció en los tres
+casos— y no hubo nada que mejorar. Se descartó.
+
+Léase despacio, porque es el resultado más útil de los dos días: **una mejora
+del 100% en el taller que no reaparece en la reserva no era una mejora, era el
+reparto de los casos.** Sin partición, esa promoción habría entrado con un
+número espectacular detrás.
+
+Y deja medido el tamaño del problema de AA-06: el fallo de forma aparece en uno
+de cada tres casos, así que con tres casos de reserva la mitad de las veces no
+aparece ninguno. **Una métrica que se dispara un tercio de las veces necesita
+bastantes más de tres casos para decidir nada.** No es que el objetivo esté mal
+planteado; es que el dataset no da todavía para contestarlo.
+
+El otro motivo del descarte fue la guardia de gasto: el candidato costaba un
+34,7% más y la tolerancia era del 25%. Las dos razones son buenas y basta con
+una.
+
+### Lo que sigue sin ejercitarse
+
+**Ninguna de las cuatro rondas ha promovido**, así que el camino que escribe el
+prompt y lo commitea solo lo han recorrido los tests, en un repositorio de usar
+y tirar. Está probado —que escribe el fichero, que el commit no arrastra nada
+más y que se planta ante un árbol sucio— pero no ha pasado de verdad. Conviene
+tenerlo presente la primera vez que pase.
