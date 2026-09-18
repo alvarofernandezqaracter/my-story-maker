@@ -415,7 +415,7 @@ Comprobaciones deterministas en código, con id `VD-xx`. No confundir con el age
 | VD-10 | Tres dimensiones, una vez cada una, nota entera 1-5 | Salida del validador | Antes del gate | Bloq. | Reintenta la llamada al validador, no al escritor |
 | VD-11 | Ningún bloqueante pendiente al confirmar | Transacción del canon | En la escritura | Bloq. | Deshace la transacción; el canon no queda a medias |
 | VD-12 | Cada línea de `olvida` está literal en el `sabe` de esa ficha | Propuesta del cronista | Antes de escribir | Bloq. | Rechaza la propuesta entera; una retractación parafraseada no retira nada |
-| VD-13 | El retoque no cambia el canon del capítulo | Vuelta del editor global (§11) | Tras el gate del retoque | Bloq. | Descarta el texto retocado y devuelve el retoque al editor global |
+| VD-13 | El texto retocado da los mismos presentes y los mismos eventos | Vuelta del editor global (§11) | Tras el gate del retoque | Bloq. | Descarta el texto retocado y devuelve el retoque al editor global |
 
 **Orden.** Cada salida pasa sus comprobaciones antes de usarse, y las comprobaciones van siempre antes que el gate. La regla que ahorra dinero es VD-08 y su familia: si el capítulo redactado no cumple lo básico, se reintenta la generación sin gastar la llamada al agente validador. VD-08 es la única comprobación de dos escalones, y por eso lleva dos márgenes en §12: un texto algo corto se valida igual y arrastra el aviso, y uno que se sale del margen de bloqueo no llega al validador porque ninguna nota va a arreglar que falte medio capítulo. La que salva el canon es VD-11: la escritura del cronista es una transacción única, así que o entran resumen, cambios de ficha y eventos juntos, o no entra nada. El gate (§8) solo se calcula sobre revisiones que ya pasaron VD-10, de modo que nunca opera con notas inventadas o incompletas.
 
@@ -424,6 +424,10 @@ Un bloqueante que falla dos veces seguidas sobre el mismo artefacto para el proc
 **Las dos que casan cadenas literales** son VD-12 y el cierre de hilos, y lo hacen por la misma razón: son la única forma de que retirar algo del canon sea una operación exacta y no una aproximación. Un hilo cerrado con una paráfrasis queda vivo para siempre; un `olvida` parafraseado deja la línea vieja donde estaba y añade ruido. En los dos casos el orquestador devuelve la propuesta en vez de buscar el parecido más cercano: acertar por aproximación en el canon es peor que fallar, porque nadie vuelve a mirarlo.
 
 **VD-13 es la que hace barato el cierre.** Sin ella, retocar el capítulo 3 obligaría a comprobar si los capítulos que lo leyeron siguen en pie, y retocar el 1 podría arrastrar el libro entero. Con ella, un retoque que cambiaría los hechos no se aplica a medias: se descarta y el editor global tiene una oportunidad de reformularlo como lo que sí cabe, un arreglo de prosa. §11 explica por qué esa frontera es la correcta.
+
+**Y compara ids, nunca prosa.** Es la única de las trece que se estrenó rota y se corrigió con una ejecución delante. Comparaba el canon entero de la reemisión con el guardado, incluidos los hilos, las ubicaciones y las líneas de `sabe`, y eso no funciona: el cronista es un modelo y **redacta lo mismo con otras palabras cada vez que se le llama**. Al aplicar el primer retoque real —añadir un gesto de una niña que ya estaba en la escena— la reemisión devolvió los mismos hechos con los hilos reescritos, y VD-13 lo tumbó. Habría tumbado todos los retoques del sistema, incluido el que no cambia nada.
+
+Así que compara lo único estable entre dos llamadas al cronista: los **ids** de `personajes_presentes` y los **ids y tipos** de los eventos. Eso basta para lo que la comprobación existe: que un retoque no meta a nadie en una escena donde no estaba ni haga que pase algo que no pasó. Lo que deja pasar es un retoque que abriera una promesa nueva sin tocar el reparto; se acepta a sabiendas, porque los hilos de una reemisión no son comparables con los de otra y fingir que sí lo son es peor que no mirarlos.
 
 ## §10 Inventario de skills
 
@@ -463,7 +467,9 @@ Los retoques se procesan **de menor a mayor capítulo**, y cada uno da una vuelt
 1. El escritor recibe su propio texto aprobado y el retoque. Es un arreglo quirúrgico: toca lo señalado y no reescribe lo que ya funciona.
 2. El texto nuevo pasa **VD-08 y el gate entero**, con los tres validadores otra vez. Un retoque no es una excepción al gate: si el arreglo estropea el capítulo, no entra.
 3. El cronista vuelve a emitir el canon de ese capítulo sobre el texto nuevo.
-4. **VD-13**: ese canon tiene que salir igual al que ya estaba —mismos hilos, mismos eventos, mismos cambios de ficha, mismos presentes—. Si sale igual, el texto retocado sustituye al anterior como intento aprobado. Si no, el retoque se descarta.
+4. **VD-13**: esa reemisión tiene que dar los mismos personajes presentes y los mismos eventos que el canon ya guardado, comparando ids. Si coincide, el texto retocado sustituye al anterior como intento aprobado. Si no, el retoque se descarta.
+
+**El canon no se reescribe al retocar.** Cambia el fichero de texto y nada más: el resumen, los hilos y las fichas se quedan exactamente como estaban. Es lo que mantiene válido lo que ya leyeron los capítulos siguientes, y la razón de que la reemisión del cronista sirva solo para comparar y se tire después. Un resumen nuevo sería otra redacción de lo mismo, escrita por un modelo que ya no está juzgando nada.
 
 Un retoque descartado vuelve **una vez** al editor global, con el motivo delante, para que lo reformule como un arreglo que no toque los hechos. Si la reformulación tampoco pasa, se anota `descartado` y se sigue: es la política de un reintento de §9, sin excepciones al final del libro.
 
@@ -1107,6 +1113,9 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `7d9370d` | 2026-09-18 | feat(afinado): 0.2.0, la vuelta 1 mide el validador y no promueve |
 | `87dc6b9` | 2026-09-18 | docs(spec): §17 regenerada para 1.25.0 |
 | `2c21840` | 2026-09-18 | docs(spec): 1.26.0, §11 el cierre aplica sus retoques y §3 sabe se retracta |
+| `eb5fe1e` | 2026-09-18 | docs(spec): §17 regenerada para 1.26.0 |
+| `8a1b999` | 2026-09-18 | feat(afinado): 0.3.0, el conjunto pasa a 45 casos y las guardias llevan margen |
+| `42ab8f1` | 2026-09-18 | docs(spec): 1.27.0, §12 margen_guardias y el tope de gasto de una vuelta |
 
 ```
 git -c i18n.logOutputEncoding=UTF-8 log --reverse \n    --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
