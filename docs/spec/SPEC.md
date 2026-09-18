@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.26.0
+version: 1.27.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -501,9 +501,10 @@ evitar. DA-02 se decide en ese frontmatter.
 | `margenes.parrafos_min` | 3 | Mínimo de párrafos de un capítulo redactado (VD-08) |
 | `afinado.pasadas` | 3 | Veces que se corre cada caso con el mismo prompt ([AFINADO.md](AFINADO.md) §7) |
 | `afinado.factor_margen` | 1,0 | Cuánto tiene que superar al ruido una mejora para promover |
+| `afinado.margen_guardias` | 1,0 | Cuánto puede empeorar una guardia sin contar como empeorar ([AFINADO.md](AFINADO.md) §7) |
 | `afinado.max_candidatos` | 3 | Candidatos que se prueban en una vuelta antes de parar |
 | `afinado.fallos_seguidos` | 2 | Candidatos seguidos que no baten el ruido antes de parar |
-| `afinado.tope_gasto` | 1,0 | Dólares que puede gastar una vuelta |
+| `afinado.tope_gasto` | 4,0 | Dólares que puede gastar una vuelta |
 | `afinado.entorno` | `afinado` | Entorno de Langfuse de las llamadas de medición |
 
 El puerto de la interfaz vive aquí y no en el código por la misma regla que el resto: es un número que se toca sin tocar código, y en una máquina con el 8787 ocupado hay que poder cambiarlo. `python -m novela ui --puerto N` lo pisa para un arranque suelto, igual que `--config`.
@@ -529,7 +530,7 @@ apunta, y no abre ficheros—, pero mandar el libro a un servicio de fuera es un
 decisión de quien opera la máquina y no un detalle de implementación. Quien la
 apaga pierde el juez y conserva las trazas, las notas y el gasto.
 
-Con esto la tabla tiene **veintitrés** claves, y ninguna sobra: cada una la lee alguien.
+Con esto la tabla tiene **veinticuatro** claves, y ninguna sobra: cada una la lee alguien.
 
 **Por qué el afinado tiene entorno propio.** Si las llamadas con las que se mide un prompt cayeran en el entorno de las novelas, el gasto de una vuelta se sumaría al de un libro y nadie lo notaría. Por eso `afinado.entorno` se valida distinto de `trazas.entorno` al arrancar, y no como una recomendación.
 
@@ -586,6 +587,22 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.27.0] — 2026-09-18
+
+**Añadido**
+- §12. `afinado.margen_guardias`, y con ella la tabla pasa de veintitrés a
+  veinticuatro claves. Es cuánto puede empeorar una guardia del loop de afinado
+  sin contar como empeorar; el porqué está en [AFINADO.md](AFINADO.md) §7.
+- §18. Once tests más en `tests/test_afinado.py`: la tolerancia de las guardias,
+  la resolución de una fracción con pocos casos y el recuento por nivel de
+  dificultad de lo sembrado. Los tests pasan a ciento cuarenta y cuatro.
+
+**Cambiado**
+- §12. `afinado.tope_gasto` de 1,0 a 4,0 $. El conjunto de casos del loop pasa de
+  dieciocho a cuarenta y cinco y una vuelta entera cuesta 3,29 $ a los precios
+  medidos: el tope anterior la paraba a la mitad, con el gasto hecho y sin
+  veredicto.
 
 ### [1.26.0] — 2026-09-18
 
@@ -1160,7 +1177,7 @@ el loop de intentos y el bloqueo.
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ciento treinta y tres, en
+**Tests.** `python -m unittest discover -s tests -t .`: ciento cuarenta y cuatro, en
 cinco ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el

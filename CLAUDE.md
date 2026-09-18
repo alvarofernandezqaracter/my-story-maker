@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.25.0.
+de un brief de cinco campos. Versión 1.27.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -122,7 +122,7 @@ Y conviene no olvidarlo, porque es el precio:
   conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de que
   mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
   instruido.
-- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 135
+- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 144
   tests que hay cubren el Python de `novela/`, que mira el canon y arranca al
   orquestador, pero no escribe novelas. Lo único que se comprueba del camino
   delegado son los ficheros de `.claude/agents/`, y solo su forma: que el
@@ -208,8 +208,8 @@ en un prompt sin pasar por este fichero, es un bug.** Las claves:
 `contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`,
 `interfaz.puerto`, `lanzador.{comando,permisos}`, `trazas.{activas,entorno,texto}`,
 `margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`,
-`afinado.{pasadas,factor_margen,max_candidatos,fallos_seguidos,tope_gasto,entorno}`.
-Veintitrés. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
+`afinado.{pasadas,factor_margen,margen_guardias,max_candidatos,fallos_seguidos,tope_gasto,entorno}`.
+Veinticuatro. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
 `capitulos_max >= capitulos_min`, y `afinado.entorno` distinto de
 `trazas.entorno`, para que el gasto de una vuelta de afinado no se sume al de un
 libro.
@@ -229,7 +229,7 @@ python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
                                              # sin Langfuse tira del diario local
 python -m novela afinar preparar             # abre una vuelta de afinado (AFINADO.md)
 python -m novela afinar puntuar              # cuenta lo que devolvieron los subagentes
-python -m unittest discover -s tests -t .    # 135 tests, sin red
+python -m unittest discover -s tests -t .    # 144 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
