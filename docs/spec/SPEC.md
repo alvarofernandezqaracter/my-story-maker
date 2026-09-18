@@ -965,6 +965,9 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `4070a63` | 2026-09-18 | docs(spec): §17 regenerada para 1.17.1 |
 | `d0948fc` | 2026-09-18 | docs(autoaprendizaje): 0.4.0, §3 primero se mide y despues se escribe el objetivo |
 | `c5106f2` | 2026-09-18 | docs(spec): 1.18.0, §24 el comando medir y la linea base obligatoria |
+| `db7b10f` | 2026-09-18 | docs(spec): §17 regenerada para 1.18.0 |
+| `2c148ad` | 2026-09-18 | docs(autoaprendizaje): 0.5.0, §3 antes de elegir la metrica, mirar donde esta el dinero |
+| `ac013a5` | 2026-09-18 | docs(spec): 1.18.1, §24 elegir el objetivo es antes que medirlo |
 
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
