@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.17.1
+version: 1.18.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -567,6 +567,19 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.18.0] — 2026-09-18
+
+**Añadido**
+- §24, §18. El comando `medir` y la regla que trae: **un objetivo del banco no
+  corre sin línea base medida**, que es la de §23 llevada al banco. Motivo: los
+  tres primeros objetivos se escribieron a ojo y dos de sus guardias las
+  incumplía el prompt vigente que protegían, así que ninguna de las cuatro
+  rondas podía terminar bien. El porqué entero, con los números, está en
+  `AUTOAPRENDIZAJE.md`.
+
+**Cambiado**
+- §18. Los tests pasan a ciento cuarenta.
+
 ### [1.17.1] — 2026-09-18
 
 **Cambiado**
@@ -999,12 +1012,13 @@ el loop de intentos y el bloqueo.
 | `informe-trazas [--sesion S] [--salida F] [--json]` | Lee de vuelta las trazas de una novela y agrega el gasto (§22) |
 | `objetivos` | Lo que el banco sabe optimizar y con cuántos casos cuenta (§24) |
 | `sembrar --objetivo O` | Saca los casos de las novelas escritas y los sube al dataset (§24) |
+| `medir --objetivo O [--pasadas N] [--guardar]` | Mide el prompt vigente y su ruido. **Se hace antes de escribir el objetivo** (§24) |
 | `aprender --objetivo O [--rondas N] [--seco]` | El loop del banco. **Es el único comando de este paquete que escribe en el repositorio**, y solo en `agentes/<rol>.md` (§24) |
 | `ui.bat` | Lo mismo que `ui` en Windows, buscando el intérprete por su cuenta |
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ciento treinta y cinco, en
+**Tests.** `python -m unittest discover -s tests -t .`: ciento cuarenta, en
 cuatro ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
@@ -1720,6 +1734,12 @@ acepta sin sus guardias: «que el investigador gaste menos» no es un objetivo, 
 «que gaste menos sin bajar de doce datos, con las cuatro categorías y sin un solo
 fallo de VD-04» sí lo es. Un objetivo sin guardias es un atajo esperando a que
 alguien lo tome.
+
+**La regla de §23 vale también aquí, y por las malas.** Un objetivo del banco no
+corre sin línea base medida, igual que un `OB-xx` no entra en la tabla sin ella.
+Entró después de escribir tres objetivos a ojo y descubrir que dos de sus
+guardias las incumplía el propio prompt que protegían, y que el margen que se
+les pedía era menor que lo que la métrica se mueve sola.
 
 **Lo que no cierra.** El banco mide un rol aislado, así que no ve lo que una
 promoción le hace al rol siguiente. DA-02 sigue abierta y el banco le da

@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.17.1.
+de un brief de cinco campos. Versión 1.18.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -210,8 +210,9 @@ python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
                                              # sin Langfuse tira del diario local
 python -m novela objetivos                   # lo que el banco sabe optimizar (§24)
 python -m novela sembrar --objetivo O        # saca los casos de las novelas escritas
+python -m novela medir    --objetivo O       # la linea base y el ruido, antes
 python -m novela aprender --objetivo O       # el loop. Con --seco no promueve nada
-python -m unittest discover -s tests -t .    # 135 tests, sin red
+python -m unittest discover -s tests -t .    # 140 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
@@ -307,6 +308,10 @@ propia versión; aquí lo que no se puede olvidar:
   optimizador no ve la reserva jamás; con ella se decide la promoción.
 - **Un objetivo de gasto sin guardias no es un objetivo**: es la regla de §23
   —el coste no se persigue solo— aplicada aquí.
+- **Y ninguno se escribe sin medir antes.** El banco se niega a correr un
+  objetivo sin línea base, o cuyo margen no supere al ruido de su métrica.
+  Se aprendió por las malas: dos guardias las incumplía el prompt que
+  protegían, y `tokens_rol` se mueve solo un 37,9% entre pasadas idénticas.
 
 # Estado actual y cosas abiertas
 

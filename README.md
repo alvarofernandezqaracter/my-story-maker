@@ -174,6 +174,7 @@ Opción global: `--config <ruta>`.
 
 ```bash
 python -m novela sembrar --objetivo investigador-barato
+python -m novela medir   --objetivo investigador-barato --guardar
 python -m novela aprender --objetivo investigador-barato --seco
 ```
 
@@ -192,7 +193,7 @@ mensaje: se deshace revirtiéndolo. El diseño entero está en
 python -m unittest discover -s tests -t .
 ```
 
-Ciento treinta y cinco, sin red y sin coste. Cubren el lector del canon, la auditoría
+Ciento cuarenta, sin red y sin coste. Cubren el lector del canon, la auditoría
 del gate, la API de la interfaz, el árbol de trazas reconstruido, el hook, y la
 aritmética del banco con sus reglas de parada.
 
