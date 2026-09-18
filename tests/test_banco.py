@@ -18,7 +18,7 @@ from novela.banco import (
     mejora, merece_la_reserva, resumir, sin_frontmatter)
 from novela.config import validar_config, ErrorConfig
 from novela.metricas import (
-    agregar, json_de, medir, palabras, parrafos, tokens_estimados)
+    agregar, json_de, medir, MEDIDAS, palabras, parrafos, tokens_estimados)
 
 CONFIG = {
     'gate': {'nota_minima': 3, 'media_minima': 3.7, 'max_intentos': 3},
@@ -354,9 +354,15 @@ class Objetivos(unittest.TestCase):
             self.assertIn(cargado['prompt'], cargado['piezas'])
             for pieza in cargado['piezas']:
                 self.assertTrue(Path(pieza).is_file(), 'falta la pieza {}'.format(pieza))
-            self.assertIn(cargado['objetivo']['metrica'], dict.fromkeys(
-                ['tokens_rol', 'tokens_salida', 'desvio_palabras', 'media_notas',
-                 'coste_usd', 'segundos']))
+            # Contra el registro de metricas y no contra una lista escrita a
+            # mano: una lista aparte se queda vieja en cuanto entra una metrica
+            # nueva, y entonces el test rechaza objetivos que son correctos.
+            self.assertIn(cargado['objetivo']['metrica'], MEDIDAS)
+            for guardia in cargado.get('guardias') or []:
+                self.assertIn(guardia['metrica'], MEDIDAS)
+                self.assertTrue(str(guardia.get('porque') or '').strip(),
+                                'la guardia {} de {} no dice por que existe'.format(
+                                    guardia['metrica'], cargado['id']))
 
     def test_un_objetivo_que_no_existe_lo_dice_con_los_que_si(self):
         with self.assertRaises(ErrorBanco) as fallo:
