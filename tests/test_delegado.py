@@ -559,7 +559,8 @@ class TestClavesDeConfig(unittest.TestCase):
     def test_el_perfil_del_repositorio_vale(self):
         self.assertEqual(
             sorted(self.base),
-            ['contexto', 'gate', 'interfaz', 'lanzador', 'margenes', 'trazas'])
+            ['autoaprendizaje', 'contexto', 'gate', 'interfaz', 'lanzador',
+             'margenes', 'trazas'])
 
     def test_un_modo_de_permiso_inventado_no_arranca(self):
         with self.assertRaisesRegex(ErrorConfig, 'lanzador.permisos'):

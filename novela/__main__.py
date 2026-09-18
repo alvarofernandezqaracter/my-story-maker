@@ -10,11 +10,16 @@ import sys
 from pathlib import Path
 
 from .config import cargar_config, ErrorConfig
+from .banco import (
+    aprender as aprender_banco, cargar_objetivo, ErrorBanco,
+    listar_objetivos)
 from .biblioteca import actual, ErrorBiblioteca, listar as listar_novelas
+from .casos import leer_espejo, PARTICIONES, sembrar as sembrar_casos
 from .entorno import cargar_entorno
 from .informe import construir as construir_informe, texto as texto_informe
 from .servidor import arrancar as arrancar_interfaz
-from .trazas_cc import exportar as exportar_trazas_cc
+from .trazas import Trazas
+from .trazas_cc import _config_de_trazas, exportar as exportar_trazas_cc
 from .trazas_hook import desde_stdin as trazar_desde_stdin
 
 AYUDA = """
@@ -37,6 +42,18 @@ La novela se escribe desde Claude Code: abre el repositorio y lanza
                                    agrega el gasto para analizarlo (§22). Si
                                    Langfuse no contesta, tira del diario local
                                    del hook: sale todo menos el dinero
+
+El banco (AUTOAPRENDIZAJE.md) mejora el prompt de un rol contra una metrica:
+
+  novela objetivos                 lo que el banco sabe optimizar, y con cuantos
+                                   casos cuenta cada uno
+  novela sembrar --objetivo O      saca los casos de las novelas ya escritas,
+                                   los parte en taller y reserva y los sube al
+                                   dataset de Langfuse
+  novela aprender --objetivo O [--rondas N] [--seco]
+                                   el loop: mide el vigente, pide variantes,
+                                   mide, y promueve el prompt si gana por el
+                                   margen. Con --seco no promueve nunca
 
 Opciones globales: --config <ruta> (por defecto config.json)
 """.strip()
@@ -74,6 +91,14 @@ def _entero(valor, mensaje):
 
 def _aviso(mensaje):
     sys.stderr.write('trazas: {}\n'.format(mensaje))
+
+
+def _exige(opciones, clave, comando):
+    valor = opciones.get(clave)
+    if not isinstance(valor, str) or not valor.strip():
+        raise ValueError('{} necesita --{} <id>. Los que hay salen con'
+                         ' "novela objetivos".'.format(comando, clave))
+    return valor.strip()
 
 
 def _ejecutar(comando, posicionales, opciones, config):
@@ -147,6 +172,67 @@ def _ejecutar(comando, posicionales, opciones, config):
         else:
             _log(salida)
 
+    elif comando == 'objetivos':
+        objetivos = listar_objetivos()
+        if not objetivos:
+            _log('no hay ningun objetivo definido en autoaprendizaje/objetivos/.')
+            return
+        for objetivo in objetivos:
+            meta = objetivo.get('objetivo') or {}
+            _log('{}  [{}]'.format(objetivo['id'], objetivo.get('rol')))
+            _log('    {} {}'.format(
+                meta.get('metrica'),
+                'a la baja' if meta.get('direccion', 'baja') == 'baja' else 'al alza'))
+            guardias = ', '.join(g['metrica'] for g in objetivo.get('guardias') or [])
+            _log('    guardias: {}'.format(guardias or 'ninguna'))
+            for particion in PARTICIONES:
+                _log('    {}: {} casos en el espejo'.format(
+                    particion, len(leer_espejo(objetivo['rol'], particion))))
+
+    elif comando == 'sembrar':
+        objetivo = cargar_objetivo(_exige(opciones, 'objetivo', 'sembrar'))
+        trazas = Trazas(_config_de_trazas(config), aviso=_aviso)
+        try:
+            recuento = sembrar_casos(objetivo, trazas, aviso=_aviso)
+        finally:
+            trazas.cerrar()
+        _log('{}: {} casos de taller y {} de reserva'.format(
+            objetivo['id'], recuento['taller'], recuento['reserva']))
+        if recuento['en_langfuse']:
+            _log('  subidos a Langfuse: {} y {}'.format(
+                recuento['subidos']['taller'], recuento['subidos']['reserva']))
+        else:
+            _log('  sin Langfuse: quedan solo en el espejo local, que es una cache')
+        minimos = (config.get('autoaprendizaje') or {}).get('casos_minimos')
+        if recuento['reserva'] < minimos:
+            _log('  aviso: la reserva tiene menos de {} casos. Se puede medir, pero'
+                 ' ninguna promocion sera valida hasta que la biblioteca crezca.'
+                 .format(minimos))
+
+    elif comando == 'aprender':
+        objetivo = cargar_objetivo(_exige(opciones, 'objetivo', 'aprender'))
+        trazas = Trazas(_config_de_trazas(config), aviso=_aviso)
+        seco = bool(opciones.get('seco'))
+        _log('objetivo {} sobre el rol {}{}'.format(
+            objetivo['id'], objetivo['rol'], ', en seco' if seco else ''))
+        try:
+            resultado = aprender_banco(
+                objetivo, config, seco=seco,
+                rondas=_entero(opciones['rondas'], 'aprender --rondas necesita un numero')
+                if opciones.get('rondas') else None,
+                trazas=trazas, aviso=_aviso, log=_log)
+        finally:
+            trazas.cerrar()
+        _log('')
+        _log('{} ronda(s), {:.4f} $ y el loop acaba {}'.format(
+            len(resultado['rondas']), resultado['gasto'], resultado['estado']))
+        ultima = resultado['rondas'][-1] if resultado['rondas'] else None
+        if ultima:
+            _log('lo medido esta en autoaprendizaje/rondas/{}/'.format(ultima['id']))
+        if ultima and ultima.get('promocion'):
+            _log('promovido {}: revierte ese commit para deshacerlo'.format(
+                ultima['promocion']['fichero']))
+
     else:
         raise ValueError('comando desconocido: {}\n\n{}'.format(comando, AYUDA))
 
@@ -178,7 +264,7 @@ def main(argv=None):
     try:
         config = cargar_config(opciones.get('config') or 'config.json')
         _ejecutar(comando, posicionales, opciones, config)
-    except ErrorBiblioteca as e:
+    except (ErrorBiblioteca, ErrorBanco) as e:
         sys.stderr.write('\n{}\n'.format(e))
         return 1
     except ErrorConfig as e:

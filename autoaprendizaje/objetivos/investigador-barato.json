@@ -1,0 +1,106 @@
+{
+  "id": "investigador-barato",
+  "rol": "investigador",
+  "porque": "El dossier se paga una vez por novela y lo lee todo el libro. Que quepa en menos tokens sin perder datos utiles abarata la preparacion entera y deja mas sitio al paquete de contexto de cada capitulo.",
+  "prompt": "agentes/investigador.md",
+  "piezas": [
+    ".claude/agents/novela-investigador.md",
+    "agentes/investigador.md",
+    "skills/formato-dossier/SKILL.md"
+  ],
+  "herramientas": [],
+  "modelo": "haiku",
+  "salida": "respuesta",
+  "objetivo": {
+    "metrica": "tokens_rol",
+    "direccion": "baja",
+    "agregado": "media",
+    "explicacion": "La suma de dos cosas: los caracteres del prompt divididos entre cuatro, y los tokens que el modelo genera al contestar. La segunda parte suele ser la mayor, asi que un prompt mas largo sube el numero por los dos lados: por su propio tamano y porque un encargo mas detallado produce una respuesta mas larga. Bajarlo es decir lo mismo en menos palabras y pedir datos mas cortos, sin bajar de doce datos, sin perder ninguna de las cuatro categorias y sin un solo fallo de forma."
+  },
+  "guardias": [
+    {
+      "metrica": "vd04_fallos",
+      "agregado": "suma",
+      "maximo": 0,
+      "porque": "VD-04 no es negociable: un verificado con fuente modelo tumba el dossier entero en el orquestador."
+    },
+    {
+      "metrica": "datos",
+      "agregado": "media",
+      "minimo": 12,
+      "porque": "Es lo que convierte gastar menos en gastar menos manteniendo el rendimiento. Sin este suelo, el prompt mas barato es el que no devuelve nada."
+    },
+    {
+      "metrica": "categorias",
+      "agregado": "minimo",
+      "minimo": 4,
+      "porque": "Las cuatro categorias utiles tienen que estar en todos los casos, no de media: un dossier sin comida ni lenguaje deja al escritor sin la mitad de la epoca."
+    },
+    {
+      "metrica": "vd01",
+      "agregado": "media",
+      "maximo": 1,
+      "no_peor_que_vigente": true,
+      "porque": "La forma no puede empeorar. El contrato es un unico objeto JSON y nada mas; un candidato que ademas del dossier suelta un parrafo de cortesia gasta tokens en algo que el orquestador tira."
+    }
+  ],
+  "informativas": [
+    "vd01",
+    "tokens_prompt",
+    "tokens_salida",
+    "coste_usd",
+    "segundos"
+  ],
+  "semillas": [
+    {
+      "id": "semilla-lisboa-1755",
+      "entrada": {
+        "epoca": "Lisboa, 1755, semanas anteriores al terremoto",
+        "premisa": "Un aparejador portugues descubre que los planos de la iglesia que restaura ocultan una camara que no consta en ningun registro.",
+        "tono": "sobrio",
+        "capitulos": 6,
+        "palabras_por_capitulo": 1800
+      }
+    },
+    {
+      "id": "semilla-edimburgo-1828",
+      "entrada": {
+        "epoca": "Edimburgo, 1828, la ciudad vieja y la escuela de anatomia",
+        "premisa": "Una lavandera reconoce en la mesa de diseccion a la vecina que dio por desaparecida el mes anterior.",
+        "tono": "seco",
+        "capitulos": 8,
+        "palabras_por_capitulo": 2000
+      }
+    },
+    {
+      "id": "semilla-tenochtitlan-1520",
+      "entrada": {
+        "epoca": "Tenochtitlan, 1520, los meses de la viruela",
+        "premisa": "Un escriba mexica encargado de llevar la cuenta de los muertos empieza a falsear el registro para proteger a su barrio.",
+        "tono": "contenido",
+        "capitulos": 7,
+        "palabras_por_capitulo": 1700
+      }
+    },
+    {
+      "id": "semilla-danzig-1939",
+      "entrada": {
+        "epoca": "Danzig, 1939, los meses previos a la guerra",
+        "premisa": "Una tipografa de un periodico bilingue descubre que las erratas que le corrigen cada noche son un codigo.",
+        "tono": "tenso",
+        "capitulos": 6,
+        "palabras_por_capitulo": 1900
+      }
+    },
+    {
+      "id": "semilla-nagasaki-1641",
+      "entrada": {
+        "epoca": "Nagasaki, 1641, la isla de Dejima recien inaugurada",
+        "premisa": "El interprete de la factoria holandesa empieza a traducir mal, a proposito, para mantener viva una negociacion que su senor quiere romper.",
+        "tono": "medido",
+        "capitulos": 6,
+        "palabras_por_capitulo": 1800
+      }
+    }
+  ]
+}

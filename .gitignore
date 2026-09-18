@@ -14,3 +14,10 @@ biblioteca/
 # regenera con un comando, y ademas lleva dentro el gasto de una pasada
 # concreta: lo que se versiona es lo que se aprende de el, en docs/spec/TRAZAS.md
 /informe*.md
+
+# Lo que produce el banco de AUTOAPRENDIZAJE.md. Las rondas son salida: lo que
+# hay que conservar de una que promovio ya esta en el commit del prompt y en
+# Langfuse. Y los casos de aqui son un espejo del dataset, o sea una cache: la
+# fuente de verdad esta en Langfuse, que es donde se comparan las corridas.
+autoaprendizaje/rondas/
+autoaprendizaje/casos/

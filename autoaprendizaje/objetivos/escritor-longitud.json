@@ -1,0 +1,49 @@
+{
+  "id": "escritor-longitud",
+  "rol": "escritor",
+  "porque": "VD-08 descarta un intento que se pasa de largo o se queda corto antes de llamar al validador, y cada descarte cuesta un capitulo entero de tokens. Un escritor que acierta la longitud a la primera se paga solo.",
+  "prompt": "agentes/escritor.md",
+  "piezas": [
+    ".claude/agents/novela-escritor.md",
+    "agentes/escritor.md",
+    "skills/formato-paquete-contexto/SKILL.md",
+    "skills/estilo-prosa/SKILL.md"
+  ],
+  "herramientas": [
+    "Write"
+  ],
+  "modelo": "haiku",
+  "salida": "fichero",
+  "objetivo": {
+    "metrica": "desvio_palabras",
+    "direccion": "baja",
+    "agregado": "media",
+    "explicacion": "La distancia relativa entre las palabras que tiene el capitulo y las que pedia el brief, sin signo: pasarse de largo y quedarse corto puntuan igual. Cero es clavarlo. No se baja escribiendo menos -hay un suelo de palabras- sino acertando, y para eso lo que funciona es decirle al escritor como repartir la longitud entre las escenas, no repetirle el numero."
+  },
+  "guardias": [
+    {
+      "metrica": "vd08",
+      "agregado": "maximo",
+      "maximo": 1,
+      "porque": "Ningun caso puede llegar al escalon de bloqueo. El aviso se tolera; el bloqueo es el intento tirado."
+    },
+    {
+      "metrica": "parrafos",
+      "agregado": "minimo",
+      "minimo": 3,
+      "porque": "Acertar el numero de palabras en un solo bloque de texto no es acertar: seria optimizar la metrica rompiendo el capitulo."
+    },
+    {
+      "metrica": "palabras",
+      "agregado": "media",
+      "minimo": 1000,
+      "porque": "Suelo absoluto contra la solucion facil de escribir menos. El desvio se puede bajar recortando, y recortar tiene un limite por debajo del cual ya no es un capitulo."
+    }
+  ],
+  "informativas": [
+    "tokens_rol",
+    "tokens_salida",
+    "coste_usd",
+    "segundos"
+  ]
+}
