@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.18.0
+version: 1.18.1
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -567,6 +567,15 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.18.1] — 2026-09-18
+
+**Cambiado**
+- §24. El banco tiene un estado mas para un objetivo, **agotado**: bien
+  medido y sin recorrido, porque su techo queda por debajo del ruido. El
+  primero del banco acabo asi y su motivo conecta con §6 de `TRAZAS.md`:
+  perseguia el gasto del investigador, que es una llamada por novela de unas
+  cuarenta. El porque entero esta en `AUTOAPRENDIZAJE.md`.
+
 ### [1.18.0] — 2026-09-18
 
 **Añadido**
@@ -1021,7 +1030,7 @@ el loop de intentos y el bloqueo.
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ciento cuarenta, en
+**Tests.** `python -m unittest discover -s tests -t .`: ciento cuarenta y uno, en
 cuatro ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
@@ -1737,6 +1746,12 @@ acepta sin sus guardias: «que el investigador gaste menos» no es un objetivo, 
 «que gaste menos sin bajar de doce datos, con las cuatro categorías y sin un solo
 fallo de VD-04» sí lo es. Un objetivo sin guardias es un atajo esperando a que
 alguien lo tome.
+
+**Y elegir el objetivo es antes que medirlo.** Un objetivo del banco puede estar
+bien medido y no servir para nada si el rol que optimiza no pesa en el total.
+Pasó con el primero: perseguía el gasto del investigador, que es **una llamada** 
+por novela de unas cuarenta, y §22 ya decía que el gasto vive en el validador y
+el escritor. Es el fallo más caro de detectar, porque todo parece correcto.
 
 **La regla de §23 vale también aquí, y por las malas.** Un objetivo del banco no
 corre sin línea base medida, igual que un `OB-xx` no entra en la tabla sin ella.

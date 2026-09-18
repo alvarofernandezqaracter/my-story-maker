@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.18.0.
+de un brief de cinco campos. Versión 1.18.1.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -212,7 +212,7 @@ python -m novela objetivos                   # lo que el banco sabe optimizar (�
 python -m novela sembrar --objetivo O        # saca los casos de las novelas escritas
 python -m novela medir    --objetivo O       # la linea base y el ruido, antes
 python -m novela aprender --objetivo O       # el loop. Con --seco no promueve nada
-python -m unittest discover -s tests -t .    # 140 tests, sin red
+python -m unittest discover -s tests -t .    # 141 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
