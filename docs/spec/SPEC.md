@@ -468,6 +468,12 @@ evitar. DA-02 se decide en ese frontmatter.
 | `margenes.palabras_aviso` | 0,15 | Desvío sobre `palabras_objetivo` que genera aviso (VD-08) |
 | `margenes.palabras_bloqueo` | 0,4 | Desvío que descarta el intento sin llamar al validador (VD-08) |
 | `margenes.parrafos_min` | 3 | Mínimo de párrafos de un capítulo redactado (VD-08) |
+| `afinado.pasadas` | 3 | Veces que se corre cada caso con el mismo prompt ([AFINADO.md](AFINADO.md) §7) |
+| `afinado.factor_margen` | 1,0 | Cuánto tiene que superar al ruido una mejora para promover |
+| `afinado.max_candidatos` | 3 | Candidatos que se prueban en una vuelta antes de parar |
+| `afinado.fallos_seguidos` | 2 | Candidatos seguidos que no baten el ruido antes de parar |
+| `afinado.tope_gasto` | 1,0 | Dólares que puede gastar una vuelta |
+| `afinado.entorno` | `afinado` | Entorno de Langfuse de las llamadas de medición |
 
 El puerto de la interfaz vive aquí y no en el código por la misma regla que el resto: es un número que se toca sin tocar código, y en una máquina con el 8787 ocupado hay que poder cambiarlo. `python -m novela ui --puerto N` lo pisa para un arranque suelto, igual que `--config`.
 
@@ -492,7 +498,9 @@ apunta, y no abre ficheros—, pero mandar el libro a un servicio de fuera es un
 decisión de quien opera la máquina y no un detalle de implementación. Quien la
 apaga pierde el juez y conserva las trazas, las notas y el gasto.
 
-Con esto la tabla tiene **diecisiete** claves, y ninguna sobra: cada una la lee alguien.
+Con esto la tabla tiene **veintitrés** claves, y ninguna sobra: cada una la lee alguien.
+
+**Por qué el afinado tiene entorno propio.** Si las llamadas con las que se mide un prompt cayeran en el entorno de las novelas, el gasto de una vuelta se sumaría al de un libro y nadie lo notaría. Por eso `afinado.entorno` se valida distinto de `trazas.entorno` al arrancar, y no como una recomendación.
 
 **Por qué dos márgenes de palabras.** VD-08 tiene que distinguir el capítulo que se queda corto del que no sirve. Dentro de `palabras_aviso` el texto vale y la desviación viaja como aviso al reintento; pasado `palabras_bloqueo` no se gasta la llamada al validador y se reintenta la generación. Con un solo umbral había que elegir entre no filtrar nada o tirar capítulos aprovechables.
 
@@ -930,6 +938,9 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `ac013a5` | 2026-09-18 | docs(spec): 1.18.1, §24 elegir el objetivo es antes que medirlo |
 | `fdf04e4` | 2026-09-18 | docs(spec): §17 regenerada para 1.18.1 |
 | `9f6b7b4` | 2026-09-18 | feat(novela): §24 fuera el banco de autoaprendizaje entero |
+| `894757f` | 2026-09-18 | docs(spec): §17 regenerada para 1.19.0 |
+| `106d27b` | 2026-09-18 | docs(afinado): 0.1.0, el loop del validador de anacronismos y sus cinco campos |
+| `a93d197` | 2026-09-18 | docs(spec): 1.20.0, §20 la skill exporta las trazas al cerrar |
 
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
@@ -986,12 +997,13 @@ el loop de intentos y el bloqueo.
 | `biblioteca` | Lista las novelas, de la más reciente a la más antigua, y marca la que está en curso (§21) |
 | `hook-traza` | Lee un `PostToolUse` por stdin y traza la llamada al subagente. Lo llama el hook, no una persona (§22) |
 | `informe-trazas [--sesion S] [--salida F] [--json]` | Lee de vuelta las trazas de una novela y agrega el gasto (§22) |
+| `afinar <paso> [--vuelta N]` | El loop que mide y mejora el prompt de un rol ([AFINADO.md](AFINADO.md)). Prepara, cuenta y decide; **las llamadas a los subagentes las hace la sesión** |
 | `ui.bat` | Lo mismo que `ui` en Windows, buscando el intérprete por su cuenta |
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ochenta y nueve, en tres
-ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
+**Tests.** `python -m unittest discover -s tests -t .`: ciento veinticuatro, en
+cuatro ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
 hook de §22. Los dos últimos corren contra una capa de mentira
