@@ -865,6 +865,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `067f7ad` | 2026-09-18 | docs(spec): 1.13.0, §20 el juez corre en otra familia de modelos |
 | `b158aa0` | 2026-09-18 | docs(spec): §17 regenerada para 1.13.0 |
 | `3a4aa53` | 2026-09-18 | docs(spec): 1.14.0, §21 el archivo de novelas y §18 sus dos comandos |
+| `7b293e0` | 2026-09-18 | docs(spec): §17 regenerada para 1.14.0 |
+| `d2be23b` | 2026-09-18 | feat(biblioteca): §21 cada novela nace en su carpeta y desaparece novela-cc |
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
 ```
