@@ -26,9 +26,10 @@
   "afinado": {
     "pasadas": 3,
     "factor_margen": 1.0,
+    "margen_guardias": 1.0,
     "max_candidatos": 3,
     "fallos_seguidos": 2,
-    "tope_gasto": 1.0,
+    "tope_gasto": 4.0,
     "entorno": "afinado"
   },
   "trazas": {

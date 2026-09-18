@@ -1,6 +1,6 @@
 ---
 doc: spec-afinado-de-prompts
-version: 0.2.0
+version: 0.3.0
 estado: borrador
 actualizado: 2026-09-18
 ---
@@ -101,6 +101,10 @@ buenos, que es más coste por el camino de los reintentos. **Los valores que cad
 guardia tiene que respetar no se escriben aquí a mano**: salen de la medición
 del paso 3 y quedan en la sección de la vuelta.
 
+Ninguna guardia se compara contra el valor pelado del vigente, sino contra ese
+valor **más lo que esa guardia no sabe distinguir** (§7). «No sube» quiere decir
+«no sube más de lo que se movería sola».
+
 ## §4 Los cinco campos
 
 Un loop son cinco campos rellenados con valores concretos. Sin los cinco no se
@@ -137,6 +141,33 @@ le enseña nunca.
 Mientras una vuelta corre, los casos se escriben en una carpeta temporal fuera
 del repositorio y se borran al cerrarla.
 
+**Cada capítulo lleva cuatro sembrados, uno por nivel de dificultad.** Los
+niveles, del más visible al menos: **objeto** —algo que no existía, y se ve sin
+saber historia—, **institución** —un organismo o un cuerpo fundado siglos
+después—, **práctica** —una costumbre o un procedimiento posteriores— y
+**concepto** —una idea o una palabra que todavía no existían—. Se siembran
+cuatro y no uno porque con pocos casos la métrica no tiene resolución: con
+cuatro sembrados en la reserva solo puede valer 0, 0,25, 0,5, 0,75 o 1.
+
+Ese reparto resuelve además AF-05 sin tener que acertar con él. Si cada capítulo
+lleva los cuatro niveles, **cualquier** partición por capítulo sale equilibrada
+por construcción, y no vuelve a pasar lo de la vuelta 1, donde el taller quedó
+con los casos difíciles y la reserva con los fáciles. Todas las variantes de un
+capítulo caen en la misma partición: si el limpio quedara en el taller y sus
+sembrados en la reserva, quien mira el taller estaría leyendo el texto de la
+reserva menos una frase.
+
+El nivel se guarda con la clave y **no entra en ninguna métrica ni en el
+veredicto**. Se cuenta para poder leer después *qué clase* de anacronismo se le
+escapa al prompt, que es lo que dice por dónde tiene que ir el candidato
+siguiente.
+
+**Un capítulo aprobado no sirve como caso limpio si ya trae un anacronismo
+dentro.** Castigaría al candidato por acertar. Es lo que pasa con la tercera
+novela del repositorio, cuyos capítulos hablan de un papel escrito en el 133
+a.C.: queda fuera del conjunto, y el hecho de que el gate la aprobara es un dato
+sobre el validador, no sobre ella.
+
 **Crecer no cuesta lo mismo en las dos variantes**: cada capítulo nuevo aprobado
 es un caso limpio sin trabajo ninguno, y cada caso sembrado hay que escribirlo.
 Es trabajo de autoría, se hace una vez y no se repite; no es mantenimiento.
@@ -172,6 +203,27 @@ Un candidato se promueve solo si su mejora sobre la reserva supera
 ruido; subirlo exige más evidencia y promueve menos veces. **El umbral no se
 elige antes de medir el ruido**, que es el orden de §2.
 
+### La tolerancia de las guardias
+
+Las guardias siguen la misma regla, y por la misma razón. Lo que se le consiente
+a una guardia es la mayor de dos cosas, multiplicada por
+`afinado.margen_guardias`:
+
+- **Su ruido**: cuánto se movió esa guardia entre dos pasadas idénticas del
+  vigente.
+- **Su resolución**: el salto más pequeño que puede dar con los casos que hay.
+  Con doce capítulos limpios, un falso positivo mueve la guardia 0,083 y no hay
+  manera de moverla menos.
+
+Sin la segunda, una guardia que el vigente clava en su valor perfecto se rompe
+con el primer caso que falle. Eso no es prudencia: es una guardia que nadie
+puede pasar, y disimula el fallo porque el loop parece cauto cuando está roto.
+Pasó en la vuelta 1 y costó una promoción que la métrica objetivo pedía.
+
+La resolución se toma de la pasada más pobre, no de la mejor: si una pasada
+contestó menos casos, la guardia distingue menos, y quien decide tiene que
+enterarse por el lado prudente.
+
 ## §8 Promover, y deshacerlo
 
 Promover es escribir `agentes/<rol>.md` y commitearlo, **solo eso y en un commit
@@ -185,20 +237,28 @@ commit con el spec ni con la sección de la vuelta, que van en los suyos.
 
 ## §9 Configuración
 
-Seis claves nuevas en el `config.json` de `SPEC.md` §12, que pasa de diecisiete
-a veintitrés. Ningún número de este documento vive en el código ni en un prompt.
+Siete claves en el `config.json` de `SPEC.md` §12, que pasa de diecisiete a
+veinticuatro. Ningún número de este documento vive en el código ni en un prompt.
 
 | Clave | Por defecto | Para qué |
 |---|---|---|
 | `afinado.pasadas` | 3 | Veces que se corre cada caso con el mismo prompt (§7) |
 | `afinado.factor_margen` | 1.0 | Cuántas veces el ruido tiene que superar la mejora para promover |
+| `afinado.margen_guardias` | 1.0 | Cuánto puede empeorar una guardia sin contar como empeorar (§7) |
 | `afinado.max_candidatos` | 3 | Candidatos que se prueban en una vuelta antes de parar |
 | `afinado.fallos_seguidos` | 2 | Candidatos seguidos que no baten el ruido antes de parar |
-| `afinado.tope_gasto` | 1.0 | Dólares que puede gastar una vuelta |
+| `afinado.tope_gasto` | 4.0 | Dólares que puede gastar una vuelta |
 | `afinado.entorno` | `afinado` | Entorno de Langfuse al que van las llamadas de medición (§6) |
 
+`tope_gasto` sale de la aritmética de una vuelta entera y no de un número
+redondo: 45 casos × 3 pasadas × 4 prompts —el vigente y los tres candidatos de
+`max_candidatos`— × 0,0061 $ la llamada medidos en la vuelta 1 son 3,29 $. Un
+tope por debajo de eso no protege de nada: para la vuelta a la mitad y deja el
+gasto hecho sin veredicto.
+
 `pasadas` no puede bajar de 2: con una sola pasada no hay ruido que medir y el
-loop se queda ciego. Y hay una regla cruzada, `afinado.entorno` distinto de
+loop se queda ciego. `margen_guardias` sí puede valer 0, y entonces las guardias
+se comportan como en la vuelta 1: cualquier empeoramiento veta. Y hay una regla cruzada, `afinado.entorno` distinto de
 `trazas.entorno`: si las llamadas de medición cayeran en el entorno de las
 novelas, el gasto de una vuelta se sumaría al de un libro y nadie lo notaría.
 
@@ -220,20 +280,39 @@ Conviene tenerlo escrito, porque es el precio:
 
 ## §11 Decisiones abiertas
 
-Los ids no se reutilizan.
+Los ids no se reutilizan. Una decisión tomada sale de esta tabla y se queda
+donde manda, que es la sección que la aplica.
 
 | Id | Decisión pendiente | Cuándo decidirla |
 |---|---|---|
 | AF-01 | Si el disparo automático al cerrar una novela debe pedir permiso o correr solo | Con el gasto de dos o tres vueltas medido |
 | AF-02 | Si la métrica objetivo debe ser `deteccion` o la caída emparejada de la nota entre el caso limpio y el sembrado | Con el ruido de la vuelta 1 delante |
 | AF-03 | Qué rol entra en el segundo loop. El cronista es el candidato: empata en coste por capítulo y emite 3.995 tokens de salida por resumen | Cuando el primero haya cerrado dos vueltas |
-| AF-04 | Si las guardias deben poder vetar por sí solas o sumar en un único veredicto | Cuando una guardia impida una promoción que la métrica objetivo pedía. **Ya ha pasado**: §14 |
-| AF-05 | Cómo se reparten los casos entre taller y reserva | La vuelta 1 repartió por novela y salió un taller de casos difíciles (0,20 de detección) contra una reserva de casos fáciles (0,75). Con esa diferencia, la reserva no mide lo mismo que el taller y la decisión de promover depende de en qué lado cayó cada caso | Antes de la vuelta 2 |
 | AF-06 | Quién vuelca las respuestas del subagente | Hoy lo hace la misma sesión que propone el candidato, así que ve la reserva por fuerza. Es el agujero de «el examinado no ve el examen» por el otro lado: no lo ve el examinado, lo ve el examinador | Antes de que una vuelta promueva algo |
 
 ## §12 Historial de cambios
 
 Formato Keep a Changelog.
+
+### [0.3.0] — 2026-09-18
+
+**Añadido**
+- §7. La tolerancia de las guardias: una guardia solo se rompe si empeora más
+  que su propio ruido o que su resolución, la mayor de las dos. Con eso se
+  decide **AF-04**: las guardias siguen vetando por sí solas, porque una guardia
+  con margen medido ya no veta por ruido.
+- §9. `afinado.margen_guardias`, que multiplica esa tolerancia. En 0 el loop se
+  comporta como en la vuelta 1.
+- §5. Cuatro sembrados por capítulo, uno por nivel de dificultad, y la regla de
+  que todas las variantes de un capítulo caen en la misma partición. Con eso se
+  decide **AF-05**: el reparto sale equilibrado por construcción y no hay que
+  acertar con él.
+- §5. Un capítulo que ya trae un anacronismo no vale como caso limpio.
+
+**Cambiado**
+- §9. `afinado.tope_gasto` de 1,0 a 4,0 $, que es lo que cuesta una vuelta
+  entera con el conjunto nuevo a los precios medidos en la vuelta 1. El tope
+  anterior paraba la vuelta a la mitad.
 
 ### [0.2.0] — 2026-09-18
 

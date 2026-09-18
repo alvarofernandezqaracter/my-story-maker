@@ -107,7 +107,8 @@ def abrir_vuelta(numero, entorno, casos):
         (carpeta / 'capitulo.md').write_text(caso['capitulo'], encoding='utf-8')
         (carpeta / 'contexto.md').write_text(caso['contexto'], encoding='utf-8')
         clave[cid] = {'tipo': caso['tipo'], 'particion': caso['particion'],
-                      'marca': caso.get('marca'), 'origen': caso.get('origen')}
+                      'marca': caso.get('marca'), 'nivel': caso.get('nivel'),
+                      'origen': caso.get('origen')}
 
     marca = {'vuelta': int(numero), 'entorno': entorno, 'abierta': True,
              'sesion': 'afinado-{:02d}'.format(int(numero)),
@@ -220,6 +221,7 @@ def medir_pasada(config, clave, respuestas, particion=None):
     """
     suelo = config['gate']['nota_minima']
     sembrados = aciertos = limpios = falsos = validas = total = 0
+    niveles = {}
 
     for cid, bruto in respuestas.items():
         ficha = clave.get(cid)
@@ -238,7 +240,17 @@ def medir_pasada(config, clave, respuestas, particion=None):
         bloquea = _bloquearia_el_gate(bloque, suelo)
         if ficha['tipo'] == 'sembrado':
             sembrados += 1
-            aciertos += 1 if bloquea else 0
+            acierta = 1 if bloquea else 0
+            aciertos += acierta
+            # El nivel no decide nada: no entra en ninguna metrica ni en el
+            # veredicto. Se cuenta para poder leer despues **que clase** de
+            # anacronismo se le escapa al prompt, que es lo que dice por donde
+            # tiene que ir el candidato siguiente.
+            if ficha.get('nivel') is not None:
+                cuenta = niveles.setdefault(
+                    str(ficha['nivel']), {'sembrados': 0, 'aciertos': 0})
+                cuenta['sembrados'] += 1
+                cuenta['aciertos'] += acierta
         else:
             limpios += 1
             falsos += 1 if bloquea else 0
@@ -248,12 +260,40 @@ def medir_pasada(config, clave, respuestas, particion=None):
             'limpios': limpios, 'falsos': falsos,
             'deteccion': _fraccion(aciertos, sembrados),
             'falsos_positivos': _fraccion(falsos, limpios),
-            'forma': _fraccion(validas, total)}
+            'forma': _fraccion(validas, total),
+            'niveles': niveles}
 
 
 def _media(valores):
     limpios = [v for v in valores if v is not None]
     return round(sum(limpios) / len(limpios), 4) if limpios else None
+
+
+def _resolucion(cuantos):
+    """El salto mas pequeno que una fraccion puede dar con `cuantos` casos.
+
+    Con doce capitulos limpios, un solo falso positivo mueve la guardia 0,0833
+    y no hay manera de moverla menos: por debajo de eso la guardia no distingue
+    nada, solo reparte.
+    """
+    return round(1.0 / cuantos, 4) if cuantos else None
+
+
+def _tolerancia(ruido, resolucion, margen):
+    """Cuanto puede empeorar una guardia sin que cuente como empeorar.
+
+    Manda la mayor de dos cosas. El **ruido** es cuanto se movio esa guardia
+    entre dos pasadas identicas del vigente. La **resolucion** es el salto mas
+    pequeno que la guardia sabe dar con los casos que hay.
+
+    Sin la segunda, una guardia que el vigente clava en su valor perfecto se
+    rompe con el primer caso que falle, y entonces no protege: impide, que es
+    la regla de AFINADO.md §2. Paso de verdad en la vuelta 1: el vigente hizo
+    cero falsos positivos de doce y el candidato uno, y con eso se cayo una
+    promocion que la metrica objetivo pedia.
+    """
+    medidas = [v for v in (ruido, resolucion) if v is not None]
+    return round(max(medidas) * margen, 4) if medidas else 0.0
 
 
 def _ruido(valores):
@@ -283,6 +323,11 @@ def medir(config, numero, prompt, particion=None):
     pasadas = [medir_pasada(config, clave, respuestas, particion)
                for _, respuestas in sorted(por_pasada.items())]
     detecciones = [p['deteccion'] for p in pasadas]
+    # La resolucion se toma de la pasada mas pobre, no de la mejor: si una
+    # pasada contesto menos casos, la guardia distingue menos en esa vuelta, y
+    # el que decide tiene que saberlo por el lado prudente.
+    limpios = [p['limpios'] for p in pasadas if p['limpios']]
+    contados = [p['casos'] for p in pasadas if p['casos']]
     return {
         'prompt': prompt,
         'particion': particion or 'todas',
@@ -291,6 +336,10 @@ def medir(config, numero, prompt, particion=None):
         'ruido': _ruido(detecciones),
         'falsos_positivos': _media([p['falsos_positivos'] for p in pasadas]),
         'forma': _media([p['forma'] for p in pasadas]),
+        'ruido_falsos': _ruido([p['falsos_positivos'] for p in pasadas]),
+        'ruido_forma': _ruido([p['forma'] for p in pasadas]),
+        'resolucion_falsos': _resolucion(min(limpios) if limpios else 0),
+        'resolucion_forma': _resolucion(min(contados) if contados else 0),
     }
 
 
@@ -304,6 +353,7 @@ def comparar(config, vigente, candidato, hermanas=None, coste=None):
     que hay que demostrar algo.
     """
     factor = config['afinado']['factor_margen']
+    margen = config['afinado']['margen_guardias']
     ruido = vigente.get('ruido')
     mejora = None
     if vigente.get('deteccion') is not None and candidato.get('deteccion') is not None:
@@ -314,39 +364,59 @@ def comparar(config, vigente, candidato, hermanas=None, coste=None):
     guardias = []
     guardias.append(_guardia(
         'falsos_positivos', vigente.get('falsos_positivos'),
-        candidato.get('falsos_positivos'), 'no sube'))
+        candidato.get('falsos_positivos'), 'no sube',
+        _tolerancia(vigente.get('ruido_falsos'),
+                    vigente.get('resolucion_falsos'), margen)))
     guardias.append(_guardia(
-        'forma', vigente.get('forma'), candidato.get('forma'), 'no baja'))
+        'forma', vigente.get('forma'), candidato.get('forma'), 'no baja',
+        _tolerancia(vigente.get('ruido_forma'),
+                    vigente.get('resolucion_forma'), margen)))
     if hermanas:
         guardias.append(_guardia(
             'notas_hermanas', hermanas.get('vigente'), hermanas.get('candidato'),
-            'no baja'))
+            'no baja',
+            _tolerancia(hermanas.get('ruido'), hermanas.get('resolucion'), margen)))
     if coste:
         guardias.append(_guardia(
-            'coste_llamada', coste.get('vigente'), coste.get('candidato'), 'no sube'))
+            'coste_llamada', coste.get('vigente'), coste.get('candidato'),
+            'no sube', _tolerancia(coste.get('ruido'), None, margen)))
 
     rotas = [g['metrica'] for g in guardias if g['empeora']]
     bate = (mejora is not None and umbral is not None and mejora > umbral)
 
     return {
         'mejora': mejora, 'ruido': ruido, 'factor_margen': factor, 'umbral': umbral,
+        'margen_guardias': margen,
         'bate_el_ruido': bate, 'guardias': guardias, 'rotas': rotas,
         'promueve': bool(bate and not rotas),
         'operacion': 'mejora {} {} umbral {} (ruido {} x factor {}){}'.format(
             mejora, '>' if bate else '<=', umbral, ruido, factor,
-            '' if not rotas else '; guardias rotas: ' + ', '.join(rotas)),
+            '' if not rotas else '; guardias rotas: ' + ', '.join(
+                '{} ({} -> {}, tolerancia {})'.format(
+                    g['metrica'], g['antes'], g['ahora'], g['tolerancia'])
+                for g in guardias if g['empeora'])),
     }
 
 
-def _guardia(metrica, antes, ahora, sentido):
+def _guardia(metrica, antes, ahora, sentido, tolerancia=0.0):
+    """Una guardia, con el margen que se le consiente.
+
+    `tolerancia` no es indulgencia: es lo que esa guardia no sabe distinguir,
+    medido en el paso 3. Empeorar menos que eso no es empeorar, es la misma
+    medida otra vez.
+    """
     if antes is None or ahora is None:
         # Sin medida no hay guardia, y una guardia que no se pudo medir no se
         # da por cumplida: se dice que falta.
         return {'metrica': metrica, 'antes': antes, 'ahora': ahora,
-                'sentido': sentido, 'empeora': True, 'motivo': 'sin medir'}
-    empeora = ahora > antes if sentido == 'no sube' else ahora < antes
+                'sentido': sentido, 'tolerancia': tolerancia,
+                'empeora': True, 'motivo': 'sin medir'}
+    diferencia = round(ahora - antes, 6)
+    empeora = (diferencia > tolerancia if sentido == 'no sube'
+               else -diferencia > tolerancia)
     return {'metrica': metrica, 'antes': antes, 'ahora': ahora,
-            'sentido': sentido, 'empeora': bool(empeora), 'motivo': None}
+            'sentido': sentido, 'tolerancia': tolerancia,
+            'empeora': bool(empeora), 'motivo': None}
 
 
 def parar(config, fallos_seguidos, candidatos_probados, gasto):
@@ -383,6 +453,7 @@ def subir_casos(config, casos, aviso=None):
         raise ErrorAfinado(
             'sin Langfuse no hay donde guardar los casos: {}'.format(capa.motivo))
     subidos = {p: 0 for p in PARTICIONES}
+    fallidos = []
     try:
         for particion in PARTICIONES:
             capa.crear_conjunto(
@@ -395,14 +466,27 @@ def subir_casos(config, casos, aviso=None):
             particion = caso['particion']
             if particion not in PARTICIONES:
                 raise ErrorAfinado('particion desconocida: {}'.format(particion))
-            capa.subir_caso(
-                conjunto(particion), caso['id'],
-                entrada={'capitulo': caso['capitulo'], 'contexto': caso['contexto']},
-                clave={'tipo': caso['tipo'], 'marca': caso.get('marca')},
-                metadata={'origen': caso.get('origen'), 'particion': particion})
+            if not capa.subir_caso(
+                    conjunto(particion), caso['id'],
+                    entrada={'capitulo': caso['capitulo'],
+                             'contexto': caso['contexto']},
+                    clave={'tipo': caso['tipo'], 'marca': caso.get('marca'),
+                           'nivel': caso.get('nivel')},
+                    metadata={'origen': caso.get('origen'),
+                              'particion': particion}):
+                # Se cuenta lo que subio, no lo que se intento. La capa se apaga
+                # sola al primer fallo (§20), asi que contar intentos daria un
+                # conjunto completo sobre un conjunto vacio, y la vuelta
+                # siguiente mediria contra casos que no estan.
+                fallidos.append(caso['id'])
+                continue
             subidos[particion] += 1
     finally:
         capa.cerrar()
+    if fallidos:
+        raise ErrorAfinado(
+            'no subieron {} casos de {} (el primero, {}): {}'.format(
+                len(fallidos), len(casos), fallidos[0], capa.motivo))
     return subidos
 
 
@@ -420,6 +504,7 @@ def bajar_casos(config, aviso=None):
                 casos.append({
                     'id': item['id'], 'particion': particion,
                     'tipo': clave.get('tipo'), 'marca': clave.get('marca'),
+                    'nivel': clave.get('nivel'),
                     'origen': (item['metadata'] or {}).get('origen'),
                     'capitulo': entrada.get('capitulo') or '',
                     'contexto': entrada.get('contexto') or ''})

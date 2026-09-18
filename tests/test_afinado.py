@@ -14,9 +14,10 @@ from novela import afinado
 from novela.config import cargar_config, validar_config, ErrorConfig
 
 
-def _caso(ident, tipo, particion='reserva'):
+def _caso(ident, tipo, particion='reserva', nivel=None):
     return {'id': ident, 'tipo': tipo, 'particion': particion,
             'marca': 'reloj de pulsera' if tipo == 'sembrado' else None,
+            'nivel': nivel if tipo == 'sembrado' else None,
             'origen': 'novela-de-prueba cap-01',
             'capitulo': 'texto del capitulo', 'contexto': 'el paquete'}
 
@@ -204,6 +205,83 @@ class TestElVeredicto(unittest.TestCase):
         self.assertFalse(v['promueve'])
 
 
+class TestElNivelDeLoSembrado(_Temporal):
+    """El nivel se cuenta para poder leer QUE se le escapa al prompt, pero no
+    entra en ninguna metrica ni en el veredicto."""
+
+    def test_cuenta_aciertos_por_nivel_sin_tocar_la_deteccion(self):
+        clave = {c['id']: c for c in [
+            _caso('caso-01', 'sembrado', nivel=1),
+            _caso('caso-02', 'sembrado', nivel=4),
+            _caso('caso-03', 'limpio')]}
+        medida = afinado.medir_pasada(self.config, clave, {
+            'caso-01': _respuesta(1), 'caso-02': _respuesta(5),
+            'caso-03': _respuesta(5)})
+        self.assertEqual(medida['deteccion'], 0.5)
+        self.assertEqual(medida['niveles']['1'], {'sembrados': 1, 'aciertos': 1})
+        self.assertEqual(medida['niveles']['4'], {'sembrados': 1, 'aciertos': 0})
+
+    def test_un_caso_limpio_no_tiene_nivel(self):
+        clave = {'caso-03': _caso('caso-03', 'limpio')}
+        medida = afinado.medir_pasada(self.config, clave,
+                                      {'caso-03': _respuesta(5)})
+        self.assertEqual(medida['niveles'], {})
+
+
+class TestLaToleranciaDeLasGuardias(unittest.TestCase):
+    """AFINADO.md §2: una guardia que el vigente no pasa no protege nada. La
+    version fina de lo mismo es que una guardia clavada en su valor perfecto
+    tampoco protege, porque cualquier resultado que no sea la perfeccion la
+    rompe. Paso en la vuelta 1 y costo una promocion."""
+
+    def setUp(self):
+        self.config = cargar_config('config.json')
+
+    def _medida(self, deteccion, ruido, falsos=0.0, forma=1.0, limpios=12):
+        return {'deteccion': deteccion, 'ruido': ruido,
+                'falsos_positivos': falsos, 'forma': forma,
+                'ruido_falsos': 0.0, 'ruido_forma': 0.0,
+                'resolucion_falsos': round(1.0 / limpios, 4),
+                'resolucion_forma': round(1.0 / limpios, 4)}
+
+    def test_un_solo_caso_de_doce_no_rompe_una_guardia_clavada_en_cero(self):
+        # Es el caso exacto de la vuelta 1: el vigente 0 de 12, el candidato
+        # 1 de 12. Un caso es lo minimo que esa guardia sabe mover.
+        v = afinado.comparar(self.config, self._medida(0.44, 0.1),
+                             self._medida(0.74, 0.1, falsos=round(1 / 12, 4)))
+        self.assertEqual(v['rotas'], [])
+        self.assertTrue(v['promueve'])
+
+    def test_empeorar_mas_que_la_resolucion_si_rompe_la_guardia(self):
+        v = afinado.comparar(self.config, self._medida(0.44, 0.1),
+                             self._medida(0.74, 0.1, falsos=0.25))
+        self.assertEqual(v['rotas'], ['falsos_positivos'])
+        self.assertFalse(v['promueve'])
+
+    def test_manda_el_ruido_cuando_es_mayor_que_la_resolucion(self):
+        vigente = self._medida(0.44, 0.1)
+        vigente['ruido_falsos'] = 0.5
+        v = afinado.comparar(self.config, vigente,
+                             self._medida(0.74, 0.1, falsos=0.4))
+        self.assertEqual(v['rotas'], [])
+
+    def test_la_tolerancia_queda_impresa_en_la_operacion(self):
+        # Como el gate de SPEC.md §8: la regla se imprime entera o no se puede
+        # discutir el veredicto.
+        v = afinado.comparar(self.config, self._medida(0.44, 0.1),
+                             self._medida(0.74, 0.1, falsos=0.9))
+        self.assertIn('tolerancia', v['operacion'])
+
+    def test_sin_resolucion_ni_ruido_la_tolerancia_es_cero(self):
+        self.assertEqual(afinado._tolerancia(None, None, 1.0), 0.0)
+
+    def test_la_resolucion_sale_de_la_pasada_mas_pobre(self):
+        # Si una pasada contesto menos casos, la guardia distingue menos, y el
+        # que decide tiene que enterarse por el lado prudente.
+        self.assertEqual(afinado._resolucion(4), 0.25)
+        self.assertIsNone(afinado._resolucion(0))
+
+
 class TestLaVuelta(_Temporal):
 
     def test_abrir_deja_los_casos_sin_decir_cuales_estan_sembrados(self):
@@ -280,13 +358,19 @@ class TestLosFrenos(unittest.TestCase):
         self.assertIsNone(afinado.parar(self.config, 0, 0, 0.0))
 
     def test_para_al_agotar_los_candidatos(self):
-        self.assertIn('candidatos', afinado.parar(self.config, 0, 3, 0.0))
+        # Los topes se leen de config.json y no se copian aqui: un test con el
+        # numero escrito a mano deja de comprobar el freno el dia que el numero
+        # cambia, y encima falla por la razon equivocada.
+        tope = self.config['afinado']['max_candidatos']
+        self.assertIn('candidatos', afinado.parar(self.config, 0, tope, 0.0))
 
     def test_para_con_dos_fallos_seguidos(self):
-        self.assertIn('seguidos', afinado.parar(self.config, 2, 0, 0.0))
+        tope = self.config['afinado']['fallos_seguidos']
+        self.assertIn('seguidos', afinado.parar(self.config, tope, 0, 0.0))
 
     def test_para_al_llegar_al_tope_de_gasto(self):
-        self.assertIn('gasto', afinado.parar(self.config, 0, 0, 1.0))
+        tope = self.config['afinado']['tope_gasto']
+        self.assertIn('gasto', afinado.parar(self.config, 0, 0, tope))
 
 
 class TestLaPromocion(unittest.TestCase):
@@ -308,6 +392,17 @@ class TestSuConfig(unittest.TestCase):
         with self.assertRaisesRegex(ErrorConfig, 'afinado.pasadas'):
             validar_config({**self.base,
                             'afinado': {**self.base['afinado'], 'pasadas': 1}})
+
+    def test_el_margen_de_las_guardias_no_puede_ser_negativo(self):
+        # Cero vale: es decir «ninguna tolerancia», que es la vuelta 1. Negativo
+        # seria exigirle al candidato que mejore la guardia para no romperla.
+        validar_config({**self.base,
+                        'afinado': {**self.base['afinado'],
+                                    'margen_guardias': 0}})
+        with self.assertRaisesRegex(ErrorConfig, 'afinado.margen_guardias'):
+            validar_config({**self.base,
+                            'afinado': {**self.base['afinado'],
+                                        'margen_guardias': -1}})
 
     def test_el_entorno_de_afinado_no_puede_ser_el_de_las_novelas(self):
         with self.assertRaisesRegex(ErrorConfig, 'afinado.entorno'):

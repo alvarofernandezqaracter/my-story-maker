@@ -63,6 +63,7 @@ REGLAS = [
      'minusculas, digitos, guion o guion bajo, sin empezar por "langfuse"'),
     ('afinado.pasadas', lambda v: _entero(v) and v >= 2, 'entero >= 2'),
     ('afinado.factor_margen', lambda v: _numero(v) and v > 0, 'numero > 0'),
+    ('afinado.margen_guardias', lambda v: _numero(v) and v >= 0, 'numero >= 0'),
     ('afinado.max_candidatos', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
     ('afinado.fallos_seguidos', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
     ('afinado.tope_gasto', lambda v: _numero(v) and v > 0, 'numero > 0'),
