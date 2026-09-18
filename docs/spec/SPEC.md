@@ -953,6 +953,9 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `dbc98c6` | 2026-09-18 | docs(spec): §17 regenerada para 1.17.0 |
 | `8a56e6c` | 2026-09-18 | docs(autoaprendizaje): 0.3.0, §14 lo que han ensenado las primeras rondas |
 | `7a07df7` | 2026-09-18 | docs(spec): 1.17.1, §18 los tests que cubren la promocion |
+| `4070a63` | 2026-09-18 | docs(spec): §17 regenerada para 1.17.1 |
+| `d0948fc` | 2026-09-18 | docs(autoaprendizaje): 0.4.0, §3 primero se mide y despues se escribe el objetivo |
+| `c5106f2` | 2026-09-18 | docs(spec): 1.18.0, §24 el comando medir y la linea base obligatoria |
 
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
