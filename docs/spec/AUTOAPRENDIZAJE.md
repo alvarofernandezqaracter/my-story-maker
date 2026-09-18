@@ -1,6 +1,6 @@
 ---
 doc: spec-autoaprendizaje
-version: 0.3.0
+version: 0.4.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -60,6 +60,64 @@ escribir una novela entera después de una promoción y mirarla con `TRAZAS.md`.
 
 ## §3 El objetivo: una métrica que baja y varias que no pueden caer
 
+### Primero se mide, y después se escribe el objetivo
+
+**Ningún objetivo se escribe sin haber medido antes el prompt vigente.** No es
+una recomendación: el banco se niega a correr un objetivo que no lleve su línea
+base dentro, y lo dice al arrancar en vez de gastar una ronda.
+
+Esta regla no es nueva en el repositorio —§23 de `SPEC.md` ya decía que un
+objetivo sin línea base no entra en la tabla— y entró aquí por haberla
+incumplido. Los tres primeros objetivos del banco se escribieron a ojo, y al
+medir el vigente salió esto:
+
+- El suelo de datos estaba en 12 y el prompt real da entre 20 y 22.
+- La guardia de categorías exigía las cuatro en todos los casos, y **el propio
+  prompt vigente baja a tres** en una de cada cuatro pasadas.
+- La guardia de VD-04 exigía cero fallos, y una de las cuatro pasadas del
+  vigente sacó cuatro.
+
+Dos de las tres guardias **las incumplía el prompt que estaban protegiendo**.
+Una guardia así no protege nada: solo hace imposible promover, y el loop parece
+prudente cuando en realidad está roto.
+
+```bash
+python -m novela medir --objetivo <id> --guardar
+```
+
+Mide el vigente y nada más —sin optimizador, sin promoción— varias veces, y
+escribe lo medido dentro del fichero del objetivo, que es donde alguien va a
+escribir una guardia.
+
+### Y el margen tiene que quedar por encima del ruido
+
+`medir` corre **más de una pasada a propósito**. La diferencia entre dos pasadas
+idénticas es el ruido, y el ruido es el suelo de lo que el banco puede
+distinguir. Medido en este repositorio, con un caso por corrida:
+
+| Métrica | Cuánto se mueve sola |
+|---|---:|
+| `vd01`, `vd04_fallos` | 100% |
+| `tokens_salida` | 45,9% |
+| `tokens_rol` | 37,9% |
+| `datos` | 32,3% |
+| `tokens_prompt` | 0% |
+
+Con esos números, **pedir una mejora del 10% era pedir que el azar cayera del
+lado bueno**. De ahí salen dos cosas: que el margen pueda vivir en el objetivo y
+no solo en `config.json` —cada métrica tiene su propio ruido, y un único margen
+para todas o no aprieta o hace imposible ganar—, y que el banco compruebe la
+relación entre los dos números antes de correr. Si el margen no supera al ruido,
+se niega y explica cuál de las tres salidas hay: subir el margen, subir
+`repeticiones` o conseguir más casos.
+
+**Un objetivo que hoy no puede decidir nada se queda escrito y marcado**, como
+`investigador-formato`. No se borra: dice qué hay que perseguir el día que haya
+casos suficientes, y mientras tanto solo corre en seco. Es el mismo «pendiente
+de medir» de §23 de `SPEC.md`, que es un estado honesto.
+
+### Las dos piezas de un objetivo
+
 Un **objetivo** es lo que se optimiza, y es la pieza central: sin él no hay loop.
 Lleva siempre dos cosas.
 
@@ -107,11 +165,17 @@ Los tres objetivos que hay definidos:
 | `investigador-formato` | investigador | `vd01`, la fracción de veces que no obedece el contrato de salida | Las tres anteriores, y el gasto no sube más de un cuarto |
 | `escritor-longitud` | escritor | `desvio_palabras` sobre `palabras_objetivo` | VD-08 sin bloqueo; párrafos sobre `margenes.parrafos_min`; un suelo de palabras |
 
-El segundo enseña dos cosas. Una, que **la métrica objetivo no siempre es
-dinero**: que el investigador devuelva a veces el dossier con un párrafo de
-cortesía delante no cuesta casi nada y rompe el contrato de §5. Y otra, que los
-objetivos salen de haber medido: este existe porque las dos primeras rondas de
-`investigador-barato` no encontraron lo que buscaban y encontraron esto.
+De los tres, **hoy solo el primero puede decidir algo**, y con un margen del 45%
+porque su métrica se mueve sola un 37,9%. El segundo está parado por ruido y el
+tercero por no tener línea base. Que dos de tres no sean accionables no es un
+defecto del banco: es lo que hay, dicho en voz alta en vez de escondido detrás de
+rondas que descartan y nadie sabe por qué.
+
+El segundo enseña además que **la métrica objetivo no siempre es dinero**: que el
+investigador devuelva a veces el dossier con un párrafo de cortesía delante no
+cuesta casi nada y rompe el contrato de §5. Y enseña que los objetivos salen de
+haber medido: existe porque las primeras rondas de `investigador-barato` no
+encontraron lo que buscaban y encontraron esto.
 
 **Una guardia puede llevar tolerancia**, y por eso este objetivo deja subir el
 gasto un 25%. Sin holgura, una guardia es binaria y rechaza cualquier canje:
@@ -334,6 +398,11 @@ es un número que nadie se atreve a tocar dentro de seis meses.
 
 `propuesta` → `medida` → `promovida` | `descartada` | `agotada` | `parada`
 
+Y antes de todo eso, un objetivo que no puede decidir nada **no llega a ser una
+ronda**: el banco para al arrancar y dice cuál de las tres salidas hay. Gastar
+una ronda para descubrir lo que se sabía de antemano es la forma cara de no
+enterarse.
+
 `descartada` es el resultado normal y sano: el candidato no ganó por el margen.
 `agotada` es que se acabaron las rondas sin promover nada, y dice algo del
 objetivo, no del prompt. `parada` es el tope de gasto, y deja la ronda a medias a
@@ -416,6 +485,29 @@ banco; todo impide dar por buena una promoción sin mirarla.
 
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección
 tocada y el motivo.
+
+### [0.4.0] — 2026-09-18
+
+**Añadido**
+- §3. **Primero se mide y después se escribe el objetivo**, y el banco lo exige:
+  sin línea base dentro del objetivo, se niega a correr. Y **el margen tiene que
+  quedar por encima del ruido** de su métrica, con el margen viviendo en el
+  objetivo porque cada métrica tiene el suyo. Motivo: medido, `tokens_rol` se
+  mueve solo un 37,9% entre dos pasadas idénticas y el margen era del 10%. La
+  regla no es nueva en el repositorio —§23 de `SPEC.md` ya la tenía— y entró
+  aquí por haberla incumplido.
+- §3, §9. El comando `medir`, que mide el vigente y nada más, y el estado de un
+  objetivo que hoy no puede decidir nada: se queda escrito, marcado, y solo
+  corre en seco.
+- §14. Tanda 3, con los números que provocaron todo lo anterior.
+
+**Cambiado**
+- §3. Las tres guardias de `investigador-barato`, reescritas con la medida
+  delante. Dos de ellas **las incumplía el prompt vigente que protegían**: VD-04
+  a cero cuando una pasada suya saca cuatro fallos, y las cuatro categorías en
+  todos los casos cuando una de cada cuatro pasadas baja a tres. Una guardia que
+  el titular no pasa no protege nada: hace imposible promover y disfraza de
+  prudencia un loop roto.
 
 ### [0.3.0] — 2026-09-18
 
@@ -543,3 +635,26 @@ prompt y lo commitea solo lo han recorrido los tests, en un repositorio de usar
 y tirar. Está probado —que escribe el fichero, que el commit no arrastra nada
 más y que se planta ante un árbol sucio— pero no ha pasado de verdad. Conviene
 tenerlo presente la primera vez que pase.
+
+### Tanda 3 — 2026-09-18, medida de la línea base, 0,47 $
+
+La pregunta que la provocó: si cuatro rondas no han mejorado nada, **lo que
+estará mal serán las métricas y los objetivos**. Lo estaban, y este es el
+número que lo demuestra: el mismo prompt, sobre los mismos casos, medido dos
+veces sin cambiar absolutamente nada, dio **7.166 y 4.907 tokens**. Un 37,9% de
+diferencia contra un margen del 10%.
+
+Y al mirar las guardias con la medida delante, dos de las tres **las incumplía
+el propio prompt vigente**: una pasada suya sacó cuatro fallos de VD-04 contra
+una guardia de cero, y otra bajó a tres categorías contra una guardia de cuatro.
+El suelo de datos, en 12, estaba muy por debajo de los 20–22 reales.
+
+**Ninguna de las cuatro rondas anteriores podía terminar bien.** No porque el
+optimizador fuera malo ni porque el prompt vigente fuera insuperable, sino
+porque se le pedía a un candidato que batiera el azar y que pasara por encima de
+un listón que el titular tampoco pasaba.
+
+De aquí salen las tres reglas nuevas de §3 —medir antes de escribir el objetivo,
+margen por encima del ruido, y guardias con los números del vigente delante— y
+el comando `medir`, que es el que faltaba. Y sale un aviso para el futuro:
+**cuatro rondas descartando seguidas no son prudencia, son un síntoma**.
