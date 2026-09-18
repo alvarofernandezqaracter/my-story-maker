@@ -192,7 +192,7 @@ mensaje: se deshace revirtiéndolo. El diseño entero está en
 python -m unittest discover -s tests -t .
 ```
 
-Ciento veintiocho, sin red y sin coste. Cubren el lector del canon, la auditoría
+Ciento veintinueve, sin red y sin coste. Cubren el lector del canon, la auditoría
 del gate, la API de la interfaz, el árbol de trazas reconstruido, el hook, y la
 aritmética del banco con sus reglas de parada.
 

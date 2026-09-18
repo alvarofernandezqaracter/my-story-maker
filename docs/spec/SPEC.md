@@ -925,6 +925,10 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `278c121` | 2026-09-18 | docs(spec): §17 regenerada para 1.15.0 |
 | `8f172fc` | 2026-09-18 | docs(autoaprendizaje): §1-§13 el banco monotraza que mejora prompts con metricas |
 | `cb61e88` | 2026-09-18 | docs(spec): 1.16.0, §23 los objetivos medibles |
+| `9888378` | 2026-09-18 | docs(spec): §17 regenerada para 1.16.0 |
+| `e0e7ec2` | 2026-09-18 | docs(autoaprendizaje): 0.2.0, el documento describe el banco que hay |
+| `8149cfe` | 2026-09-18 | docs(spec): 1.17.0, §24 el banco y §12 sus nueve claves |
+
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
 ```
@@ -988,7 +992,7 @@ el loop de intentos y el bloqueo.
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ciento veintiocho, en
+**Tests.** `python -m unittest discover -s tests -t .`: ciento veintinueve, en
 cuatro ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el

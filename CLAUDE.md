@@ -211,7 +211,7 @@ python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
 python -m novela objetivos                   # lo que el banco sabe optimizar (§24)
 python -m novela sembrar --objetivo O        # saca los casos de las novelas escritas
 python -m novela aprender --objetivo O       # el loop. Con --seco no promueve nada
-python -m unittest discover -s tests -t .    # 128 tests, sin red
+python -m unittest discover -s tests -t .    # 129 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
