@@ -16,8 +16,8 @@ from pathlib import Path
 from novela import casos as casos_mod
 from novela.banco import (
     comparar, componer, ErrorBanco, Gasto, cargar_objetivo, listar_objetivos,
-    arbol_sucio, mejora, merece_la_reserva, promover, resumir,
-    sin_frontmatter)
+    arbol_sucio, decidible, margen_de, mejora, merece_la_reserva, promover,
+    resumir, sin_frontmatter)
 from novela.config import validar_config, ErrorConfig
 from novela.metricas import (
     agregar, json_de, medir, MEDIDAS, palabras, parrafos, tokens_estimados)
@@ -283,6 +283,49 @@ class ReglaDePromocion(unittest.TestCase):
         resumen = resumir(corridas, lista, OBJETIVO, CONFIG)
         self.assertEqual(resumen['corridas'], 4)
         self.assertEqual(resumen['validas'], 2)
+
+
+class ObjetivoDecidible(unittest.TestCase):
+    """La regla que salio de medir: un objetivo sin linea base, o con un margen
+    por debajo de su ruido, no puede decidir nada aunque lo parezca."""
+
+    def _con(self, ruido=None, margen=None):
+        objetivo = json.loads(json.dumps(OBJETIVO))
+        if ruido is not None:
+            objetivo['linea_base'] = {'medido': '2026-09-18', 'ruido': ruido}
+        if margen is not None:
+            objetivo['objetivo']['margen'] = margen
+        return objetivo
+
+    def test_sin_linea_base_no_se_corre(self):
+        vale, por_que = decidible(self._con(), CONFIG)
+        self.assertFalse(vale)
+        self.assertIn('linea base', por_que)
+
+    def test_un_margen_por_debajo_del_ruido_no_decide_nada(self):
+        # Medido: tokens_rol se mueve solo un 37,9% entre dos pasadas
+        # identicas, y el margen de config es del 10%.
+        vale, por_que = decidible(self._con(ruido={'tokens_rol': 0.379}), CONFIG)
+        self.assertFalse(vale)
+        self.assertIn('suerte', por_que)
+
+    def test_con_el_margen_por_encima_del_ruido_si(self):
+        vale, _ = decidible(self._con(ruido={'tokens_rol': 0.379}, margen=0.45), CONFIG)
+        self.assertTrue(vale)
+
+    def test_el_margen_del_objetivo_manda_sobre_el_de_la_config(self):
+        # Cada metrica tiene su propio ruido, asi que un unico margen para todas
+        # o no aprieta o hace imposible ganar.
+        self.assertEqual(margen_de(self._con(margen=0.45), CONFIG), 0.45)
+        self.assertEqual(margen_de(self._con(), CONFIG), 0.1)
+
+    def test_los_objetivos_del_repositorio_dicen_si_pueden_decidir(self):
+        # No se exige que todos sean decidibles -hoy dos no lo son y esta
+        # escrito por que-, se exige que ninguno lo finja.
+        for objetivo in listar_objetivos():
+            vale, por_que = decidible(objetivo, CONFIG)
+            if not vale:
+                self.assertTrue(por_que and por_que.strip())
 
 
 class TopeDeGasto(unittest.TestCase):

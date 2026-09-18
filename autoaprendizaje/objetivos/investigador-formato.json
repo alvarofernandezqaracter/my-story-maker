@@ -1,7 +1,7 @@
 {
   "id": "investigador-formato",
   "rol": "investigador",
-  "porque": "Sale de dos rondas medidas del objetivo investigador-barato. El prompt vigente es muy eficiente en tokens -ningun candidato se le acerco- pero incumple el contrato de salida un tercio de las veces: devuelve el dossier con vallas de codigo o con un parrafo delante, y §5 dice un unico objeto JSON y nada mas. Todos los candidatos de aquellas rondas lo arreglaban de paso. Es una mejora que existe y que aquel objetivo no podia ver, porque medir el gasto no mide la obediencia.",
+  "porque": "El prompt vigente incumple el contrato de salida y todos los candidatos de las primeras rondas lo arreglaban. Pero medido, vd01 se mueve **el 100%** entre dos pasadas identicas -salta entre 0,0 y 0,67 sin que cambie nada-, porque con tres casos el fallo aparece o no aparece. **Este objetivo no puede decidir nada todavia** y el banco se niega a correrlo salvo en seco. Lo que le falta no es codigo: son casos.",
   "prompt": "agentes/investigador.md",
   "piezas": [
     ".claude/agents/novela-investigador.md",
@@ -15,7 +15,8 @@
     "metrica": "vd01",
     "direccion": "baja",
     "agregado": "media",
-    "explicacion": "Vale 1 cuando la respuesta no es solo el objeto JSON -hay un preambulo, una despedida o texto fuera- y 0 cuando lo es. La media sobre los casos es la fraccion de veces que el rol desobedece el contrato. Cero es obedecer siempre. Las vallas de codigo no cuentan como fallo; lo que cuenta es el texto suelto fuera del JSON."
+    "explicacion": "Vale 1 cuando la respuesta no es solo el objeto JSON -hay un preambulo, una despedida o texto fuera- y 0 cuando lo es. La media sobre los casos es la fraccion de veces que el rol desobedece el contrato. Cero es obedecer siempre. Las vallas de codigo no cuentan como fallo; lo que cuenta es el texto suelto fuera del JSON.",
+    "margen": 0.5
   },
   "guardias": [
     {
@@ -45,5 +46,47 @@
       "porque": "El gasto no puede dispararse por arreglar la forma, pero una guardia sin holgura rechazaria cualquier canje: los candidatos de las dos rondas anteriores arreglaban el formato y costaban entre un 39% y un 129% mas. Un cuarto es lo que se acepta pagar por que el rol obedezca siempre."
     }
   ],
-  "informativas": ["tokens_por_dato", "tokens_prompt", "tokens_salida", "coste_usd", "segundos"]
+  "informativas": [
+    "tokens_por_dato",
+    "tokens_prompt",
+    "tokens_salida",
+    "coste_usd",
+    "segundos"
+  ],
+  "linea_base": {
+    "medido": "2026-09-18",
+    "pasadas": 4,
+    "ruido": {
+      "vd01": 1.0,
+      "vd04_fallos": 1.0,
+      "tokens_salida": 0.459,
+      "tokens_rol": 0.379,
+      "segundos": 0.341,
+      "datos": 0.323,
+      "coste_usd": 0.319,
+      "categorias": 0.25,
+      "tokens_prompt": 0.0
+    },
+    "vigente": {
+      "taller": {
+        "tokens_rol": 7166.0,
+        "vd04_fallos": 0,
+        "datos": 21.67,
+        "categorias": 4,
+        "vd01": 0.3333,
+        "tokens_prompt": 1425.0,
+        "tokens_salida": 5741.0
+      },
+      "reserva": {
+        "tokens_rol": 8205.33,
+        "vd04_fallos": 4,
+        "datos": 20.67,
+        "categorias": 3,
+        "vd01": 0.0,
+        "tokens_prompt": 1425.0,
+        "tokens_salida": 6780.33
+      }
+    },
+    "nota": "Cuatro pasadas del prompt vigente, dos por particion, el 2026-09-18. El ruido es la diferencia entre dos pasadas identicas, y es el suelo de lo que el banco puede distinguir."
+  }
 }

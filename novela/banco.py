@@ -294,6 +294,50 @@ def mejora(vigente, candidato, direccion):
     return (vigente - candidato) / abs(float(vigente))
 
 
+def margen_de(objetivo, config):
+    """El margen que tiene que batir un candidato en este objetivo.
+
+    Puede vivir en el objetivo y no solo en config.json, y la diferencia no es
+    un capricho: cada metrica tiene su propio ruido. Medido, `tokens_rol` se
+    mueve solo un 38% entre dos pasadas identicas y `tokens_prompt` un 0%, asi
+    que un unico margen para las dos o no aprieta o hace imposible ganar.
+    """
+    propio = (objetivo.get('objetivo') or {}).get('margen')
+    if isinstance(propio, (int, float)) and not isinstance(propio, bool):
+        return float(propio)
+    return (config.get('autoaprendizaje') or {}).get('margen_mejora', 0.1)
+
+
+def decidible(objetivo, config):
+    """Si este objetivo puede decidir algo, o solo parecerlo.
+
+    Dos condiciones, las dos aprendidas midiendo. **Hace falta una linea base**,
+    porque un suelo puesto a ojo o no aprieta o hace imposible ganar -las
+    primeras guardias de este repositorio las incumplia el propio prompt
+    vigente la mitad de las veces-. Y **el margen tiene que quedar por encima
+    del ruido** de la metrica, porque una mejora por debajo del ruido no se
+    distingue de haber tenido suerte.
+
+    Es la regla de §23 de SPEC.md, que ya decia que un objetivo sin linea base
+    no entra en la tabla, traida aqui y hecha obligatoria.
+    """
+    base = objetivo.get('linea_base') or {}
+    if not base.get('medido'):
+        return False, ('{} no tiene linea base. Mide primero:'
+                       ' python -m novela medir --objetivo {} --guardar'.format(
+                           objetivo['id'], objetivo['id']))
+    metrica = objetivo['objetivo']['metrica']
+    ruido = (base.get('ruido') or {}).get(metrica)
+    margen = margen_de(objetivo, config)
+    if isinstance(ruido, (int, float)) and ruido >= margen:
+        return False, ('{} se mueve solo un {:.1%} entre dos pasadas identicas y el'
+                       ' margen es {:.1%}: con estos numeros una promocion seria'
+                       ' suerte. Sube el margen del objetivo, sube'
+                       ' autoaprendizaje.repeticiones o consigue mas casos.'.format(
+                           metrica, ruido, margen))
+    return True, None
+
+
 def merece_la_reserva(ganancia, margen):
     """Si vale la pena gastar la reserva midiendo a este candidato.
 
@@ -307,7 +351,7 @@ def merece_la_reserva(ganancia, margen):
 def comparar(resumen_vigente, resumen_candidato, objetivo, config):
     """La regla de promocion de §7, entera y con sus motivos escritos."""
     ajustes = (config.get('autoaprendizaje') or {})
-    margen = ajustes.get('margen_mejora', 0.1)
+    margen = margen_de(objetivo, config)
     minimos = ajustes.get('casos_minimos', 4)
 
     metrica = objetivo['objetivo']['metrica']
@@ -361,6 +405,93 @@ def comparar(resumen_vigente, resumen_candidato, objetivo, config):
     return {'gana': not motivos, 'ganancia': ganancia, 'metrica': metrica,
             'vigente': vig, 'candidato': cand, 'guardias': guardias,
             'motivos': motivos}
+
+
+def linea_base(objetivo, config, trazas=None, pasadas=2, raiz='.', aviso=None,
+               log=None):
+    """Mide el prompt vigente y nada mas. Sin optimizador y sin promocion.
+
+    Es el paso que faltaba y por el que hay que empezar siempre: **un objetivo
+    escrito sin haber medido antes es un deseo con formato de JSON**. §23 de
+    SPEC.md ya lo decia de los OB-xx -sin linea base no entra en la tabla- y
+    aqui vale igual, porque un suelo puesto a ojo o bien no aprieta o bien hace
+    imposible ganar, y en los dos casos el loop no puede decir nada.
+
+    Se mide **mas de una vez a proposito**. La diferencia entre dos pasadas
+    identicas es el ruido, y el margen de promocion tiene que ser mayor que ese
+    numero o el banco promovera por suerte.
+    """
+    decir = log or (lambda *_: None)
+    gasto = Gasto((config.get('autoaprendizaje') or {}).get('gasto_max', 5.0))
+    prompt = componer(objetivo, prompt_vigente(objetivo, raiz), raiz)
+    salida = {'objetivo': objetivo['id'], 'rol': objetivo['rol'],
+              'pasadas': [], 'gasto': 0.0}
+
+    for particion in casos_mod.PARTICIONES:
+        lista, origen = casos_mod.cargar(objetivo, particion, trazas, aviso=aviso)
+        if not lista:
+            continue
+        for numero in range(1, int(pasadas) + 1):
+            decir('  {} pasada {}: {} casos ({})'.format(
+                particion, numero, len(lista), origen))
+            resumen = resumir(correr(prompt, lista, objetivo, config, gasto, aviso),
+                              lista, objetivo, config)
+            salida['pasadas'].append({'particion': particion, 'pasada': numero,
+                                      'casos': resumen['validas'],
+                                      'agregados': resumen['agregados'],
+                                      'detalle': resumen['detalle']})
+    salida['gasto'] = gasto.total
+    salida['ruido'] = _ruido(salida['pasadas'], objetivo)
+    return salida
+
+
+def guardar_linea_base(objetivo, base, raiz=OBJETIVOS):
+    """Escribe lo medido dentro del objetivo, que es donde se consulta.
+
+    En el fichero del objetivo y no en un informe aparte porque es ahi donde
+    alguien escribe una guardia, y una guardia se pone con los numeros del
+    vigente delante o no se pone.
+    """
+    ruta = Path(raiz) / '{}.json'.format(objetivo['id'])
+    guardado = json.loads(ruta.read_text(encoding='utf-8'))
+    por_particion = {}
+    for pasada in base['pasadas']:
+        por_particion.setdefault(pasada['particion'], []).append(pasada['agregados'])
+    guardado['linea_base'] = {
+        'medido': datetime.now().strftime('%Y-%m-%d'),
+        'pasadas': len(base['pasadas']),
+        'ruido': {k: round(v, 4) for k, v in (base['ruido'] or {}).items()},
+        'vigente': {particion: {clave: round(valor, 4)
+                                if isinstance(valor, float) else valor
+                                for clave, valor in agregados[0].items()}
+                    for particion, agregados in por_particion.items()},
+    }
+    ruta.write_text(json.dumps(guardado, indent=2, ensure_ascii=False) + chr(10),
+                    encoding='utf-8')
+    return ruta
+
+
+def _ruido(pasadas, objetivo):
+    """Cuanto se mueve una metrica sola, entre dos pasadas identicas.
+
+    Es el suelo de lo que el banco puede distinguir: una mejora por debajo de
+    este numero no se diferencia de haber tenido suerte, asi que
+    `margen_mejora` tiene que quedar por encima.
+    """
+    ruido = {}
+    nombres = _nombres_medidos(objetivo)
+    for particion in casos_mod.PARTICIONES:
+        valores = [p['agregados'] for p in pasadas if p['particion'] == particion]
+        if len(valores) < 2:
+            continue
+        for nombre in nombres:
+            serie = [v.get(nombre) for v in valores
+                     if isinstance(v.get(nombre), (int, float))]
+            if len(serie) < 2 or not max(serie):
+                continue
+            relativo = (max(serie) - min(serie)) / float(abs(max(serie)))
+            ruido[nombre] = max(ruido.get(nombre, 0), relativo)
+    return ruido
 
 
 # --- el optimizador -----------------------------------------------------------
@@ -603,7 +734,7 @@ def ronda(objetivo, config, gasto, numero, taller, reserva, raiz='.',
         return cerrar('descartada', 'ningun candidato paso las guardias en el taller')
 
     candidato, ganancia_taller = mejor
-    margen = (config.get('autoaprendizaje') or {}).get('margen_mejora', 0.1)
+    margen = margen_de(objetivo, config)
     if not merece_la_reserva(ganancia_taller, margen):
         return cerrar('descartada', 'el mejor del taller mejora {:.1%} y el margen'
                       ' es {:.1%}: no se gasta la reserva'.format(ganancia_taller, margen))
@@ -680,6 +811,12 @@ def aprender(objetivo, config, raiz='.', seco=False, rondas=None, trazas=None,
     """El loop entero. Para al promover, al agotarse o al quedarse sin margen."""
     decir = log or (lambda *_: None)
     ajustes = (config.get('autoaprendizaje') or {})
+    vale, por_que = decidible(objetivo, config)
+    if not vale:
+        if not seco:
+            raise ErrorBanco(por_que)
+        decir('aviso: {}'.format(por_que))
+        decir('se corre igual porque es en seco, y lo que salga no decide nada.')
     if not seco and arbol_sucio(objetivo, raiz):
         raise ErrorBanco(
             'hay cambios sin commitear en {}. El banco promueve commiteando, y'

@@ -12,7 +12,7 @@ from pathlib import Path
 from .config import cargar_config, ErrorConfig
 from .banco import (
     aprender as aprender_banco, cargar_objetivo, ErrorBanco,
-    listar_objetivos)
+    guardar_linea_base, linea_base, listar_objetivos)
 from .biblioteca import actual, ErrorBiblioteca, listar as listar_novelas
 from .casos import leer_espejo, PARTICIONES, sembrar as sembrar_casos
 from .entorno import cargar_entorno
@@ -50,6 +50,10 @@ El banco (AUTOAPRENDIZAJE.md) mejora el prompt de un rol contra una metrica:
   novela sembrar --objetivo O      saca los casos de las novelas ya escritas,
                                    los parte en taller y reserva y los sube al
                                    dataset de Langfuse
+  novela medir --objetivo O [--pasadas N] [--guardar]
+                                   mide el prompt vigente y nada mas: la linea
+                                   base y el ruido. **Se hace antes de escribir
+                                   el objetivo**, no despues
   novela aprender --objetivo O [--rondas N] [--seco]
                                    el loop: mide el vigente, pide variantes,
                                    mide, y promueve el prompt si gana por el
@@ -208,6 +212,45 @@ def _ejecutar(comando, posicionales, opciones, config):
             _log('  aviso: la reserva tiene menos de {} casos. Se puede medir, pero'
                  ' ninguna promocion sera valida hasta que la biblioteca crezca.'
                  .format(minimos))
+
+    elif comando == 'medir':
+        objetivo = cargar_objetivo(_exige(opciones, 'objetivo', 'medir'))
+        trazas = Trazas(_config_de_trazas(config), aviso=_aviso)
+        _log('midiendo el prompt vigente de {}'.format(objetivo['id']))
+        try:
+            base = linea_base(
+                objetivo, config, trazas=trazas,
+                pasadas=_entero(opciones['pasadas'], 'medir --pasadas necesita un numero')
+                if opciones.get('pasadas') else 2, aviso=_aviso, log=_log)
+        finally:
+            trazas.cerrar()
+        _log('')
+        for pasada in base['pasadas']:
+            _log('{} pasada {} ({} casos)'.format(
+                pasada['particion'], pasada['pasada'], pasada['casos']))
+            for nombre, valor in pasada['agregados'].items():
+                _log('    {:<18} {}'.format(
+                    nombre, round(valor, 4) if isinstance(valor, float) else valor))
+        _log('')
+        _log('Ruido entre pasadas identicas, que es el suelo de lo que se puede')
+        _log('distinguir. El margen de promocion tiene que quedar por encima:')
+        for nombre, valor in sorted(base['ruido'].items(), key=lambda x: -x[1]):
+            _log('    {:<18} {:.1%}'.format(nombre, valor))
+        margen = (config.get('autoaprendizaje') or {}).get('margen_mejora')
+        objetivo_ruido = base['ruido'].get(objetivo['objetivo']['metrica'])
+        if objetivo_ruido is not None and objetivo_ruido >= margen:
+            _log('')
+            _log('AVISO: la metrica objetivo se mueve sola un {:.1%} y el margen es'
+                 ' {:.1%}. Con estos numeros el banco promoveria por suerte: sube el'
+                 ' margen, sube repeticiones o consigue mas casos.'.format(
+                     objetivo_ruido, margen))
+        if opciones.get('guardar'):
+            ruta = guardar_linea_base(objetivo, base)
+            _log('')
+            _log('linea base guardada en {}. Las guardias se escriben con estos'
+                 ' numeros delante, no a ojo.'.format(ruta))
+        _log('')
+        _log('{:.4f} $'.format(base['gasto']))
 
     elif comando == 'aprender':
         objetivo = cargar_objetivo(_exige(opciones, 'objetivo', 'aprender'))

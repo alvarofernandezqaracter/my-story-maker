@@ -1,7 +1,7 @@
 {
   "id": "investigador-barato",
   "rol": "investigador",
-  "porque": "El dossier se paga una vez por novela y lo lee todo el libro. Que quepa en menos tokens sin perder datos utiles abarata la preparacion entera y deja mas sitio al paquete de contexto de cada capitulo.",
+  "porque": "El dossier se paga una vez por novela y lo lee todo el libro. Que quepa en menos tokens sin perder datos utiles abarata la preparacion entera. OJO: con una repeticion por caso la metrica se mueve sola un 37,9%, asi que el margen esta en el 45% y solo una mejora enorme es distinguible. Para poder pedir menos hay que subir autoaprendizaje.repeticiones o tener mas casos.",
   "prompt": "agentes/investigador.md",
   "piezas": [
     ".claude/agents/novela-investigador.md",
@@ -15,37 +15,34 @@
     "metrica": "tokens_rol",
     "direccion": "baja",
     "agregado": "media",
-    "explicacion": "La suma de dos cosas: los caracteres del prompt divididos entre cuatro, y los tokens que el modelo genera al contestar. La segunda parte suele ser la mayor, asi que un prompt mas largo sube el numero por los dos lados: por su propio tamano y porque un encargo mas detallado produce una respuesta mas larga. Bajarlo es decir lo mismo en menos palabras y pedir datos mas cortos, sin bajar de doce datos, sin perder ninguna de las cuatro categorias y sin un solo fallo de forma."
+    "explicacion": "La suma de dos cosas: los caracteres del prompt divididos entre cuatro, y los tokens que el modelo genera al contestar. La segunda parte suele ser la mayor, asi que un prompt mas largo sube el numero por los dos lados: por su propio tamano y porque un encargo mas detallado produce una respuesta mas larga. Bajarlo es decir lo mismo en menos palabras y pedir datos mas cortos, sin bajar de doce datos, sin perder ninguna de las cuatro categorias y sin un solo fallo de forma.",
+    "margen": 0.45
   },
   "guardias": [
     {
-      "metrica": "vd04_fallos",
-      "agregado": "suma",
-      "maximo": 0,
-      "porque": "VD-04 no es negociable: un verificado con fuente modelo tumba el dossier entero en el orquestador."
-    },
-    {
       "metrica": "datos",
       "agregado": "media",
-      "minimo": 12,
-      "porque": "Es lo que convierte gastar menos en gastar menos manteniendo el rendimiento. Sin este suelo, el prompt mas barato es el que no devuelve nada."
+      "minimo": 14,
+      "porque": "El vigente da entre 20,7 y 21,7 de media segun la pasada, y la cifra se mueve sola un 32%. El suelo va justo por debajo de esa banda: 14. Antes estaba en 12, puesto a ojo y sin haber medido nada."
     },
     {
       "metrica": "categorias",
-      "agregado": "minimo",
-      "minimo": 4,
-      "porque": "Las cuatro categorias utiles tienen que estar en todos los casos, no de media: un dossier sin comida ni lenguaje deja al escritor sin la mitad de la epoca."
+      "agregado": "media",
+      "minimo": 3.5,
+      "porque": "Estaba en 'las cuatro en todos los casos', y **el propio prompt vigente lo incumple**: una de las cuatro pasadas bajo a 3. Una guardia que el vigente no pasa no protege nada, solo hace imposible promover."
     },
     {
-      "metrica": "vd01",
-      "agregado": "media",
-      "maximo": 1,
+      "metrica": "vd04_fallos",
+      "agregado": "suma",
+      "maximo": 99,
       "no_peor_que_vigente": true,
-      "porque": "La forma no puede empeorar. El contrato es un unico objeto JSON y nada mas; un candidato que ademas del dossier suelta un parrafo de cortesia gasta tokens en algo que el orquestador tira."
+      "tolerancia": 0.0,
+      "porque": "Estaba en cero y era inalcanzable: una de las cuatro pasadas del vigente saco 4 fallos de VD-04. Que el dossier del sistema incumpla VD-04 la mitad de las veces es un hallazgo por si solo y merece objetivo propio; mientras tanto, lo unico exigible es que un candidato no lo empeore."
     }
   ],
   "informativas": [
     "vd01",
+    "tokens_por_dato",
     "tokens_prompt",
     "tokens_salida",
     "coste_usd",
@@ -102,5 +99,41 @@
         "palabras_por_capitulo": 1800
       }
     }
-  ]
+  ],
+  "linea_base": {
+    "medido": "2026-09-18",
+    "pasadas": 4,
+    "ruido": {
+      "vd01": 1.0,
+      "vd04_fallos": 1.0,
+      "tokens_salida": 0.459,
+      "tokens_rol": 0.379,
+      "segundos": 0.341,
+      "datos": 0.323,
+      "coste_usd": 0.319,
+      "categorias": 0.25,
+      "tokens_prompt": 0.0
+    },
+    "vigente": {
+      "taller": {
+        "tokens_rol": 7166.0,
+        "vd04_fallos": 0,
+        "datos": 21.67,
+        "categorias": 4,
+        "vd01": 0.3333,
+        "tokens_prompt": 1425.0,
+        "tokens_salida": 5741.0
+      },
+      "reserva": {
+        "tokens_rol": 8205.33,
+        "vd04_fallos": 4,
+        "datos": 20.67,
+        "categorias": 3,
+        "vd01": 0.0,
+        "tokens_prompt": 1425.0,
+        "tokens_salida": 6780.33
+      }
+    },
+    "nota": "Cuatro pasadas del prompt vigente, dos por particion, el 2026-09-18. El ruido es la diferencia entre dos pasadas identicas, y es el suelo de lo que el banco puede distinguir."
+  }
 }
