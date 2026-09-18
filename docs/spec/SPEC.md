@@ -854,6 +854,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `8510030` | 2026-09-17 | feat(trazas): §20 el rol de cada observacion viaja en sus metadatos |
 | `009aeed` | 2026-09-17 | docs(spec): §17 regenerada para 1.12.1 |
 | `067f7ad` | 2026-09-18 | docs(spec): 1.13.0, §20 el juez corre en otra familia de modelos |
+| `b158aa0` | 2026-09-18 | docs(spec): §17 regenerada para 1.13.0 |
+| `3a4aa53` | 2026-09-18 | docs(spec): 1.14.0, §21 el archivo de novelas y §18 sus dos comandos |
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
 ```
