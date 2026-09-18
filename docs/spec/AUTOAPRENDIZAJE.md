@@ -1,6 +1,6 @@
 ---
 doc: spec-autoaprendizaje
-version: 0.4.0
+version: 0.5.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -110,6 +110,25 @@ para todas o no aprieta o hace imposible ganar—, y que el banco compruebe la
 relación entre los dos números antes de correr. Si el margen no supera al ruido,
 se niega y explica cuál de las tres salidas hay: subir el margen, subir
 `repeticiones` o conseguir más casos.
+
+Hay un cuarto estado, **agotado**: el objetivo está bien puesto y el techo de lo
+que se puede ganar queda por debajo del ruido de todas formas. No se borra, se
+marca con el motivo dentro, porque un objetivo agotado dice dónde no hay que
+volver a mirar.
+
+### Y antes de nada, mirar dónde está el dinero
+
+Un objetivo puede estar perfectamente medido, con sus guardias calibradas y su
+margen por encima del ruido, y seguir sin servir para nada: si el rol que
+optimiza no pesa en el total, mejorarlo no se nota. Pasó con el primero de este
+banco. El investigador se llama **una vez por novela** de unas cuarenta llamadas,
+y §6 de `TRAZAS.md` ya decía que el gasto vive en el validador y el escritor.
+Abaratarlo a la mitad no habría cambiado el precio de ningún libro.
+
+**Así que el orden es: primero dónde pesa, después qué métrica, y solo entonces
+los umbrales.** Saltarse el primer paso da trabajo impecable sobre el problema
+equivocado, que es más caro de detectar que un umbral mal puesto porque todo
+parece correcto.
 
 **Un objetivo que hoy no puede decidir nada se queda escrito y marcado**, como
 `investigador-formato`. No se borra: dice qué hay que perseguir el día que haya
@@ -486,6 +505,27 @@ banco; todo impide dar por buena una promoción sin mirarla.
 Formato Keep a Changelog. Una entrada por versión; cada línea dice la sección
 tocada y el motivo.
 
+### [0.5.0] — 2026-09-18
+
+**Añadido**
+- §3. **Antes de elegir la métrica, mirar dónde está el dinero.** Motivo: el
+  primer objetivo del banco perseguía el gasto del investigador, que es una
+  llamada por novela de unas cuarenta. Estaba bien medido y no servía para nada,
+  que es el fallo más caro de detectar porque todo parece correcto.
+- §3. El estado **agotado**: el objetivo está bien puesto y su techo queda por
+  debajo del ruido igualmente. Se marca con el motivo dentro y el banco se niega
+  a correrlo, porque un objetivo agotado dice dónde no hay que volver.
+- §14. Tanda 4, que lo cierra: acortar el prompt un 30% ahorra un 1,1%, porque
+  el gasto lo domina lo que el rol devuelve y no lo que se le manda.
+
+**Cambiado**
+- El encargo del optimizador. Doce variantes de doce salieron más caras porque
+  sus instrucciones premiaban añadir detalle; ahora lleva escrito que en un
+  objetivo de gasto el texto se paga dos veces y que al menos una variante tiene
+  que ser más corta que el vigente. Funcionó a la primera: las tres siguientes
+  salieron más cortas.
+- `investigador-barato` queda marcado como agotado.
+
 ### [0.4.0] — 2026-09-18
 
 **Añadido**
@@ -658,3 +698,35 @@ De aquí salen las tres reglas nuevas de §3 —medir antes de escribir el objet
 margen por encima del ruido, y guardias con los números del vigente delante— y
 el comando `medir`, que es el que faltaba. Y sale un aviso para el futuro:
 **cuatro rondas descartando seguidas no son prudencia, son un síntoma**.
+
+### Tanda 4 — 2026-09-18, `investigador-barato` con el examen ya bien puesto, 1,60 $
+
+Dos rondas más, las primeras con las guardias calibradas y el margen por encima
+del ruido. Las dos descartaron, y entre las dos cierran el objetivo.
+
+**La primera confirmó que el optimizador iba en dirección contraria.** Las tres
+variantes pasaron las tres guardias —el listón ya estaba bien puesto— y costaron
+entre un 58% y un 82% **más**. Con eso, doce variantes de doce habían salido más
+caras. El problema había dejado de estar en la medida y estaba en quien
+proponía: sus instrucciones premiaban añadir detalle, y en un objetivo de gasto
+el texto se paga dos veces, en el encargo y en la respuesta que provoca. Se le
+escribió esa lección en su propio encargo, con la obligación de que al menos una
+variante sea más corta que el vigente.
+
+**La segunda demostró que la lección funciona y que el objetivo no tiene sitio.**
+Las tres variantes salieron más cortas que el vigente —1.405, 1.702 y 1.457
+caracteres frente a 2.056— y la mejor igualó el gasto: un 1,1%. Ahí está el
+techo, y explica todo lo anterior: **acortar el prompt un 30% ahorra un 1%**,
+porque el gasto lo domina lo que el rol devuelve —un dossier de veinte fichas— y
+no lo que se le manda. Lo único que movería la cifra es recortar el dossier, que
+es justo lo que las guardias prohíben, con razón.
+
+**Y el objetivo estaba mal elegido desde el principio.** El investigador se llama
+**una vez por novela** de unas cuarenta llamadas; la pasada 1 de `TRAZAS.md` ya
+decía que el gasto está en el validador y el escritor. Ni abaratándolo a la mitad
+lo notaría el libro. Queda marcado como **agotado**, con el motivo dentro: un
+objetivo agotado no se borra, porque dice dónde no hay que volver.
+
+De aquí sale la regla que faltaba en §3: **antes de elegir qué métrica perseguir,
+mirar dónde está el dinero**. Un objetivo bien medido sobre un rol que no pesa es
+trabajo perfectamente hecho sobre el problema equivocado.
