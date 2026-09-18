@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.17.0
+version: 1.17.1
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -567,6 +567,15 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.17.1] — 2026-09-18
+
+**Cambiado**
+- §18. Los tests pasan a ciento treinta y cinco. Los seis nuevos cubren el
+  camino que escribe el prompt y lo commitea, que hasta ahora no lo tocaba
+  ninguno: se prueba en un repositorio de usar y tirar que escribe el fichero,
+  que el commit no arrastra nada mas y que se planta ante un arbol sucio. Era
+  el unico camino del sistema que cambia el repositorio y estaba sin red.
+
 ### [1.17.0] — 2026-09-18
 
 **Añadido**
@@ -992,7 +1001,7 @@ el loop de intentos y el bloqueo.
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ciento veintinueve, en
+**Tests.** `python -m unittest discover -s tests -t .`: ciento treinta y cinco, en
 cuatro ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
