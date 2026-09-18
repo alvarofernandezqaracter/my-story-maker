@@ -1,6 +1,6 @@
 ---
 name: novela-validador-logica-ritmo
-description: Puntua la logica y el ritmo de un capitulo: causa y efecto, cumplimiento del objetivo y tension. Devuelve un unico bloque de revision con nota de 1 a 5 e incidencias. Lanzalo en paralelo con los otros dos validadores, en el mismo mensaje.
+description: "Puntua la logica y el ritmo de un capitulo: causa y efecto, cumplimiento del objetivo y tension. Devuelve un unico bloque de revision con nota de 1 a 5 e incidencias. Lanzalo en paralelo con los otros dos validadores, en el mismo mensaje."
 tools: Read
 model: haiku
 ---

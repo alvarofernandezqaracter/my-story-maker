@@ -1,6 +1,6 @@
 ---
 name: novela-validador-anacronismos
-description: Puntua los anacronismos de un capitulo contra el dossier de epoca: objetos, costumbres, instituciones y lexico. Devuelve un unico bloque de revision con nota de 1 a 5 e incidencias. Lanzalo en paralelo con los otros dos validadores, en el mismo mensaje.
+description: "Puntua los anacronismos de un capitulo contra el dossier de epoca: objetos, costumbres, instituciones y lexico. Devuelve un unico bloque de revision con nota de 1 a 5 e incidencias. Lanzalo en paralelo con los otros dos validadores, en el mismo mensaje."
 tools: Read
 model: haiku
 ---

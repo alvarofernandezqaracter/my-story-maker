@@ -1,6 +1,6 @@
 ---
 name: novela-validador-continuidad
-description: Puntua la continuidad de un capitulo contra el canon: donde esta cada uno, que sabe cada uno y cuando pasa. Devuelve un unico bloque de revision con nota de 1 a 5 e incidencias. Lanzalo en paralelo con los otros dos validadores, en el mismo mensaje.
+description: "Puntua la continuidad de un capitulo contra el canon: donde esta cada uno, que sabe cada uno y cuando pasa. Devuelve un unico bloque de revision con nota de 1 a 5 e incidencias. Lanzalo en paralelo con los otros dos validadores, en el mismo mensaje."
 tools: Read
 model: haiku
 ---
