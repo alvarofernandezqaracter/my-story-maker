@@ -137,6 +137,18 @@ class Metricas(unittest.TestCase):
         crudo = 'texto antes {"datos": [{"dato": "un } dentro", "categoria": "comida"}]}'
         self.assertEqual(json_de(crudo)['datos'][0]['categoria'], 'comida')
 
+    def test_los_tokens_por_dato_premian_al_que_rinde_y_no_al_que_trabaja_menos(self):
+        # Un dossier el doble de grande por el mismo precio es mejor, y en
+        # tokens absolutos se leeria como un empeoramiento.
+        flojo = corrida(dossier(5), tokens_prompt=500, tokens_salida=500)
+        lleno = corrida(dossier(20), tokens_prompt=500, tokens_salida=700)
+        self.assertEqual(medir(flojo, {}, CONFIG, ['tokens_por_dato'])['tokens_por_dato'], 200)
+        self.assertEqual(medir(lleno, {}, CONFIG, ['tokens_por_dato'])['tokens_por_dato'], 60)
+
+    def test_sin_datos_no_hay_tokens_por_dato_en_vez_de_una_division_por_cero(self):
+        vacio = corrida('esto no es un dossier')
+        self.assertIsNone(medir(vacio, {}, CONFIG, ['tokens_por_dato'])['tokens_por_dato'])
+
     def test_palabras_y_parrafos_cuentan_lo_que_parece(self):
         self.assertEqual(palabras('una dos tres'), 3)
         self.assertEqual(parrafos('uno\n\ndos\n\n\ntres'), 3)
@@ -237,6 +249,19 @@ class ReglaDePromocion(unittest.TestCase):
         self.assertFalse(merece_la_reserva(0.05, 0.1))
         self.assertFalse(merece_la_reserva(-0.18, 0.1))
         self.assertFalse(merece_la_reserva(None, 0.1))
+
+    def test_una_guardia_con_tolerancia_admite_un_canje(self):
+        # Sin tolerancia, la guardia es binaria y tumba cualquier candidato que
+        # mejore una cosa a cambio de empeorar otra un poco.
+        objetivo = dict(OBJETIVO, guardias=[
+            {'metrica': 'datos', 'agregado': 'media', 'maximo': 99,
+             'no_peor_que_vigente': True, 'tolerancia': 0.2}])
+        dentro = comparar(self._resumen(1000, datos=10), self._resumen(500, datos=11),
+                          objetivo, CONFIG)
+        fuera = comparar(self._resumen(1000, datos=10), self._resumen(500, datos=13),
+                         objetivo, CONFIG)
+        self.assertTrue(dentro['gana'])
+        self.assertFalse(fuera['gana'])
 
     def test_el_resumen_solo_agrega_las_corridas_validas(self):
         lista = [{'id': 'c1'}, {'id': 'c2'}]

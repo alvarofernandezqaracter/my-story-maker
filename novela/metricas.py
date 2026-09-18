@@ -266,6 +266,22 @@ def _vd10_fallos(corrida, caso, config):
     return fallos
 
 
+def _tokens_por_dato(corrida, caso, config):
+    """Lo que cuesta cada dato util del dossier.
+
+    Sale de dos rondas reales en las que todos los candidatos salieron mas caros
+    que el vigente: con un suelo de doce datos y las cuatro categorias
+    obligatorias, un prompt que instruye mejor produce un dossier mas lleno, y
+    en tokens absolutos eso se lee como un empeoramiento aunque cada dato salga
+    mas barato. Esta metrica pregunta lo que de verdad se quiere saber -si el
+    rol rinde mas por token- en vez de premiar al que trabaja menos.
+    """
+    datos = _datos(corrida, caso, config)
+    if not datos:
+        return None
+    return _tokens_rol(corrida, caso, config) / float(datos)
+
+
 def _media_notas(corrida, caso, config):
     """La media de las tres notas de un validador, para poder vigilarla."""
     valor = json_de(corrida.get('salida'))
@@ -289,6 +305,7 @@ MEDIDAS = {
     'vd01': _vd01,
     'datos': _datos,
     'categorias': _categorias,
+    'tokens_por_dato': _tokens_por_dato,
     'vd04_fallos': _vd04_fallos,
     'vd10_fallos': _vd10_fallos,
     'media_notas': _media_notas,

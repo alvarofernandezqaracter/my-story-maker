@@ -1,0 +1,49 @@
+{
+  "id": "investigador-formato",
+  "rol": "investigador",
+  "porque": "Sale de dos rondas medidas del objetivo investigador-barato. El prompt vigente es muy eficiente en tokens -ningun candidato se le acerco- pero incumple el contrato de salida un tercio de las veces: devuelve el dossier con vallas de codigo o con un parrafo delante, y §5 dice un unico objeto JSON y nada mas. Todos los candidatos de aquellas rondas lo arreglaban de paso. Es una mejora que existe y que aquel objetivo no podia ver, porque medir el gasto no mide la obediencia.",
+  "prompt": "agentes/investigador.md",
+  "piezas": [
+    ".claude/agents/novela-investigador.md",
+    "agentes/investigador.md",
+    "skills/formato-dossier/SKILL.md"
+  ],
+  "herramientas": [],
+  "modelo": "haiku",
+  "salida": "respuesta",
+  "objetivo": {
+    "metrica": "vd01",
+    "direccion": "baja",
+    "agregado": "media",
+    "explicacion": "Vale 1 cuando la respuesta no es solo el objeto JSON -hay un preambulo, una despedida o texto fuera- y 0 cuando lo es. La media sobre los casos es la fraccion de veces que el rol desobedece el contrato. Cero es obedecer siempre. Las vallas de codigo no cuentan como fallo; lo que cuenta es el texto suelto fuera del JSON."
+  },
+  "guardias": [
+    {
+      "metrica": "vd04_fallos",
+      "agregado": "suma",
+      "maximo": 0,
+      "porque": "VD-04 no es negociable: un verificado con fuente modelo tumba el dossier entero en el orquestador."
+    },
+    {
+      "metrica": "datos",
+      "agregado": "media",
+      "minimo": 12,
+      "porque": "Obedecer el formato no puede salir a cambio de un dossier mas pobre."
+    },
+    {
+      "metrica": "categorias",
+      "agregado": "minimo",
+      "minimo": 4,
+      "porque": "Las cuatro categorias utiles, en todos los casos y no de media."
+    },
+    {
+      "metrica": "tokens_rol",
+      "agregado": "media",
+      "maximo": 20000,
+      "no_peor_que_vigente": true,
+      "tolerancia": 0.25,
+      "porque": "El gasto no puede dispararse por arreglar la forma, pero una guardia sin holgura rechazaria cualquier canje: los candidatos de las dos rondas anteriores arreglaban el formato y costaban entre un 39% y un 129% mas. Un cuarto es lo que se acepta pagar por que el rol obedezca siempre."
+    }
+  ],
+  "informativas": ["tokens_por_dato", "tokens_prompt", "tokens_salida", "coste_usd", "segundos"]
+}

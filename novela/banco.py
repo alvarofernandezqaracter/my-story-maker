@@ -342,9 +342,16 @@ def comparar(resumen_vigente, resumen_candidato, objetivo, config):
         elif guardia.get('no_peor_que_vigente') and isinstance(antes, (int, float)):
             # Una guardia con minimo mira hacia arriba; una con maximo, hacia
             # abajo. El empate vale: lo que no vale es empeorar.
-            if 'minimo' in guardia and valor < antes:
+            #
+            # `tolerancia` existe porque una guardia binaria rechaza cualquier
+            # canje. Dos rondas medidas lo ensenaron: los candidatos arreglaban
+            # la forma y a cambio costaban algo mas, y sin margen ninguno podia
+            # entrar aunque el canje compensara. Quien pone la tolerancia dice
+            # cuanto esta dispuesto a pagar, y lo dice en el objetivo.
+            holgura = 1 + float(guardia.get('tolerancia') or 0)
+            if 'minimo' in guardia and valor < antes / holgura:
                 pasa, por_que = False, 'peor que el vigente ({} < {})'.format(valor, antes)
-            if 'maximo' in guardia and valor > antes:
+            if 'maximo' in guardia and valor > antes * holgura:
                 pasa, por_que = False, 'peor que el vigente ({} > {})'.format(valor, antes)
         guardias.append({'metrica': nombre, 'valor': valor, 'vigente': antes,
                          'pasa': pasa, 'motivo': por_que})
