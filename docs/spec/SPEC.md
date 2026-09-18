@@ -997,6 +997,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `77cd3c8` | 2026-09-18 | feat(afinado): el loop que mide el prompt del validador y decide si lo sustituye |
 | `35788c2` | 2026-09-18 | docs(spec): §17 regenerada para 1.21.0 |
 | `67ecd9f` | 2026-09-18 | docs(spec): 1.22.0, §21 y §22 el subagente que no carga y la llamada que el hook no reconoce |
+| `d65fa29` | 2026-09-18 | docs(spec): §17 regenerada para 1.22.0 |
+| `4634275` | 2026-09-18 | fix(afinado): una vuelta abierta no desvia las trazas de una novela ajena |
 
 ```
 git -c i18n.logOutputEncoding=UTF-8 log --reverse \n    --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
