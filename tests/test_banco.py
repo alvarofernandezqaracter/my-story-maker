@@ -319,6 +319,15 @@ class ObjetivoDecidible(unittest.TestCase):
         self.assertEqual(margen_de(self._con(margen=0.45), CONFIG), 0.45)
         self.assertEqual(margen_de(self._con(), CONFIG), 0.1)
 
+    def test_un_objetivo_agotado_no_se_corre_y_dice_por_que(self):
+        # Agotado no es roto: es que el techo de lo que se puede ganar esta por
+        # debajo del ruido, y eso no lo arregla insistir.
+        objetivo = self._con(ruido={'tokens_rol': 0.379}, margen=0.45)
+        objetivo['agotado'] = 'acortar el prompt un 30% ahorra un 1,1%'
+        vale, por_que = decidible(objetivo, CONFIG)
+        self.assertFalse(vale)
+        self.assertIn('agotado', por_que)
+
     def test_los_objetivos_del_repositorio_dicen_si_pueden_decidir(self):
         # No se exige que todos sean decidibles -hoy dos no lo son y esta
         # escrito por que-, se exige que ninguno lo finja.

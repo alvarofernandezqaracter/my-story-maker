@@ -51,6 +51,19 @@ barato que uno que no lo dice; uno que dice "doce datos, uno por linea, sin
 preambulo" si. Lo que mueve una metrica es una instruccion que el modelo pueda
 obedecer sin tener que interpretarla.
 
+**Cuando la metrica es un gasto, el texto se paga dos veces.** Se paga el prompt
+que escribes y se paga la respuesta que provoca, y la segunda suele ser la
+mayor. Anadir una seccion de ejemplos, una lista de casos o una explicacion de
+por que importa algo sube las dos. **Esta medido y no es una opinion**: doce
+variantes seguidas de este banco resultaron entre un 18% y un 129% mas caras que
+el prompt al que querian ganar, y todas tenian en comun ser mas largas.
+
+Por eso, en un objetivo de gasto, **al menos una de tus variantes tiene que ser
+mas corta que el prompt vigente**, en numero de caracteres, y conseguirlo
+quitando y no apretando: secciones que repiten lo que ya dice otra, ejemplos que
+ilustran lo obvio, avisos de modos de fallo que el formato ya impide. Empieza por
+ahi y mira cuanto se puede tirar antes de que el rol deje de saber que hacer.
+
 **Las guardias son el encargo, no un estorbo.** El prompt que gasta la mitad y
 devuelve un dossier inservible no gana: lo tumba la primera guardia y habras
 gastado la ronda. Antes de dar una variante por buena, releela preguntandote que

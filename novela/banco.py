@@ -321,6 +321,12 @@ def decidible(objetivo, config):
     Es la regla de §23 de SPEC.md, que ya decia que un objetivo sin linea base
     no entra en la tabla, traida aqui y hecha obligatoria.
     """
+    if objetivo.get('agotado'):
+        # Un objetivo puede quedarse sin recorrido sin que nada este roto: si el
+        # techo de lo que se puede ganar esta por debajo del ruido, ninguna
+        # ronda lo va a encontrar por mucho que se insista. Se marca y se deja
+        # escrito, que es mas util que borrarlo: dice donde no hay que volver.
+        return False, '{} esta agotado: {}'.format(objetivo['id'], objetivo['agotado'])
     base = objetivo.get('linea_base') or {}
     if not base.get('medido'):
         return False, ('{} no tiene linea base. Mide primero:'
