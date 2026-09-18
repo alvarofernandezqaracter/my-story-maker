@@ -242,17 +242,6 @@ class Trazas:
         """
         return getattr(self._cliente, 'api', None) if self._cliente else None
 
-    @property
-    def cliente(self):
-        """El cliente del SDK, para lo que se guarda y no se observa.
-
-        Los datasets del banco (AUTOAPRENDIZAJE.md) son filas que se escriben y
-        se releen, no observaciones. Salen por aqui porque el cliente REST de
-        `api` no los sabe crear, y siguen saliendo de esta capa porque la regla
-        de §20 no cambia: la credencial vive en un solo sitio.
-        """
-        return self._cliente
-
     def averiado(self, error):
         """Un fallo de observabilidad no para la novela: se apaga y se cuenta.
 

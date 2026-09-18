@@ -57,21 +57,6 @@ REGLAS = [
     ('margenes.palabras_aviso', _fraccion, 'fraccion en (0, 1)'),
     ('margenes.palabras_bloqueo', _fraccion, 'fraccion en (0, 1)'),
     ('margenes.parrafos_min', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
-    # El banco de AUTOAPRENDIZAJE.md. Son numeros que gobiernan un loop que
-    # commitea solo, asi que estan aqui por la misma razon que los demas y con
-    # mas motivo: ninguno puede vivir escrito dentro del codigo.
-    ('autoaprendizaje.rondas_max', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
-    ('autoaprendizaje.candidatos_por_ronda', lambda v: _entero(v) and v >= 1,
-     'entero >= 1'),
-    ('autoaprendizaje.margen_mejora', _fraccion, 'fraccion en (0, 1)'),
-    ('autoaprendizaje.casos_minimos', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
-    ('autoaprendizaje.gasto_max', lambda v: _numero(v) and v > 0, 'numero > 0'),
-    ('autoaprendizaje.paciencia', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
-    ('autoaprendizaje.corridas_en_paralelo', lambda v: _entero(v) and 1 <= v <= 16,
-     'entero entre 1 y 16'),
-    ('autoaprendizaje.tope_segundos', lambda v: _entero(v) and v >= 30, 'entero >= 30'),
-    ('autoaprendizaje.repeticiones', lambda v: _entero(v) and 1 <= v <= 10,
-     'entero entre 1 y 10'),
     ('trazas.activas', lambda v: isinstance(v, bool), 'booleano'),
     ('trazas.texto', lambda v: isinstance(v, bool), 'booleano'),
     ('trazas.entorno', lambda v: isinstance(v, str) and bool(ENTORNO_DE_TRAZAS.match(v)),
@@ -110,14 +95,6 @@ def validar_config(bruto):
     maximo = _leer(bruto, 'margenes.capitulos_max')
     if _numero(minimo) and _numero(maximo) and maximo < minimo:
         fallos.append('margenes.capitulos_max debe ser mayor o igual que margenes.capitulos_min')
-
-    # Una paciencia mayor que las rondas es una clave que no llega a leerse
-    # nunca: el loop se acaba antes de que se agote.
-    paciencia = _leer(bruto, 'autoaprendizaje.paciencia')
-    rondas = _leer(bruto, 'autoaprendizaje.rondas_max')
-    if _entero(paciencia) and _entero(rondas) and paciencia > rondas:
-        fallos.append('autoaprendizaje.paciencia no puede ser mayor que'
-                      ' autoaprendizaje.rondas_max')
 
     if fallos:
         detalle = '\n  - '.join(fallos)

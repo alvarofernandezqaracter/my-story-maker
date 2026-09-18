@@ -27,16 +27,5 @@
     "activas": true,
     "entorno": "desarrollo",
     "texto": true
-  },
-  "autoaprendizaje": {
-    "rondas_max": 3,
-    "candidatos_por_ronda": 3,
-    "margen_mejora": 0.1,
-    "casos_minimos": 3,
-    "gasto_max": 5.0,
-    "paciencia": 2,
-    "corridas_en_paralelo": 3,
-    "tope_segundos": 600,
-    "repeticiones": 1
   }
 }
