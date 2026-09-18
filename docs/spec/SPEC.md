@@ -1,8 +1,8 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.12.1
+version: 1.13.0
 estado: vigente
-actualizado: 2026-09-17
+actualizado: 2026-09-18
 ---
 
 # Spec — Sistema multiagente de novelas históricas
@@ -497,7 +497,7 @@ Con esto la tabla tiene **diecisiete** claves, y ninguna sobra: cada una la lee 
 
 **La búsqueda web del investigador no existe.** Su subagente tiene `tools: Read` y trabaja de memoria. Aquí no hay ninguna clave que la encienda, y no la habrá: lo que hay que cambiar el día que entre son las herramientas del subagente. DA-04 sigue abierta.
 
-**Las credenciales, todas fuera de aquí.** Ni la de la API ni las de Langfuse (§20) caben en este fichero, porque se versiona. Van en un `.env` de la raíz, ignorado por git, que se lee al arrancar y vuelca en el entorno **sin pisar lo que ya haya**: quien exporta una variable a mano lo hace para esa ejecución y el fichero no tiene por qué contradecirle. El lector es propio y minúsculo a propósito, para no estrenar dependencia por veinte líneas. `trazas.entorno` sí vive aquí porque no es un secreto sino una etiqueta, y se valida al arrancar con las reglas de Langfuse: un entorno mal escrito no falla, que sería barato, sino que manda las trazas a otro sitio.
+**Las credenciales, todas fuera de aquí.** Ni la de la API, ni las de Langfuse, ni la del proveedor de los jueces (§20) caben en este fichero, porque se versiona. Van en un `.env` de la raíz, ignorado por git, que se lee al arrancar y vuelca en el entorno **sin pisar lo que ya haya**: quien exporta una variable a mano lo hace para esa ejecución y el fichero no tiene por qué contradecirle. El lector es propio y minúsculo a propósito, para no estrenar dependencia por veinte líneas. `trazas.entorno` sí vive aquí porque no es un secreto sino una etiqueta, y se valida al arrancar con las reglas de Langfuse: un entorno mal escrito no falla, que sería barato, sino que manda las trazas a otro sitio.
 
 ## §13 Operación: fallos y reanudación
 
@@ -547,6 +547,14 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.13.0] — 2026-09-18
+
+**Añadido**
+- §20, §12. Los jueces corren en **otra familia de modelos** que el escritor, con
+  la credencial de su proveedor en el `.env` (`OPENROUTER_API_KEY`). Motivo: un
+  juez del mismo proveedor y la misma familia comparte los puntos ciegos de quien
+  escribió, que es justo lo que esta pieza existe para detectar.
 
 ### [1.12.1] — 2026-09-17
 
@@ -1286,6 +1294,14 @@ instante, y deshacerlo es borrar puntuaciones de una en una. Se enciende a mano
 después de mirar lo que puntúa, que es también lo que pide el método: un juez sin
 calibrar contra notas humanas no mide calidad, mide el parecido entre dos
 modelos.
+
+**El juez no corre en la misma familia de modelos que el escritor**, y no es
+casualidad. Un juez del mismo proveedor y la misma familia comparte los puntos
+ciegos de quien escribió, que es precisamente lo que esta pieza existe para
+detectar. El proveedor es un servicio aparte, con su propia credencial en el
+`.env` (`OPENROUTER_API_KEY`), y la conexión se registra una sola vez en el
+proyecto de Langfuse. Cuál es el modelo exacto se elige allí, junto al resto de
+la configuración del juez.
 
 **Lo que esto cuesta y no se ve.** El juez lo corre Langfuse con su propia
 conexión al proveedor, así que **su gasto no aparece en el informe de §22**, que
