@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.15.0
+version: 1.16.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -29,6 +29,7 @@ informe de §22. Nada de eso escribe novelas.
 | §2–§13, §15 | **El diseño.** Glosario, canon, máquina de estados, agentes, paquete de contexto, gate, validadores, skills, editor global, configuración, operación y decisiones abiertas |
 | §18, §21 | Cómo está montado: el repositorio y sus comandos, y la orquestación en sí |
 | §19, §20, §22 | Lo que mira el sistema desde fuera: la interfaz, las trazas y su análisis |
+| §23 | **Los objetivos medibles.** Qué número tiene que subir o bajar, desde dónde y hasta dónde |
 | §16, §17 | Historial y log de commits del documento |
 
 El §14 está muerto. Los números de sección no se reutilizan.
@@ -37,7 +38,7 @@ El §14 está muerto. Los números de sección no se reutilizan.
 
 **Fuera de alcance en el alcance inicial.** Exportación a EPUB, ilustraciones, varios proyectos a la vez, traducción y reescritura automática a partir del editor global. La interfaz gráfica estaba también en esta lista y ha salido en parte: hay una página local (§19) desde la que se ve el canon, se sigue el proceso y se leen los capítulos. No lanza nada, porque en ese canon escribe el orquestador y nadie más.
 
-**Criterio de éxito.** Una novela completa sin contradicciones de canon detectables ni anacronismos groseros, con intervención humana solo en los dos puntos fijos que marca §4.
+**Criterio de éxito.** Una novela completa sin contradicciones de canon detectables ni anacronismos groseros, con intervención humana solo en los dos puntos fijos que marca §4. Eso dice qué se persigue y no se puede medir: **los objetivos que sí se cuentan, con su línea base y su meta, están en §23**.
 
 ## §2 Glosario
 
@@ -547,6 +548,17 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.16.0] — 2026-09-18
+
+**Añadido**
+- §23, §1. Los objetivos medibles: siete métricas con su línea base sacada de la
+  pasada 1 y su meta. Motivo: el criterio de éxito de §1 dice qué se persigue
+  pero no se puede medir ni comparar entre pasadas, así que no había forma de
+  saber si un cambio mejoraba algo. Un objetivo sin línea base no entra.
+- §23. Se declara además lo que **no** es objetivo y por qué, empezando por bajar
+  el coste por sí solo: se cumple trivialmente con un modelo peor y arruinaría la
+  única métrica que mide calidad de verdad.
 
 ### [1.15.0] — 2026-09-18
 
@@ -1515,3 +1527,81 @@ Una pasada de análisis se hace con la skill `analizar-trazas`, que lleva el
 cuestionario fijo. No hay subagente para esto a propósito: el análisis es una
 conversación con repreguntas, y un subagente que devuelve su informe y se muere
 obliga a empezar de cero en cada una.
+
+## §23 Objetivos medibles
+
+**Por qué esta sección.** El criterio de éxito de §1 —«una novela completa sin
+contradicciones de canon detectables ni anacronismos groseros»— dice qué se
+persigue pero no se puede medir ni comparar entre pasadas: no hay número que
+suba o baje, así que no hay forma de saber si un cambio mejoró algo o solo lo
+movió. Aquí viven los objetivos que sí se pueden contar.
+
+**Qué es un objetivo aquí.** Cuatro cosas o no es un objetivo, es un deseo: una
+**métrica**, **cómo se mide** —de dónde sale el número, sin intervención de
+nadie—, una **línea base** y una **meta**. Un objetivo sin línea base no entra
+en esta tabla; se queda en «pendiente de medir», que es un estado honesto y
+frecuente.
+
+**El límite de lo que hay medido.** La única novela completa es la pasada 1 de
+[`TRAZAS.md`](TRAZAS.md), y su línea base está **contaminada**: corrió con tres
+modelos distintos porque el modelo de los roles cambió a mitad, y uno de ellos no
+tiene precio en Langfuse, así que el coste está subestimado en una cantidad
+desconocida. Las líneas base de abajo se marcan según eso. **Ninguna meta de
+coste se da por incumplida contra una base sucia.**
+
+### Los objetivos
+
+| Id | Métrica | Cómo se mide | Línea base | Meta |
+|---|---|---|---|---|
+| **OB-01** | Acuerdo entre el validador y el juez externo en continuidad | Diferencia media entre la nota de `continuidad` y la de `continuidad-externa` sobre el mismo intento (§20) | **sin medir** | ≤ 0,5 de media, y **cero** intentos donde el juez ponga ≤2 y el validador ≥4 |
+| **OB-02** | Intentos por capítulo | `estado.json`: intentos totales ÷ capítulos | 1,33 (8 en 6) | ≤ 1,15 |
+| **OB-03** | Intentos que incumplen un «Ignora» de una ficha | Puntuación `ignora-respetado` (§20) | 25% (2 de 8), y **el 100% de los rechazos del gate** | ≤ 5% de los intentos |
+| **OB-04** | El gate cuadra | `gate-cuadra`: la fórmula de §8 rehecha contra lo que escribió el orquestador | 100% (8 de 8) | 100%, sin excepción |
+| **OB-05** | Aprovechamiento de caché | Tokens leídos de caché ÷ tokens de entrada, del informe de §22 | 100,0% | ≥ 99% |
+| **OB-06** | Coste por mil palabras aprobadas | Coste de la sesión ÷ palabras de los intentos aprobados | 0,0758 $ — **base sucia**, subestimada | Primero una base limpia; luego no subir de ella |
+| **OB-07** | Margen del capítulo más justo | `media` del intento aprobado menos `media_minima` | 0,30 sobre 5 | Ninguno por debajo de 0,10 |
+
+### Por qué estos y en este orden
+
+**OB-01 va primero porque de él depende que los demás signifiquen algo.** Todas
+las notas de este sistema se las pone el propio sistema: el validador es parte
+del pipeline que escribe. Mientras no haya un juez de fuera con el que
+compararlas, «media 4,27» no dice que la novela sea buena, dice que el sistema
+cree que lo es. Es también el único objetivo sin línea base, y eso es exactamente
+lo que lo hace urgente.
+
+**OB-02 y OB-03 son el mismo problema por los dos extremos.** Un rechazo del gate
+cuesta aproximadamente un capítulo entero en tokens, porque el reintento del
+último intento va de cero (§8). Y los dos rechazos de la pasada 1 fueron los dos
+por contradecir un «Ignora» de una ficha, que es el hueco de DA-13. Bajar OB-03
+baja OB-02, y bajar OB-02 baja el coste **sin tocar ningún umbral**: es la única
+palanca que mejora calidad y precio a la vez.
+
+**OB-04 y OB-05 son de guardia, no de mejora.** Están al 100% y lo que se pide es
+que no bajen. El gate lo suma un modelo (§21), así que su aritmética es el punto
+más débil del sistema y no admite un 99%. La caché se lleva el 100,0% de los
+tokens de entrada; si cae, el coste se multiplica sin que nada más haya cambiado
+y sin que nada lo anuncie.
+
+### Lo que deliberadamente no es un objetivo
+
+- **Bajar el coste por sí solo.** Hay una forma trivial de cumplir OB-06 —un
+  modelo peor— y arruinaría OB-01 sin que OB-06 se enterase. El coste solo se
+  persigue a calidad constante, y por eso OB-01 va antes en la lista.
+- **Subir las notas del validador.** Es la métrica más fácil de mover y la que
+  menos significa: el mismo sistema que escribe se la pone. Mientras OB-01 no
+  tenga base, una subida de notas no es evidencia de nada.
+- **Bajar `media_minima` para que quepan más capítulos.** La pasada 1 no da
+  ninguna razón: el margen más estrecho fue 0,30 y los dos rechazos tenían nota
+  mínima 1 con incidencia grave. No había ningún capítulo aprobable cayendo por
+  un decimal.
+- **El tope de contexto.** Al ritmo medido —unos 800 tokens por capítulo— el
+  orden de recorte de §7 no se ejercitaría hasta el capítulo 43. Optimizar algo
+  que no se ha ejecutado nunca es adivinar.
+
+### Quién mide y cuándo
+
+Una vez por novela terminada, en la pasada de análisis de §22, y el resultado se
+apunta en `TRAZAS.md` junto al resto de la pasada. **Aquel documento mide, este
+decide**: cuando una meta se alcanza de forma estable o se demuestra equivocada,
+se cambia aquí y allí queda la referencia cruzada.

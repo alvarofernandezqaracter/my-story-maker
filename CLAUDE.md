@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.15.0.
+de un brief de cinco campos. Versión 1.16.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -267,6 +267,19 @@ una rúbrica guardada aquí la puede leer justo quien está siendo evaluado. No 
 versiones, no los copies a un fichero de trabajo dentro del repo y no escribas su
 texto en el spec. Lo que sí va al spec es la decisión: que existen, a qué
 observación apuntan y por qué están fuera.
+
+## Los objetivos medibles (§23)
+
+Siete, con línea base y meta. El orden importa: **OB-01**, el acuerdo entre el
+validador y el juez externo de §20, va primero porque todas las demás notas se
+las pone el propio sistema y sin él no miden calidad sino autoestima. **OB-02**
+(1,33 intentos por capítulo) y **OB-03** (25% de intentos incumplen un «Ignora»)
+son el mismo problema por los dos lados y bajan el coste sin tocar umbrales.
+**OB-04** (el gate cuadra) y **OB-05** (caché al 100%) son de guardia: están
+perfectos y lo que se pide es que no bajen.
+
+No son objetivos, y está escrito por qué: bajar el coste por sí solo, subir las
+notas del validador, y bajar `media_minima`.
 
 # Estado actual y cosas abiertas
 
