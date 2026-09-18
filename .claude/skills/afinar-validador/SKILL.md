@@ -116,5 +116,10 @@ examinado lo puede leer.
 ## Los cuatro frenos
 
 Paras si se agotan los candidatos, si dos seguidos no baten el ruido, si una
-guardia empeora o si el gasto llega al tope. Los cuatro numeros estan en
-`config.json` y ninguno se negocia a mitad de vuelta.
+guardia empeora **mas que su tolerancia** o si el gasto llega al tope. Los
+numeros estan en `config.json` y ninguno se negocia a mitad de vuelta.
+
+La tolerancia de una guardia no es indulgencia: es lo que esa guardia no sabe
+distinguir con los casos que hay. Un falso positivo de doce capitulos limpios
+mueve la guardia 0,083 y no hay manera de moverla menos, asi que exigirle cero
+seria exigirle la perfeccion.
