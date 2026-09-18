@@ -57,7 +57,7 @@ independencia de las notas y el tiempo.
 ## La maquina de estados
 
 ```
-borrador -> investigado -> estructurado -> escribiendo -> escrito -> editado
+borrador -> investigado -> estructurado -> escribiendo -> escrito -> retocando -> editado
                                               |
                                               +--> bloqueado  (salida lateral)
 ```
@@ -145,10 +145,13 @@ Este es el loop, y es donde esta casi todo el diseno. Para el capitulo N:
    - Si aprueba, ve al punto 4. Si no, al punto 7.
 4. **Cronista.** Lanza `novela-cronista` diciendole explicitamente que el
    capitulo esta aprobado y con que intento.
-5. Comprueba su JSON: forma, obligatorios, **VD-03**, **VD-05**, **VD-06** y
-   **VD-09**.
+5. Comprueba su JSON: forma, obligatorios, **VD-03**, **VD-05**, **VD-06**,
+   **VD-09** y **VD-12** (cada linea de `olvida` esta literal en el `sabe` que
+   esa ficha tiene ahora).
 6. **Escribe el canon de una sola vez**: el resumen, los cambios de ficha en
-   `personajes.json`, los hilos en `hilos.json` y los eventos en `timeline.json`.
+   `personajes.json` —retirando primero las lineas de `olvida` y anadiendo
+   despues las de `sabe`—, los hilos en `hilos.json` y los eventos en
+   `timeline.json`.
    Van juntos o no va ninguno. Si te quedas a medias, deshaz lo escrito antes de
    hacer nada mas: media escritura es peor que ninguna, porque el capitulo
    siguiente la leera como si fuera completa.
@@ -171,10 +174,53 @@ Al aprobar el ultimo capitulo, estado a `escrito`.
 
 Requiere estado `escrito`. Lanza `novela-editor-global`, comprueba forma y
 obligatorios, y vuelca los retoques en `<novela>/retoques.md` ordenados por
-severidad. Estado a `editado`.
+severidad. Estado a `retocando`.
 
-Los retoques **se aplican a mano**. No los apliques tu y no ofrezcas aplicarlos:
-son el segundo punto fijo de intervencion humana del sistema.
+**Los retoques los aplicas tu.** Este tramo no acaba en una lista de tareas para
+una persona: acaba con cada retoque aplicado, reformulado o descartado, y con el
+motivo escrito. Un paso manual que el sistema puede dar es trabajo sin terminar.
+
+### El loop de retoque
+
+Ordena los retoques **de menor a mayor capitulo** y recorrelos de uno en uno. Un
+retoque que toca varios capitulos se aplica al menor de ellos.
+
+Para cada retoque, sobre el intento aprobado del capitulo N:
+
+1. **Escritor, quirurgico.** Pasale la ruta de su propio texto aprobado, el
+   retoque entero y la ruta de salida `cap-NN-retoque-R.md`. Le dices que toque
+   **solo** lo senalado, que no reescriba lo que ya funciona y, sobre todo, que
+   **no cambie ningun hecho**: quien entra en la escena, que sabe cada uno, que
+   pasa y en que orden. Puede cambiar como esta contado, no que paso.
+2. **VD-08 y el gate entero**, con los tres validadores a la vez, igual que en el
+   Tramo 2. Un retoque no es una excepcion al gate. Si no aprueba, el retoque se
+   queda en `descartado` y pasas al siguiente: **no gastas los tres intentos**,
+   porque el capitulo ya tenia una version aprobada y no hay nada que salvar.
+3. **Cronista** sobre el texto retocado, diciendole que es una reemision de un
+   capitulo ya aprobado.
+4. **VD-13.** Compara ese canon con el que ya estaba guardado. Si cuadra, el texto
+   retocado pasa a ser el intento aprobado y el resumen nuevo sustituye al viejo.
+   Si no cuadra, **descarta el texto retocado y deja el capitulo como estaba**.
+
+### Cuando VD-13 lo tumba
+
+Devuelve el retoque **una vez** al editor global, con el motivo delante: que
+listas del canon salieron distintas y por que. Le pides que lo reformule como un
+arreglo que no toque los hechos, o que diga que no se puede.
+
+Si la version reformulada pasa, el desenlace es `reformulado`. Si tampoco pasa, o
+si el editor dice que no se puede, es `descartado`. No hay tercera vuelta: es la
+politica de un reintento de siempre, y al final del libro tampoco hay excepcion.
+
+### Al acabar
+
+Reescribe `<novela>/retoques.md` con el desenlace de cada retoque y su motivo.
+Estado a `editado`.
+
+Lo que **no** haces aqui: bajar el liston del gate porque sea el ultimo tramo,
+aplicar a mano un retoque que VD-13 tumbo, ni tocar el canon para que un retoque
+quepa. Si un retoque pide que pase algo que no paso, eso es escaleta, no retoque,
+y se queda `descartado` con su motivo escrito.
 
 ### Exportar las trazas, y solo aqui
 
@@ -194,7 +240,7 @@ Tres reglas, y ninguna es negociable:
 
 - **Despues de `editado`, nunca antes.** El estado es lo que manda y esto solo
   observa: si falla, el cierre ya ocurrio igual.
-- **Una sola vez por novela, en la transicion `escrito` -> `editado`.** Si
+- **Una sola vez por novela, en la transicion `retocando` -> `editado`.** Si
   reanudas una novela que **ya** esta en `editado`, no lo lances. Esa es la unica
   garantia de que no se duplica: `trazar` exporta la novela entera y las
   observaciones hijas no llevan id sembrado, asi que una segunda exportacion mete
@@ -226,3 +272,5 @@ bueno. Pregunta cual y no elijas tu.
 - No ajustas los umbrales de `config.json` para que algo pase.
 - No inventas datos de epoca, resumenes ni hilos para rellenar un hueco. Si algo
   falta, el hueco se queda y se dice.
+- No aplicas a mano un retoque que VD-13 tumbo, ni retocas el canon para que
+  quepa. Se queda `descartado` con su motivo, que es informacion util.

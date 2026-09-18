@@ -138,6 +138,39 @@ no tiene la culpa de que una revision viniera mal. Bloqueante.
 Antes de escribir la propuesta del cronista en el canon, comprueba que ninguna
 comprobacion bloqueante quedo sin resolver. Si queda alguna, **no escribas nada**.
 
+## VD-12 — la retractacion casa literal
+
+Cada cadena de `olvida`, dentro de un `cambios_personaje`, tiene que estar escrita
+**tal cual** en el `sabe` que ese personaje tiene ahora mismo en
+`personajes.json`. Comparas caracter a caracter, igual que al cerrar un hilo.
+
+Si una no casa, **rechaza la propuesta entera** y devuelvesela al cronista con la
+lista de las que no casan y el `sabe` actual delante. No busques el parecido mas
+cercano: retirar del canon la linea equivocada es peor que no retirar ninguna,
+porque nadie vuelve a mirarlo. Bloqueante.
+
+`olvida` puede venir vacia o no venir. Lo que no puede es traer una linea que la
+ficha no tiene.
+
+## VD-13 — el retoque no cambia el canon
+
+Solo en el tramo de cierre (§11), despues del gate del capitulo retocado. El
+cronista vuelve a emitir el canon de ese capitulo sobre el texto nuevo, y tiene
+que salir **igual** al que ya estaba guardado en:
+
+- `resumenes/cap-NN.json`: los mismos `hilos_abiertos`, `hilos_cerrados` y
+  `personajes_presentes`, como conjuntos.
+- `timeline.json`: los mismos eventos de ese capitulo, por `id` y por `tipo`.
+- `personajes.json`: los mismos `cambios_personaje`, por `id`, `ubicacion`, y las
+  mismas lineas en `sabe` y en `olvida`.
+
+El resumen en prosa **si puede cambiar**: es la redaccion de lo mismo. Lo que no
+puede cambiar es ninguna de las listas de arriba.
+
+Si cuadra, el texto retocado sustituye al intento aprobado y el resumen nuevo
+sustituye al viejo. Si no cuadra, **descarta el texto retocado**, deja el capitulo
+como estaba y devuelve el retoque al editor global. Bloqueante.
+
 ## El gate
 
 Entra despues de VD-10 y solo con las tres revisiones validas delante.

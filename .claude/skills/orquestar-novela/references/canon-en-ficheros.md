@@ -45,7 +45,7 @@ no se versiona: lo que se versiona es lo que la produce.
     cap-01.md           el paquete con el que se escribio, para poder auditarlo
   capitulos/
     cap-01-intento-1.md borradores, aprobados y descartados
-  retoques.md           salida final del editor global
+  retoques.md           los retoques y que paso con cada uno
 ```
 
 La columna de la derecha dice **de que rol sale** el contenido, no quien escribe
@@ -112,7 +112,12 @@ te devuelva su ruta**, en el mismo momento, y no al aprobar el capitulo: un
 intento descartado tambien tiene que llevarla.
 
 `estado` del proyecto: `borrador`, `investigado`, `estructurado`, `escribiendo`,
-`bloqueado`, `escrito`, `editado`.
+`bloqueado`, `escrito`, `retocando`, `editado`.
+
+`retocando` se entra al recibir la lista del editor global, no al aplicar el
+primer retoque, y se sale cuando todos tienen desenlace anotado en
+`retoques.md`. Eso es lo que permite reanudar un cierre a medias sin repetir
+los retoques ya aplicados.
 
 `estado` de cada capitulo: `pendiente`, `en_curso`, `aprobado`, `bloqueado`.
 
@@ -148,7 +153,33 @@ solo en dos campos: `ubicacion` y `sabe`. El resto de la ficha (`id`, `nombre`,
 `rol`, `voz`, `motivacion`, `arco`) es del arquitecto y no se toca en el loop.
 
 `sabe` es acumulativo: lo que el cronista devuelve se anade a lo que ya habia, no
-lo sustituye. Un personaje no desaprende.
+lo sustituye. Un personaje no desaprende por descuido.
+
+### Retirar una linea: `olvida`
+
+La unica forma de que una linea salga de `sabe` es que el cronista la ponga en
+`olvida`, dentro de ese mismo `cambios_personaje`:
+
+```json
+{ "id": "amara",
+  "ubicacion": "En el taller",
+  "sabe": ["Que su hermano esta vivo en Castillejo"],
+  "olvida": ["Ignora que su hermano Koryo esta vivo en el campamento de Castillejo"] }
+```
+
+Existe porque media lista de `sabe` esta escrita en negativo —los «Ignora»— y sin
+esto, un personaje que aprende justo lo que ignoraba deja la ficha **afirmando y
+negando lo mismo**, y las dos lineas viajan juntas al paquete del escritor.
+
+Aplicalo asi, y en este orden: primero retiras las de `olvida`, despues anades las
+de `sabe`. **Casando la cadena literalmente**, igual que al cerrar un hilo. Si una
+no casa, es VD-12 y la propuesta entera vuelve al cronista.
+
+Retirar una linea no reescribe el pasado: la ficha dice lo que el personaje sabe
+**ahora**, y el capitulo en el que lo ignoraba sigue contandolo en su resumen.
+
+Y una linea retirada **no vuelve sola**. Si el personaje olvida algo de verdad,
+eso es una linea nueva y afirmativa, no un `olvida` del hecho.
 
 El `id` no cambia jamas. Si cambiara, todas las fichas de capitulo que apuntaban
 a el quedarian huerfanas.
@@ -162,3 +193,21 @@ Y antes de sobrescribir cualquier fichero del canon, **leelo**. Nunca lo
 reconstruyas de memoria a partir de lo que creas recordar de la conversacion: el
 fichero es la verdad y tu contexto es una copia que puede estar vieja o haberse
 compactado.
+
+## retoques.md
+
+No es canon: es el parte del cierre. Lleva los retoques que propuso el editor
+global **y el desenlace de cada uno**, porque es lo que te deja reanudar un
+cierre a medias sin repetir lo ya aplicado.
+
+Cada retoque acaba en uno de tres:
+
+| Desenlace | Que paso |
+|---|---|
+| `aplicado` | El texto retocado paso el gate y VD-13, y sustituyo al intento aprobado |
+| `reformulado` | VD-13 lo tumbo, el editor global lo reescribio y la version nueva si entro |
+| `descartado` | VD-13 tumbo las dos versiones, o el gate no aprobo el texto retocado |
+
+Un `descartado` **no es un fallo tuyo y no se arregla a mano**: se anota con su
+motivo y se sigue. Casi siempre significa que el retoque pedia que pasara algo
+que no paso, y eso es un cambio de escaleta disfrazado de retoque.

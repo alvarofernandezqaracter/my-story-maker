@@ -65,7 +65,7 @@ promoción mala sea un `git revert`.
 | [.claude/skills/orquestar-novela/SKILL.md](.claude/skills/orquestar-novela/SKILL.md) | La máquina de estados escrita como instrucciones: los tres tramos, el loop de intentos y el bloqueo |
 | [references/canon-en-ficheros.md](.claude/skills/orquestar-novela/references/canon-en-ficheros.md) | Dónde vive cada cosa del canon y quién la escribe |
 | [references/paquete-de-contexto.md](.claude/skills/orquestar-novela/references/paquete-de-contexto.md) | Los nueve bloques, el cruce de etiquetas y el orden de recorte |
-| [references/comprobaciones.md](.claude/skills/orquestar-novela/references/comprobaciones.md) | Los once `VD-xx` y el gate, con sus números |
+| [references/comprobaciones.md](.claude/skills/orquestar-novela/references/comprobaciones.md) | Los trece `VD-xx` y el gate, con sus números |
 | `.claude/agents/novela-*.md` | Los ocho subagentes |
 | `.claude/skills/afinar-validador/SKILL.md` | El loop de `AFINADO.md` escrito como instrucciones: medir, proponer, decidir y cerrar |
 | `.claude/settings.json` | El hook `PostToolUse` sobre `Agent`, que traza cada llamada (§22) |
@@ -122,7 +122,7 @@ Y conviene no olvidarlo, porque es el precio:
   conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de que
   mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
   instruido.
-- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 133
+- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 135
   tests que hay cubren el Python de `novela/`, que mira el canon y arranca al
   orquestador, pero no escribe novelas. Lo único que se comprueba del camino
   delegado son los ficheros de `.claude/agents/`, y solo su forma: que el
@@ -141,20 +141,22 @@ Esto es lo que especifican §2–§13 y §15, y lo obedece la skill.
 | `arquitecto` | brief + dossier | `{ personajes, capitulos }` | `formato-fichas` |
 | `escritor` | paquete de contexto | `{ texto, faltantes? }` | `formato-paquete-contexto`, `estilo-prosa` |
 | `validador` | capítulo + paquete + encargo | `{ revisiones: [3 bloques] }` | `rubricas-validador` |
-| `cronista` | capítulo aprobado + fichas | resumen, hilos, `cambios_personaje`, `eventos` | `formato-fichas` |
+| `cronista` | capítulo aprobado + fichas | resumen, hilos, `cambios_personaje` (con `olvida`), `eventos` | `formato-fichas` |
 | `editor_global` | resúmenes + escaleta + personajes | `{ retoques: [...] }` | — |
 
 Una skill es texto que lee un modelo, **nunca fuente de verdad para el código**:
 los números y umbrales viven en `config.json`.
 
-## Los once validadores (§9)
+## Los trece validadores (§9)
 
 VD-01 forma, VD-02 obligatorios, VD-03 ids existentes, VD-04 dossier con fuente y
 estado (un `verificado` con fuente `modelo` es inválido), VD-05 evento de trama con
 capítulo e histórico sin él, VD-06 resumen solo si hay intento aprobado, VD-07 número
 de capítulos dentro de márgenes, **VD-08 la única de dos escalones** (aviso y bloqueo,
 de ahí sus dos márgenes), VD-09 personajes presentes ⊆ ficha, VD-10 tres dimensiones
-una vez cada una con nota entera 1-5, VD-11 nada bloqueante pendiente al confirmar.
+una vez cada una con nota entera 1-5, VD-11 nada bloqueante pendiente al confirmar,
+VD-12 cada línea de `olvida` casa literal con el `sabe` de la ficha, VD-13 el retoque
+no cambia el canon del capítulo.
 
 Las tres dimensiones del validador son siempre `continuidad`, `anacronismos` y
 `logica_ritmo`, en ese orden.
@@ -169,12 +171,14 @@ La incidencia grave veta por sí sola. Siempre tres notas; **nota global no exis
 
 ## Máquina de estados (§4)
 
-`borrador` → `investigado` → `estructurado` → `escribiendo` → `escrito` → `editado`,
-con `bloqueado` como salida lateral que exige mano humana. `escribiendo` se entra al
-**arrancar** el primer capítulo, no al aprobarlo.
+`borrador` → `investigado` → `estructurado` → `escribiendo` → `escrito` →
+`retocando` → `editado`, con `bloqueado` como salida lateral que exige mano humana.
+`escribiendo` se entra al **arrancar** el primer capítulo, no al aprobarlo, y
+`retocando` al **recibir** la lista del editor global, no al aplicar el primer retoque.
 
-Dos puntos fijos de intervención humana: capítulo bloqueado (tres salidas manuales)
-y los retoques finales, que se aplican a mano.
+**Un solo punto fijo de intervención humana**: el capítulo bloqueado, con sus tres
+salidas manuales. Los retoques finales eran el segundo y dejaron de serlo: los aplica
+el sistema (§11). Un paso manual que el sistema puede dar es trabajo sin terminar.
 
 ## Invariantes del diseño
 
@@ -225,7 +229,7 @@ python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
                                              # sin Langfuse tira del diario local
 python -m novela afinar preparar             # abre una vuelta de afinado (AFINADO.md)
 python -m novela afinar puntuar              # cuenta lo que devolvieron los subagentes
-python -m unittest discover -s tests -t .    # 133 tests, sin red
+python -m unittest discover -s tests -t .    # 135 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
@@ -304,12 +308,12 @@ notas del validador, y bajar `media_minima`.
 
 - El `.drawio` de [docs/diagrama/](docs/diagrama/) va por detrás del Mermaid: le
   falta el cronista y se regenera a mano. El Mermaid de §4 es el bueno.
-- Decisiones abiertas vivas en §15: DA-02, DA-03, DA-04, DA-05, DA-06, DA-07,
-  DA-08, DA-09, DA-10, DA-12, DA-13, DA-14, DA-15.
+- Decisiones abiertas vivas en §15: DA-02, DA-03, DA-04, DA-05, DA-06, DA-08,
+  DA-09, DA-10, DA-12, DA-13, DA-15. DA-07 y DA-14 se cerraron en 1.26.0 y sus
+  números quedan muertos, como DA-01 y DA-11.
 - La búsqueda web del investigador no existe: su subagente tiene `tools: Read`.
   Para que entre hay que cambiarle las herramientas, no una clave de config.
-- **Dos huecos del modelo de datos**, que salieron en la primera pasada completa:
-  ningún `VD-xx` comprueba que el cronista respete un «Ignora» de una ficha, así
-  que un conocimiento que el gate acaba de vetar puede entrar por la puerta de al
-  lado; y `sabe` solo acumula, sin forma de retractar un «Ignora», de modo que una
-  ficha termina afirmando y negando lo mismo.
+- **Queda un hueco del modelo de datos**: ningún `VD-xx` comprueba que el cronista
+  respete un «Ignora» de una ficha, así que un conocimiento que el gate acaba de
+  vetar puede entrar por la puerta de al lado (DA-13). El otro hueco, que `sabe`
+  solo acumulara, se cerró en 1.26.0 con `olvida` y VD-12.

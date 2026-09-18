@@ -124,7 +124,7 @@ const NODOS = [
     reglas: [
       '§6 — identidad inmutable; ubicación y sabe evolucionan',
       '§7 — entran enteras las fichas de quien sale en el capítulo',
-      'DA-14 — sabe solo acumula: hoy no hay forma de retractar un «Ignora»',
+      '§3 — sabe acumula, y el cronista retira líneas con olvida (VD-12)',
     ],
     canon: (p) => (p.reparto.length ? [
       ['fichas', p.reparto.length],
@@ -357,19 +357,20 @@ const NODOS = [
         + ' lo registró',
       '§11 — lista corta y accionable: diez que se puedan ejecutar valen más que'
         + ' cuarenta observaciones',
-      '§11 — no aplica nada ni dispara reescrituras',
+      '§11 — propone; quien los aplica es el orquestador, con el gate delante',
     ],
     canon: (p) => (p.retoques ? [['intervenciones', 'una, al cerrar']] : null),
   },
   {
     id: 'retoques', nivel: 9, forma: 'artefacto', nombre: 'retoques.md',
-    descripcion: 'La lista de tareas para una persona. Se guarda junto al canon y no dentro:'
-      + ' el canon es la verdad de la novela escrita, y esto es trabajo pendiente.',
-    entradas: ['la lista del editor global'],
+    descripcion: 'El parte del cierre: cada retoque con lo que pasó al aplicarlo. Se guarda'
+      + ' junto al canon y no dentro, porque el canon es la verdad de la novela escrita.',
+    entradas: ['la lista del editor global', 'el desenlace de cada retoque aplicado'],
     salidas: ['retoques.md, al lado del canon'],
     reglas: [
-      '§11 — se aplican a mano; automatizar esa vuelta está fuera de alcance (DA-07)',
-      '§4 — al escribirlo el proyecto pasa a editado, que es el estado final',
+      '§11 — los aplica el orquestador: gate entero y VD-13 por cada uno',
+      '§11 — cada uno acaba aplicado, reformulado o descartado, con su motivo',
+      '§4 — al recibir la lista se pasa a retocando; al agotarla, a editado',
     ],
     canon: (p) => (p.retoques ? [['fichero', p.ruta_retoques]] : null),
   },

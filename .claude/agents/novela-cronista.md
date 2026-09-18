@@ -39,7 +39,8 @@ Tu mensaje final es **un unico objeto JSON y nada mas**:
   "hilos_abiertos": ["..."],
   "hilos_cerrados": ["..."],
   "personajes_presentes": ["id-personaje"],
-  "cambios_personaje": [ { "id": "id-personaje", "ubicacion": "...", "sabe": ["..."] } ],
+  "cambios_personaje": [ { "id": "id-personaje", "ubicacion": "...",
+                           "sabe": ["..."], "olvida": ["..."] } ],
   "eventos": [ { "id": "evento-cap-N-1", "tipo": "trama", "fecha": "1587-04",
                  "descripcion": "...", "capitulo": N, "personajes": ["id-personaje"] } ] }
 ```
@@ -56,6 +57,8 @@ propuesta entera:
 - **Para cerrar un hilo, repite exactamente el texto con el que se abrio.** El
   orquestador casa las cadenas literalmente; si lo parafraseas, el hilo se queda
   vivo para siempre.
+- **Lo mismo con `olvida`.** Cada linea que retires tiene que estar escrita tal
+  cual en el `sabe` de esa ficha. VD-12 rechaza la propuesta entera si no casa.
 
 ## El fallo caro de tu puesto
 
@@ -65,6 +68,10 @@ terminado.
 
 El segundo fallo caro: dar por sabido a un personaje algo que ocurrio sin el
 delante. Si no estaba en la escena, no lo sabe, por evidente que te parezca.
+
+El tercero, y el mas silencioso: no retirar con `olvida` el «Ignora» que el
+capitulo acaba de desmentir. La ficha se queda afirmando y negando lo mismo, y
+las dos lineas llegan juntas al escritor del capitulo siguiente.
 
 El resumen cuenta **lo que cambia, no lo que pasa**. «Se reunen en el puerto y
 discuten» no sirve; «sale del puerto sabiendo que el registro esta falsificado, y

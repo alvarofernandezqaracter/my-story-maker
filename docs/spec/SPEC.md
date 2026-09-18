@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.25.0
+version: 1.26.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -36,7 +36,7 @@ Hay otros dos documentos con su propia versión: [`TRAZAS.md`](TRAZAS.md), que a
 
 Los §14 y §24 están muertos. Los números de sección no se reutilizan.
 
-**Qué produce.** Un canon consultable, un fichero por capítulo aprobado y una lista final de retoques. No maqueta el libro ni aplica esos retoques por sí mismo.
+**Qué produce.** Un canon consultable, un fichero por capítulo aprobado y un parte de los retoques finales con lo que pasó al aplicar cada uno. Los retoques los aplica el propio sistema, con el gate delante (§11); no maqueta el libro.
 
 **Fuera de alcance en el alcance inicial.** Exportación a EPUB, ilustraciones, varios proyectos a la vez, traducción y reescritura automática a partir del editor global. La interfaz gráfica estaba también en esta lista y ha salido en parte: hay una página local (§19) desde la que se ve el canon, se sigue el proceso y se leen los capítulos. No lanza nada, porque en ese canon escribe el orquestador y nadie más.
 
@@ -64,7 +64,7 @@ Los §14 y §24 están muertos. Los números de sección no se reutilizan.
 | Intento | Cada pasada del escritor sobre el mismo capítulo. El tope lo fija `gate.max_intentos`, tres por defecto (§12). |
 | Editor global | Agente de pasada única al final, fuera del loop. Lee resúmenes, no texto. |
 | Orquestador | Quien lleva el proceso y escribe el canon: una sesión de Claude Code con la skill de §21. No genera prosa. |
-| `VD-xx` | **Validador determinista**: cada una de las once comprobaciones mecánicas de §9. Se cumplen o no, sin criterio literario ni llamada a ningún modelo. Las dos primeras letras vienen de «validador», pero **no son el agente validador**: ese juzga y estas cuentan. |
+| `VD-xx` | **Validador determinista**: cada una de las trece comprobaciones mecánicas de §9. Se cumplen o no, sin criterio literario ni llamada a ningún modelo. Las dos primeras letras vienen de «validador», pero **no son el agente validador**: ese juzga y estas cuentan. |
 | `DA-xx` | **Decisión abierta**: cada una de las cosas sin decidir de §15. Nada de ahí impide escribir una novela; todo impide darla por buena sin mirarla. Los ids no se reutilizan: DA-01 y DA-11 quedaron muertos al decidirse. |
 
 ## §3 Modelo de datos del canon
@@ -88,6 +88,12 @@ El brief no tiene entidad propia: se guarda en `estado.json` con sus cinco campo
 | ubicacion | texto | sí | Dónde está ahora mismo en la trama |
 | sabe | lista | no | Qué conoce y qué ignora. Clave para la dimensión de continuidad |
 | actualizado_en | entero | sí | Nº del último capítulo aprobado que tocó la ficha |
+
+**`sabe` acumula, pero también se retracta.** El cronista añade líneas a `sabe` y un personaje no desaprende, salvo por una vía: cada cambio de ficha puede traer un `olvida` con las líneas que deja de ser ciertas. El orquestador las retira de la ficha casando la cadena **literalmente**, igual que hace al cerrar un hilo, y VD-12 rechaza la propuesta si alguna no está escrita tal cual en el `sabe` de ese personaje.
+
+Existe porque la mitad de las líneas de `sabe` son negativas —«Ignora que su hermano lo sabía»— y un personaje que aprende justo eso dejaba la ficha afirmando y negando lo mismo. Las dos líneas viajaban juntas al paquete de §7 y el escritor tenía que elegir. Retirarla no es reescribir el pasado: la ficha dice lo que el personaje sabe **ahora**, y el capítulo donde lo ignoraba sigue en su resumen.
+
+Una línea retirada no vuelve sola. Si el personaje deja de saber algo, eso es una línea nueva y afirmativa («ha olvidado dónde estaba el registro»), no un `olvida` del hecho.
 
 **Evento de timeline**
 
@@ -246,14 +252,16 @@ flowchart TD
 - `escribiendo` — el loop está en marcha: hay capítulos en curso o ya aprobados y quedan pendientes. Se entra al arrancar el primero, no al aprobarlo.
 - `bloqueado` — un capítulo agotó sus intentos (`gate.max_intentos`). Requiere mano humana (§8).
 - `escrito` — todas las fichas de capítulo en `aprobado`. Habilita el editor global.
-- `editado` — existe la lista de retoques. Estado final del sistema.
+- `retocando` — existe la lista de retoques y el sistema la está aplicando (§11). Se entra al recibir la lista, no al aplicar el primero.
+- `editado` — la lista está agotada: cada retoque quedó `aplicado`, `reformulado` o `descartado`. Estado final del sistema.
 
 **Qué corre en paralelo.** Nada, con la configuración por defecto: el validador único dejó el flujo entero en serie. Solo vuelve a haber paralelismo si se pone `validador.modo` en `separado` (§12), y entonces son tres llamadas simultáneas sobre el mismo capítulo. Lo demás es secuencial por dependencia real: el arquitecto necesita el dossier cerrado, y cada capítulo necesita el canon que dejó el anterior. No se escriben dos capítulos a la vez, aunque parezca tentador: el capítulo N+1 depende de lo que el N haya dejado en las fichas de personaje.
 
-**Dónde entra el humano.** Dos puntos fijos:
+**Dónde entra el humano.** Un punto fijo, y solo uno:
 
 1. **Capítulo bloqueado.** Al fallar el tercer intento el sistema para y espera. Tú editas el texto a mano, relajas el umbral o retocas la ficha de capítulo, y lo desbloqueas (§8).
-2. **Retoques finales.** El editor global entrega una lista y tú decides qué aplicar. Aplicarlos es manual y queda fuera del sistema en el alcance inicial.
+
+Los retoques finales eran el segundo y dejaron de serlo: el sistema los aplica él, con el gate delante, y deja escrito en `retoques.md` qué pasó con cada uno (§11). La regla que queda es que **el humano revisa el resultado, no ejecuta los pasos que llevan a él**. Un paso manual que el sistema podría dar es trabajo sin terminar, no prudencia; el bloqueo sobrevive porque ahí no hay nada mecánico que dar, sino una decisión sobre un capítulo que el sistema ya intentó tres veces.
 
 Queda por decidir un tercer punto: parar al acabar la preparación para que revises dossier y escaleta antes de arrancar el loop. Es la parada más barata del sistema y un fallo ahí contamina el libro entero, pero obliga a partir la ejecución en dos arranques. Sin cerrar, en §15 (DA-03). Mientras no se decida, la preparación no para y la escaleta se corrige editando el canon a mano.
 
@@ -280,9 +288,9 @@ Seis agentes. Ninguno escribe en el canon: todos devuelven una propuesta estruct
 
 *Riesgo conocido de fundirlas.* Al juzgar en una sola pasada, las notas tienden a correlacionarse: el capítulo que gusta se lleva tres cincos y el que chirría tres doses, cuando la gracia del diseño es que un texto brillante pueda caer por continuidad. El segundo efecto es que el anacronismo conceptual, el caro, se diluye cuando la misma pasada ya va buscando contradicciones de canon: el léxico raro salta, la idea fuera de época no. Ambos se vigilan comparando la dispersión de las tres notas a lo largo del libro; si se confirman, `validador.modo: "separado"` (§12) devuelve las tres llamadas sin tocar el modelo de datos ni el gate. Otros modos de fallo: falsos positivos de léxico moderno pero válido, y confundir una elipsis con un hueco de continuidad.
 
-**Cronista.** Corre una sola vez por capítulo, después del gate y solo sobre el intento aprobado. Le paso el texto, la ficha de capítulo y las fichas de quien sale, y le pido cuatro cosas: el resumen de un párrafo, los hilos que abre y los que cierra, los cambios de `ubicacion` y `sabe` de cada personaje presente, y los eventos de trama nuevos para la línea de tiempo. Devuelve una propuesta que el orquestador valida antes de escribirla en el canon. Modos de fallo: resúmenes que cuentan lo que pasa pero no lo que cambia, dar por sabido a un personaje algo que ocurrió sin él delante, y callarse hilos abiertos, que es el fallo caro porque el editor global solo ve lo que el cronista escribió.
+**Cronista.** Corre una sola vez por capítulo, después del gate y solo sobre el intento aprobado. Le paso el texto, la ficha de capítulo y las fichas de quien sale, y le pido cuatro cosas: el resumen de un párrafo, los hilos que abre y los que cierra, los cambios de `ubicacion` y `sabe` de cada personaje presente —incluido el `olvida` que retira las líneas que dejan de ser ciertas (§3)— y los eventos de trama nuevos para la línea de tiempo. Devuelve una propuesta que el orquestador valida antes de escribirla en el canon. Modos de fallo: resúmenes que cuentan lo que pasa pero no lo que cambia, dar por sabido a un personaje algo que ocurrió sin él delante, y callarse hilos abiertos, que es el fallo caro porque el editor global solo ve lo que el cronista escribió.
 
-**Editor global.** Le paso los resúmenes de todos los capítulos, la escaleta y las fichas de personaje, nunca el texto completo. Le pido una lista corta y accionable: arcos que no cierran, promesas abiertas sin saldar, actos desequilibrados. Modos de fallo: generalidades no accionables del tipo «reforzar el tema», y proponer reescrituras masivas cuando el encargo es una lista de retoques.
+**Editor global.** Le paso los resúmenes de todos los capítulos, la escaleta y las fichas de personaje, nunca el texto completo. Le pido una lista corta y accionable: arcos que no cierran, promesas abiertas sin saldar, actos desequilibrados. Su lista ya no acaba en una tarea para mí: el orquestador la aplica retoque a retoque con el gate delante (§11), y puede devolverle uno que VD-13 rechazó para que lo reformule sin tocar los hechos. Modos de fallo: generalidades no accionables del tipo «reforzar el tema», proponer reescrituras masivas cuando el encargo es una lista de retoques, y pedir que pase algo que no pasó, que es un cambio de escaleta disfrazado de retoque y el único que el cierre no puede aplicar.
 
 ## §6 Memoria: largo y corto plazo
 
@@ -406,10 +414,16 @@ Comprobaciones deterministas en código, con id `VD-xx`. No confundir con el age
 | VD-09 | Personajes presentes ⊆ personajes de la ficha | Propuesta del cronista | Antes de escribir | Bloq. | Rechaza y reintenta; suele ser personaje colado |
 | VD-10 | Tres dimensiones, una vez cada una, nota entera 1-5 | Salida del validador | Antes del gate | Bloq. | Reintenta la llamada al validador, no al escritor |
 | VD-11 | Ningún bloqueante pendiente al confirmar | Transacción del canon | En la escritura | Bloq. | Deshace la transacción; el canon no queda a medias |
+| VD-12 | Cada línea de `olvida` está literal en el `sabe` de esa ficha | Propuesta del cronista | Antes de escribir | Bloq. | Rechaza la propuesta entera; una retractación parafraseada no retira nada |
+| VD-13 | El retoque no cambia el canon del capítulo | Vuelta del editor global (§11) | Tras el gate del retoque | Bloq. | Descarta el texto retocado y devuelve el retoque al editor global |
 
 **Orden.** Cada salida pasa sus comprobaciones antes de usarse, y las comprobaciones van siempre antes que el gate. La regla que ahorra dinero es VD-08 y su familia: si el capítulo redactado no cumple lo básico, se reintenta la generación sin gastar la llamada al agente validador. VD-08 es la única comprobación de dos escalones, y por eso lleva dos márgenes en §12: un texto algo corto se valida igual y arrastra el aviso, y uno que se sale del margen de bloqueo no llega al validador porque ninguna nota va a arreglar que falte medio capítulo. La que salva el canon es VD-11: la escritura del cronista es una transacción única, así que o entran resumen, cambios de ficha y eventos juntos, o no entra nada. El gate (§8) solo se calcula sobre revisiones que ya pasaron VD-10, de modo que nunca opera con notas inventadas o incompletas.
 
 Un bloqueante que falla dos veces seguidas sobre el mismo artefacto para el proceso y deja el estado escrito, igual que un error de proveedor (§13). No hay reintento infinito: si un agente no sabe devolver lo que se le pide, insistir sale caro y no arregla nada.
+
+**Las dos que casan cadenas literales** son VD-12 y el cierre de hilos, y lo hacen por la misma razón: son la única forma de que retirar algo del canon sea una operación exacta y no una aproximación. Un hilo cerrado con una paráfrasis queda vivo para siempre; un `olvida` parafraseado deja la línea vieja donde estaba y añade ruido. En los dos casos el orquestador devuelve la propuesta en vez de buscar el parecido más cercano: acertar por aproximación en el canon es peor que fallar, porque nadie vuelve a mirarlo.
+
+**VD-13 es la que hace barato el cierre.** Sin ella, retocar el capítulo 3 obligaría a comprobar si los capítulos que lo leyeron siguen en pie, y retocar el 1 podría arrastrar el libro entero. Con ella, un retoque que cambiaría los hechos no se aplica a medias: se descarta y el editor global tiene una oportunidad de reformularlo como lo que sí cabe, un arreglo de prosa. §11 explica por qué esa frontera es la correcta.
 
 ## §10 Inventario de skills
 
@@ -438,9 +452,24 @@ Corre una sola vez, cuando el proyecto entra en `escrito`, y fuera del loop. Lee
 
 Devuelve una lista corta de retoques. Cada retoque tiene id, tipo (`arco`, `promesa`, `ritmo` o `personaje`), capítulos afectados, una descripción accionable de una o dos frases y una severidad. Se le pide brevedad y concreción: diez retoques que se puedan ejecutar valen más que cuarenta observaciones.
 
-La lista se guarda como `retoques.md` junto al canon, no dentro. El canon es la verdad de la novela escrita y esto es una lista de tareas para mí; mezclarlas haría que el canon dejara de ser lo que dice §2.
+La lista se guarda como `retoques.md` junto al canon, no dentro. El canon es la verdad de la novela escrita y esto es el parte de lo que se hizo al cerrar; mezclarlas haría que el canon dejara de ser lo que dice §2. Cada retoque se anota además con lo que pasó al aplicarlo: `aplicado`, `reformulado` o `descartado`.
 
-El editor no aplica nada ni dispara reescrituras. En el alcance inicial el bucle se cierra a mano: yo decido qué retoques valen y los aplico editando capítulos. Automatizar esa vuelta es lo primero que queda fuera de alcance (§1) y está apuntado en §15 (DA-07).
+### La vuelta, que la cierra el sistema
+
+**El editor no aplica los retoques, pero el orquestador sí.** El proyecto pasa de `escrito` a `retocando`, y de ahí a `editado` cuando la lista está agotada. Nadie edita capítulos a mano: un paso manual al final de un sistema multiagente es trabajo que el sistema no ha terminado.
+
+Los retoques se procesan **de menor a mayor capítulo**, y cada uno da una vuelta corta:
+
+1. El escritor recibe su propio texto aprobado y el retoque. Es un arreglo quirúrgico: toca lo señalado y no reescribe lo que ya funciona.
+2. El texto nuevo pasa **VD-08 y el gate entero**, con los tres validadores otra vez. Un retoque no es una excepción al gate: si el arreglo estropea el capítulo, no entra.
+3. El cronista vuelve a emitir el canon de ese capítulo sobre el texto nuevo.
+4. **VD-13**: ese canon tiene que salir igual al que ya estaba —mismos hilos, mismos eventos, mismos cambios de ficha, mismos presentes—. Si sale igual, el texto retocado sustituye al anterior como intento aprobado. Si no, el retoque se descarta.
+
+Un retoque descartado vuelve **una vez** al editor global, con el motivo delante, para que lo reformule como un arreglo que no toque los hechos. Si la reformulación tampoco pasa, se anota `descartado` y se sigue: es la política de un reintento de §9, sin excepciones al final del libro.
+
+**Por qué el retoque no puede cambiar el canon.** Porque el capítulo N+1 se escribió leyendo el resumen de N. Si un retoque cambia lo que N deja escrito, todo lo que vino después se redactó sobre algo que ya no es cierto, y arreglarlo de verdad significa reescribir el resto del libro con su gate. Esa cascada es cara, puede no converger y convierte el cierre en una segunda escritura completa. La frontera de VD-13 es lo que mantiene el cierre en una vuelta por retoque: el editor global puede arreglar cómo está contado, no qué pasó.
+
+Eso deja fuera un tipo de retoque real —«este personaje debería aparecer aquí»— y es una pérdida consciente. Lo que ese retoque señala no es un defecto de redacción sino de escaleta, y la escaleta se arregla en la preparación, que es donde cuesta una llamada en vez de medio libro. Cuando aparezca, el parte lo dirá con su motivo.
 
 ## §12 Configuración
 
@@ -514,7 +543,7 @@ Con esto la tabla tiene **veintitrés** claves, y ninguna sobra: cada una la lee
 
 **Qué pasa cuando algo falla a mitad.** El estado vive en el canon, nunca en memoria del proceso, así que un corte de red, un error del proveedor o un Ctrl+C no pierden más que el intento en curso. Como el canon solo se toca después del gate y en una única escritura validada del cronista, no existe el estado a medias: o el capítulo entró entero o no entró. Lo peor que deja una caída es un Markdown huérfano en `<novela>/capitulos/` sin su intento en `estado.json`, que al relanzar se descarta. Ante un error de un subagente se reintenta la llamada una vez; si vuelve a fallar, el proceso para y deja el estado escrito en lugar de insistir. No hay política de backoff ni de reintentos finos en el alcance inicial, y es deliberado: con un solo usuario, parar y mirar sale más barato que automatizar la recuperación.
 
-**Reanudación.** Una sola instrucción, sin argumentos: lee el estado del proyecto, localiza el primer capítulo no aprobado y sigue desde ahí. Relanzar con el proyecto ya `escrito` no reescribe nada, solo vuelve a ofrecer el editor global. El par capítulo e intento identifica cada fichero, así que repetir un intento sobrescribe en lugar de duplicar. Reanudar no desbloquea: mientras el proyecto siga en `bloqueado`, el comando vuelve a parar en el mismo capítulo hasta que se tome una de las tres salidas manuales de §8.
+**Reanudación.** Una sola instrucción, sin argumentos: lee el estado del proyecto, localiza el primer capítulo no aprobado y sigue desde ahí. Con el proyecto en `escrito` arranca el editor global, y en `retocando` sigue por el primer retoque que no tenga desenlace anotado: por eso `retoques.md` lleva escrito qué pasó con cada uno y no solo la lista. Relanzar con el proyecto ya `editado` no reescribe nada. El par capítulo e intento identifica cada fichero, así que repetir un intento sobrescribe en lugar de duplicar. Reanudar no desbloquea: mientras el proyecto siga en `bloqueado`, el comando vuelve a parar en el mismo capítulo hasta que se tome una de las tres salidas manuales de §8.
 
 ## §14 *(número muerto)*
 
@@ -524,8 +553,9 @@ Los números de sección no se reutilizan.
 
 Lo que no está decidido. Nada de aquí bloquea escribir una novela; todo
 bloquea darla por buena sin mirarla. Los ids no se reutilizan: DA-01 salió al
-decidirse el stack (§18) y DA-11 al decidirse que la interfaz no lanza nada (§19).
-Los dos números quedan muertos.
+decidirse el stack (§18), DA-11 al decidirse que la interfaz no lanza nada (§19),
+DA-07 al aplicar el sistema sus propios retoques (§11) y DA-14 al poder el
+cronista retractar una línea de `sabe` (§3). Los cuatro números quedan muertos.
 
 DA-06 no se cierra con las trazas, pero deja de estar a ciegas: §20 manda las
 tres notas y la media de cada intento como puntuaciones, y §22 las cruza con lo
@@ -539,14 +569,12 @@ distribución en lugar de discutirla.
 | DA-04 | Proveedor de búsqueda del investigador | Define qué significa exactamente `verificado` en el dossier | Cuando la búsqueda web entre de verdad |
 | DA-05 | Qué hacer con los `faltantes` del escritor | Hoy se registran y nadie los mira; podrían disparar una consulta al investigador | Antes de la próxima novela larga |
 | DA-06 | Calibración de `nota_minima` y `media_minima` | Puestos a ojo: altos bloquean todo, bajos no filtran nada | Con capítulos reales de varias pasadas |
-| DA-07 | Vuelta del editor global | Si los retoques se aplican siempre a mano o disparan reescritura de capítulos | Cuando haya una novela cerrada que releer |
 | DA-08 | Quién valida lo que propone el cronista | Los `VD-xx` validan forma, no fondo; un resumen que miente envenena el canon entero | Antes de la próxima novela larga |
 | DA-09 | Unidad de escritura: capítulo entero o escena a escena | Si la prosa se degrada en capítulos largos, el loop cambia de grano | Si la prosa se degrada en capítulos largos |
 | DA-10 | Qué hacer si la escaleta se queda corta o larga a mitad de libro | Replanificar toca el canon en caliente; forzarla estropea el final | La primera vez que pase |
 | DA-12 | Qué hacer con el coste, ahora que se conoce | §22 agrega lo que cuesta cada capítulo y lo cruza con sus notas, pero nadie actúa sobre ello: no hay tope ni cuota en ningún sitio, y es el hueco que §19 pinta como «sin datos todavía» | Con el informe de §22 de varias novelas delante |
-| DA-13 | Si un validador debe vigilar que el cronista respete los «Ignora» de una ficha | Ninguno de los once `VD-xx` lo mira, así que un conocimiento que el gate acaba de vetar puede entrar en el canon por la propuesta del cronista. VD-09 solo comprueba que los presentes sean subconjunto de la ficha, no lo que aprenden | Antes de calibrar DA-06 |
+| DA-13 | Si un validador debe vigilar que el cronista respete los «Ignora» de una ficha | Ninguno de los trece `VD-xx` lo mira, así que un conocimiento que el gate acaba de vetar puede entrar en el canon por la propuesta del cronista. VD-09 solo comprueba que los presentes sean subconjunto de la ficha, y VD-12 que una retractación case literalmente, pero ninguno mira lo que aprenden | Antes de calibrar DA-06 |
 | DA-15 | Qué hacer cuando la auditoría del gate no cuadra | Hoy se avisa y nada más: §19 lo pinta y §20 lo manda como puntuación, pero el canon manda aunque la suma esté mal. Convertirlo en un `VD-xx` obligaría al orquestador a rehacer el capítulo, y todavía no hay ni un caso real que diga si pasa lo bastante como para que compense | Cuando haya varias pasadas que mirar |
-| DA-14 | Cómo se retracta un «Ignora» de `sabe` | El campo solo acumula, así que cuando un personaje aprende lo que su ficha decía que ignoraba, la ficha acaba afirmando y negando lo mismo, y el paquete de §7 arrastra las dos líneas. Hace falta decidir si `sabe` se parte en dos campos, si los «Ignora» caducan o si el cronista puede retirar líneas | Antes de la próxima novela larga |
 
 ## §16 Historial de cambios
 
@@ -558,6 +586,36 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.26.0] — 2026-09-18
+
+**Añadido**
+- §3. `olvida` en el cambio de ficha del cronista: la vía por la que una línea de
+  `sabe` se retira, casando la cadena literalmente. Cierra DA-14, que llevaba
+  abierta desde que se vio una ficha afirmando y negando lo mismo en la misma
+  lista.
+- §9. **VD-12**, que la retractación case literal, y **VD-13**, que el retoque no
+  cambie el canon del capítulo. Con ellas los `VD-xx` pasan de once a trece; §2 y
+  DA-13 recogen la cifra nueva.
+- §4. Estado **`retocando`**, entre `escrito` y `editado`. Se entra al recibir la
+  lista del editor global y se sale cuando todos los retoques tienen desenlace.
+- §11. La vuelta del cierre: el orquestador aplica cada retoque con el escritor en
+  modo quirúrgico, lo pasa por el gate entero y lo confirma solo si el cronista
+  vuelve a emitir el mismo canon. Cierra DA-07.
+
+**Cambiado**
+- §4. **Los puntos de intervención humana pasan de dos a uno.** Aplicar los
+  retoques a mano era el segundo y deja de existir: un paso manual que el sistema
+  puede dar es trabajo sin terminar. El bloqueo de capítulo sobrevive porque ahí
+  no hay nada mecánico que dar.
+- §1 y §13. El sistema ya no entrega «una lista de retoques» sino el parte de lo
+  que hizo con cada uno, y por eso `retoques.md` guarda el desenlace: es lo que
+  permite reanudar un cierre a medias.
+- §5. El cronista emite `olvida`; el editor global puede recibir de vuelta un
+  retoque rechazado para reformularlo una vez.
+
+**Decidido**
+- DA-07 y DA-14 salen de §15. Sus números quedan muertos, como DA-01 y DA-11.
 
 ### [1.25.0] — 2026-09-18
 

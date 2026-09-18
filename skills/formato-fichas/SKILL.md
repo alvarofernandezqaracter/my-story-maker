@@ -21,7 +21,7 @@ vez y el loop solo lo lee.
 | `motivacion` | Que quiere y por que |
 | `arco` | De donde parte y adonde llega |
 | `ubicacion` | Donde esta ahora mismo en la trama |
-| `sabe` | Lista de lo que conoce y lo que ignora |
+| `sabe` | Lista de lo que conoce y lo que ignora. Acumula; se retira con `olvida` |
 
 El `id` no cambia jamas. Si cambia, todas las fichas de capitulo que apuntaban
 al personaje quedan huerfanas y el orquestador rechaza la escaleta entera.
@@ -35,6 +35,11 @@ la novela avanza.
 continuidad son de ignorancia: «Sabe que el contador falsifico el registro»,
 «Ignora que su hermano lo sabia». Lo que un personaje ignora es informacion tan
 dura como lo que sabe.
+
+Y por eso mismo hace falta poder retirarlas. Una linea negativa es cierta hasta
+el capitulo en que deja de serlo, y ahi el cronista la quita con `olvida`
+copiandola literal. Si no la quita, la ficha afirma y niega lo mismo, y las dos
+lineas llegan juntas al escritor del capitulo siguiente.
 
 ## Ficha de capitulo
 
@@ -66,7 +71,8 @@ la dimension de logica y ritmo.
 ## Cuando el cronista propone cambios
 
 El cronista usa este mismo formato, pero solo puede tocar tres campos del
-personaje: `ubicacion`, `sabe` y, de forma automatica, `actualizado_en`. La voz,
+personaje: `ubicacion`, `sabe` —anadiendo lineas, y retirandolas con `olvida`— y,
+de forma automatica, `actualizado_en`. La voz,
 la motivacion y el arco son identidad y pertenecen a la parte inmutable del
 canon: si el arco cambia, es que la escaleta cambio, y eso es una decision
 humana, no una consecuencia de un capitulo.

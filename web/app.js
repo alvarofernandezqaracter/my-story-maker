@@ -21,6 +21,7 @@ const COMANDO = {
   estructurado: '/orquestar-novela escribir',
   escribiendo: '/orquestar-novela continuar',
   escrito: '/orquestar-novela cerrar',
+  retocando: '/orquestar-novela continuar',
   editado: '/orquestar-novela',
   bloqueado: '/orquestar-novela desbloquear el capítulo N',
 };

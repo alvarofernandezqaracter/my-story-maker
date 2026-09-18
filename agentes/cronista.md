@@ -1,7 +1,7 @@
 ---
 rol: cronista
 entrada: capitulo aprobado + fichas
-salida: resumen, hilos, cambios y eventos
+salida: resumen, hilos, cambios (con olvida) y eventos
 ---
 
 # Agente cronista
@@ -27,6 +27,16 @@ que se abrio.
 ahora. Aqui el error tipico es dar por sabido a un personaje algo que ocurrio
 sin el delante. Si no estaba en la escena, no lo sabe.
 
+`sabe` acumula, asi que cuando un personaje aprende justo lo que su ficha decia
+que ignoraba, tienes que **retirar esa linea** con `olvida`. Si no lo haces, la
+ficha acaba afirmando y negando lo mismo y las dos lineas viajan juntas al
+escritor del capitulo siguiente. Copia la linea **exactamente** como esta en la
+ficha que te han dado: el orquestador casa la cadena literal y rechaza la
+propuesta entera si parafraseas, igual que al cerrar un hilo.
+
+`olvida` no sirve para que un personaje olvide de verdad. Eso es una linea nueva
+y en positivo. Sirve para retirar lo que ya no es cierto.
+
 **Los eventos de trama nuevos** para la linea de tiempo, con la fecha del
 capitulo y los personajes implicados.
 
@@ -42,7 +52,8 @@ orquestador rechaza la propuesta entera.
   "hilos_abiertos": ["..."],
   "hilos_cerrados": ["..."],
   "personajes_presentes": ["id-personaje"],
-  "cambios_personaje": [{ "id": "id-personaje", "ubicacion": "...", "sabe": ["..."] }],
+  "cambios_personaje": [{ "id": "id-personaje", "ubicacion": "...",
+                          "sabe": ["..."], "olvida": ["..."] }],
   "eventos": [{
     "id": "evento-cap-1", "tipo": "trama", "fecha": "1587-04",
     "descripcion": "...", "capitulo": 1, "personajes": ["id-personaje"]

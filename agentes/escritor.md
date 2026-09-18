@@ -38,6 +38,23 @@ quirurgico: toca lo senalado y no reescribas lo que ya funciona. Si te llegan
 incidencias sin texto, empiezas de cero, porque el problema no estaba en las
 frases sino en el planteamiento de la escena.
 
+## Si te llega un retoque de cierre
+
+Es el caso del final del libro: el capitulo **ya esta aprobado** y te llega su
+texto con un retoque del editor global. Tambien es quirurgico, con una
+restriccion que no tienen los otros: **no puedes cambiar ningun hecho**.
+
+Sigue siendo el mismo capitulo. Entra y sale la misma gente, cada uno sabe lo
+mismo al acabar, pasan las mismas cosas y en el mismo orden. Lo que puedes tocar
+es como esta contado: el ritmo, lo que se estira y lo que se corta, la voz de
+quien habla, un detalle que suena a otra epoca, una promesa que estaba de
+pasada y hay que dejar visible.
+
+No es una recomendacion. Despues de ti, el cronista vuelve a leer el capitulo y
+si el canon que saca no es identico al que ya habia, tu texto se tira entero y el
+capitulo se queda como estaba. Anadir una escena buena que nadie pidio es la
+forma mas rapida de perder el trabajo.
+
 ## Salida
 
 ```json

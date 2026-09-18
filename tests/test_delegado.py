@@ -76,6 +76,30 @@ RESUMEN = {
 }
 
 
+# El parte del cierre (§11): cada retoque con su desenlace debajo. Los tres
+# desenlaces posibles, para que el recuento no dependa de cual sea.
+RETOQUES_CON_DESENLACE = """# Retoques finales
+
+### RET-01 - promesa - capitulo 1
+
+El hilo del registro se abre y no vuelve.
+
+- Desenlace: aplicado (intento 3, notas 4/5/4)
+
+### RET-02 - ritmo - capitulo 2
+
+El acto central se queda sin giro.
+
+- Desenlace: reformulado (VD-13 tumbo la primera version)
+
+### RET-03 - personaje - capitulo 2
+
+Que aparezca el escribano en la escena del puerto.
+
+- Desenlace: descartado (VD-13: anade un personaje presente; es escaleta)
+"""
+
+
 def _escribir(ruta, valor):
     ruta.parent.mkdir(parents=True, exist_ok=True)
     if isinstance(valor, str):
@@ -335,6 +359,24 @@ class TestTrazasDelegadas(CanonDelegadoDePrueba):
         self.assertFalse(resumen['cerrar'])
         self.assertTrue(resumen['reconstruido'])
         self.assertTrue(resumen['sesion'].startswith('novela-'))
+
+    def test_el_cierre_solo_cuenta_con_el_proyecto_editado(self):
+        # `retocando` es un cierre a medias (§4): la lista existe pero todavia
+        # se esta aplicando, asi que la traza de cierre no sale hasta `editado`.
+        raiz = Path(self.dir) / NOVELA
+        _escribir(raiz / 'retoques.md', RETOQUES_CON_DESENLACE)
+        for estado, esperado in (('retocando', False), ('editado', True)):
+            _escribir(raiz / 'canon' / 'estado.json', {**ESTADO, 'estado': estado})
+            self.assertIs(plan(CanonCC(), self.config)['cerrar'], esperado)
+
+    def test_el_desenlace_de_un_retoque_no_estorba_al_recuento(self):
+        # `retoques.md` dejo de ser una lista y paso a ser el parte del cierre
+        # (§11), con lo que paso con cada retoque. El recuento sigue yendo por
+        # el encabezado `### RET-xx`, asi que lo que se anada debajo da igual.
+        raiz = Path(self.dir) / NOVELA
+        _escribir(raiz / 'retoques.md', RETOQUES_CON_DESENLACE)
+        _escribir(raiz / 'canon' / 'estado.json', {**ESTADO, 'estado': 'editado'})
+        self.assertEqual(plan(CanonCC(), self.config)['retoques'], 3)
 
     def test_la_sesion_sale_del_brief_y_no_de_ningun_id(self):
         # El canon no guarda ningun id de proyecto -es fila unica-, asi que la

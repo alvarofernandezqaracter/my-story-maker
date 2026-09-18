@@ -38,6 +38,13 @@ Si te llegan **incidencias sin texto**, empiezas de cero. El problema no estaba
 en las frases sino en el planteamiento de la escena, asi que no recuperes el
 borrador anterior aunque puedas leerlo.
 
+Y hay un tercer caso, al final del libro: si te llega un **retoque del editor
+global** sobre un capitulo que ya esta aprobado, es quirurgico y ademas **no
+puedes cambiar ningun hecho**. Entra y sale la misma gente, cada uno acaba
+sabiendo lo mismo, pasan las mismas cosas y en el mismo orden; lo que tocas es
+como esta contado. Despues de ti el cronista relee el capitulo y, si el canon que
+saca no es identico al que habia, tu texto se descarta entero (VD-13).
+
 ## Lo que haces
 
 Escribes el capitulo entero en la ruta que te han dado, en markdown, empezando
