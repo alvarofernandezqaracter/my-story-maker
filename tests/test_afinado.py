@@ -218,6 +218,35 @@ class TestLaVuelta(_Temporal):
         self.assertFalse((afinado.ruta_vuelta(1) / 'casos').exists())
 
 
+class TestQueLlamadaEsDeLaVuelta(_Temporal):
+    """El marcador es de la maquina entera: mientras se mide, otra sesion puede
+    estar escribiendo una novela, y sus llamadas no pueden acabar en el entorno
+    de afinado."""
+
+    def setUp(self):
+        super().setUp()
+        from novela import trazas_hook
+        self.hook = trazas_hook
+        afinado.abrir_vuelta(1, 'afinado', [_caso('caso-01', 'sembrado')])
+
+    def test_la_que_apunta_a_los_casos_es_de_la_vuelta(self):
+        ruta = str(afinado.ruta_vuelta(1) / 'casos' / 'caso-01' / 'capitulo.md')
+        self.assertIsNotNone(self.hook._vuelta_de('Juzga ' + ruta, None))
+
+    def test_la_ruta_vale_con_barras_de_los_dos_lados(self):
+        ruta = str(afinado.ruta_vuelta(1) / 'casos').replace('\\', '/')
+        self.assertIsNotNone(self.hook._vuelta_de(ruta + '/caso-01/capitulo.md'))
+
+    def test_la_de_una_novela_no_se_desvia_aunque_haya_vuelta_abierta(self):
+        self.assertIsNone(self.hook._vuelta_de(
+            'Juzga biblioteca/2026-09-18-cadiz-1812/capitulos/cap-02-intento-1.md'))
+
+    def test_sin_vuelta_abierta_no_hay_nada_que_desviar(self):
+        afinado.cerrar_vuelta(1)
+        ruta = str(afinado.ruta_vuelta(1) / 'casos')
+        self.assertIsNone(self.hook._vuelta_de(ruta))
+
+
 class TestLosFrenos(unittest.TestCase):
 
     def setUp(self):

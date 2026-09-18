@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.21.0.
+de un brief de cinco campos. Versión 1.23.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -122,7 +122,7 @@ Y conviene no olvidarlo, porque es el precio:
   conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de que
   mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
   instruido.
-- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 94
+- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 128
   tests que hay cubren el Python de `novela/`, que mira el canon y arranca al
   orquestador, pero no escribe novelas. Lo único que se comprueba del camino
   delegado son los ficheros de `.claude/agents/`, y solo su forma: que el
@@ -225,7 +225,7 @@ python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
                                              # sin Langfuse tira del diario local
 python -m novela afinar preparar             # abre una vuelta de afinado (AFINADO.md)
 python -m novela afinar puntuar              # cuenta lo que devolvieron los subagentes
-python -m unittest discover -s tests -t .    # 119 tests, sin red
+python -m unittest discover -s tests -t .    # 128 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de

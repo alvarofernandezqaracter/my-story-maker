@@ -139,6 +139,25 @@ def _perfil(ruta='config.json'):
         return {}
 
 
+def _vuelta_de(*textos):
+    """Si esta llamada es de una vuelta de afinado, cual.
+
+    No basta con que haya una vuelta abierta: el marcador es de la maquina
+    entera y mientras se mide se puede estar escribiendo una novela en otra
+    sesion. Lo que decide es que la llamada apunte a los casos de la vuelta, y
+    eso solo pasa cuando la hizo quien esta midiendo.
+    """
+    vuelta = vuelta_en_curso()
+    if not vuelta:
+        return None
+    casos = str(ruta_vuelta(vuelta['vuelta']) / 'casos')
+    crudo = '\n'.join(_texto_de(t, 20000) for t in textos)
+    for forma in (casos, casos.replace('\\', '/'), casos.replace('\\', '\\\\')):
+        if forma in crudo:
+            return vuelta
+    return None
+
+
 def _con_entorno(perfil, entorno):
     """El mismo perfil con otro entorno de trazas, sin tocar el fichero.
 
@@ -223,7 +242,7 @@ def procesar(payload, raiz=None, ruta_config='config.json', momento=None):
     # prueba dentro de la sesion de una novela real, y quien la consultara
     # despues contaba el doble de llamadas de las que hubo.
     perfil = _perfil(ruta_config)
-    vuelta = vuelta_en_curso()
+    vuelta = _vuelta_de(prompt, entrada.get('description'))
     if vuelta:
         raiz = ruta_vuelta(vuelta['vuelta'])
         sesion = vuelta['sesion']

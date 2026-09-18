@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.22.0
+version: 1.23.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -559,6 +559,18 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.23.0] — 2026-09-18
+
+**Cambiado**
+- §22. El hook ya no desvía una llamada al entorno de afinado solo porque haya
+  una vuelta abierta: el marcador es de la máquina entera, así que exige además
+  que la llamada apunte a los casos de esa vuelta. Sin eso, una novela escrita
+  desde otra sesión mientras se mide un prompt se llevaría sus trazas a un
+  entorno que no es el suyo.
+- §18. Los tests pasan a ciento veintiocho, en cinco ficheros: cuatro nuevos
+  cubren qué llamada es de una vuelta y cuál no. El recuento anterior se había
+  quedado corto.
+
 ### [1.22.0] — 2026-09-18
 
 **Corregido**
@@ -1050,8 +1062,8 @@ el loop de intentos y el bloqueo.
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ciento diecinueve, en
-cuatro ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
+**Tests.** `python -m unittest discover -s tests -t .`: ciento veintiocho, en
+cinco ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
 hook de §22. Los dos últimos corren contra una capa de mentira
