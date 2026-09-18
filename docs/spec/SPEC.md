@@ -963,10 +963,16 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `894757f` | 2026-09-18 | docs(spec): §17 regenerada para 1.19.0 |
 | `106d27b` | 2026-09-18 | docs(afinado): 0.1.0, el loop del validador de anacronismos y sus cinco campos |
 | `a93d197` | 2026-09-18 | docs(spec): 1.20.0, §20 la skill exporta las trazas al cerrar |
+| `7b1aa49` | 2026-09-18 | docs(spec): §17 regenerada para 1.20.0 |
+| `77cd3c8` | 2026-09-18 | feat(afinado): el loop que mide el prompt del validador y decide si lo sustituye |
+| `d02c3fa` | 2026-09-18 | docs(spec): §17 regenerada para 1.21.0 |
 
 ```
-git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
+git -c i18n.logOutputEncoding=UTF-8 log --reverse \n    --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
 ```
+
+La opción de codificación no es adorno: sin ella, en Windows el `§` de los
+asuntos sale roto y la tabla entra con basura dentro.
 
 ## §18 Estructura del repo y comandos
 
