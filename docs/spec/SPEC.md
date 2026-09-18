@@ -937,6 +937,9 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `9888378` | 2026-09-18 | docs(spec): §17 regenerada para 1.16.0 |
 | `e0e7ec2` | 2026-09-18 | docs(autoaprendizaje): 0.2.0, el documento describe el banco que hay |
 | `8149cfe` | 2026-09-18 | docs(spec): 1.17.0, §24 el banco y §12 sus nueve claves |
+| `dbc98c6` | 2026-09-18 | docs(spec): §17 regenerada para 1.17.0 |
+| `8a56e6c` | 2026-09-18 | docs(autoaprendizaje): 0.3.0, §14 lo que han ensenado las primeras rondas |
+| `7a07df7` | 2026-09-18 | docs(spec): 1.17.1, §18 los tests que cubren la promocion |
 
 ```
 git log --reverse --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
