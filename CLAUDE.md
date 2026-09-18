@@ -122,9 +122,12 @@ Y conviene no olvidarlo, porque es el precio:
   conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de que
   mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
   instruido.
-- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 89
+- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 94
   tests que hay cubren el Python de `novela/`, que mira el canon y arranca al
-  orquestador, pero no escribe novelas.
+  orquestador, pero no escribe novelas. Lo único que se comprueba del camino
+  delegado son los ficheros de `.claude/agents/`, y solo su forma: que el
+  frontmatter se pueda leer y que los ocho sean los que el hook traza. Un
+  subagente que no carga no se ve mirando el fichero, se ve contando.
 
 # El diseño
 

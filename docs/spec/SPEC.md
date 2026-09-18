@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.21.0
+version: 1.22.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -558,6 +558,24 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.22.0] — 2026-09-18
+
+**Corregido**
+- §21. La descripción de los tres subagentes validadores va entrecomillada. Sin
+  comillas, los dos puntos que llevaba dentro rompían el frontmatter y Claude
+  Code descartaba los tres ficheros sin decir nada: las sesiones arrancaban con
+  cinco subagentes de ocho.
+- §22. El hook deja constancia en el diario local de las llamadas a subagentes
+  que no reconoce. Antes las descartaba en silencio, así que una sustitución por
+  subagentes genéricos no dejaba rastro en ninguna parte y el gasto del rol
+  sustituido desaparecía de la medición sin que nadie lo notase.
+
+**Cambiado**
+- §21. Cinco tests nuevos en `tests/test_subagentes.py`: comprueban que el
+  frontmatter de los ocho ficheros se puede leer, que ningún valor suelto lleva
+  dos puntos y que el reparto en disco es el mismo que el que traza el hook. Un
+  subagente que no carga no se ve mirando el fichero; se ve contando.
 
 ### [1.21.0] — 2026-09-18
 
@@ -1482,6 +1500,8 @@ datos, no la cierra.
 
 Seis roles y ocho subagentes porque **el validador va partido en tres**. No es una opción de configuración: es la forma del sistema y no se puede apagar. Tres cabezas que no se ven dan tres notas que no se contagian, que es lo que el gate necesita para que un texto brillante pueda caer por continuidad.
 
+**Un subagente que no carga no avisa.** El frontmatter de esos ocho ficheros es YAML, y ahí un valor sin comillas que lleve dos puntos y un espacio deja de ser un escalar: Claude Code descarta el fichero entero **en silencio**, y la sesión arranca con cinco subagentes de ocho como si fuera lo normal. Pasó con los tres validadores a la vez, cuya descripción llevaba `epoca: objetos`, y costó una novela entera: se escribió con validadores genéricos puestos a mano, así que sus doce llamadas no se parecen a las de ninguna otra pasada y no sirven para medir. Por eso una descripción con dos puntos va entrecomillada, y por eso hay un test que lo comprueba: es un fallo que no se ve mirando, solo contando.
+
 Los subagentes reciben **rutas, no contenido**. Es lo que mantiene el canon fuera de la ventana del orquestador: el escritor lee su paquete de un fichero y deja el capítulo en otro, y solo devuelve la ruta. Un capítulo de mil ochocientas palabras por tres intentos y por seis capítulos no cabe en una conversación.
 
 ### El canon en ficheros
@@ -1576,6 +1596,8 @@ que lee el evento por stdin. **Nada de esto puede parar una novela**, y aquí pe
 más que en ningún otro sitio: un hook que revienta ensucia la sesión del
 orquestador. Por eso todo va envuelto, la salida es siempre 0 y cada llamada deja
 además su línea en un diario local, que sobrevive aunque Langfuse no conteste.
+
+**Lo que no reconoce, lo apunta igual.** El hook solo traza los ocho nombres de §21, que es lo correcto: por ese tool pasan también los subagentes que no son de la novela. Pero descartarlos sin más dejaba un punto ciego, porque si un `novela-*` no carga el orquestador puede sustituirlo por uno genérico y seguir adelante: la novela sale, el rol desaparece de la observación y sus cifras quedan por debajo de las reales **con aspecto de buenas**, que es peor que no tenerlas. Así que la llamada ajena no entra en el árbol —no es una unidad de trabajo del sistema— pero deja su línea en el diario local, con el subagente que se usó. Queda constancia de que hubo trabajo que el árbol no vio.
 
 El hook traduce los ocho subagentes a los seis roles de §5 —los tres validadores
 comparten nombre de observación y se distinguen por su dimensión— y saca el
