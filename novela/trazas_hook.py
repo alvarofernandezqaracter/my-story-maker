@@ -24,6 +24,7 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from .afinado import ruta_vuelta, vuelta_en_curso
 from .biblioteca import actual as novela_actual
 from .canon_cc import CanonCC
 from .trazas import (
@@ -138,6 +139,19 @@ def _perfil(ruta='config.json'):
         return {}
 
 
+def _con_entorno(perfil, entorno):
+    """El mismo perfil con otro entorno de trazas, sin tocar el fichero.
+
+    El entorno lo elige el perfil (§12) y aqui no se inventa ninguno: se cambia
+    por el que la vuelta abierta trae escrito, que salio de `afinado.entorno`.
+    """
+    if not entorno:
+        return perfil
+    bloque = dict((perfil or {}).get('trazas') or {})
+    bloque['entorno'] = entorno
+    return dict(perfil or {}, trazas=bloque)
+
+
 def procesar(payload, raiz=None, ruta_config='config.json', momento=None):
     """Una llamada a un subagente, observada. Devuelve que se hizo y por que no.
 
@@ -155,8 +169,24 @@ def procesar(payload, raiz=None, ruta_config='config.json', momento=None):
     entrada = payload.get('tool_input') or {}
     subagente = entrada.get('subagent_type') or ''
     if subagente not in ROLES:
-        return {'trazado': False, 'motivo': 'subagente ajeno a la novela: {}'.format(
-            subagente or 'sin tipo')}
+        # Ajeno al reparto, pero **no se calla**. Si un subagente `novela-*` no
+        # carga, el orquestador puede sustituirlo por uno generico y seguir: la
+        # novela sale, y el rol desaparece de la observacion sin que nadie lo
+        # note. Las cifras de ese rol quedan por debajo de las reales y parecen
+        # buenas. Por eso la llamada ajena deja su linea en el diario: no entra
+        # en el arbol de §20 -no es una unidad de trabajo del sistema-, pero
+        # queda constancia de que hubo trabajo que el arbol no vio.
+        linea = {
+            'momento': (momento or datetime.now(timezone.utc)).isoformat(),
+            'ajeno': True,
+            'subagente': subagente or None,
+            'descripcion': entrada.get('description') or None,
+            'sesion_cc': payload.get('session_id'),
+        }
+        _anotar(raiz, linea)
+        return {'trazado': False, 'diario': True, 'linea': linea,
+                'motivo': 'subagente ajeno a la novela: {}'.format(
+                    subagente or 'sin tipo')}
 
     rol, dimension = ROLES[subagente]
     respuesta = payload.get('tool_response')
@@ -187,14 +217,30 @@ def procesar(payload, raiz=None, ruta_config='config.json', momento=None):
         'sesion_cc': payload.get('session_id'),
     }
 
-    canon = CanonCC(raiz)
-    sesion = sesion_de(canon.brief()) if canon.existe else None
+    # Mientras hay una vuelta de afinado abierta, esta llamada no es de ninguna
+    # novela y no puede colgarse de su sesion (AFINADO.md §6). No es una
+    # precaucion teorica: el trabajo anterior metio veintiuna observaciones de
+    # prueba dentro de la sesion de una novela real, y quien la consultara
+    # despues contaba el doble de llamadas de las que hubo.
+    perfil = _perfil(ruta_config)
+    vuelta = vuelta_en_curso()
+    if vuelta:
+        raiz = ruta_vuelta(vuelta['vuelta'])
+        sesion = vuelta['sesion']
+        sitio = dict(sitio, tramo='afinado', traza='afinar-prompt')
+        linea['tramo'] = sitio['tramo']
+        linea['vuelta'] = vuelta['vuelta']
+        perfil = _con_entorno(perfil, vuelta.get('entorno'))
+    else:
+        canon = CanonCC(raiz)
+        sesion = sesion_de(canon.brief()) if canon.existe else None
+
     trace_id = id_de_traza('{}|{}'.format(sesion or 'sin-sesion', sitio['tramo']))
     linea['sesion'] = sesion
     linea['traza'] = trace_id
     _anotar(raiz, linea)
 
-    trazas = Trazas(_config_de_trazas(_perfil(ruta_config)))
+    trazas = Trazas(_config_de_trazas(perfil))
     if not trazas.activa:
         return {'trazado': False, 'motivo': trazas.motivo, 'diario': True, 'linea': linea}
 

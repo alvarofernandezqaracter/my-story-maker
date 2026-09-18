@@ -91,7 +91,7 @@ para medir.
 | **Objetivo** | `deteccion`: de los casos con un anacronismo sembrado, fracción en los que la nota de `anacronismos` queda por debajo de `gate.nota_minima` —es decir, con la que el gate bloquea— | **sube** |
 | Guardia | `falsos_positivos`: de los casos limpios, fracción con la nota por debajo de `gate.nota_minima` | no sube |
 | Guardia | `notas_hermanas`: media de `continuidad` y `logica_ritmo` sobre los casos limpios | no baja |
-| Guardia | `vd10`: fracción de respuestas que pasan VD-10 a la primera | no baja |
+| Guardia | `forma`: fracción de respuestas que cumplen lo que VD-10 exige —un bloque, de la dimensión pedida, con nota entera de 1 a 5— | no baja |
 | Guardia | `coste_llamada`: coste medio de una llamada al validador | no sube |
 
 Las dos guardias del medio existen por un motivo concreto: las tres dimensiones
@@ -197,8 +197,10 @@ a veintitrés. Ningún número de este documento vive en el código ni en un pro
 | `afinado.tope_gasto` | 1.0 | Dólares que puede gastar una vuelta |
 | `afinado.entorno` | `afinado` | Entorno de Langfuse al que van las llamadas de medición (§6) |
 
-Reglas cruzadas: `pasadas >= 2`, porque con una sola pasada no hay ruido que
-medir y el loop se queda ciego; y `factor_margen > 0`.
+`pasadas` no puede bajar de 2: con una sola pasada no hay ruido que medir y el
+loop se queda ciego. Y hay una regla cruzada, `afinado.entorno` distinto de
+`trazas.entorno`: si las llamadas de medición cayeran en el entorno de las
+novelas, el gasto de una vuelta se sumaría al de un libro y nadie lo notaría.
 
 ## §10 Lo que este diseño no tiene
 

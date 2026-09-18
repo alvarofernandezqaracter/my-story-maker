@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.19.0.
+de un brief de cinco campos. Versión 1.21.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -27,10 +27,19 @@ el spec se actualiza en el mismo momento, no después. Eso implica además:
 - Los números de sección son estables y **no se reutilizan**; si una sección
   desaparece, su número queda muerto (pasó con DA-01, DA-11 y §14).
 
-Hay un segundo spec, [`docs/spec/TRAZAS.md`](docs/spec/TRAZAS.md), con su propia
-versión. `SPEC.md` describe cómo se escribe una novela; aquel describe qué se ha
-aprendido mirando cómo se escribió. **Aquel observa y no decide**: cuando un
-hallazgo se convierte en un cambio de diseño, se muda a `SPEC.md`.
+Hay otros dos specs, cada uno con su propia versión.
+
+[`docs/spec/TRAZAS.md`](docs/spec/TRAZAS.md): `SPEC.md` describe cómo se escribe
+una novela; aquel describe qué se ha aprendido mirando cómo se escribió.
+**Aquel observa y no decide**: cuando un hallazgo se convierte en un cambio de
+diseño, se muda a `SPEC.md`.
+
+[`docs/spec/AFINADO.md`](docs/spec/AFINADO.md): cómo mejora solo el prompt de un
+agente. Un loop que mide con un número que calcula código, propone una versión
+mejor, la vuelve a medir contra casos que no ha visto y la promueve solo si la
+mejora supera al ruido de la propia medida. Toca un único fichero del
+repositorio, `agentes/<rol>.md`, y con un commit propio, para que deshacer una
+promoción mala sea un `git revert`.
 
 ## Cómo se trabaja este repo
 
@@ -58,6 +67,7 @@ hallazgo se convierte en un cambio de diseño, se muda a `SPEC.md`.
 | [references/paquete-de-contexto.md](.claude/skills/orquestar-novela/references/paquete-de-contexto.md) | Los nueve bloques, el cruce de etiquetas y el orden de recorte |
 | [references/comprobaciones.md](.claude/skills/orquestar-novela/references/comprobaciones.md) | Los once `VD-xx` y el gate, con sus números |
 | `.claude/agents/novela-*.md` | Los ocho subagentes |
+| `.claude/skills/afinar-validador/SKILL.md` | El loop de `AFINADO.md` escrito como instrucciones: medir, proponer, decidir y cerrar |
 | `.claude/settings.json` | El hook `PostToolUse` sobre `Agent`, que traza cada llamada (§22) |
 
 Los ocho subagentes son los seis roles de §5, **con el validador partido en
@@ -190,9 +200,12 @@ en un prompt sin pasar por este fichero, es un bug.** Las claves:
 `gate.{nota_minima,media_minima,max_intentos}`,
 `contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`,
 `interfaz.puerto`, `lanzador.{comando,permisos}`, `trazas.{activas,entorno,texto}`,
-`margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`.
-Diecisiete. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
-`capitulos_max >= capitulos_min`.
+`margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min}`,
+`afinado.{pasadas,factor_margen,max_candidatos,fallos_seguidos,tope_gasto,entorno}`.
+Veintitrés. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
+`capitulos_max >= capitulos_min`, y `afinado.entorno` distinto de
+`trazas.entorno`, para que el gasto de una vuelta de afinado no se sume al de un
+libro.
 
 Las credenciales van en un `.env` de la raíz que no se versiona. Un **perfil** es
 un `config*.json` de la raíz, nada más.
@@ -207,7 +220,9 @@ python -m novela trazar                      # manda a Langfuse el canon reconst
 python -m novela biblioteca                  # las novelas, y cuál está en curso (§21)
 python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
                                              # sin Langfuse tira del diario local
-python -m unittest discover -s tests -t .    # 89 tests, sin red
+python -m novela afinar preparar             # abre una vuelta de afinado (AFINADO.md)
+python -m novela afinar puntuar              # cuenta lo que devolvieron los subagentes
+python -m unittest discover -s tests -t .    # 119 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
@@ -226,6 +241,7 @@ python -m unittest discover -s tests -t .    # 89 tests, sin red
 | [novela/trazas_hook.py](novela/trazas_hook.py) | El hook `PostToolUse`: traza cada llamada en vivo, con su gasto | §22 |
 | [novela/informe.py](novela/informe.py) | Lee las trazas de vuelta y agrega el gasto; sin Langfuse, del diario local | §22 |
 | [novela/biblioteca.py](novela/biblioteca.py) | Dónde vive cada novela y cuál es la de ahora. **No escribe canon** | §21 |
+| [novela/afinado.py](novela/afinado.py) | El loop que mide un prompt y decide si un candidato lo sustituye. **No llama a ningún subagente** | AFINADO.md |
 | [novela/entorno.py](novela/entorno.py) | Lector del `.env` | §12, §20 |
 | [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada** | §18 |
 

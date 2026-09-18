@@ -61,6 +61,13 @@ REGLAS = [
     ('trazas.texto', lambda v: isinstance(v, bool), 'booleano'),
     ('trazas.entorno', lambda v: isinstance(v, str) and bool(ENTORNO_DE_TRAZAS.match(v)),
      'minusculas, digitos, guion o guion bajo, sin empezar por "langfuse"'),
+    ('afinado.pasadas', lambda v: _entero(v) and v >= 2, 'entero >= 2'),
+    ('afinado.factor_margen', lambda v: _numero(v) and v > 0, 'numero > 0'),
+    ('afinado.max_candidatos', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
+    ('afinado.fallos_seguidos', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
+    ('afinado.tope_gasto', lambda v: _numero(v) and v > 0, 'numero > 0'),
+    ('afinado.entorno', lambda v: isinstance(v, str) and bool(ENTORNO_DE_TRAZAS.match(v)),
+     'minusculas, digitos, guion o guion bajo, sin empezar por "langfuse"'),
 ]
 
 _AUSENTE = object()
@@ -90,6 +97,13 @@ def validar_config(bruto):
     bloqueo = _leer(bruto, 'margenes.palabras_bloqueo')
     if _fraccion(aviso) and _fraccion(bloqueo) and bloqueo <= aviso:
         fallos.append('margenes.palabras_bloqueo debe ser mayor que margenes.palabras_aviso')
+
+    # Si las llamadas de medicion cayeran en el entorno de las novelas, el
+    # gasto de una vuelta se sumaria al de un libro y nadie lo notaria.
+    entorno = _leer(bruto, 'trazas.entorno')
+    afinado = _leer(bruto, 'afinado.entorno')
+    if isinstance(entorno, str) and isinstance(afinado, str) and entorno == afinado:
+        fallos.append('afinado.entorno debe ser distinto de trazas.entorno')
 
     minimo = _leer(bruto, 'margenes.capitulos_min')
     maximo = _leer(bruto, 'margenes.capitulos_max')

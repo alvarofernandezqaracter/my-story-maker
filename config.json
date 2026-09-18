@@ -23,6 +23,14 @@
     "palabras_bloqueo": 0.4,
     "parrafos_min": 3
   },
+  "afinado": {
+    "pasadas": 3,
+    "factor_margen": 1.0,
+    "max_candidatos": 3,
+    "fallos_seguidos": 2,
+    "tope_gasto": 1.0,
+    "entorno": "afinado"
+  },
   "trazas": {
     "activas": true,
     "entorno": "desarrollo",

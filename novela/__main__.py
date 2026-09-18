@@ -9,6 +9,7 @@ import json
 import sys
 from pathlib import Path
 
+from . import afinado
 from .config import cargar_config, ErrorConfig
 from .biblioteca import actual, ErrorBiblioteca, listar as listar_novelas
 from .entorno import cargar_entorno
@@ -38,6 +39,15 @@ La novela se escribe desde Claude Code: abre el repositorio y lanza
                                    agrega el gasto para analizarlo (§22). Si
                                    Langfuse no contesta, tira del diario local
                                    del hook: sale todo menos el dinero
+  novela afinar <paso> [--vuelta N]
+                                   el loop que mide y mejora el prompt de un
+                                   rol (AFINADO.md). Los pasos son: `casos`
+                                   para subir los casos a Langfuse desde una
+                                   carpeta, `preparar` para bajarlos y abrir la
+                                   vuelta, `puntuar` para contar lo que
+                                   devolvieron los subagentes, `cerrar` y
+                                   `promover`. Las llamadas las hace la sesion,
+                                   no este comando
 
 Opciones globales: --config <ruta> (por defecto config.json)
 """.strip()
@@ -148,8 +158,79 @@ def _ejecutar(comando, posicionales, opciones, config):
         else:
             _log(salida)
 
+    elif comando == 'afinar':
+        _afinar(posicionales[1:], opciones, config)
+
     else:
         raise ValueError('comando desconocido: {}\n\n{}'.format(comando, AYUDA))
+
+
+def _afinar(posicionales, opciones, config):
+    """El loop de AFINADO.md. Este comando no llama a ningun subagente: prepara,
+    cuenta y decide. Las llamadas las hace la sesion de Claude Code, que es
+    donde el prompt corre de verdad (AFINADO.md §6)."""
+    paso = posicionales[0] if posicionales else None
+    vuelta = _entero(opciones.get('vuelta', 1), 'afinar --vuelta necesita un numero')
+
+    if paso == 'casos':
+        desde = opciones.get('desde')
+        if not isinstance(desde, str):
+            raise ValueError('afinar casos necesita --desde <carpeta con los casos>')
+        casos = [json.loads(f.read_text(encoding='utf-8'))
+                 for f in sorted(Path(desde).glob('*.json'))]
+        subidos = afinado.subir_casos(config, casos, aviso=_aviso)
+        for particion, cuantos in subidos.items():
+            _log('{}: {} caso(s) en {}'.format(
+                particion, cuantos, afinado.conjunto(particion)))
+        _log('Los casos ya no hacen falta en disco: borralos de {}'.format(desde))
+
+    elif paso == 'preparar':
+        casos = afinado.bajar_casos(config, aviso=_aviso)
+        marca = afinado.abrir_vuelta(vuelta, config['afinado']['entorno'], casos)
+        _log('vuelta {:02d} abierta con {} casos, {} pasada(s) cada uno'.format(
+            marca['vuelta'], marca['casos'], config['afinado']['pasadas']))
+        _log('  casos en {}'.format(afinado.ruta_vuelta(vuelta) / 'casos'))
+        _log('  respuestas en {}'.format(afinado.ruta_vuelta(vuelta) / 'respuestas'))
+        _log('  las llamadas de esta vuelta van al entorno "{}", no al de las'
+             ' novelas'.format(marca['entorno']))
+
+    elif paso == 'puntuar':
+        prompts = str(opciones.get('prompts') or 'vigente').split(',')
+        particion = opciones.get('particion')
+        particion = particion if isinstance(particion, str) else None
+        medidas = [afinado.medir(config, vuelta, p.strip(), particion)
+                   for p in prompts if p.strip()]
+        veredicto = None
+        if len(medidas) == 2:
+            veredicto = afinado.comparar(config, medidas[0], medidas[1])
+        salida = afinado.texto(vuelta, medidas, veredicto)
+        destino = opciones.get('salida')
+        if opciones.get('json'):
+            salida = json.dumps({'medidas': medidas, 'veredicto': veredicto},
+                                indent=2, ensure_ascii=False)
+        if isinstance(destino, str):
+            Path(destino).write_text(salida + '\n', encoding='utf-8')
+            _log('escrito en {}'.format(destino))
+        else:
+            _log(salida)
+
+    elif paso == 'cerrar':
+        afinado.cerrar_vuelta(vuelta)
+        _log('vuelta {:02d} cerrada. Los casos se han borrado del disco'.format(vuelta))
+
+    elif paso == 'promover':
+        candidato = opciones.get('candidato')
+        if not isinstance(candidato, str):
+            raise ValueError('afinar promover necesita --candidato <ruta>')
+        rol = opciones.get('rol')
+        hecho = afinado.promover(vuelta, rol if isinstance(rol, str) else 'validador',
+                                 candidato)
+        _log('promovido en {}'.format(hecho['commit'][:12]))
+        _log('  {}'.format(hecho['asunto']))
+        _log('  para deshacerlo: {}'.format(hecho['deshacer']))
+
+    else:
+        raise ValueError('paso desconocido de afinar: {}\n\n{}'.format(paso, AYUDA))
 
 
 def main(argv=None):
@@ -179,6 +260,9 @@ def main(argv=None):
     try:
         config = cargar_config(opciones.get('config') or 'config.json')
         _ejecutar(comando, posicionales, opciones, config)
+    except afinado.ErrorAfinado as e:
+        sys.stderr.write('\nla vuelta no puede seguir: {}\n'.format(e))
+        return 1
     except ErrorBiblioteca as e:
         sys.stderr.write('\n{}\n'.format(e))
         return 1

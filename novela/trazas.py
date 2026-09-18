@@ -242,6 +242,49 @@ class Trazas:
         """
         return getattr(self._cliente, 'api', None) if self._cliente else None
 
+    # ---- casos de afinado (AFINADO.md §5)
+    #
+    # Viven aqui, y no en `afinado.py`, por la regla de la cabecera: esta es la
+    # unica pieza del repositorio que sabe que Langfuse existe. Y viven en
+    # Langfuse, y no en el repositorio, porque el examinado tiene `Read` sobre
+    # el proyecto y no puede tener delante el examen.
+
+    def crear_conjunto(self, nombre, descripcion=None, metadata=None):
+        if not self.activa:
+            return False
+        try:
+            self._cliente.create_dataset(
+                name=nombre, description=descripcion, metadata=metadata)
+            return True
+        except Exception as e:
+            self.averiado(e)
+            return False
+
+    def subir_caso(self, conjunto, ident, entrada, clave, metadata=None):
+        """Un caso: lo que ve el agente en `input` y la respuesta en
+        `expected_output`. Reenviar el mismo id actualiza el caso."""
+        if not self.activa:
+            return False
+        try:
+            self._cliente.create_dataset_item(
+                dataset_name=conjunto, id=ident, input=entrada,
+                expected_output=clave, metadata=metadata)
+            return True
+        except Exception as e:
+            self.averiado(e)
+            return False
+
+    def leer_casos(self, conjunto):
+        if not self.activa:
+            return []
+        try:
+            return [{'id': i.id, 'entrada': i.input, 'clave': i.expected_output,
+                     'metadata': i.metadata}
+                    for i in self._cliente.get_dataset(conjunto).items]
+        except Exception as e:
+            self.averiado(e)
+            return []
+
     def averiado(self, error):
         """Un fallo de observabilidad no para la novela: se apaga y se cuenta.
 

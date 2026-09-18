@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.20.0
+version: 1.21.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -31,6 +31,8 @@ informe de §22. Nada de eso escribe novelas.
 | §19, §20, §22 | Lo que mira el sistema desde fuera: la interfaz, las trazas y su análisis |
 | §23 | **Los objetivos medibles.** Qué número tiene que subir o bajar, desde dónde y hasta dónde |
 | §16, §17 | Historial y log de commits del documento |
+
+Hay otros dos documentos con su propia versión: [`TRAZAS.md`](TRAZAS.md), que anota lo que se aprende mirando cómo se escribió una novela, y [`AFINADO.md`](AFINADO.md), que describe cómo mejora solo el prompt de un agente. **Los dos observan este documento y ninguno lo contradice**: cuando un hallazgo suyo se convierte en un cambio de diseño, se muda aquí.
 
 Los §14 y §24 están muertos. Los números de sección no se reutilizan.
 
@@ -557,6 +559,26 @@ las versiones anteriores describían un documento en construcción y ya no ayuda
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
 
+### [1.21.0] — 2026-09-18
+
+**Añadido**
+- §12. Seis claves nuevas, el bloque `afinado`, y la tabla pasa de diecisiete a
+  veintitrés. `afinado.entorno` se valida distinto de `trazas.entorno`: si las
+  llamadas de medición cayeran en el entorno de las novelas, el gasto de una
+  vuelta se sumaría al de un libro sin que nadie lo notase.
+- §18. El comando `afinar` y la skill `afinar-validador`. El comando prepara,
+  cuenta y decide; las llamadas a los subagentes las hace la sesión, porque una
+  mejora medida en otro arnés puede no aparecer donde el prompt corre.
+- §1. Referencia al tercer spec, [`AFINADO.md`](AFINADO.md), que describe cómo
+  mejora solo el prompt de un agente.
+
+**Cambiado**
+- §18. Treinta tests nuevos en un fichero propio, `tests/test_afinado.py`:
+  cubren la forma de una respuesta del validador, las cuentas, el ruido y el
+  veredicto del loop.
+- §22. El hook manda las llamadas de una vuelta de afinado a su propio entorno
+  y a su propia sesión, en lugar de colgarlas de la novela en curso.
+
 ### [1.20.0] — 2026-09-18
 
 **Añadido**
@@ -958,6 +980,7 @@ desde fuera.
 |---|---|
 | `.claude/skills/orquestar-novela/` | La máquina de estados de §4 escrita como instrucciones, con tres referencias: el canon en ficheros, el paquete de contexto y las comprobaciones con el gate |
 | `.claude/agents/novela-*.md` | Los ocho subagentes de §21, con su rol, sus herramientas y su modelo |
+| `.claude/skills/afinar-validador/` | El loop de [AFINADO.md](AFINADO.md) escrito como instrucciones: medir, proponer, decidir y cerrar |
 | `agentes/` | Un fichero por rol de §5, con su encargo y sus modos de fallo. Cada subagente lo lee al arrancar |
 | `skills/` | Las skills de §10, una carpeta por skill |
 | `novela/` | Python: el lector del canon, la interfaz de §19, las trazas de §20 y el informe de §22 |
@@ -1002,7 +1025,7 @@ el loop de intentos y el bloqueo.
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ciento veinticuatro, en
+**Tests.** `python -m unittest discover -s tests -t .`: ciento diecinueve, en
 cuatro ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
