@@ -1,8 +1,8 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.28.0
+version: 1.29.0
 estado: vigente
-actualizado: 2026-09-18
+actualizado: 2026-09-21
 ---
 
 # Spec — Sistema multiagente de novelas históricas
@@ -426,7 +426,9 @@ Un bloqueante que falla dos veces seguidas sobre el mismo artefacto para el proc
 
 **VD-14 existe porque el gate no la cubría.** En una pasada real el escritor devolvió un capítulo entero en inglés, en una novela cuyo brief, canon y prompts están todos en castellano, y las tres dimensiones lo puntuaron 4/4/4 sin mencionarlo: continuidad, anacronismos y lógica y ritmo se pueden juzgar perfectamente en otro idioma, así que ninguna rúbrica tenía por qué saltar. No fue mala suerte, era un hueco: el sistema no tenía ninguna pieza, ni mecánica ni de criterio, que mirase en qué lengua estaba el texto.
 
-Se comprueba contando **palabras funcionales** —«de», «la», «que» frente a «the», «of», «and»—, no vocabulario. Es el método más tonto que funciona, y es deliberado: son las palabras que ningún texto largo puede evitar y que ningún nombre propio ni término de época contamina, así que una novela romana llena de latinismos sigue dando castellano. Corre junto a VD-08 y por la misma razón: un capítulo en otro idioma no merece gastar tres llamadas al validador. Por debajo de cuarenta palabras no decide nada, porque un falso bloqueo tira un capítulo bueno sin que ninguna nota lo pueda defender.
+Se comprueba contando **palabras funcionales** —«de», «la», «que» frente a «the», «of», «and»—, no vocabulario. Es el método más tonto que funciona, y es deliberado: son las palabras que ningún texto largo puede evitar y que ningún nombre propio ni término de época contamina, así que una novela romana llena de latinismos sigue dando castellano. Corre junto a VD-08 y por la misma razón: un capítulo en otro idioma no merece gastar tres llamadas al validador. Sus dos umbrales viven en §12 y están calibrados contra los dieciséis capítulos escritos, no elegidos a ojo: el peor de los quince en castellano está a 0,003 de disparar la comprobación y el que venía en inglés la supera nueve veces. Tres órdenes de magnitud de separación, que es lo que permite ponerla a bloquear sin miedo a que tumbe un capítulo bueno.
+
+**Lo que VD-14 no cubre**, y hay que tenerlo escrito porque un guardia que parece cubrir más de lo que cubre es peor que no tenerlo: un capítulo en castellano **con un párrafo** en otra lengua pasa, porque mide el texto entero y no sus trozos; un idioma hermano —portugués, italiano— pasa, porque comparte las palabras funcionales que se cuentan; y mira **solo el capítulo**, así que un resumen del cronista o un dossier del investigador en otra lengua entran en el canon sin que nadie los mire. Los tres huecos son estrechables con el mismo método y ninguno se ha visto todavía: se estrechan cuando se vean, no antes.
 
 **VD-13 es la que hace barato el cierre.** Sin ella, retocar el capítulo 3 obligaría a comprobar si los capítulos que lo leyeron siguen en pie, y retocar el 1 podría arrastrar el libro entero. Con ella, un retoque que cambiaría los hechos no se aplica a medias: se descarta y el editor global tiene una oportunidad de reformularlo como lo que sí cabe, un arreglo de prosa. §11 explica por qué esa frontera es la correcta.
 
@@ -510,6 +512,8 @@ evitar. DA-02 se decide en ese frontmatter.
 | `margenes.palabras_aviso` | 0,15 | Desvío sobre `palabras_objetivo` que genera aviso (VD-08) |
 | `margenes.palabras_bloqueo` | 0,4 | Desvío que descarta el intento sin llamar al validador (VD-08) |
 | `margenes.parrafos_min` | 3 | Mínimo de párrafos de un capítulo redactado (VD-08) |
+| `margenes.idioma_palabras_min` | 40 | Por debajo de esto VD-14 no decide nada |
+| `margenes.idioma_factor` | 1,5 | Cuántas veces tiene que ganar el otro idioma para que VD-14 bloquee |
 | `afinado.pasadas` | 3 | Veces que se corre cada caso con el mismo prompt ([AFINADO.md](AFINADO.md) §7) |
 | `afinado.factor_margen` | 1,0 | Cuánto tiene que superar al ruido una mejora para promover |
 | `afinado.margen_guardias` | 1,0 | Cuánto puede empeorar una guardia sin contar como empeorar ([AFINADO.md](AFINADO.md) §7) |
@@ -541,7 +545,7 @@ apunta, y no abre ficheros—, pero mandar el libro a un servicio de fuera es un
 decisión de quien opera la máquina y no un detalle de implementación. Quien la
 apaga pierde el juez y conserva las trazas, las notas y el gasto.
 
-Con esto la tabla tiene **veinticuatro** claves, y ninguna sobra: cada una la lee alguien.
+Con esto la tabla tiene **veintiséis** claves, y ninguna sobra: cada una la lee alguien.
 
 **Por qué el afinado tiene entorno propio.** Si las llamadas con las que se mide un prompt cayeran en el entorno de las novelas, el gasto de una vuelta se sumaría al de un libro y nadie lo notaría. Por eso `afinado.entorno` se valida distinto de `trazas.entorno` al arrancar, y no como una recomendación.
 
@@ -598,6 +602,31 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.29.0] — 2026-09-21
+
+**Añadido**
+- §12. `margenes.idioma_palabras_min` y `margenes.idioma_factor`, los dos
+  umbrales de VD-14, que estaban escritos dentro de
+  [`novela/idioma.py`](../../novela/idioma.py). La tabla pasa de veinticuatro a
+  veintiséis claves. Un número en el código es un número que hay que tocar
+  código para cambiar, y esta sección existe justo para eso.
+- §18. Comando `novela idioma <ruta>`. Sustituye al `python -c` con `sys.path`
+  que llevaba la skill, que ya no valía: los umbrales hay que leerlos de
+  `config.json` y el comando lo trae cargado y validado. **Sale con 1 si
+  bloquea**, para que quien encadene comandos no tenga que leer la salida.
+- §9. Los tres huecos que VD-14 no cubre, escritos: el párrafo suelto en otra
+  lengua, el idioma hermano y que solo mira el capítulo. Un guardia que parece
+  cubrir más de lo que cubre es peor que no tenerlo.
+- §18. Once tests más, hasta ciento cincuenta y cinco: que los dos umbrales
+  gobiernen de verdad —se comprueba moviéndolos—, que la separación medida
+  sobre los capítulos reales sea de tres órdenes de magnitud, y el código de
+  salida del comando.
+
+**Cambiado**
+- §9. Los umbrales de VD-14 dejan de ser una elección y pasan a ser una medida:
+  calibrados contra los dieciséis capítulos escritos, el peor castellano está a
+  0,003 de disparar y el capítulo en inglés la supera nueve veces.
 
 ### [1.28.0] — 2026-09-18
 
@@ -1219,13 +1248,14 @@ el loop de intentos y el bloqueo.
 | `biblioteca` | Lista las novelas, de la más reciente a la más antigua, y marca la que está en curso (§21) |
 | `hook-traza` | Lee un `PostToolUse` por stdin y traza la llamada al subagente. Lo llama el hook, no una persona (§22) |
 | `informe-trazas [--sesion S] [--salida F] [--json]` | Lee de vuelta las trazas de una novela y agrega el gasto (§22) |
+| `idioma <ruta>` | VD-14 (§9): en qué lengua está un capítulo redactado. **Sale con 1 si bloquea**, para que el escalón se note sin leer la salida |
 | `afinar <paso> [--vuelta N]` | El loop que mide y mejora el prompt de un rol ([AFINADO.md](AFINADO.md)). Prepara, cuenta y decide; **las llamadas a los subagentes las hace la sesión** |
 | `ui.bat` | Lo mismo que `ui` en Windows, buscando el intérprete por su cuenta |
 
 **No hay comando que consulte el canon**, y no hace falta: son ficheros JSON en un formato que se lee a ojo, y para verlos con forma está la interfaz.
 
-**Tests.** `python -m unittest discover -s tests -t .`: ciento cuarenta y cuatro, en
-cinco ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
+**Tests.** `python -m unittest discover -s tests -t .`: ciento cincuenta y cinco, en
+seis ficheros y sin red. Cubren el lector del canon, la auditoría del gate, la API de
 §19 —por la función que enruta, no por un socket—, la comprobación del brief que
 hace el lanzador antes de arrancar nada, el árbol de trazas reconstruido y el
 hook de §22. Los dos últimos corren contra una capa de mentira

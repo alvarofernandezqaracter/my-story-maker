@@ -127,11 +127,23 @@ capitulo en otro idioma no merece gastar tres llamadas.
 No lo mires a ojo, cuentalo:
 
 ```bash
-python -c "import io,sys; sys.path.insert(0,'.'); from novela.idioma import revisar; print(revisar(io.open(sys.argv[1],encoding='utf-8').read()))" <novela>/capitulos/cap-01-intento-1.md
+python -m novela idioma <novela>/capitulos/cap-01-intento-1.md
 ```
 
 Devuelve `ok`, `bloqueo` o `sin_datos` (el texto es demasiado corto para
-decidir, y entonces no bloquea nada).
+decidir, y entonces no bloquea nada). Sale con 1 solo si bloquea, asi que el
+codigo de salida vale por si solo y no hay que leer el texto.
+
+Los dos umbrales que usa estan en `config.json`, en `margenes`: por debajo de
+cuantas palabras no se decide nada y cuantas veces tiene que ganar el otro
+idioma para llamarlo fallo.
+
+**Lo que NO caza**, y conviene saberlo antes de fiarse: un capitulo en
+castellano con un parrafo en ingles pasa, porque busca el idioma del texto
+entero y no el de un trozo; un idioma hermano -portugues, italiano- pasa,
+porque comparte las palabras funcionales; y mira **solo el capitulo**, asi que
+un resumen del cronista o un dossier en otra lengua entran en el canon sin que
+nadie los vea.
 
 **Bloqueo**: marca el intento `descartado` y vuelve al escritor **desde cero**,
 igual que con VD-08. No llames a los validadores.

@@ -57,6 +57,8 @@ REGLAS = [
     ('margenes.palabras_aviso', _fraccion, 'fraccion en (0, 1)'),
     ('margenes.palabras_bloqueo', _fraccion, 'fraccion en (0, 1)'),
     ('margenes.parrafos_min', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
+    ('margenes.idioma_palabras_min', lambda v: _entero(v) and v >= 1, 'entero >= 1'),
+    ('margenes.idioma_factor', lambda v: _numero(v) and v > 0, 'numero > 0'),
     ('trazas.activas', lambda v: isinstance(v, bool), 'booleano'),
     ('trazas.texto', lambda v: isinstance(v, bool), 'booleano'),
     ('trazas.entorno', lambda v: isinstance(v, str) and bool(ENTORNO_DE_TRAZAS.match(v)),

@@ -21,7 +21,9 @@
     "capitulos_max": 1.2,
     "palabras_aviso": 0.15,
     "palabras_bloqueo": 0.4,
-    "parrafos_min": 3
+    "parrafos_min": 3,
+    "idioma_palabras_min": 40,
+    "idioma_factor": 1.5
   },
   "afinado": {
     "pasadas": 3,

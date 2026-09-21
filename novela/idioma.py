@@ -29,11 +29,13 @@ INGLES = frozenset("""
     when what all one out up about into then than them its who him
 """.split())
 
-# Debajo de esto no se decide nada: un texto de dos frases no da senal.
-MINIMO_PALABRAS = 40
-# Cuantas veces tiene que ganar el otro idioma para llamarlo fallo. Amplio a
-# proposito: el objetivo es cazar el capitulo entero en otro idioma, no la cita.
-FACTOR = 1.5
+# Los dos umbrales viven en `config.json` y no aqui, que es la regla de
+# SPEC.md §12: un numero escrito en el codigo es un numero que hay que tocar
+# codigo para cambiar. `margenes.idioma_palabras_min` es por debajo de cuantas
+# palabras no se decide nada, porque un texto de dos frases no da senal, y
+# `margenes.idioma_factor` es cuantas veces tiene que ganar el otro idioma para
+# llamarlo fallo. El segundo es amplio a proposito: lo que se caza es el
+# capitulo entero en otro idioma, no la cita.
 
 
 def _normalizar(texto):
@@ -51,12 +53,16 @@ def contar(texto):
     }
 
 
-def revisar(texto):
-    """Devuelve (escalon, detalle). El escalon es 'ok', 'sin_datos' o 'bloqueo'."""
+def revisar(texto, config):
+    """Devuelve (escalon, detalle). El escalon es 'ok', 'sin_datos' o 'bloqueo'.
+
+    `config` es el `config.json` ya cargado: los dos umbrales salen de ahi.
+    """
+    margenes = config['margenes']
     c = contar(texto)
-    if c['palabras'] < MINIMO_PALABRAS:
+    if c['palabras'] < margenes['idioma_palabras_min']:
         return 'sin_datos', dict(c, motivo='texto demasiado corto para decidir')
-    if c['ingles'] > c['espanol'] * FACTOR:
+    if c['ingles'] > c['espanol'] * margenes['idioma_factor']:
         return 'bloqueo', dict(
             c, motivo='parece escrito en ingles: %d funcionales inglesas frente '
                       'a %d espanolas' % (c['ingles'], c['espanol']))

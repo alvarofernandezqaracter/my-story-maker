@@ -13,6 +13,7 @@ from . import afinado
 from .config import cargar_config, ErrorConfig
 from .biblioteca import actual, ErrorBiblioteca, listar as listar_novelas
 from .entorno import cargar_entorno
+from .idioma import revisar as revisar_idioma
 from .informe import construir as construir_informe, texto as texto_informe
 from .servidor import arrancar as arrancar_interfaz
 from .trazas import Trazas
@@ -39,6 +40,9 @@ La novela se escribe desde Claude Code: abre el repositorio y lanza
                                    agrega el gasto para analizarlo (§22). Si
                                    Langfuse no contesta, tira del diario local
                                    del hook: sale todo menos el dinero
+  novela idioma <ruta>             VD-14 (§9): en que lengua esta un capitulo
+                                   redactado, contando palabras funcionales.
+                                   Imprime el escalon y sale con 1 si bloquea
   novela afinar <paso> [--vuelta N]
                                    el loop que mide y mejora el prompt de un
                                    rol (AFINADO.md). Los pasos son: `casos`
@@ -116,6 +120,22 @@ def _ejecutar(comando, posicionales, opciones, config):
             resumen.get('intentos'), resumen.get('notas'), resumen.get('retoques'),
             resumen.get('entorno')))
         _log('  reconstruido del canon: sin latencia, sin tokens y sin coste')
+
+    elif comando == 'idioma':
+        # VD-14 de §9. Existe como comando y no como un `python -c` en la skill
+        # por los dos umbrales: viven en config.json (§12) y el comando ya lo
+        # trae cargado y validado.
+        if len(posicionales) < 2:
+            raise ValueError('novela idioma necesita la ruta de un capitulo')
+        texto = Path(posicionales[1]).read_text(encoding='utf-8')
+        escalon, detalle = revisar_idioma(texto, config)
+        _log('{}: {} palabras, {} funcionales espanolas, {} inglesas'.format(
+            escalon, detalle['palabras'], detalle['espanol'], detalle['ingles']))
+        if detalle['motivo']:
+            _log('  {}'.format(detalle['motivo']))
+        # El codigo de salida es lo que mira quien encadena comandos: un
+        # bloqueo tiene que notarse sin leer el texto de la salida.
+        return 1 if escalon == 'bloqueo' else 0
 
     elif comando == 'biblioteca':
         novelas = listar_novelas()
@@ -259,7 +279,9 @@ def main(argv=None):
 
     try:
         config = cargar_config(opciones.get('config') or 'config.json')
-        _ejecutar(comando, posicionales, opciones, config)
+        # El comando que quiera decir que algo no cuadra devuelve su codigo;
+        # los demas devuelven None y salen con 0, como siempre.
+        return _ejecutar(comando, posicionales, opciones, config) or 0
     except afinado.ErrorAfinado as e:
         sys.stderr.write('\nla vuelta no puede seguir: {}\n'.format(e))
         return 1
