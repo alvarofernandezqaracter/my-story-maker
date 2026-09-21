@@ -78,9 +78,12 @@ Estas reglas salen de `architecture.md` y gobiernan cualquier propuesta:
 - **Toda `Crítica` lleva evidencia citable**; sin ella se descarta.
 - **Sin harness a medida.** El estado vive en artefactos declarativos legibles
   por los agentes, no en objetos tipados en memoria.
-- **100 000 tokens por ejecución.** Una ejecución completa no puede gastar más
-  de 100 000 tokens de contexto. No es un presupuesto por agente: es el techo de
-  la suma de todos los agentes que participan en esa ejecución.
+- **100 000 tokens de contexto a la vez.** El techo es de concurrencia: en
+  cualquier instante, la suma del contexto que ocupan los agentes que están
+  corriendo simultáneamente no puede pasar de 100 000 tokens. No es un
+  presupuesto por agente ni un gasto acumulado: el agente que termina libera su
+  parte, así que una cadena secuencial larga no lo agota por larga que sea. Lo
+  que lo agota es abrir demasiados frentes en paralelo.
 
 ## El ciclo de edición
 
@@ -125,9 +128,10 @@ más**: `backend/`, `frontend/` o ambos en el mismo cambio si la frontera entre
 ellos lo exige.
 
 Antes de escribir código, el agente abre la skill de la parte de la pila que va
-a tocar: `python-fastapi-ops` para `backend/`, `react-ops` para `frontend/` y
-`sqlite-ops` para todo lo que sea base de datos. Son obligatorias, no dependen
-de que la spec las nombre.
+a tocar: `fastapi` para `backend/`, `frontend-react` para `frontend/` y
+`backend-sqlite` para todo lo que sea base de datos, más `sqlite-vec` cuando
+haya embeddings o búsqueda por parecido. Son obligatorias, no dependen de que
+la spec las nombre.
 
 Si al programar aparece algo que la spec no cubre —una decisión de fondo, no un
 detalle de implementación— **se vuelve a la fase 1** y se amplía la spec. No se

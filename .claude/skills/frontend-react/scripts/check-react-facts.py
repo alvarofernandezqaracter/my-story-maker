@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Staleness verifier for react-ops: the React 19 facts the skill encodes must
+"""Staleness verifier for frontend-react: the React 19 facts the skill encodes must
 stay real and named in the prose.
 
-react-ops centers on React 19 (use(), Actions, useActionState, useFormStatus,
+frontend-react centers on React 19 (use(), Actions, useActionState, useFormStatus,
 useOptimistic, React Compiler) and names an ecosystem stack (Zustand, Jotai,
 Redux Toolkit, TanStack Query, React Hook Form, Zod). That is exactly the fact
 that drifts silently (SKILL-RESOURCE-PROTOCOL.md §7): a package moves a major
@@ -51,12 +51,12 @@ EX_UNPARSEABLE = 4
 EX_UNAVAILABLE = 7
 EX_DRIFT = 10
 
-SCHEMA = "claude-mods.react-ops.facts/v1"
+SCHEMA = "claude-mods.frontend-react.facts/v1"
 HERE = Path(__file__).resolve().parent
 DEFAULT_FACTS = HERE.parent / "assets" / "react-facts.json"
 DEFAULT_SKILL = HERE.parent
 REGISTRY = "https://registry.npmjs.org"
-CURRENCY_RE = re.compile(r"as of 20\d\d")
+CURRENCY_RE = re.compile(r"(?:as of|verificado en) 20\d\d")
 
 
 class Term:
@@ -140,7 +140,7 @@ def npm_latest(name: str, timeout: float) -> tuple[str, object]:
     """Return (resolved|notfound|unavailable, version-string-or-status)."""
     url = f"{REGISTRY}/{urllib.parse.quote(name, safe='')}/latest"
     req = urllib.request.Request(url, method="GET",
-                                 headers={"User-Agent": "claude-mods-react-ops-check/1",
+                                 headers={"User-Agent": "claude-mods-frontend-react-check/1",
                                           "Accept": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -182,7 +182,7 @@ def check_live(facts: dict, timeout: float) -> tuple[list[dict], list[dict]]:
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(
         prog="check-react-facts.py",
-        description="Verify react-ops' React 19 facts stay named (offline) and current on npm (live).",
+        description="Verify frontend-react' React 19 facts stay named (offline) and current on npm (live).",
     )
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--offline", action="store_true", help="structural consistency, no network (default)")
