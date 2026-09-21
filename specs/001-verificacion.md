@@ -67,3 +67,31 @@ Editor de estilo no ve por diseño; van al Verificador de continuidad. Solo el
 léxico se queda en el Editor, que sí recibe la lista vetada. «Alcance local» en
 `definitions.md` describe el alcance del defecto, no el del agente que lo
 encuentra.
+
+## §3 Objetivos medibles
+
+No hay código todavía, así que **ninguna línea base es real**. Se declaran como
+pendientes de medir en la primera ejecución completa, que es un estado honesto y
+preferible a inventar el número. La meta se fija cuando exista la base.
+
+| Métrica | Cómo se mide | Línea base | Meta |
+| --- | --- | --- | --- |
+| Tasa de detección por dimensión | Casos sembrados: un capítulo con un defecto conocido por dimensión; se cuenta si el agente responsable lo señala | Pendiente | Por fijar tras medir |
+| Falsos positivos por capítulo | `Crítica` emitida cuya evidencia no sostiene el defecto al revisarla | Pendiente | Por fijar tras medir |
+| Críticas descartadas sin evidencia | Proporción sobre el total emitido, ya prevista en `architecture.md` §5 | Pendiente | Por fijar tras medir |
+| Iteraciones hasta `Aceptado` | Recuento por capítulo en la `Traza` | Pendiente | Por fijar tras medir |
+| Coste de la verificación | Tokens gastados por los agentes que critican, sobre el techo de 100 000 por ejecución | Pendiente | ≤ 30 % del techo |
+
+**Qué no es un objetivo.** Bajar el número de críticas emitidas. Se cumple
+trivialmente haciendo peor al Verificador, y arruinaría la única métrica que
+mide si el sistema detecta algo. El orden importa: la tasa de detección va
+primera porque, sin ella, las otras cuatro miden un bucle que puede estar
+girando en vacío.
+
+## §4 Fuera de alcance
+
+- No se escriben los prompts de los diez agentes. La skill dice qué debe llevar
+  un contrato de verificación; redactarlos es fase de implementación.
+- No se toca el censo de agentes ni se declara ningún rol nuevo.
+- No se implementa nada en `backend/` ni en `frontend/`: siguen vacíos.
+- No se construye el conjunto de casos sembrados de §3; se define qué mide.
