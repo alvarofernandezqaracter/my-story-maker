@@ -4,11 +4,11 @@
 
 ## Qué contiene este documento
 
-Todo lo relativo a **cómo está construido el sistema**: la separación en capas y su regla de acoplamiento, las entidades de producción, la gestión de contexto por rol, el ciclo de vida de un capítulo, el bucle de control de calidad, el gobierno por entidad y las notas de implementación.
+Todo lo relativo a **cómo está construido el sistema**: la separación en capas y su regla de acoplamiento, las entidades de producción, la gestión de contexto y las tres memorias, la orquestación por guion y el ciclo de vida de un capítulo, el bucle de control de calidad, el gobierno por entidad, la organización del código dentro de cada paquete y las notas de implementación.
 
 El vocabulario del dominio —qué es una escena, un personaje, un anacronismo— vive en `definitions.md`, y sus diagramas en `domain-knowledge.md`. Este documento referencia esas entidades, no las define.
 
-El reparto del repositorio —qué va en `backend/`, qué va en `frontend/` y dónde está la frontera entre ambos— está en la sección «Estructura del repositorio» de `AGENTS.md`, en la raíz. Este documento describe el sistema, no dónde se guardan sus ficheros.
+El reparto del repositorio —qué va en `backend/`, qué va en `frontend/` y dónde está la frontera entre ambos— está en la sección «Estructura del repositorio» de `AGENTS.md`, en la raíz. Aquí se describe el escalón siguiente: cómo se organiza el código **dentro** de cada uno de esos dos paquetes, en §7.
 
 ## 1. Arquitectura en tres capas
 
@@ -62,20 +62,21 @@ Esta capa convierte el sistema multiagente en algo inspeccionable. Es la que per
 
 ### Censo de agentes
 
-Diez roles. **Cada rol tiene exactamente un tipo de tarea y cada tipo de tarea tiene exactamente un rol**: si aparece trabajo que ningún tipo cubre, se declara un rol nuevo, no se ensancha uno existente. Todo lo que el sistema hace lo hace un agente; no hay lógica de negocio fuera de esta tabla.
+Once roles. **Cada rol tiene exactamente un tipo de tarea y cada tipo de tarea tiene exactamente un rol**: si aparece trabajo que ningún tipo cubre, se declara un rol nuevo, no se ensancha uno existente. Todo lo que el sistema hace lo hace un agente; no hay lógica de negocio fuera de esta tabla.
 
-| Agente | Tipo de tarea | Qué escribe | Alcance | Cuándo actúa |
-| --- | --- | --- | --- | --- |
-| Constructor de mundo | `poblar_mundo` | `Personaje`, `Lugar`, `Objeto`, `Facción` | Obra | Arranque y ampliación bajo demanda |
-| Documentalista | `documentar` | `Fuente`, `Concepto`, `Práctica`, `Registro lingüístico` | Escena | Antes de planificar y antes de redactar |
-| Arquitecto de arcos | `auditar` | `Crítica` de alcance global | Obra | Cada N capítulos y al cierre |
-| Planificador | `planificar` | `Plan`, `Capítulo`, contratos de `Escena`, `Compromiso` | Capítulo | Al abrir capítulo |
-| Redactor | `redactar` | `Borrador`, `Párrafo` | Escena o capítulo | Tras plan aceptado |
-| Contable de estado | `plegar` | `EventoEstado`, estado en N | Cierre de capítulo | Al pasar de `Aceptado` a `Cerrado` |
-| Verificador de continuidad | `verificar` | `Crítica` de alcance escena y capítulo | Capítulo | Sobre cada borrador nuevo |
-| Editor de estilo | `editar_estilo` | `Crítica` local, `Borrador` de superficie | Párrafo | Sobre cada borrador nuevo |
-| Juez de rúbrica | `juzgar` | `Crítica` ruidosa, marcada aparte | Escena y capítulo | Solo en dimensiones no formulables como predicado |
-| Revisor | `revisar` | `Revisión`, `Borrador` | Escena o capítulo | Con críticas `mayor` pendientes |
+| Agente | Tipo de tarea | Alcance | Cuándo actúa |
+| --- | --- | --- | --- |
+| Constructor de mundo | `poblar_mundo` | Obra | Arranque y ampliación bajo demanda |
+| Documentalista | `documentar` | Escena | Antes de planificar y antes de redactar |
+| Arquitecto de arcos | `auditar` | Obra | Cada N capítulos y al cierre |
+| Planificador | `planificar` | Capítulo | Al abrir capítulo |
+| Redactor | `redactar` | Escena | Tras plan aceptado, una escena por encargo |
+| Contable de estado | `plegar` | Cierre de capítulo | Al pasar de `Aceptado` a `Cerrado` |
+| Verificador de continuidad | `verificar` | Escena y capítulo | En cada criba, una tarea por dimensión |
+| Editor de estilo | `editar_estilo` | Párrafo y capítulo | Al coser el capítulo y en la criba de pulido |
+| Juez de rúbrica | `juzgar` | Escena y capítulo | En la criba de pulido, solo en lo no formulable como predicado |
+| Revisor | `revisar` | Escena o capítulo | Con críticas `mayor` pendientes |
+| Archivero | `destilar` | Capítulo | Al cerrar capítulo, después del Contable |
 
 Dos roles estaban antes implícitos y ahora son explícitos: el **Constructor de mundo**, que escribía la capa 2 sin tener tarea ni vista, y el **Revisor**, que modificaba capítulos y escenas sin estar declarado. Dos son nuevos: el **Contable de estado**, que absorbe el pliegue del log que antes hacía una función pura, y el **Juez de rúbrica**, que antes aparecía como "juez LLM" sin ser un rol.
 
@@ -85,6 +86,47 @@ Reglas de integridad del censo:
 - Solo el Contable de estado emite `EventoEstado`. Es el único punto por el que el mundo cambia.
 - Solo el Documentalista escribe `Fuente`. Un dato sin `Fuente` escrita por él es una alucinación por definición.
 - El Revisor aplica críticas ajenas; no puede crear las suyas.
+- El Archivero no escribe hechos del mundo ni prosa: resume el capítulo cerrado y retira lo que caduca. No decide nada sobre el texto.
+
+### Entrada y salida de cada agente
+
+Qué artefacto consume cada rol y qué artefacto deja escrito. La salida de un agente es la entrada del siguiente y **el testigo se pasa siempre por artefacto escrito, nunca por llamada directa**: ningún rol invoca a otro ni le pasa objetos en memoria, lee lo que el anterior dejó en el almacén. Esta tabla fija el testigo; la de §3 fija la ventana desde la que cada rol lo mira.
+
+| Agente | Entrada | Salida |
+| --- | --- | --- |
+| Constructor de mundo | `Obra` con su premisa y su marco, elenco declarado por el editor, `Fuente` ya recogidas | Fichas de `Personaje`, `Lugar`, `Objeto` y `Facción` |
+| Documentalista | Marco de la escena —fecha, lugar, ámbito— y afirmaciones históricas pendientes de respaldo | `Fuente`, `Concepto`, `Práctica` y `Registro lingüístico`, filtrados por esa fecha y ese lugar |
+| Arquitecto de arcos | Resúmenes de los capítulos cerrados, arcos declarados, cola de `Compromiso`, `funcion_estructural` de las escenas en orden | `Crítica` de alcance global |
+| Planificador | Canon, estado en N-1, compromisos abiertos, arcos | `Plan`: esqueleto de `Capítulo`, contrato de cada `Escena` y `Compromiso` asignados |
+| Redactor | Contrato de una escena del `Plan` aceptado, voces del elenco presente en ella, cola de continuidad local, documentación recuperada para esa escena | `Borrador` candidato de esa escena, con sus `Párrafo` |
+| Contable de estado | Estado en N-1 ya materializado, texto aceptado del capítulo N, vocabulario de tipos de evento | `EventoEstado` del capítulo N, con fecha y lugar resultantes ya calculados, y estado en N |
+| Verificador de continuidad | Un contrato de verificación por dimensión —predicado y proyección mínima, `validators.md` §4— y el texto producido | `Crítica` de alcance escena y capítulo con evidencia citable, o la constancia de que el predicado se cumple |
+| Editor de estilo | Texto producido, `Registro lingüístico` de las escenas en juego, lista vetada corta del capítulo, registro acumulado de imágenes y muletillas | `Crítica` local, `Borrador` de superficie y el registro acumulado actualizado al cerrar el capítulo |
+| Juez de rúbrica | Texto producido y rúbrica de la única dimensión que puntúa | `Crítica` ruidosa, marcada aparte, que por sí sola no dispara regeneración |
+| Revisor | `Borrador` vigente, críticas a atender ya filtradas por severidad, contrato de la unidad | `Revisión` —críticas atendidas y rechazadas con motivo— y el `Borrador` siguiente |
+| Archivero | Texto aceptado del capítulo N, cola de `Compromiso`, registro acumulado de estilo | `Resumen de capítulo`, las dos colas actualizadas y la memoria de capítulo retirada |
+
+La `Traza` no es salida de ningún rol: se registra en toda tarea, la ejecute quien la ejecute, y por eso no aparece en la tabla.
+
+```mermaid
+flowchart LR
+  MUN[Constructor de mundo] -- fichas de mundo --> PLA[Planificador]
+  DOC[Documentalista] -- fuentes y lexico --> RED[Redactor]
+  PLA -- Plan con contratos --> RED
+  RED -- Borrador --> VER[Verificador]
+  RED -- Borrador --> EDI[Editor de estilo]
+  RED -- Borrador --> JUE[Juez de rubrica]
+  VER -- Critica --> REV[Revisor]
+  EDI -- Critica --> REV
+  JUE -- Critica ruidosa --> REV
+  REV -- Borrador revisado --> VER
+  REV -- texto aceptado --> CON[Contable de estado]
+  CON -- EventoEstado y estado en N --> PLA
+  CON -- estado en N --> VER
+  REV -- texto aceptado --> ARC[Archivero]
+  ARC -- Resumen de capitulo --> ARQ[Arquitecto de arcos]
+  ARQ -- Critica global --> PLA
+```
 
 **Plan.** Descomposición previa a la escritura: esqueleto de capítulo, lista de escenas con sus contratos, asignación de compromisos. Es la salida del planificador y la entrada del redactor.
 
@@ -108,6 +150,8 @@ Sin esta estructura no se puede medir si el bucle de revisión converge o gira e
 **Decisión.** Elección de diseño registrada y sus alternativas descartadas: nombre de un personaje, licencia histórica asumida, giro elegido. Evita que el sistema reabra lo ya cerrado.
 
 **EventoEstado.** Hecho atómico emitido por un capítulo al cerrarse, que modifica el mundo. Es la pieza central de la gestión de contexto: el estado del mundo en el capítulo N no se almacena, se deriva plegando estos eventos.
+
+**Resumen de capítulo.** Lo que queda de un capítulo cerrado cuando su prosa deja de leerse: qué pasó, qué cambió y qué quedó pendiente, en unas pocas líneas. Lo escribe el Archivero y es la única forma en que los capítulos antiguos siguen presentes en el sistema. No es un `EventoEstado`: el evento registra un hecho y el resumen registra un tramo de historia.
 
 **Traza.** Registro por tarea de contexto enviado, salida obtenida, coste y latencia. Necesario para el trabajo académico: es lo que permite medir el sistema, no solo la novela.
 
@@ -182,15 +226,43 @@ Cerrar estos vocabularios es lo que hace computables los predicados de calidad. 
 
 La pregunta operativa no es qué sabe el sistema, sino **qué proyección de la ontología recibe cada agente en cada paso**. El contexto es una vista sobre el grafo, y cada rol necesita una distinta.
 
+### Ningún agente recuerda: toda tarea arranca en frío
+
+No hay historial de conversación en ninguna parte. Cada tarea abre una ventana construida desde cero a partir de los artefactos escritos y la cierra al escribir el suyo. Entre dos tareas no viaja nada más que un artefacto en el almacén: es la regla del paso de testigo de §2 vista desde el lado del contexto.
+
+Esto no es austeridad, es lo que hace el techo **verificable antes de gastar**: una ventana que se arma de cero se puede medir antes de mandarla. Un agente que acumulase memoria propia sería un agente cuyo coste nadie puede acotar.
+
+### Las tres memorias
+
+Lo que se suele llamar memoria a corto y a largo plazo son aquí tres plazos, y lo que los separa no es su contenido sino **cuándo se tira lo que hay dentro**.
+
+| Memoria | Qué contiene | Cuándo se tira |
+| --- | --- | --- |
+| De tarea | La ventana de un agente para un encargo concreto | Al terminar el encargo. Solo sobrevive el artefacto escrito |
+| De capítulo | Borradores descartados, documentación recuperada por escena, críticas ya resueltas | Al cerrar el capítulo, y lo hace el Archivero |
+| De obra | Canon y fichas, log de `EventoEstado`, estado materializado, `Resumen de capítulo`, cola de `Compromiso`, registro acumulado de estilo, `Decisión` | Nunca |
+
+**Olvidar es un paso del guion, no un descuido.** La memoria de capítulo no caduca sola: la retira el Archivero al destilar (§4). Sin ese paso, el gasto constante deja de serlo a los pocos capítulos.
+
 ### Los cinco materiales y su política de residencia
 
-| Material | Qué es | Política |
-| --- | --- | --- |
-| Canon | Hechos inmutables del mundo y decisiones ya cerradas | Siempre presente, comprimido, nunca reescrito por el redactor |
-| Estado en N | Dónde está cada quien, qué sabe, qué posee, qué debe | Derivado, no almacenado: pliegue de los `EventoEstado` hasta N |
-| Compromisos abiertos | Pistas plantadas sin pagar, subtramas vivas, promesas al lector | Siempre presente; cola ordenada por vencimiento |
-| Continuidad local | Cola literal de los últimos párrafos del capítulo anterior | Siempre presente en crudo: el estilo se contagia por adyacencia |
-| Documentación | Fuentes, detalle material, léxico de época | Recuperado por escena, filtrado por fecha y lugar |
+| Material | Qué es | Memoria | Política |
+| --- | --- | --- | --- |
+| Canon | Hechos inmutables del mundo y decisiones ya cerradas | Obra | Siempre presente, comprimido, nunca reescrito por el redactor |
+| Estado en N | Dónde está cada quien, qué sabe, qué posee, qué debe | Obra | Derivado, no almacenado: pliegue de los `EventoEstado` hasta N |
+| Compromisos abiertos | Pistas plantadas sin pagar, subtramas vivas, promesas al lector | Obra | Siempre presente; cola ordenada por vencimiento |
+| Continuidad local | Cola literal de los últimos párrafos del capítulo anterior | Obra | Siempre presente en crudo: el estilo se contagia por adyacencia |
+| Documentación | Fuentes, detalle material, léxico de época | Capítulo | Recuperada por escena, filtrada por fecha y lugar, descartada al cerrar |
+
+### La regla que sostiene las tres
+
+> **Nada cuyo tamaño crezca con la longitud de la obra entra en la ventana de ningún agente.**
+
+Es la condición para que el capítulo 40 cueste lo mismo que el capítulo 4. De ella salen tres consecuencias que el resto del documento da por supuestas:
+
+- **El log de `EventoEstado` no se lee nunca entero.** El pliegue es incremental: estado en N-1 más los eventos de N.
+- **La prosa cerrada no se relee jamás.** La única excepción es la cola de continuidad local, corta y de tamaño fijo.
+- **Solo dos materiales crecen con la obra**, y por eso los dos llevan tope declarado y un único lector: los `Resumen de capítulo`, que lee el Arquitecto de arcos, y el registro acumulado de estilo, que lee el Editor de estilo. Alcanzado el tope, se compactan antes de seguir. Nada más en el sistema tiene permitido crecer sin límite.
 
 ### Estado como pliegue, no como campo mutable
 
@@ -249,9 +321,65 @@ El verificador que ve la prosa anterior se ancla en ella y deja pasar los fallos
 
 ### Presupuesto
 
-El contexto se dimensiona por rol, no globalmente. Reglas de compresión: el canon se mantiene como fichas cortas y estables; los capítulos anteriores entran como resumen estructurado (eventos + cambios de estado), nunca como prosa completa, salvo la cola de continuidad local; la documentación entra solo la recuperada para esa escena y se descarta al cerrarla.
+**El techo son 100 000 tokens simultáneos.** No es el gasto de una obra ni el de un capítulo, que suman mucho más paso tras paso: es lo que puede haber abierto **a la vez**. El agente que termina libera su parte, así que una cadena secuencial larga no agota el techo por larga que sea. Lo que lo agota es abrir demasiados frentes en paralelo. De ahí salen tres reglas.
 
-## 4. Ciclo de vida de un capítulo
+**Primera: cada rol tiene un tope de ventana.** No es una estimación, es un límite. Si la proyección mínima de una tarea no cabe en el tope de su rol, la tarea se parte en unidades menores —de capítulo a escena, de escena a párrafo— en lugar de recortar la proyección a ojo. Recortar la proyección es fabricar falsos negativos: el agente deja de ver justamente lo que tenía que comparar.
+
+| Rol | Tope de ventana |
+| --- | --- |
+| Arquitecto de arcos | 25 000 |
+| Planificador · Revisor | 20 000 |
+| Constructor de mundo | 15 000 |
+| Contable de estado · Archivero · Redactor | 12 000 |
+| Documentalista · Verificador · Editor de estilo | 8 000 |
+| Juez de rúbrica | 6 000 |
+
+El reparto es la asignación de diseño, no una medida: calibrarlo contra las `Traza` reales es trabajo de implementación, y la `Traza` existe en parte para eso.
+
+**Segunda: la anchura de una tanda se calcula, no se elige.** Se reserva el 20 % del techo como margen para lo que no se puede prever y quedan 80 000 útiles. En una tanda caben `80 000 ÷ tope del rol más caro de la tanda` agentes simultáneos. Con verificadores a 8 000, diez a la vez. Si hay veinte comprobaciones que hacer, son dos tandas: se abren diez, se espera a que cierren las diez y se abren las otras diez.
+
+**Tercera: paralelo donde no se pisan, secuencial donde hay testigo.** Dos tareas corren a la vez solo si ninguna necesita el artefacto de la otra: documentar varias escenas, comprobar varias dimensiones sobre un mismo borrador. Planificar, redactar, revisar y cerrar van en fila porque cada una consume lo que dejó la anterior. Nunca en abanico libre: un abanico cuya anchura no se conoce de antemano es un techo que no se puede prometer.
+
+Un efecto de los topes que conviene notar, porque decide el diseño sin que haya que ordenarlo: **al verificador no le cabe un capítulo entero**. Sus instrucciones y su contrato rondan los 1 500 tokens, su proyección mínima otros 1 500 y un capítulo de cuatro escenas unos 5 200. No entra. Así que verifica por escena. Las dimensiones que sí son de alcance de capítulo caben porque son justamente las que no leen prosa, sino datos que otro agente ya dejó escritos —el modo declarado de cada párrafo, las fechas resultantes de cada `EventoEstado`—. El presupuesto y el reparto de `validators.md` llegan a la misma conclusión por caminos distintos.
+
+Reglas de compresión, que son las que hacen que los topes se cumplan: el canon se mantiene como fichas cortas y estables; los capítulos anteriores entran como `Resumen de capítulo`, nunca como prosa, salvo la cola de continuidad local; la documentación entra solo la recuperada para esa escena y se descarta al cerrarla.
+
+## 4. Orquestación: el guion del capítulo
+
+### Un guion escrito, y quién lo camina
+
+El orden de los pasos está escrito de antemano y no lo decide nadie sobre la marcha. Hay un **guion declarativo** —qué paso viene, a qué rol le toca, qué proyección recibe, cuánto puede gastar y si va solo o en tanda— y una pieza que lo camina sin criterio propio: no conoce el dominio, lee cuál es el paso siguiente y lo ejecuta.
+
+Por eso no hay coordinador y la simetría del censo se mantiene: **ningún agente manda sobre otro y ningún agente enruta**. La alternativa —que cada agente declarase al terminar a quién le toca— deja el gasto sin acotar, porque nadie puede saber de antemano cuántos frentes habrá abiertos, y el techo de §3 dejaría de ser una garantía.
+
+Las únicas bifurcaciones del guion son el enrutado por severidad y el tope de vueltas, ambos declarados en §5.
+
+| Paso | Tarea | Rol | Concurrencia |
+| --- | --- | --- | --- |
+| 1 | `planificar` | Planificador | Solo |
+| 2 | `documentar` | Documentalista | Uno por escena, en tanda |
+| 3 | `redactar` | Redactor | Uno por escena, en tanda |
+| 4 | `verificar` — criba de bloqueantes | Verificador de continuidad | Uno por dimensión y escena, en tandas |
+| 5 | `revisar` | Revisor | Solo, por escena; vuelve al 4 |
+| 6 | `verificar` — criba de mayores | Verificador de continuidad | Uno por dimensión y escena, en tandas |
+| 7 | `editar_estilo` — costura del capítulo | Editor de estilo | Solo, sobre el capítulo entero |
+| 8 | `juzgar` y `editar_estilo` — criba de pulido | Juez de rúbrica, Editor de estilo | En tanda |
+| 9 | `plegar` | Contable de estado | Solo |
+| 10 | `destilar` | Archivero | Solo |
+
+Dos tareas quedan fuera del guion del capítulo porque no tienen su cadencia: `poblar_mundo`, que ocurre al arrancar la obra y cuando hace falta ampliar el elenco, y `auditar`, que entra cada N capítulos y al cierre de la obra. Las dos van solas.
+
+### Se redacta por escena y se cose por capítulo
+
+El redactor recibe un encargo por escena, no por capítulo, y el capítulo se cose después en el paso 7. Tres razones, en orden de peso:
+
+- **Al verificador no le cabe un capítulo entero** (§3). Las comprobaciones se hacen por escena de todas formas, así que redactar por capítulo y verificar por escena paga el precio de las dos opciones sin cobrar la ventaja de ninguna.
+- **Equivocarse sale cuatro veces más caro.** Si un defecto bloqueante en la tercera escena obliga a rehacer el capítulo, cada error multiplica el gasto por el número de escenas. Por escena, regenerar es barato, y eso es lo que mantiene acotada la factura total, que no es el techo pero sí es el coste.
+- **El defecto que esto provoca tiene arreglo y el contrario no.** Escribir por trozos hace que la voz derive entre escenas y que las transiciones queden secas; para eso está la costura, y hay un rol que ya sabe hacerla. Un capítulo caro de regenerar no tiene arreglo posible.
+
+No rompe la regla de un rol una tarea: el Editor de estilo sigue teniendo un solo tipo de tarea y la ejerce sobre párrafo y sobre capítulo cerrado, como el Redactor y el Revisor ya la ejercen sobre escena o capítulo.
+
+### Ciclo de vida de un capítulo
 
 ```mermaid
 stateDiagram-v2
@@ -268,7 +396,7 @@ stateDiagram-v2
   Descartado --> [*]
 ```
 
-El paso de `Aceptado` a `Cerrado` es el que actualiza el mundo: hasta que un capítulo no se cierra, sus eventos no existen para el resto del sistema. Eso es lo que permite regenerar un capítulo sin corromper los siguientes.
+El paso de `Aceptado` a `Cerrado` es el que actualiza el mundo: hasta que un capítulo no se cierra, sus eventos no existen para el resto del sistema. Eso es lo que permite regenerar un capítulo sin corromper los siguientes. Y es el mismo paso el que retira la memoria de capítulo: cerrar es a la vez publicar los hechos y olvidar el andamio.
 
 ## 5. Bucle de control de calidad
 
@@ -283,6 +411,18 @@ Un contrato de verificación tiene tres partes: el predicado en una frase, la pr
 3. **Doble pasada en desacuerdo.** Si dos agentes discrepan sobre el mismo predicado, se repite la comprobación con la proyección reducida al mínimo. Si persiste, la `Crítica` baja a `sugerencia` y se registra como caso ambiguo.
 
 **Enrutado por severidad.** `bloqueante` fuerza regeneración de la escena; `mayor` entra en revisión dirigida; `menor` y `sugerencia` se acumulan para una pasada de pulido.
+
+**Tres cribas, no una.** «Una dimensión por tarea» no significa que toda dimensión se compruebe en toda vuelta. Un borrador que va a morir no merece que se le mida el ritmo, y comprobarlo todo siempre multiplica el número de tareas por vuelta sin mejorar el texto. Las dimensiones entran por orden de lo que pueden parar:
+
+| Criba | Qué entra | Cuándo corre |
+| --- | --- | --- |
+| De bloqueantes | Las dimensiones cuya `Crítica` sale `bloqueante` | En cada borrador nuevo |
+| De mayores | Las que salen `mayor` | Sobre el borrador que ha pasado la primera |
+| De pulido | Las que salen `menor` o `sugerencia` | Una sola vez, sobre el capítulo ya cosido |
+
+Qué dimensión cae en cuál lo fija la severidad de partida de `validators.md` §4; lo que fija esta tabla es en qué vuelta entra cada una.
+
+**Tope de vueltas.** El bucle converge o se declara no convergido; no gira indefinidamente. Dos revisiones dirigidas por borrador y dos regeneraciones por escena. Agotado el tope, la escena se acepta con sus críticas abiertas anotadas y el capítulo se cierra marcado, visible para el Arquitecto de arcos en su siguiente auditoría. Un bucle sin tope no es un bucle de calidad: es una forma de no terminar.
 
 **Métrica del sistema.** Registrar cuántas iteraciones necesita cada capítulo, qué dimensiones reinciden y cuántas críticas se descartan por falta de evidencia es lo que hace evaluable el sistema, no solo la novela. Con validación agéntica esta métrica importa más, no menos: es la única prueba de que el bucle converge.
 
@@ -303,6 +443,7 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `Escena` | Planificador | Revisor | Contrato completo al redactar | Contrato, POV, epistémica |
 | `Párrafo` | Redactor | Editor de estilo | Cola de continuidad local | Fatiga léxica, voz, léxico |
 | `EventoEstado` | Contable de estado, al cerrar capítulo | Inmutable | Nunca directo: se pliega en estado | Consistencia del log |
+| `Resumen de capítulo` | Archivero, al cerrar capítulo | Inmutable | En la vista del Arquitecto de arcos, nunca la prosa que resume | Fidelidad al capítulo resumido |
 | `Compromiso` | Planificador y redactor | Se cierra al pagarse | Siempre, cola abierta | Economía narrativa |
 | `Crítica` | Verificador, Editor de estilo, Arquitecto de arcos, Juez | Se resuelve en revisión | Solo al agente que revisa | Convergencia del bucle |
 | `Decisión` | Cualquier agente | Inmutable | Canon comprimido | Coherencia de diseño |
@@ -317,9 +458,79 @@ Dos reglas que la tabla implica y conviene explicitar: ninguna entidad del mundo
 
 **Quién impone la forma.** Sin Pydantic, lo que garantiza que un artefacto esté bien formado es que el agente que lo escribe tenga el esquema en su contexto y que el siguiente agente lo rechace si falta un campo. El rechazo es una `Crítica` de severidad `bloqueante` con objeto el artefacto, no el texto. Conviene medir cuántos artefactos malformados aparecen por capítulo: es el indicador temprano de que un rol necesita más ejemplos o menos alcance.
 
-**Orquestación.** El ciclo de vida del capítulo es la máquina de estados de la sección 4, y la transición la decide el agente que acaba de actuar declarando su salida y el siguiente estado. Si un rol necesita decidir a quién llamar, ese enrutado es también un contrato explícito, no lógica repartida.
 
-**Granularidad de la escena.** Generar por escena da mejor control de calidad; generar por capítulo da mejor continuidad de voz. La opción mixta es planificar por escena y redactar el capítulo entero con los contratos de todas sus escenas en contexto.
+### Organización del código
+
+El reparto entre `backend/` y `frontend/` lo fija `AGENTS.md`. Lo que sigue es el
+escalón siguiente: cómo se organiza el código dentro de cada uno de los dos
+paquetes.
+
+**Backend: cortes verticales por tipo de tarea.** El backend se organiza por
+casos de uso, no por capas técnicas: no hay una carpeta de controladores, otra
+de servicios y otra de repositorios. La unidad de corte es el **tipo de tarea**
+del censo de §2, de modo que cada agente es una carpeta y la regla «un rol, una
+tarea» queda visible en el árbol de ficheros: declarar un rol nuevo es añadir
+una carpeta, y ensanchar uno existente es un cambio dentro de la suya. Con
+capas horizontales, en cambio, cada agente queda repartido entre cuatro
+carpetas y esa regla deja de verse.
+
+```
+backend/
+  pyproject.toml
+  src/novela/
+    tareas/     una carpeta por tipo de tarea del censo (§2): poblar_mundo,
+                documentar, auditar, planificar, redactar, plegar, destilar,
+                verificar, editar_estilo, juzgar, revisar
+    nucleo/     funciones puras, sin entrada ni salida: el guion del capitulo
+                y la pieza que lo camina (§4), el enrutado por severidad y el
+                tope de vueltas (§5) y el presupuesto de contexto (§3)
+    almacen/    unica puerta de lectura y escritura del almacen de artefactos
+    api/        routers FastAPI, un procedimiento por caso de uso del editor
+```
+
+Cuatro reglas sostienen el corte:
+
+- **Las tareas no se importan entre sí.** Se comunican por artefactos, a través
+  de `almacen/`. Lo único compartido es `nucleo/` y `almacen/`; entre dos
+  tareas se duplica antes que acoplarse.
+- **`nucleo/` no decide nada del dominio.** Ensambla proyecciones, cuenta
+  contexto, camina el guion y enruta críticas. No pliega el log, no resume ni
+  juzga texto: eso es trabajo del Contable de estado, del Archivero y de los
+  verificadores. Caminar el guion no es decidir: el guion está escrito fuera y
+  `nucleo/` solo lee cuál es el paso siguiente. Si `nucleo/` engorda, está
+  reapareciendo el harness a medida que el principio de esta sección prohíbe.
+- **`almacen/` es la única frontera con la persistencia.** Se declara como
+  interfaz estrecha porque la forma física del almacén sigue abierta (§8) y
+  porque la frontera única de `AGENTS.md` exige un solo lector y un solo
+  escritor.
+- **`api/` es procedimental.** Cada endpoint es un procedimiento de principio a
+  fin. No hay capa de servicios intermedia que reutilizar.
+
+El riesgo aceptado es la duplicación: once carpetas parecidas que pueden
+divergir en cómo escriben sus artefactos. Lo que lo contiene no es una capa
+común, sino que `almacen/` sea la única puerta de escritura y que la forma del
+artefacto la imponga el rechazo del agente siguiente.
+
+**Frontend: agrupación por funcionalidad.** Una carpeta por funcionalidad
+—lanzar una obra, leer el manuscrito, inspeccionar críticas, revisar trazas—
+con sus componentes y sus llamadas dentro, y `compartido/` para el cliente de
+API y lo transversal. No hay capas de dominio en el cliente: la interfaz lanza
+ejecuciones y muestra artefactos.
+
+```
+frontend/
+  package.json
+  src/
+    features/    lanzar, manuscrito, criticas, trazas
+    compartido/  cliente de API y componentes comunes
+```
+
+**Sin estado global en el cliente.** Casi todo lo que la interfaz muestra es
+estado del servidor: artefactos que produce el backend. Se consulta y se cachea
+contra la API, y el estado propio de cada pantalla se queda en ella. Un almacén
+global sería una copia desactualizada de lo que ya tiene el backend. Cómo llega
+el avance de una ejecución en curso es detalle de implementación, no de
+organización.
 
 ### Qué se pierde sin cálculo determinista
 
@@ -342,7 +553,6 @@ En los tres casos el patrón es el mismo: **convertir un cálculo en un dato esc
 - [ ] ¿Se versiona la biblia junto a la novela o evoluciona monotónicamente?
 - [ ] ¿El Contable de estado es un rol con su propio modelo y temperatura baja, o el mismo modelo que el resto con otro contrato?
 - [ ] ¿Quién arbitra cuando Verificador y Juez discrepan de forma sistemática en una dimensión?
-- [ ] ¿El enrutado del ciclo de vida lo decide cada agente al terminar, o hace falta un rol coordinador que rompería la simetría del censo?
 - [ ] ¿Se acepta alguna herramienta externa de cálculo (fechas, recuento léxico) sin que eso cuente como harness, o la restricción de cero código es absoluta?
 - [ ] ¿Dónde vive el almacén de artefactos (`mundo/`, `obra/`, `log/`, `estado/`, `criticas/` de §7) dentro del reparto de `AGENTS.md`, y quién lo escribe?
-- [ ] ¿Los prompts de los diez agentes son parte del `backend/` o una carpeta hermana?
+- [ ] ¿Los prompts de los once agentes son parte del `backend/` o una carpeta hermana?
