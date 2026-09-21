@@ -37,6 +37,9 @@ Decisiones ya tomadas sobre el reparto:
 - **Dos paquetes, dos gestores.** `backend/` se instala con su propio
   `pyproject.toml` y `frontend/` con su propio `package.json`. No hay
   herramienta de monorepo por encima: la raíz solo agrupa.
+- **Pila fijada.** El servidor es **Python + FastAPI**, la interfaz es **Vite +
+  React** y la persistencia es **SQLite con extensión vectorial compatible**.
+  La base de datos vive detrás de la frontera: solo el `backend/` la abre.
 
 Lo que queda por decidir sobre el reparto está en `architecture.md` §8, junto al
 resto de decisiones abiertas.
@@ -76,6 +79,9 @@ Estas reglas salen de `architecture.md` y gobiernan cualquier propuesta:
 - **Toda `Crítica` lleva evidencia citable**; sin ella se descarta.
 - **Sin harness a medida.** El estado vive en artefactos declarativos legibles
   por los agentes, no en objetos tipados en memoria.
+- **100 000 tokens por ejecución.** Una ejecución completa no puede gastar más
+  de 100 000 tokens de contexto. No es un presupuesto por agente: es el techo de
+  la suma de todos los agentes que participan en esa ejecución.
 
 ## El ciclo de edición
 
