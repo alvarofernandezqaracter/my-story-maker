@@ -1207,6 +1207,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `0de6ca0` | 2026-09-18 | docs(spec): §17 regenerada para 1.27.0 |
 | `5fe81a3` | 2026-09-21 | feat(idioma): 1.28.0, VD-14 comprueba en que lengua esta el capitulo |
 | `c203909` | 2026-09-21 | feat(idioma): 1.29.0, §12 los dos umbrales de VD-14 salen de config.json |
+| `d006d24` | 2026-09-21 | docs(spec): §17 regenerada para 1.29.0 |
+| `ad0aa68` | 2026-09-21 | docs(spec): 1.30.0, §9 VD-13 se queda en el reparto y nada mas |
 
 ```
 git -c i18n.logOutputEncoding=UTF-8 log --reverse \n    --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
