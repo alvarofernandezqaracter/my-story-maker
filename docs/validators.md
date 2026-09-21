@@ -132,7 +132,7 @@ afirmar que el bucle converge en lugar de suponerlo.
 | Que las críticas son utilizables | `analisis` | Proporción descartada por falta de `evidencia` | Agentes que opinan en vez de comprobar |
 | Que los artefactos están bien formados | `analisis` | Recuento de rechazos por campo ausente, por capítulo | Un rol con demasiado alcance o con pocos ejemplos |
 | Que el sistema aguanta lo difícil | `prueba` | Briefs adversarios: época mal documentada, personajes homónimos, saltos temporales largos | Dimensiones que solo fallan bajo presión |
-| Que cabe en el presupuesto | `analisis` | Tokens por ejecución frente al techo de 100 000 | Verificación que se come la generación |
+| Que cabe en el presupuesto | `analisis` | Pico de contexto concurrente frente al techo de 100 000 | Verificación que se come la generación |
 
 Tres señales de verificación mal diseñada, todas visibles en la `Traza`: el
 agente que no encuentra nada nunca —casi siempre es una proyección incompleta,
