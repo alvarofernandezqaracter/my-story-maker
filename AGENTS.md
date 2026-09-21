@@ -5,9 +5,9 @@ manuscrito verificado.
 
 ## Alcance de esta rama (importante)
 
-Esta rama es `v2`, un arranque desde cero: contiene `docs/`, la carpeta `specs/`
-—todavía vacía— y las dos carpetas vacías del monorepo, `backend/` y
-`frontend/`. No hay código todavía.
+Esta rama es `v2`, un arranque desde cero: contiene `docs/`, `specs/` —con la
+primera spec dentro—, las skills del proyecto y las dos carpetas vacías del
+monorepo, `backend/` y `frontend/`. No hay código de aplicación todavía.
 
 - Considera como fuente de verdad únicamente lo que existe en esta rama. Ignora
   `main` y cualquier historial, convención o código anterior: no aplica aquí.
@@ -28,6 +28,7 @@ solo está fijada la frontera entre ambos.
 | `frontend/` | La interfaz web desde la que se lanza y se inspecciona una obra | Vite + React |
 | `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
 | `specs/` | Una spec por cambio —el contexto específico—: qué se cambia y por qué | Markdown |
+| `.claude/skills/` | Las skills del proyecto: procedimientos que los agentes cargan al trabajar aquí | Markdown |
 
 Decisiones ya tomadas sobre el reparto:
 
@@ -54,11 +55,10 @@ consistentes entre sí y deben seguir siéndolo.
 | `docs/definitions.md` | La ontología del dominio en prosa: qué es una `Obra`, una `Escena`, un `Personaje`, un anacronismo. Define las dos capas del dominio —**Obra** (cómo está hecho el texto) y **Mundo** (de qué habla el texto)—, el contrato de escena, las seis familias de relaciones, los vocabularios controlados de forma y de mundo, y las dimensiones de calidad con su alcance. Es el documento del *qué*. |
 | `docs/domain-knowledge.md` | Los mismos conceptos en seis diagramas Mermaid: árbol de la obra, árbol del mundo, relaciones, contrato de escena, árbol de calidad y vocabularios. No añade definiciones nuevas; sirve para ver de un vistazo lo que `definitions.md` describe. Si cambia una definición, cambia también el diagrama. |
 | `docs/architecture.md` | Cómo está construido el sistema: las tres capas y su regla de acoplamiento, el censo de diez agentes con sus tareas y permisos, las entidades de producción (`Plan`, `Borrador`, `Crítica`, `Revisión`, `Decisión`, `EventoEstado`, `Traza`), la gestión de contexto por rol, el ciclo de vida del capítulo, el bucle de control de calidad, la tabla de gobierno por entidad y las decisiones abiertas. Es el documento del *cómo*. |
+| `docs/validators.md` | El reparto de la verificación: los dos niveles —la obra y el sistema que la escribe—, el vocabulario controlado `metodo_de_verificacion` con sus cinco valores, las tres partes de un contrato de verificación, la tabla que asigna a cada dimensión de calidad su método, su agente, su proyección mínima y su severidad de partida, lo que no admite predicado, y los métodos que quedan fuera con su motivo. Es el documento del *cómo se comprueba*. |
 
 El reparto del repositorio —el *dónde*— no tiene documento propio: vive en la
 sección «Estructura del repositorio» de este mismo fichero.
-
-`docs/validators.md` está vacío: no es fuente de verdad de nada todavía.
 
 ## Invariantes que no se rompen sin cambiar el documento
 
@@ -141,6 +141,7 @@ el **contexto general** de `docs/`, que describe el sistema tal como es ahora:
 | La ontología, una entidad o un vocabulario | `definitions.md` y el diagrama correspondiente de `domain-knowledge.md`, en el mismo cambio |
 | Las capas, los agentes, las entidades de producción o el flujo | `architecture.md` |
 | Una decisión abierta que queda cerrada | `architecture.md` §8, retirándola de la lista |
+| Cómo se comprueba una dimensión de calidad, o qué agente la verifica | `validators.md` |
 | El reparto del repositorio | La sección «Estructura del repositorio» de este fichero |
 
 Los docs **describen el estado actual, no la historia**: lo que se retira

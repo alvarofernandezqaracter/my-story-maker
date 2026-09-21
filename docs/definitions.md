@@ -134,7 +134,7 @@ Valores cerrados. Cualquier atributo que los use rechaza texto libre; así los p
 
 ## Dimensiones de calidad
 
-Las dimensiones tienen alcances distintos y solo son observables en el suyo. Meterlo todo en un juez global produce el "8/10, buen ritmo" que no significa nada. El mecanismo que aplica estas dimensiones —estrategia de validación y bucle de control— está en `architecture.md`.
+Las dimensiones tienen alcances distintos y solo son observables en el suyo. Meterlo todo en un juez global produce el "8/10, buen ritmo" que no significa nada. El mecanismo que aplica estas dimensiones —estrategia de validación y bucle de control— está en `architecture.md`, y el reparto concreto de cada una —método, agente y proyección— en `validators.md`.
 
 ### Alcance local (párrafo y página)
 

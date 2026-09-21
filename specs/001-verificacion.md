@@ -2,7 +2,7 @@
 spec: 001
 titulo: Verificación — qué método le toca a cada dimensión de calidad
 version: 0.1.0
-estado: aprobada
+estado: aplicada
 fecha: 2026-09-21
 fuente: hoja de referencia externa de metodologías de verificación
   (https://claude.ai/artifact/Rass3RVfaN5KSJDdG2FQhR), aportada por el editor
