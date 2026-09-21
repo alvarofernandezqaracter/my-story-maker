@@ -119,6 +119,28 @@ incidencias del reintento si el gate acaba rechazando.
 Ejemplo con objetivo 1800: 1500 palabras es desvio 0.17, aviso. 1000 palabras es
 desvio 0.44, bloqueo.
 
+## VD-14 — el capitulo esta en el idioma de la novela
+
+Corre **junto a VD-08**, antes de los validadores, y por la misma razon: un
+capitulo en otro idioma no merece gastar tres llamadas.
+
+No lo mires a ojo, cuentalo:
+
+```bash
+python -c "import io,sys; sys.path.insert(0,'.'); from novela.idioma import revisar; print(revisar(io.open(sys.argv[1],encoding='utf-8').read()))" <novela>/capitulos/cap-01-intento-1.md
+```
+
+Devuelve `ok`, `bloqueo` o `sin_datos` (el texto es demasiado corto para
+decidir, y entonces no bloquea nada).
+
+**Bloqueo**: marca el intento `descartado` y vuelve al escritor **desde cero**,
+igual que con VD-08. No llames a los validadores.
+
+Existe porque el gate no lo cubre y no puede cubrirlo: en una pasada real el
+escritor devolvio un capitulo entero en ingles y las tres dimensiones lo
+puntuaron 4/4/4. La continuidad, los anacronismos y el ritmo se juzgan igual de
+bien en cualquier lengua, asi que ninguna rubrica tenia por que saltar.
+
 ## VD-09 — personajes presentes
 
 `personajes_presentes` del cronista tiene que ser un **subconjunto** de los
@@ -152,24 +174,30 @@ porque nadie vuelve a mirarlo. Bloqueante.
 `olvida` puede venir vacia o no venir. Lo que no puede es traer una linea que la
 ficha no tiene.
 
-## VD-13 — el retoque no cambia el canon
+## VD-13 — el retoque no cambia los hechos
 
 Solo en el tramo de cierre (§11), despues del gate del capitulo retocado. El
-cronista vuelve a emitir el canon de ese capitulo sobre el texto nuevo, y tiene
-que salir **igual** al que ya estaba guardado en:
+cronista vuelve a emitir el canon de ese capitulo sobre el texto nuevo, **sin
+mirar el que ya hay**, y comparas dos cosas y solo dos:
 
-- `resumenes/cap-NN.json`: los mismos `hilos_abiertos`, `hilos_cerrados` y
-  `personajes_presentes`, como conjuntos.
-- `timeline.json`: los mismos eventos de ese capitulo, por `id` y por `tipo`.
-- `personajes.json`: los mismos `cambios_personaje`, por `id`, `ubicacion`, y las
-  mismas lineas en `sabe` y en `olvida`.
+- `personajes_presentes`, por **id**.
+- Los eventos, por **id** y por **tipo**.
 
-El resumen en prosa **si puede cambiar**: es la redaccion de lo mismo. Lo que no
-puede cambiar es ninguna de las listas de arriba.
+Si las dos cuadran, el texto retocado pasa a ser el intento aprobado. Si no,
+**descarta el texto retocado**, deja el capitulo como estaba y devuelve el retoque
+al editor global. Bloqueante.
 
-Si cuadra, el texto retocado sustituye al intento aprobado y el resumen nuevo
-sustituye al viejo. Si no cuadra, **descarta el texto retocado**, deja el capitulo
-como estaba y devuelve el retoque al editor global. Bloqueante.
+**No compares nada mas, y en particular ninguna cadena de prosa.** Ni los hilos,
+ni las ubicaciones, ni las lineas de `sabe`, ni el resumen. El cronista es un
+modelo: redacta lo mismo con otras palabras cada vez que se le llama, asi que
+comparar prosa tumba tambien el retoque que no cambia nada. Esto no es una
+sospecha: la primera version de VD-13 comparaba el canon entero y tumbo un
+retoque que solo anadia un gesto de una nina que ya estaba en la escena.
+
+**El canon no se reescribe al retocar.** Cambia el fichero de texto y nada mas: el
+resumen, los hilos y las fichas se quedan como estaban, que es lo que mantiene
+validos los capitulos que ya los leyeron. La reemision del cronista **se tira**
+despues de comparar; no la escribas.
 
 ## El gate
 

@@ -130,11 +130,13 @@ Este es el loop, y es donde esta casi todo el diseno. Para el capitulo N:
 3. Para cada intento K desde 1 hasta `gate.max_intentos`:
    - **Escritor.** Lanza `novela-escritor` con la ruta del paquete y la ruta de
      salida. En el intento 1 va limpio. En los reintentos, mira el punto 7.
-   - **VD-08, antes de los validadores.** Cuenta palabras y parrafos del borrador
-     **con el comando de `references/comprobaciones.md`**, no a ojo. Si cae en el
-     escalon de bloqueo, descarta el intento y vuelve al escritor **desde cero**,
-     sin gastar las tres llamadas a los validadores. Si solo es aviso, sigue y
-     arrastra el aviso a las incidencias.
+   - **VD-08 y VD-14, antes de los validadores.** Cuenta palabras y parrafos del
+     borrador **con los comandos de `references/comprobaciones.md`**, no a ojo, y
+     comprueba con el mismo fichero que esta escrito en el idioma de la novela.
+     Si cualquiera de las dos cae en el escalon de bloqueo, descarta el intento y
+     vuelve al escritor **desde cero**, sin gastar las tres llamadas a los
+     validadores. Si VD-08 es solo aviso, sigue y arrastra el aviso a las
+     incidencias.
    - **Validadores, los tres a la vez.** Comprueba **VD-10**: tienen que volver
      las tres dimensiones, una vez cada una, con nota entera de 1 a 5. Si falta
      una o viene repetida, relanza las que falten; eso reintenta al validador, no
@@ -192,15 +194,20 @@ Para cada retoque, sobre el intento aprobado del capitulo N:
    **solo** lo senalado, que no reescriba lo que ya funciona y, sobre todo, que
    **no cambie ningun hecho**: quien entra en la escena, que sabe cada uno, que
    pasa y en que orden. Puede cambiar como esta contado, no que paso.
-2. **VD-08 y el gate entero**, con los tres validadores a la vez, igual que en el
-   Tramo 2. Un retoque no es una excepcion al gate. Si no aprueba, el retoque se
+2. **VD-08, VD-14 y el gate entero**, con los tres validadores a la vez, igual que
+   en el Tramo 2. Un retoque no es una excepcion al gate. Si no aprueba, el retoque se
    queda en `descartado` y pasas al siguiente: **no gastas los tres intentos**,
    porque el capitulo ya tenia una version aprobada y no hay nada que salvar.
 3. **Cronista** sobre el texto retocado, diciendole que es una reemision de un
    capitulo ya aprobado.
-4. **VD-13.** Compara ese canon con el que ya estaba guardado. Si cuadra, el texto
-   retocado pasa a ser el intento aprobado y el resumen nuevo sustituye al viejo.
-   Si no cuadra, **descarta el texto retocado y deja el capitulo como estaba**.
+4. **VD-13.** Compara **solo** los `personajes_presentes` y los eventos, por id. Si
+   cuadran, el texto retocado pasa a ser el intento aprobado. Si no, **descarta el
+   texto retocado y deja el capitulo como estaba**.
+
+   **El canon no se reescribe.** Cambia el fichero de texto y nada mas, y la
+   reemision del cronista se tira despues de comparar. Y no compares prosa -hilos,
+   ubicaciones, `sabe`, resumen-: el cronista los redacta distinto cada vez y
+   tumbarias hasta el retoque que no cambia nada.
 
 ### Cuando VD-13 lo tumba
 

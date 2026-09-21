@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.27.0.
+de un brief de cinco campos. Versión 1.28.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -65,7 +65,7 @@ promoción mala sea un `git revert`.
 | [.claude/skills/orquestar-novela/SKILL.md](.claude/skills/orquestar-novela/SKILL.md) | La máquina de estados escrita como instrucciones: los tres tramos, el loop de intentos y el bloqueo |
 | [references/canon-en-ficheros.md](.claude/skills/orquestar-novela/references/canon-en-ficheros.md) | Dónde vive cada cosa del canon y quién la escribe |
 | [references/paquete-de-contexto.md](.claude/skills/orquestar-novela/references/paquete-de-contexto.md) | Los nueve bloques, el cruce de etiquetas y el orden de recorte |
-| [references/comprobaciones.md](.claude/skills/orquestar-novela/references/comprobaciones.md) | Los trece `VD-xx` y el gate, con sus números |
+| [references/comprobaciones.md](.claude/skills/orquestar-novela/references/comprobaciones.md) | Los catorce `VD-xx` y el gate, con sus números |
 | `.claude/agents/novela-*.md` | Los ocho subagentes |
 | `.claude/skills/afinar-validador/SKILL.md` | El loop de `AFINADO.md` escrito como instrucciones: medir, proponer, decidir y cerrar |
 | `.claude/settings.json` | El hook `PostToolUse` sobre `Agent`, que traza cada llamada (§22) |
@@ -147,7 +147,7 @@ Esto es lo que especifican §2–§13 y §15, y lo obedece la skill.
 Una skill es texto que lee un modelo, **nunca fuente de verdad para el código**:
 los números y umbrales viven en `config.json`.
 
-## Los trece validadores (§9)
+## Los catorce validadores (§9)
 
 VD-01 forma, VD-02 obligatorios, VD-03 ids existentes, VD-04 dossier con fuente y
 estado (un `verificado` con fuente `modelo` es inválido), VD-05 evento de trama con
@@ -156,7 +156,9 @@ de capítulos dentro de márgenes, **VD-08 la única de dos escalones** (aviso y
 de ahí sus dos márgenes), VD-09 personajes presentes ⊆ ficha, VD-10 tres dimensiones
 una vez cada una con nota entera 1-5, VD-11 nada bloqueante pendiente al confirmar,
 VD-12 cada línea de `olvida` casa literal con el `sabe` de la ficha, VD-13 el retoque
-no cambia el canon del capítulo.
+no cambia los hechos del capítulo, **VD-14 el capítulo está en el idioma de la
+novela** (corre junto a VD-08, y existe porque el gate aprobó un capítulo entero
+en inglés con 4/4/4).
 
 Las tres dimensiones del validador son siempre `continuidad`, `anacronismos` y
 `logica_ritmo`, en ese orden.
@@ -249,6 +251,7 @@ python -m unittest discover -s tests -t .    # 144 tests, sin red
 | [novela/informe.py](novela/informe.py) | Lee las trazas de vuelta y agrega el gasto; sin Langfuse, del diario local | §22 |
 | [novela/biblioteca.py](novela/biblioteca.py) | Dónde vive cada novela y cuál es la de ahora. **No escribe canon** | §21 |
 | [novela/afinado.py](novela/afinado.py) | El loop que mide un prompt y decide si un candidato lo sustituye. **No llama a ningún subagente** | AFINADO.md |
+| [novela/idioma.py](novela/idioma.py) | VD-14: en qué idioma está un capítulo, contando funcionales | §9 |
 | [novela/entorno.py](novela/entorno.py) | Lector del `.env` | §12, §20 |
 | [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada** | §18 |
 

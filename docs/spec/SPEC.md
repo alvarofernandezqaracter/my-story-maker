@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.27.0
+version: 1.28.0
 estado: vigente
 actualizado: 2026-09-18
 ---
@@ -64,7 +64,7 @@ Los §14 y §24 están muertos. Los números de sección no se reutilizan.
 | Intento | Cada pasada del escritor sobre el mismo capítulo. El tope lo fija `gate.max_intentos`, tres por defecto (§12). |
 | Editor global | Agente de pasada única al final, fuera del loop. Lee resúmenes, no texto. |
 | Orquestador | Quien lleva el proceso y escribe el canon: una sesión de Claude Code con la skill de §21. No genera prosa. |
-| `VD-xx` | **Validador determinista**: cada una de las trece comprobaciones mecánicas de §9. Se cumplen o no, sin criterio literario ni llamada a ningún modelo. Las dos primeras letras vienen de «validador», pero **no son el agente validador**: ese juzga y estas cuentan. |
+| `VD-xx` | **Validador determinista**: cada una de las catorce comprobaciones mecánicas de §9. Se cumplen o no, sin criterio literario ni llamada a ningún modelo. Las dos primeras letras vienen de «validador», pero **no son el agente validador**: ese juzga y estas cuentan. |
 | `DA-xx` | **Decisión abierta**: cada una de las cosas sin decidir de §15. Nada de ahí impide escribir una novela; todo impide darla por buena sin mirarla. Los ids no se reutilizan: DA-01 y DA-11 quedaron muertos al decidirse. |
 
 ## §3 Modelo de datos del canon
@@ -416,12 +416,17 @@ Comprobaciones deterministas en código, con id `VD-xx`. No confundir con el age
 | VD-11 | Ningún bloqueante pendiente al confirmar | Transacción del canon | En la escritura | Bloq. | Deshace la transacción; el canon no queda a medias |
 | VD-12 | Cada línea de `olvida` está literal en el `sabe` de esa ficha | Propuesta del cronista | Antes de escribir | Bloq. | Rechaza la propuesta entera; una retractación parafraseada no retira nada |
 | VD-13 | El texto retocado da los mismos presentes y los mismos eventos | Vuelta del editor global (§11) | Tras el gate del retoque | Bloq. | Descarta el texto retocado y devuelve el retoque al editor global |
+| VD-14 | El capítulo está escrito en el idioma de la novela | Capítulo redactado | Junto a VD-08, antes del validador | Bloq. | Descarta el intento y vuelve al escritor desde cero, sin llamar al validador |
 
 **Orden.** Cada salida pasa sus comprobaciones antes de usarse, y las comprobaciones van siempre antes que el gate. La regla que ahorra dinero es VD-08 y su familia: si el capítulo redactado no cumple lo básico, se reintenta la generación sin gastar la llamada al agente validador. VD-08 es la única comprobación de dos escalones, y por eso lleva dos márgenes en §12: un texto algo corto se valida igual y arrastra el aviso, y uno que se sale del margen de bloqueo no llega al validador porque ninguna nota va a arreglar que falte medio capítulo. La que salva el canon es VD-11: la escritura del cronista es una transacción única, así que o entran resumen, cambios de ficha y eventos juntos, o no entra nada. El gate (§8) solo se calcula sobre revisiones que ya pasaron VD-10, de modo que nunca opera con notas inventadas o incompletas.
 
 Un bloqueante que falla dos veces seguidas sobre el mismo artefacto para el proceso y deja el estado escrito, igual que un error de proveedor (§13). No hay reintento infinito: si un agente no sabe devolver lo que se le pide, insistir sale caro y no arregla nada.
 
 **Las dos que casan cadenas literales** son VD-12 y el cierre de hilos, y lo hacen por la misma razón: son la única forma de que retirar algo del canon sea una operación exacta y no una aproximación. Un hilo cerrado con una paráfrasis queda vivo para siempre; un `olvida` parafraseado deja la línea vieja donde estaba y añade ruido. En los dos casos el orquestador devuelve la propuesta en vez de buscar el parecido más cercano: acertar por aproximación en el canon es peor que fallar, porque nadie vuelve a mirarlo.
+
+**VD-14 existe porque el gate no la cubría.** En una pasada real el escritor devolvió un capítulo entero en inglés, en una novela cuyo brief, canon y prompts están todos en castellano, y las tres dimensiones lo puntuaron 4/4/4 sin mencionarlo: continuidad, anacronismos y lógica y ritmo se pueden juzgar perfectamente en otro idioma, así que ninguna rúbrica tenía por qué saltar. No fue mala suerte, era un hueco: el sistema no tenía ninguna pieza, ni mecánica ni de criterio, que mirase en qué lengua estaba el texto.
+
+Se comprueba contando **palabras funcionales** —«de», «la», «que» frente a «the», «of», «and»—, no vocabulario. Es el método más tonto que funciona, y es deliberado: son las palabras que ningún texto largo puede evitar y que ningún nombre propio ni término de época contamina, así que una novela romana llena de latinismos sigue dando castellano. Corre junto a VD-08 y por la misma razón: un capítulo en otro idioma no merece gastar tres llamadas al validador. Por debajo de cuarenta palabras no decide nada, porque un falso bloqueo tira un capítulo bueno sin que ninguna nota lo pueda defender.
 
 **VD-13 es la que hace barato el cierre.** Sin ella, retocar el capítulo 3 obligaría a comprobar si los capítulos que lo leyeron siguen en pie, y retocar el 1 podría arrastrar el libro entero. Con ella, un retoque que cambiaría los hechos no se aplica a medias: se descarta y el editor global tiene una oportunidad de reformularlo como lo que sí cabe, un arreglo de prosa. §11 explica por qué esa frontera es la correcta.
 
@@ -580,7 +585,7 @@ distribución en lugar de discutirla.
 | DA-09 | Unidad de escritura: capítulo entero o escena a escena | Si la prosa se degrada en capítulos largos, el loop cambia de grano | Si la prosa se degrada en capítulos largos |
 | DA-10 | Qué hacer si la escaleta se queda corta o larga a mitad de libro | Replanificar toca el canon en caliente; forzarla estropea el final | La primera vez que pase |
 | DA-12 | Qué hacer con el coste, ahora que se conoce | §22 agrega lo que cuesta cada capítulo y lo cruza con sus notas, pero nadie actúa sobre ello: no hay tope ni cuota en ningún sitio, y es el hueco que §19 pinta como «sin datos todavía» | Con el informe de §22 de varias novelas delante |
-| DA-13 | Si un validador debe vigilar que el cronista respete los «Ignora» de una ficha | Ninguno de los trece `VD-xx` lo mira, así que un conocimiento que el gate acaba de vetar puede entrar en el canon por la propuesta del cronista. VD-09 solo comprueba que los presentes sean subconjunto de la ficha, y VD-12 que una retractación case literalmente, pero ninguno mira lo que aprenden | Antes de calibrar DA-06 |
+| DA-13 | Si un validador debe vigilar que el cronista respete los «Ignora» de una ficha | Ninguno de los catorce `VD-xx` lo mira, así que un conocimiento que el gate acaba de vetar puede entrar en el canon por la propuesta del cronista. VD-09 solo comprueba que los presentes sean subconjunto de la ficha, y VD-12 que una retractación case literalmente, pero ninguno mira lo que aprenden | Antes de calibrar DA-06 |
 | DA-15 | Qué hacer cuando la auditoría del gate no cuadra | Hoy se avisa y nada más: §19 lo pinta y §20 lo manda como puntuación, pero el canon manda aunque la suma esté mal. Convertirlo en un `VD-xx` obligaría al orquestador a rehacer el capítulo, y todavía no hay ni un caso real que diga si pasa lo bastante como para que compense | Cuando haya varias pasadas que mirar |
 
 ## §16 Historial de cambios
@@ -593,6 +598,23 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.28.0] — 2026-09-18
+
+**Añadido**
+- §9. **VD-14**, que el capítulo esté escrito en el idioma de la novela, y
+  [`novela/idioma.py`](../../novela/idioma.py), que la calcula contando palabras
+  funcionales. Los `VD-xx` pasan de trece a catorce; §2 y DA-13 recogen la cifra.
+- §18. `tests/test_idioma.py`, seis casos: que el castellano pase, que el inglés
+  bloquee, que las tildes no cambien el recuento, que un texto corto no decida
+  nada y que una novela llena de nombres latinos siga contando como castellano.
+
+**Por qué**
+- Salió de una pasada completa, no de una revisión del documento. El escritor
+  devolvió el capítulo 3 entero en inglés y **el gate lo aprobó con 4/4/4**: las
+  tres dimensiones se pueden juzgar igual de bien en cualquier lengua, así que
+  ninguna rúbrica tenía motivo para saltar. Era el único atributo del capítulo
+  que no miraba nadie.
 
 ### [1.27.0] — 2026-09-18
 
@@ -609,6 +631,22 @@ repositorio, que es donde se mira si hace falta.
   dieciocho a cuarenta y cinco y una vuelta entera cuesta 3,29 $ a los precios
   medidos: el tope anterior la paraba a la mitad, con el gasto hecho y sin
   veredicto.
+
+### [1.27.0] — 2026-09-18
+
+**Cambiado**
+- §9 y §11. **VD-13 compara ids, no prosa.** Nació comparando el canon entero de
+  la reemisión contra el guardado —hilos, ubicaciones y líneas de `sabe`
+  incluidos— y la primera ejecución real la tumbó: el cronista es un modelo y
+  redacta lo mismo con otras palabras en cada llamada, así que un retoque que
+  solo añadía un gesto de una niña que ya estaba en la escena salió rechazado.
+  Habría rechazado todos. Ahora mira los ids de `personajes_presentes` y los ids
+  y tipos de los eventos, que es lo único estable entre dos llamadas y basta para
+  lo que la comprobación existe. Lo que deja pasar queda escrito en §9.
+- §11. **El canon no se reescribe al retocar.** Cambia el fichero de texto y nada
+  más, y la reemisión del cronista se tira después de comparar. Antes decía que
+  el resumen nuevo sustituía al viejo, que era justo lo que podía invalidar lo
+  que ya habían leído los capítulos siguientes.
 
 ### [1.26.0] — 2026-09-18
 
