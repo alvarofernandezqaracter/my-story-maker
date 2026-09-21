@@ -1,0 +1,346 @@
+---
+name: SPEC1
+titulo: Backend v1 — Especificación de requisitos de software
+version: 0.2.0
+estado: propuesta
+fecha: 2026-09-21
+ambito: backend/
+base:
+  - AGENTS.md
+  - docs/definitions.md
+  - docs/domain-knowledge.md
+  - docs/architecture.md
+  - docs/validators.md
+---
+
+# SPEC1 · Backend v1 — Especificación de requisitos de software
+
+## §1 Introducción
+
+### 1.1 Propósito
+
+Fijar qué tiene que hacer la primera versión del `backend/` para que una obra
+completa se produzca de principio a fin. Es un documento de requisitos, no de
+implementación: recoge lo que, si se decide mal, obliga a rehacer trabajo. Todo
+lo que se puede resolver razonablemente al programar no está aquí.
+
+### 1.2 Alcance del sistema especificado
+
+Dentro: el almacén de artefactos, la pieza que camina el guion del capítulo, las
+once carpetas de tarea con su contrato y su prompt, el presupuesto de contexto y
+la API HTTP que el editor usa para lanzar e inspeccionar una obra.
+
+Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
+lo enumerado en §11.
+
+La medida de «terminado» de v1 es una sola: **una obra corre de la primera orden
+al último capítulo cerrado sin que nadie toque nada por dentro**.
+
+### 1.3 Documentos base y jerarquía
+
+| Documento | Qué aporta a este SRS | Manda sobre |
+| --- | --- | --- |
+| `AGENTS.md` | Reparto del repositorio, pila fijada, invariantes | Frontera y pila |
+| `docs/definitions.md` | Entidades del dominio y vocabularios de forma y mundo | Nombres y valores cerrados |
+| `docs/architecture.md` | Capas, censo de once agentes, entidades de producción, memorias, guion, bucle de calidad, organización del código | Comportamiento del sistema |
+| `docs/validators.md` | Método, agente, proyección y severidad de cada dimensión | Verificación |
+
+Si este documento contradice a alguno de los cuatro, gana el documento base y
+esto es un error de este SRS. La única excepción declarada es D-02 (§8): el
+almacén es SQLite y nada más, decisión ya tomada que cierra una de las abiertas
+de `architecture.md` §8. Mientras este ciclo siga abierto, el árbol de carpetas
+de `architecture.md` §7 y esa decisión de §8 van por detrás de aquí, y ponerlos
+al día es trabajo de la fase 3.
+
+### 1.4 Convenciones
+
+- Entidades en `PascalCase` singular; relaciones en `snake_case`.
+- Identificadores de requisito estables y no reutilizables: `RF-` funcional,
+  `RD-` de datos, `RI-` de interfaz, `RNF-` no funcional, `D-` decisión de esta
+  versión, `OBJ-` objetivo.
+- La columna «Verificación» usa el vocabulario `metodo_de_verificacion` de
+  `validators.md` §2: `prueba`, `analisis`, `inspeccion`, `demostracion`,
+  `inverificable`.
+
+## §2 Descripción general
+
+### 2.1 Qué hace el backend y qué no
+
+El backend es el único que abre el almacén y el único que ejecuta tareas. **Hace
+tres cosas**: guarda y sirve artefactos, camina el guion encargando tareas a los
+agentes dentro de su presupuesto, y expone por HTTP lo que el editor necesita
+ver.
+
+**No hace una cuarta**: no decide nada del dominio. No pliega el log, no resume,
+no juzga texto y no reescribe prosa. Eso lo hacen los once roles del censo. Si
+el código del servidor empieza a interpretar el contenido de un artefacto, está
+reapareciendo el harness a medida que el proyecto prohíbe.
+
+### 2.2 Actores
+
+| Actor | Qué aporta | Qué recibe |
+| --- | --- | --- |
+| Editor (persona) | Un brief y, como mucho, una orden de detener o reanudar | Manuscrito, críticas, trazas y progreso |
+| Agente (uno de los once roles) | El artefacto que escribe | Su proyección mínima y su contrato |
+| `frontend/` | Órdenes del editor | Solo respuestas de la API; nunca ficheros |
+
+### 2.3 Restricciones heredadas
+
+Invariantes de `AGENTS.md`, no negociables en esta versión: tres capas
+disjuntas; un rol, una tarea; ningún agente valida su propia salida; el mundo
+solo cambia por `EventoEstado` emitidos por el Contable al cerrar capítulo; el
+estado se deriva plegando el log; solo el Documentalista escribe `Fuente`; toda
+`Crítica` lleva evidencia citable; sin harness a medida; y el techo de 100 000
+tokens de contexto concurrente.
+
+Pila fijada: Python con FastAPI, y SQLite con extensión vectorial compatible
+detrás de la frontera.
+
+### 2.4 Supuestos y dependencias
+
+- Hay un proveedor de modelo accesible; cuál y con qué parámetros por rol es
+  configuración, no requisito.
+- Existe un contador de tokens del mismo proveedor: el presupuesto de §3 y
+  RF-14 no se pueden cumplir estimando a ojo.
+- El brief lo escribe una persona y puede venir incompleto: eso es un caso
+  normal, no un error del sistema (RF-01).
+
+## §3 Objetivos medibles
+
+Ningún objetivo tiene línea base: no hay código, así que la base se declara
+**pendiente de medir** en lugar de inventarla. La primera pasada completa de una
+obra de prueba es la que la fija, y hasta entonces las metas son de diseño.
+
+Van en este orden porque el primero es el que hace que los demás signifiquen
+algo: un sistema que no cabe en el techo no llega a producir número alguno.
+
+| ID | Objetivo | Métrica | Cómo se mide | Línea base | Meta |
+| --- | --- | --- | --- | --- | --- |
+| OBJ-01 | Caber en el techo | Pico de tokens concurrentes en una obra | Máximo de la suma de ventanas abiertas a la vez, de la `Traza` | Pendiente | ≤ 100 000, con pico habitual ≤ 80 000 |
+| OBJ-02 | Coste plano por capítulo | Tokens totales del capítulo N | Suma de contexto y salida por capítulo, de la `Traza` | Pendiente | Capítulo 40 ≤ 1,2 × capítulo 4 |
+| OBJ-03 | Que el bucle converja | Vueltas hasta `Aceptado` por escena | Recuento de intentos en la `Traza` | Pendiente | ≥ 90 % de escenas en ≤ 2 vueltas; < 10 % de capítulos cerrados marcados |
+| OBJ-04 | Críticas utilizables | Proporción descartada por falta de `evidencia` | Recuento de rechazos sobre críticas emitidas | Pendiente | < 10 % |
+| OBJ-05 | Artefactos bien formados | Rechazos por campo ausente o valor fuera de vocabulario, por capítulo | Recuento de `Crítica` bloqueante con objeto artefacto | Pendiente | ≤ 1 por capítulo |
+| OBJ-06 | Cobertura documental | Afirmaciones históricas con `Fuente` asociada | Cociente sobre las afirmaciones del capítulo | Pendiente | ≥ 90 % |
+| OBJ-07 | Cero intervención | Órdenes humanas necesarias entre el brief y la obra cerrada | Recuento de llamadas de escritura a la API por obra | Pendiente | Exactamente 1 |
+
+**Qué no es objetivo, y por qué.** Bajar el coste por sí solo: se cumple
+trivialmente con un modelo peor y arruina OBJ-03 y OBJ-06 sin que la cifra de
+coste se entere. Bajar el número de críticas: se cumple con verificadores
+ciegos, que es el fallo que `validators.md` §6 llama «el agente que no encuentra
+nada nunca». Y la nota de un juez de rúbrica, que es ruido declarado y no
+mejora medible.
+
+## §4 Requisitos funcionales
+
+### 4.1 Alta y arranque de una obra
+
+```mermaid
+flowchart LR
+  B([Brief del editor]) --> O[Alta de Obra]
+  O --> M[poblar_mundo]
+  M --> G["Guion del capitulo<br/>pasos 1 a 10"]
+  G --> C{Quedan capitulos?}
+  C -- si --> G
+  C -- no --> A[auditar de cierre]
+  A --> F([Obra cerrada])
+```
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-01 | Acepta un brief y da de alta una `Obra` con título, época, ámbito, premisa, tesis temática, elenco declarado y políticas globales. Si falta un campo obligatorio, lo rechaza nombrando el campo, sin crear nada | `prueba` |
+| RF-02 | El alta arranca la producción completa: `poblar_mundo` y después el guion de cada capítulo hasta cerrar la obra. **No hay ninguna otra orden que el editor deba dar** | `demostracion` |
+| RF-03 | Cada obra nace en su propio espacio de artefactos, identificado por `id_obra`. No existe un espacio de trabajo compartido que haya que archivar ni vaciar entre obras | `analisis` |
+| RF-04 | La producción se puede detener y reanudar por orden explícita. Reanudar retoma el paso siguiente al último cerrado y no repite trabajo ya aceptado | `prueba` |
+| RF-05 | Una tarea fallida se reintenta hasta el tope declarado. Agotado, la obra queda detenida con la tarea, el intento y el motivo registrados, y ningún artefacto a medio escribir | `prueba` |
+
+### 4.2 Ejecución del guion
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-10 | El guion del capítulo —paso, rol, proyección, tope de ventana y concurrencia— es un artefacto declarativo, no código. La pieza que lo camina lee cuál es el paso siguiente y lo ejecuta | `inspeccion` |
+| RF-11 | Cada paso encarga una tarea a un rol con la proyección mínima de ese rol (`architecture.md` §3) y nada más. Lo que sobra en la proyección produce falsos positivos y es un defecto | `inspeccion` |
+| RF-12 | Ningún rol invoca a otro ni recibe objetos en memoria: el testigo se pasa siempre por artefacto escrito en el almacén | `analisis` |
+| RF-13 | La anchura de una tanda se calcula: `80 000 ÷ tope del rol más caro de la tanda`, redondeado a la baja. Si hay más tareas, se hacen tandas sucesivas y se espera a que cierre una antes de abrir la siguiente | `analisis` |
+| RF-14 | Antes de enviar, cuenta los tokens de la ventana. Si no cabe en el tope del rol, **parte la unidad** (capítulo → escena → párrafo) y nunca recorta la proyección | `prueba` |
+| RF-15 | Las únicas bifurcaciones son el enrutado por severidad y el tope de vueltas. Ningún agente enruta ni manda sobre otro | `inspeccion` |
+
+### 4.3 Almacén y forma de los artefactos
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-20 | `almacen/` es la única puerta de lectura y escritura. Ni `tareas/` ni `api/` hablan con la base de datos | `inspeccion` |
+| RF-21 | Todo artefacto se guarda con `id` opaco, `tipo`, `procedencia` (rol, tarea e intento que lo produjeron) y sello temporal | `analisis` |
+| RF-22 | El cuerpo del artefacto se guarda íntegro tal como lo escribió el agente. El backend no lo reinterpreta: solo extrae las columnas por las que hace falta consultar | `inspeccion` |
+| RF-23 | Un artefacto con un campo obligatorio ausente o con un valor fuera de vocabulario controlado se rechaza, y el rechazo es una `Crítica` de severidad `bloqueante` cuyo objeto es el artefacto, no el texto | `prueba` |
+| RF-24 | `EventoEstado`, `Fuente`, `Resumen de capítulo`, `Decisión` y todo borrador ya aceptado son inmutables. Cambiar algo es escribir una versión nueva | `prueba` |
+| RF-25 | El estado en N se deriva plegando: el Contable recibe el estado en N-1 materializado y los eventos de N. El log no se lee nunca entero. Regenerar el capítulo 12 descarta los estados materializados de 12 en adelante y repliega hacia delante | `analisis` |
+| RF-26 | Retirar la memoria de capítulo la ejecuta el Archivero como paso del guion: el almacén marca esos artefactos como caducados y deja de servirlos a cualquier proyección | `prueba` |
+
+### 4.4 Control de calidad
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-30 | Tres cribas por borrador —bloqueantes, mayores y pulido—, no una. Cada dimensión entra en la vuelta que le fija su severidad de partida | `inspeccion` |
+| RF-31 | Una `Crítica` sin `evidencia` citable se descarta antes de llegar al Revisor, y el descarte se cuenta (OBJ-04) | `prueba` |
+| RF-32 | Enrutado por severidad: `bloqueante` regenera la escena, `mayor` entra en revisión dirigida, `menor` y `sugerencia` esperan a la criba de pulido | `prueba` |
+| RF-33 | Tope de vueltas: dos revisiones dirigidas por borrador y dos regeneraciones por escena. Agotado, la escena se acepta con sus críticas abiertas anotadas y el capítulo se cierra marcado | `prueba` |
+| RF-34 | Si dos agentes discrepan sobre el mismo predicado, se repite con la proyección reducida al mínimo; si persiste, la crítica baja a `sugerencia` y se registra como caso ambiguo | `prueba` |
+| RF-35 | Los permisos de lectura y escritura por rol los impone el backend, no el prompt: ningún rol puede escribir una entidad que la tabla de gobierno (`architecture.md` §6) no le asigna | `prueba` |
+
+### 4.5 Cierre de capítulo y de obra
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-40 | El paso de `Aceptado` a `Cerrado` emite los `EventoEstado` del capítulo, solo por el Contable, con fecha y lugar resultantes ya calculados y escritos. Hasta que el capítulo no cierra, sus eventos no existen para nadie | `analisis` |
+| RF-41 | Cerrado el capítulo, el Archivero escribe el `Resumen de capítulo` y actualiza la cola de compromisos y el registro acumulado de estilo | `analisis` |
+| RF-42 | `auditar` entra cada N capítulos y al cierre de la obra, siempre en solitario. N es configuración | `analisis` |
+| RF-43 | Al cierre, ningún compromiso queda `abierto`: es `bloqueante`. Los retoques finales los aplica el Revisor o el Editor de estilo como paso del guion. **El editor humano no ejecuta pasos: lee el resultado** | `demostracion` |
+
+### 4.6 Consulta por el editor
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-50 | Sirve el manuscrito con solo el texto aceptado, en orden, y marca los capítulos cerrados con críticas abiertas | `inspeccion` |
+| RF-51 | Sirve las críticas filtrables por estado, dimensión, severidad y capítulo, con su evidencia y quién las detectó | `analisis` |
+| RF-52 | Sirve una `Traza` por tarea con contexto enviado, salida, coste, latencia e intento. Se registra en toda tarea, la ejecute quien la ejecute | `analisis` |
+| RF-53 | Sirve el progreso de una ejecución en curso: capítulo, paso, rol, tareas abiertas y tokens concurrentes | `demostracion` |
+| RF-54 | Sirve el estado plegado hasta el capítulo N y el log de eventos, para poder auditar por qué una escena se rechazó | `analisis` |
+
+## §5 Requisitos de datos
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RD-01 | SQLite con `WAL`, `foreign_keys` activas y tablas `STRICT`. Un solo proceso escritor; las lecturas de la API no bloquean la producción | `prueba` |
+| RD-02 | El esquema espeja las tres capas —obra, mundo, producción— más la `Traza`, y toda fila cuelga de un `id_obra` | `inspeccion` |
+| RD-03 | Los artefactos viven en una tabla por tipo con el cuerpo declarativo en una columna y, al lado, solo las columnas por las que se consulta: obra, capítulo, escena, estado, severidad, dimensión, rol | `inspeccion` |
+| RD-04 | Todo campo de vocabulario controlado se declara como valor cerrado en el esquema. Un campo de esos en texto libre es un defecto: es lo que hace incomputable el predicado que lo vigila | `analisis` |
+| RD-05 | Los fragmentos de `Fuente` se indexan con la extensión vectorial, particionados por `id_obra`, para que el Documentalista recupere por parecido y luego filtre por fecha y lugar | `prueba` |
+| RD-06 | Toda consulta que sirve una proyección está acotada por `id_obra` y por capítulo. Ninguna recorre la prosa acumulada: nada cuyo tamaño crezca con la obra entra en una ventana | `analisis` |
+| RD-07 | No se borra nada. Caducar es marcar; descartar es marcar. El almacén es el registro de por qué la obra es como es | `prueba` |
+| RD-08 | **Nada de lo que el sistema produce toca el sistema de ficheros.** Artefactos, borradores, críticas, log de eventos, estado materializado, resúmenes, decisiones y trazas viven en la base de datos, incluidos los cuerpos de texto y los embeddings. No hay carpeta de trabajo, ni volcados a disco para inspeccionar: lo que hay que ver se sirve por la API (§6) | `inspeccion` |
+| RD-09 | Los prompts de los once roles y el guion declarativo son entrada versionada con el repositorio, no almacenamiento: son lo único que el sistema lee de fuera de la base de datos, y nunca los escribe | `inspeccion` |
+
+Un único ejemplo, que fija el estilo del cuerpo de todo artefacto. Los demás no
+se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe.
+
+```json
+{
+  "id": "cri_0a91",
+  "tipo": "Critica",
+  "objeto": "esc_0007",
+  "dimension": "integridad_de_pov",
+  "severidad": "bloqueante",
+  "evidencia": "«...supo que el conde ya había firmado», con el conde ausente de la escena",
+  "accion_sugerida": "Narrar solo lo accesible al foco o declarar el conde presente en el contrato",
+  "detectada_por": {
+    "rol": "verificador_de_continuidad",
+    "tarea": "tar_1182",
+    "contrato": "integridad_de_pov"
+  }
+}
+```
+
+## §6 Requisitos de interfaz
+
+| ID | Operación | Para qué | Requisito |
+| --- | --- | --- | --- |
+| RI-01 | `POST /obras` | Lanzar una obra desde el brief | Única llamada de escritura necesaria por obra (RF-02, OBJ-07). Devuelve `id_obra` y no espera a que la obra termine |
+| RI-02 | `GET /obras/{id}` | Ficha y avance | Estado de la obra, capítulo en curso y recuento de capítulos cerrados y marcados |
+| RI-03 | `GET /obras/{id}/manuscrito` | Leer | Solo texto aceptado (RF-50) |
+| RI-04 | `GET /obras/{id}/capitulos/{n}` | Inspeccionar un capítulo | Plan, escenas con su contrato, borrador vigente y críticas |
+| RI-05 | `GET /obras/{id}/criticas` | Ver defectos | Filtros de RF-51 |
+| RI-06 | `GET /obras/{id}/trazas` | Medir el sistema | Filtrable por capítulo, rol y tarea (RF-52) |
+| RI-07 | `GET /obras/{id}/estado` | Auditar continuidad | Estado plegado hasta el capítulo indicado, y log de eventos (RF-54) |
+| RI-08 | `GET /obras/{id}/progreso` | Ver la ejecución en vivo | Flujo de eventos de progreso mientras la obra corre (RF-53) |
+| RI-09 | `POST /obras/{id}/detener` · `/reanudar` | Control, no mantenimiento | RF-04. No hay ninguna operación de limpieza ni de archivado que el editor deba ejecutar |
+
+Dos reglas de frontera: la interfaz web nunca lee ficheros ni la base de datos, y
+el contrato HTTP se valida en el borde con modelos declarados —es el único sitio
+donde el backend impone tipos, porque ahí habla con algo que no es un agente.
+
+## §7 Requisitos no funcionales
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RNF-01 | El pico de contexto concurrente no pasa de 100 000 tokens en ningún instante, con el 20 % reservado como margen (OBJ-01) | `analisis` |
+| RNF-02 | El coste de un capítulo no crece con la longitud de la obra (OBJ-02) | `analisis` |
+| RNF-03 | Toda tarea deja `Traza`. Sin ella no se puede afirmar que el bucle converge, solo suponerlo | `analisis` |
+| RNF-04 | El guion es reproducible: misma obra y mismos artefactos dan la misma secuencia de pasos, tandas y proyecciones. Lo que varía es la salida del modelo, no el recorrido | `prueba` |
+| RNF-05 | Un solo lector y un solo escritor del almacén (RF-20) | `inspeccion` |
+| RNF-06 | Un fallo del proveedor o un corte no deja artefactos a medias ni estados materializados inconsistentes: se escribe la unidad completa o nada | `prueba` |
+| RNF-07 | Español en documentación, commits, nombres de entidad y mensajes de error de la API | `inspeccion` |
+| RNF-08 | Ninguna operación de mantenimiento recurrente recae en el editor. Un paso manual periódico es un defecto de diseño, no una instrucción de uso | `inspeccion` |
+
+## §8 Decisiones de diseño de esta versión
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-01 | El artefacto es un documento declarativo y el backend no lo tipa por dentro; los tipos se declaran solo en el borde HTTP | Es el invariante «sin harness a medida». Quien impone la forma del artefacto es el esquema en el contexto del agente que lo escribe y el rechazo del siguiente (RF-23) |
+| D-02 | **Decisión tomada. Todo se guarda en SQLite y en ningún otro sitio.** No hay almacén de ficheros: los nombres `mundo/`, `obra/`, `log/`, `estado/` y `criticas/` de `architecture.md` §7 son grupos lógicos de artefactos, no carpetas en disco | `AGENTS.md` ya fijaba SQLite como persistencia y `architecture.md` §7 lo describía como ficheros. Queda una sola lectura: lo declarativo es el cuerpo del artefacto y SQLite es el único lugar donde se escribe. Un segundo sitio donde persistir sería un segundo escritor y rompería la frontera única. Cierra una decisión de `architecture.md` §8, y poner al día §7 y §8 es trabajo de la fase 3 |
+| D-03 | **Propuesta de cierre.** El prompt y el contrato de cada rol viven junto a su tarea, en `tareas/<tipo>/` | Mantiene visible en el árbol la regla «un rol, una tarea»: declarar un rol es añadir una carpeta con todo lo suyo dentro. Cierra otra decisión abierta, con la misma condición |
+| D-04 | Una sola orden por obra, y cada obra nace en su propio espacio | Evita de raíz el trabajo manual entre obras: no hay nada que archivar ni vaciar porque nunca se comparte espacio |
+| D-05 | v1 no usa herramientas externas de cálculo | La decisión sigue abierta. Mientras lo esté, coherencia temporal, fatiga léxica y léxico vetado van como `analisis` contra el dato ya escrito, y lo que las vigila es la reincidencia por dimensión |
+
+## §9 Trazabilidad
+
+| Bloque de requisitos | De dónde sale |
+| --- | --- |
+| §4.1 Alta y arranque | `architecture.md` §4; invariante de cero pasos manuales |
+| §4.2 Guion | `architecture.md` §3 y §4 |
+| §4.3 Almacén | `architecture.md` §2, §3 y §7; `AGENTS.md` (frontera y pila) |
+| §4.4 Calidad | `architecture.md` §5; `validators.md` §3 y §4 |
+| §4.5 Cierre | `architecture.md` §4 y §6; `validators.md` §4 (alcance global) |
+| §4.6 y §6 Consulta e interfaz | `AGENTS.md` (frontera única); `architecture.md` §7 |
+| §5 Datos | `definitions.md` (vocabularios); `AGENTS.md` (SQLite y extensión vectorial) |
+| §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
+
+## §10 Verificación y criterios de aceptación
+
+La verificación del propio sistema es la de `validators.md` §6 y no se duplica
+aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
+
+1. Una obra de tres capítulos de tres escenas corre de `POST /obras` a obra
+   cerrada con **una sola** llamada de escritura (OBJ-07).
+2. La `Traza` permite calcular OBJ-01 a OBJ-06 y fijar con ella las líneas base
+   que hoy están pendientes.
+3. Casos sembrados: un texto con un defecto conocido de una sola dimensión por
+   caso. Se registra la tasa de detección y los falsos positivos por dimensión,
+   sin exigir todavía una cifra: la primera medida es la línea base.
+4. Un artefacto malformado a propósito produce `Crítica` bloqueante con objeto
+   el artefacto y no llega al Revisor.
+5. Detener y reanudar a mitad de capítulo no duplica ni pierde trabajo
+   aceptado.
+6. Regenerar un capítulo intermedio deja los siguientes replegados y
+   consistentes.
+
+## §11 Fuera del alcance de v1
+
+La interfaz web. Autenticación y varios usuarios. Varias obras produciéndose a
+la vez —el techo de contexto es de la instalación, no de la obra—. La
+calibración de los topes de ventana contra trazas reales, que necesita trazas
+que todavía no existen. La compactación de los dos materiales que crecen con la
+obra: v1 declara sus topes y avisa al alcanzarlos, pero no compacta. Y cualquier
+herramienta externa de cálculo, por D-05.
+
+## §12 Decisiones abiertas
+
+De las diez de `architecture.md` §8, cuatro tocaban al backend. Una queda
+cerrada: **dónde vive el almacén de artefactos y quién lo escribe** → SQLite y
+solo SQLite, D-02 y RD-08. Quedan tres, y las tres hay que resolverlas antes de
+la fase 2.
+
+- [ ] Si los prompts son parte del `backend/` o una carpeta hermana → propuesta D-03.
+- [ ] Qué umbral de severidad dispara regeneración completa frente a revisión dirigida. RF-32 asume `bloqueante`; si cambia, cambia el enrutado.
+- [ ] Si se acepta alguna herramienta externa de cálculo. Cierra el método de tres dimensiones y afecta a D-05.
+
+Las otras seis de §8 son de dominio y no bloquean esta versión. Además, este
+SRS abre tres propias:
+
+- [ ] Con qué contador se miden los tokens de una ventana, dado que el
+      presupuesto depende de que la cuenta sea la del proveedor y no una
+      estimación.
+- [ ] Cada cuántos capítulos entra `auditar`, y si N es fijo o depende de la
+      extensión de la obra.
+- [ ] Qué modelo de embeddings indexa las `Fuente`, y si cambiarlo obliga a
+      reindexar una obra en curso.
