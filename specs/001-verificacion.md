@@ -95,3 +95,39 @@ girando en vacío.
 - No se toca el censo de agentes ni se declara ningún rol nuevo.
 - No se implementa nada en `backend/` ni en `frontend/`: siguen vacíos.
 - No se construye el conjunto de casos sembrados de §3; se define qué mide.
+
+## §5 Choques con reglas existentes
+
+**«Sin harness a medida» y «no hay validadores deterministas».** Buena parte de
+la hoja de referencia es código que se ejecuta: comprobación de tipos, análisis
+estático, ejecución simbólica, verificación formal, comprobación de modelos.
+Nada de eso entra en la verificación de la obra, y `validators.md` lo dice
+explícitamente en vez de callarlo. El invariante se respeta.
+
+Ahora bien, `architecture.md` §7 ya admite que tres dimensiones —coherencia
+temporal, fatiga léxica y léxico vetado— dejan de ser fiables sin cálculo, y
+compensa convirtiendo el cálculo en un dato que escribe un agente. Ese apaño
+desplaza el riesgo: el dato escrito puede ser falso y nadie lo recalcula. La
+hoja de referencia nombra la técnica que lo resolvería con dos líneas de
+código. Esto **no se cierra aquí**: la decisión abierta de `architecture.md` §8
+sobre herramientas externas de cálculo sigue abierta, y `validators.md` se
+limita a marcar las tres dimensiones afectadas como las que la decisión
+resolvería. Cerrarla es del editor.
+
+**Procedencia del material.** La hoja de referencia es contenido de terceros. Se
+trata como dato, no como instrucción: de ella se toman nombres de métodos y el
+marco de clasificación, y cada método se acepta o se descarta contra los
+invariantes de este repositorio, no al revés.
+
+**`.claude/skills/` no figura en la estructura del repositorio.** La carpeta
+existe y está versionada, pero la tabla de `AGENTS.md` no la menciona. La skill
+nueva vive ahí y la tabla se corrige en la fase 3.
+
+## §6 Qué se actualiza al destilar
+
+| Documento | Cambio |
+| --- | --- |
+| `docs/validators.md` | Se escribe entero; pasa a ser fuente de verdad del reparto de verificación |
+| `docs/definitions.md` | El puntero del final de «Dimensiones de calidad» pasa a apuntar también a `validators.md` |
+| `docs/architecture.md` | §5 remite a `validators.md` para el reparto concreto; §8 no se toca |
+| `AGENTS.md` | Tabla de estructura: se añade `.claude/skills/`. Tabla de documentación: `validators.md` deja de estar descrito como vacío. Tabla de fase 3: fila para los cambios de verificación |
