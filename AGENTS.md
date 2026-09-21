@@ -54,11 +54,10 @@ consistentes entre sí y deben seguir siéndolo.
 | `docs/definitions.md` | La ontología del dominio en prosa: qué es una `Obra`, una `Escena`, un `Personaje`, un anacronismo. Define las dos capas del dominio —**Obra** (cómo está hecho el texto) y **Mundo** (de qué habla el texto)—, el contrato de escena, las seis familias de relaciones, los vocabularios controlados de forma y de mundo, y las dimensiones de calidad con su alcance. Es el documento del *qué*. |
 | `docs/domain-knowledge.md` | Los mismos conceptos en seis diagramas Mermaid: árbol de la obra, árbol del mundo, relaciones, contrato de escena, árbol de calidad y vocabularios. No añade definiciones nuevas; sirve para ver de un vistazo lo que `definitions.md` describe. Si cambia una definición, cambia también el diagrama. |
 | `docs/architecture.md` | Cómo está construido el sistema: las tres capas y su regla de acoplamiento, el censo de diez agentes con sus tareas y permisos, las entidades de producción (`Plan`, `Borrador`, `Crítica`, `Revisión`, `Decisión`, `EventoEstado`, `Traza`), la gestión de contexto por rol, el ciclo de vida del capítulo, el bucle de control de calidad, la tabla de gobierno por entidad y las decisiones abiertas. Es el documento del *cómo*. |
+| `docs/validators.md` | Con qué se comprueba cada cosa: el vocabulario controlado `metodo_de_verificacion` y sus cinco valores, el contrato de verificación, y el reparto dimensión por dimensión —por alcance local, de escena y capítulo, y global— con su método, el agente que la comprueba, lo que recibe y la severidad con que sale la `Crítica`. Incluye lo que no admite predicado y la verificación del propio sistema de agentes. Es el documento del *con qué se comprueba*. |
 
 El reparto del repositorio —el *dónde*— no tiene documento propio: vive en la
 sección «Estructura del repositorio» de este mismo fichero.
-
-`docs/validators.md` está vacío: no es fuente de verdad de nada todavía.
 
 ## Invariantes que no se rompen sin cambiar el documento
 
@@ -124,6 +123,11 @@ la spec.
 No arranca sin spec aprobada. El agente implementa **lo que la spec dice y nada
 más**: `backend/`, `frontend/` o ambos en el mismo cambio si la frontera entre
 ellos lo exige.
+
+Antes de escribir código, el agente abre la skill de la parte de la pila que va
+a tocar: `python-fastapi-ops` para `backend/`, `react-ops` para `frontend/` y
+`sqlite-ops` para todo lo que sea base de datos. Son obligatorias, no dependen
+de que la spec las nombre.
 
 Si al programar aparece algo que la spec no cubre —una decisión de fondo, no un
 detalle de implementación— **se vuelve a la fase 1** y se amplía la spec. No se
