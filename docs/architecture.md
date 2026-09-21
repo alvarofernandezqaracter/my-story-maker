@@ -8,6 +8,8 @@ Todo lo relativo a **cómo está construido el sistema**: la separación en capa
 
 El vocabulario del dominio —qué es una escena, un personaje, un anacronismo— vive en `definitions.md`, y sus diagramas en `domain-knowledge.md`. Este documento referencia esas entidades, no las define.
 
+El reparto del repositorio —qué va en `backend/`, qué va en `frontend/` y dónde está la frontera entre ambos— está en la sección «Estructura del repositorio» de `AGENTS.md`, en la raíz. Este documento describe el sistema, no dónde se guardan sus ficheros.
+
 ## 1. Arquitectura en tres capas
 
 El dominio se parte en tres capas disjuntas, y la mayoría de los fallos de diseño vienen de mezclarlas.
@@ -342,3 +344,5 @@ En los tres casos el patrón es el mismo: **convertir un cálculo en un dato esc
 - [ ] ¿Quién arbitra cuando Verificador y Juez discrepan de forma sistemática en una dimensión?
 - [ ] ¿El enrutado del ciclo de vida lo decide cada agente al terminar, o hace falta un rol coordinador que rompería la simetría del censo?
 - [ ] ¿Se acepta alguna herramienta externa de cálculo (fechas, recuento léxico) sin que eso cuente como harness, o la restricción de cero código es absoluta?
+- [ ] ¿Dónde vive el almacén de artefactos (`mundo/`, `obra/`, `log/`, `estado/`, `criticas/` de §7) dentro del reparto de `AGENTS.md`, y quién lo escribe?
+- [ ] ¿Los prompts de los diez agentes son parte del `backend/` o una carpeta hermana?

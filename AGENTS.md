@@ -1,0 +1,168 @@
+# AGENTS.md — my-story-maker
+
+Generador de novelas históricas por agentes: convierte un brief de editor en un
+manuscrito verificado.
+
+## Alcance de esta rama (importante)
+
+Esta rama es `v2`, un arranque desde cero: contiene `docs/`, la carpeta `specs/`
+—todavía vacía— y las dos carpetas vacías del monorepo, `backend/` y
+`frontend/`. No hay código todavía.
+
+- Considera como fuente de verdad únicamente lo que existe en esta rama. Ignora
+  `main` y cualquier historial, convención o código anterior: no aplica aquí.
+- Si algo no está en `docs/` ni en esta rama, no existe todavía. No lo asumas:
+  pregúntalo o propónlo explícitamente.
+- Al crear la estructura del proyecto, parte de cero siguiendo
+  `docs/architecture.md` y la estructura de repositorio de más abajo, no de un
+  esqueleto heredado.
+
+## Estructura del repositorio
+
+Monorepo con dos paquetes en la raíz. Ninguno tiene código todavía: por ahora
+solo está fijada la frontera entre ambos.
+
+| Carpeta | Qué contendrá | Pila |
+| --- | --- | --- |
+| `backend/` | El servidor: expone por HTTP lo que los agentes producen y recibe las órdenes del editor | Python + FastAPI |
+| `frontend/` | La interfaz web desde la que se lanza y se inspecciona una obra | Vite + React |
+| `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
+| `specs/` | Una spec por cambio —el contexto específico—: qué se cambia y por qué | Markdown |
+
+Decisiones ya tomadas sobre el reparto:
+
+- **Frontera única.** `frontend/` nunca lee ficheros del sistema; todo lo que
+  muestra lo pide al `backend/`. Así el almacén de artefactos tiene un solo
+  lector y un solo escritor.
+- **Dos paquetes, dos gestores.** `backend/` se instala con su propio
+  `pyproject.toml` y `frontend/` con su propio `package.json`. No hay
+  herramienta de monorepo por encima: la raíz solo agrupa.
+
+Lo que queda por decidir sobre el reparto está en `architecture.md` §8, junto al
+resto de decisiones abiertas.
+
+## Documentación de referencia
+
+Léela antes de proponer diseño o escribir código. Estos documentos son
+consistentes entre sí y deben seguir siéndolo.
+
+| Documento | Qué contiene |
+| --- | --- |
+| `docs/definitions.md` | La ontología del dominio en prosa: qué es una `Obra`, una `Escena`, un `Personaje`, un anacronismo. Define las dos capas del dominio —**Obra** (cómo está hecho el texto) y **Mundo** (de qué habla el texto)—, el contrato de escena, las seis familias de relaciones, los vocabularios controlados de forma y de mundo, y las dimensiones de calidad con su alcance. Es el documento del *qué*. |
+| `docs/domain-knowledge.md` | Los mismos conceptos en seis diagramas Mermaid: árbol de la obra, árbol del mundo, relaciones, contrato de escena, árbol de calidad y vocabularios. No añade definiciones nuevas; sirve para ver de un vistazo lo que `definitions.md` describe. Si cambia una definición, cambia también el diagrama. |
+| `docs/architecture.md` | Cómo está construido el sistema: las tres capas y su regla de acoplamiento, el censo de diez agentes con sus tareas y permisos, las entidades de producción (`Plan`, `Borrador`, `Crítica`, `Revisión`, `Decisión`, `EventoEstado`, `Traza`), la gestión de contexto por rol, el ciclo de vida del capítulo, el bucle de control de calidad, la tabla de gobierno por entidad y las decisiones abiertas. Es el documento del *cómo*. |
+
+El reparto del repositorio —el *dónde*— no tiene documento propio: vive en la
+sección «Estructura del repositorio» de este mismo fichero.
+
+`docs/validators.md` está vacío: no es fuente de verdad de nada todavía.
+
+## Invariantes que no se rompen sin cambiar el documento
+
+Estas reglas salen de `architecture.md` y gobiernan cualquier propuesta:
+
+- **Tres capas disjuntas.** Obra referencia Mundo por `id` y nunca lo duplica.
+  Producción observa a las otras dos; ninguna de las dos la observa a ella.
+- **Un rol, una tarea.** Si aparece trabajo que ningún tipo de tarea cubre, se
+  declara un rol nuevo; no se ensancha uno existente.
+- **Ningún agente valida su propia salida.** Quien redacta no critica; quien
+  critica no redacta.
+- **El mundo solo cambia por `EventoEstado`**, y solo el Contable de estado los
+  emite, al cerrar un capítulo. Nada de escritura directa del redactor.
+- **El estado no se almacena, se deriva** plegando el log de eventos hasta el
+  capítulo N.
+- **Solo el Documentalista escribe `Fuente`.** Un dato histórico sin `Fuente`
+  es, por definición, una alucinación.
+- **Toda `Crítica` lleva evidencia citable**; sin ella se descarta.
+- **Sin harness a medida.** El estado vive en artefactos declarativos legibles
+  por los agentes, no en objetos tipados en memoria.
+
+## El ciclo de edición
+
+Todo cambio recorre el mismo círculo, siempre en el mismo orden. Ninguna fase
+empieza hasta que la anterior ha cerrado, y un ciclo no está cerrado hasta que
+vuelve al principio.
+
+```mermaid
+flowchart LR
+  P([Petición de cambio]) --> S
+  S["1 · Spec<br/>contexto específico<br/>specs/"] --> C["2 · Código<br/>backend/ · frontend/"]
+  C --> D["3 · Docs<br/>contexto general<br/>docs/"]
+  D --> P
+```
+
+### Fase 1 — Edición de la spec
+
+Abre el ciclo. La spec es el **contexto específico**: qué se cambia en este
+cambio concreto y por qué. Vive en `specs/NNN-nombre.md`, con numeración
+correlativa que no se reutiliza nunca, y **se queda en el repositorio para
+siempre**: la carpeta es el registro de por qué el sistema es como es.
+
+1. **Interrogatorio.** Antes de escribir una línea, el agente invoca la skill
+   `grill-me` y pregunta el porqué del cambio: qué problema real resuelve, qué
+   alternativa se descarta y qué regla existente choca con él. Este es el
+   **único punto del ciclo en el que se interrumpe al humano**; de aquí en
+   adelante se ejecuta.
+2. **Redacción.** El agente escribe la spec: el problema, la decisión tomada con
+   su justificación, lo que queda fuera y qué documentos de `docs/` habrá que
+   poner al día en la fase 3. Corta —se lee en cinco minutos— y centrada en
+   decisiones: lo que se puede resolver razonablemente al implementar no va en
+   la spec.
+3. **Aprobación.** Sin spec aprobada no hay fase 2.
+
+Si la razón dada no sostiene el cambio, el agente lo dice en lugar de escribir
+la spec.
+
+### Fase 2 — Edición del código
+
+No arranca sin spec aprobada. El agente implementa **lo que la spec dice y nada
+más**: `backend/`, `frontend/` o ambos en el mismo cambio si la frontera entre
+ellos lo exige.
+
+Si al programar aparece algo que la spec no cubre —una decisión de fondo, no un
+detalle de implementación— **se vuelve a la fase 1** y se amplía la spec. No se
+improvisa sobre la marcha ni se deja anotado para después.
+
+La fase cierra cuando el código hace lo que la spec dice.
+
+### Fase 3 — Edición de los docs
+
+No arranca hasta que el código cierra. Aquí lo decidido en la spec se destila en
+el **contexto general** de `docs/`, que describe el sistema tal como es ahora:
+
+| Si el cambio tocó… | Se actualiza |
+| --- | --- |
+| La ontología, una entidad o un vocabulario | `definitions.md` y el diagrama correspondiente de `domain-knowledge.md`, en el mismo cambio |
+| Las capas, los agentes, las entidades de producción o el flujo | `architecture.md` |
+| Una decisión abierta que queda cerrada | `architecture.md` §8, retirándola de la lista |
+| El reparto del repositorio | La sección «Estructura del repositorio» de este fichero |
+
+Los docs **describen el estado actual, no la historia**: lo que se retira
+desaparece del documento, no se narra como pasado. Al terminar, la spec queda
+marcada como aplicada y el ciclo se cierra.
+
+### La ventana de divergencia
+
+La spec aprobada es la fuente de verdad mientras el ciclo está abierto. Los
+documentos de `docs/` pueden ir por detrás del código **desde que la spec se
+aprueba hasta que la fase 3 cierra, y solo en esa ventana**.
+
+Esa ventana no se acumula: **no se abre una spec nueva con la anterior sin
+destilar**. Y cerrarla es trabajo del agente: la fase 3 no es un recordatorio
+que el humano tenga que ejecutar.
+
+## Cómo trabajar aquí
+
+- **Español** en documentación, commits y nombres de entidad.
+- **Nombres:** entidades en `PascalCase` singular (`Escena`, `EventoEstado`);
+  relaciones en `snake_case` con verbo orientado (`ocurre_en`, `paga_setup`).
+- **Regla de corte de la ontología:** si un atributo no lo lee ningún agente ni
+  lo comprueba ningún validador, no se modela.
+- **Nada de texto libre donde hay vocabulario controlado.** Los valores cerrados
+  son lo que hace computables los predicados de calidad.
+- **Todo cambio pasa por el ciclo de edición**: spec, código y docs, en ese
+  orden y sin saltarse ninguna fase. Qué documento se actualiza al final lo
+  decide la tabla de la fase 3.
+- **Las decisiones abiertas de `architecture.md` §8 están abiertas de verdad.**
+  No las cierres por tu cuenta dentro de un cambio de código: propón el cierre,
+  espera la decisión y regístrala.
