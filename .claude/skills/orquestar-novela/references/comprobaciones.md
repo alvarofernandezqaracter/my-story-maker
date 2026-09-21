@@ -193,18 +193,26 @@ cronista vuelve a emitir el canon de ese capitulo sobre el texto nuevo, **sin
 mirar el que ya hay**, y comparas dos cosas y solo dos:
 
 - `personajes_presentes`, por **id**.
-- Los eventos, por **id** y por **tipo**.
+- El conjunto de ids que aparecen en `eventos[].personajes`.
 
 Si las dos cuadran, el texto retocado pasa a ser el intento aprobado. Si no,
 **descarta el texto retocado**, deja el capitulo como estaba y devuelve el retoque
 al editor global. Bloqueante.
 
-**No compares nada mas, y en particular ninguna cadena de prosa.** Ni los hilos,
-ni las ubicaciones, ni las lineas de `sabe`, ni el resumen. El cronista es un
-modelo: redacta lo mismo con otras palabras cada vez que se le llama, asi que
-comparar prosa tumba tambien el retoque que no cambia nada. Esto no es una
-sospecha: la primera version de VD-13 comparaba el canon entero y tumbo un
-retoque que solo anadia un gesto de una nina que ya estaba en la escena.
+**No compares nada mas.** Ni los hilos, ni las ubicaciones, ni las lineas de
+`sabe`, ni el resumen, ni **cuantos eventos hay**. El cronista es un modelo y no
+devuelve lo mismo dos veces: redacta con otras palabras y trocea los hechos con
+otro grano.
+
+Esto no es una sospecha, es lo que paso las dos veces que se intento afinar mas:
+la primera version comparaba el canon entero y tumbo un retoque que solo anadia
+un gesto de una nina que ya estaba en la escena; la segunda comparaba los ids de
+los eventos y tumbo otro que no anadia ningun hecho, porque el cronista partio en
+tres eventos lo que antes habia contado en uno.
+
+Lo unico que sobrevive a dos llamadas es **quien**. Por eso se compara el reparto
+y nada mas. Y lo que eso deja pasar conviene saberlo: **un retoque que cambiara
+lo que ocurre sin cambiar quien sale, entraria**.
 
 **El canon no se reescribe al retocar.** Cambia el fichero de texto y nada mas: el
 resumen, los hilos y las fichas se quedan como estaban, que es lo que mantiene

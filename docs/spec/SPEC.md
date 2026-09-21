@@ -1,6 +1,6 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.29.0
+version: 1.30.0
 estado: vigente
 actualizado: 2026-09-21
 ---
@@ -415,7 +415,7 @@ Comprobaciones deterministas en código, con id `VD-xx`. No confundir con el age
 | VD-10 | Tres dimensiones, una vez cada una, nota entera 1-5 | Salida del validador | Antes del gate | Bloq. | Reintenta la llamada al validador, no al escritor |
 | VD-11 | Ningún bloqueante pendiente al confirmar | Transacción del canon | En la escritura | Bloq. | Deshace la transacción; el canon no queda a medias |
 | VD-12 | Cada línea de `olvida` está literal en el `sabe` de esa ficha | Propuesta del cronista | Antes de escribir | Bloq. | Rechaza la propuesta entera; una retractación parafraseada no retira nada |
-| VD-13 | El texto retocado da los mismos presentes y los mismos eventos | Vuelta del editor global (§11) | Tras el gate del retoque | Bloq. | Descarta el texto retocado y devuelve el retoque al editor global |
+| VD-13 | El texto retocado da el mismo reparto: los mismos presentes y los mismos implicados en los eventos | Vuelta del editor global (§11) | Tras el gate del retoque | Bloq. | Descarta el texto retocado y devuelve el retoque al editor global |
 | VD-14 | El capítulo está escrito en el idioma de la novela | Capítulo redactado | Junto a VD-08, antes del validador | Bloq. | Descarta el intento y vuelve al escritor desde cero, sin llamar al validador |
 
 **Orden.** Cada salida pasa sus comprobaciones antes de usarse, y las comprobaciones van siempre antes que el gate. La regla que ahorra dinero es VD-08 y su familia: si el capítulo redactado no cumple lo básico, se reintenta la generación sin gastar la llamada al agente validador. VD-08 es la única comprobación de dos escalones, y por eso lleva dos márgenes en §12: un texto algo corto se valida igual y arrastra el aviso, y uno que se sale del margen de bloqueo no llega al validador porque ninguna nota va a arreglar que falte medio capítulo. La que salva el canon es VD-11: la escritura del cronista es una transacción única, así que o entran resumen, cambios de ficha y eventos juntos, o no entra nada. El gate (§8) solo se calcula sobre revisiones que ya pasaron VD-10, de modo que nunca opera con notas inventadas o incompletas.
@@ -432,7 +432,11 @@ Se comprueba contando **palabras funcionales** —«de», «la», «que» frente
 
 **VD-13 es la que hace barato el cierre.** Sin ella, retocar el capítulo 3 obligaría a comprobar si los capítulos que lo leyeron siguen en pie, y retocar el 1 podría arrastrar el libro entero. Con ella, un retoque que cambiaría los hechos no se aplica a medias: se descarta y el editor global tiene una oportunidad de reformularlo como lo que sí cabe, un arreglo de prosa. §11 explica por qué esa frontera es la correcta.
 
-**Y compara ids, nunca prosa.** Es la única de las trece que se estrenó rota y se corrigió con una ejecución delante. Comparaba el canon entero de la reemisión con el guardado, incluidos los hilos, las ubicaciones y las líneas de `sabe`, y eso no funciona: el cronista es un modelo y **redacta lo mismo con otras palabras cada vez que se le llama**. Al aplicar el primer retoque real —añadir un gesto de una niña que ya estaba en la escena— la reemisión devolvió los mismos hechos con los hilos reescritos, y VD-13 lo tumbó. Habría tumbado todos los retoques del sistema, incluido el que no cambia nada.
+**Y compara reparto, nada más.** Es la comprobación que más ha costado calibrar, y las dos veces por lo mismo: se apoya en volver a llamar al cronista, y **el cronista no es reproducible**. Nació comparando el canon entero de la reemisión contra el guardado, hilos y ubicaciones incluidos; el primer retoque real —añadir un gesto de una niña que ya estaba en la escena— devolvió los mismos hechos con los hilos reescritos y lo tumbó. Se redujo entonces a los ids de presentes y de eventos, y el segundo retoque real la volvió a tumbar: el texto no había añadido nada, pero el cronista **troceó los mismos hechos en tres eventos donde antes había puesto uno**.
+
+La lección es que ni la prosa ni la granularidad sobreviven a dos llamadas. Lo único que ha sobrevivido es **quién**: los ids de `personajes_presentes` y el conjunto de ids implicados en los eventos. Eso es lo que compara.
+
+Lo que gana es el caso que motiva toda la frontera —«que aparezca este personaje aquí», el retoque que mete a alguien en una escena donde no estaba— y lo caza sin falsos positivos. Lo que pierde está escrito para que nadie se confíe: **un retoque que cambiara lo que pasa sin cambiar quién sale, pasaría**. No hay forma de cerrarlo con una reemisión, porque haría falta que el cronista dijera dos veces lo mismo y no lo hace. Cerrarlo de verdad exigiría preguntarle a un modelo si los hechos cambiaron, y eso convierte una comprobación mecánica en una opinión, que es justo lo que §9 no es.
 
 Así que compara lo único estable entre dos llamadas al cronista: los **ids** de `personajes_presentes` y los **ids y tipos** de los eventos. Eso basta para lo que la comprobación existe: que un retoque no meta a nadie en una escena donde no estaba ni haga que pase algo que no pasó. Lo que deja pasar es un retoque que abriera una promesa nueva sin tocar el reparto; se acepta a sabiendas, porque los hilos de una reemisión no son comparables con los de otra y fingir que sí lo son es peor que no mirarlos.
 
@@ -474,7 +478,7 @@ Los retoques se procesan **de menor a mayor capítulo**, y cada uno da una vuelt
 1. El escritor recibe su propio texto aprobado y el retoque. Es un arreglo quirúrgico: toca lo señalado y no reescribe lo que ya funciona.
 2. El texto nuevo pasa **VD-08 y el gate entero**, con los tres validadores otra vez. Un retoque no es una excepción al gate: si el arreglo estropea el capítulo, no entra.
 3. El cronista vuelve a emitir el canon de ese capítulo sobre el texto nuevo.
-4. **VD-13**: esa reemisión tiene que dar los mismos personajes presentes y los mismos eventos que el canon ya guardado, comparando ids. Si coincide, el texto retocado sustituye al anterior como intento aprobado. Si no, el retoque se descarta.
+4. **VD-13**: esa reemisión tiene que dar el mismo reparto que el canon ya guardado —los mismos `personajes_presentes` y los mismos ids implicados en los eventos—, comparando ids. Si coincide, el texto retocado sustituye al anterior como intento aprobado. Si no, el retoque se descarta.
 
 **El canon no se reescribe al retocar.** Cambia el fichero de texto y nada más: el resumen, los hilos y las fichas se quedan exactamente como estaban. Es lo que mantiene válido lo que ya leyeron los capítulos siguientes, y la razón de que la reemisión del cronista sirva solo para comparar y se tire después. Un resumen nuevo sería otra redacción de lo mismo, escrita por un modelo que ya no está juzgando nada.
 
@@ -602,6 +606,23 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.30.0] — 2026-09-21
+
+**Cambiado**
+- §9 y §11. **VD-13 se queda en el reparto.** Comparaba también los ids de los
+  eventos, y el segundo retoque real la tumbó sin que el texto hubiera añadido
+  ningún hecho: el cronista troceó los mismos sucesos en tres eventos donde antes
+  había puesto uno. Es la segunda vez que la misma causa la rompe —que volver a
+  llamar al cronista no devuelve lo mismo—, así que ahora compara lo único que ha
+  sobrevivido a dos llamadas: quién está presente y quién aparece implicado en
+  los eventos. §9 escribe qué deja pasar a cambio, que es un retoque que cambiara
+  lo que ocurre sin cambiar quién sale.
+
+**Evidencia**
+- Sale del cierre de `2026-09-18-numancia-133ac`, la primera novela cerrada con
+  el tramo de retoque de §11 en marcha: dos retoques propuestos, dos aplicados,
+  ninguno descartado.
 
 ### [1.29.0] — 2026-09-21
 

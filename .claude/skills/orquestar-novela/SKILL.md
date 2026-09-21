@@ -200,14 +200,16 @@ Para cada retoque, sobre el intento aprobado del capitulo N:
    porque el capitulo ya tenia una version aprobada y no hay nada que salvar.
 3. **Cronista** sobre el texto retocado, diciendole que es una reemision de un
    capitulo ya aprobado.
-4. **VD-13.** Compara **solo** los `personajes_presentes` y los eventos, por id. Si
-   cuadran, el texto retocado pasa a ser el intento aprobado. Si no, **descarta el
-   texto retocado y deja el capitulo como estaba**.
+4. **VD-13.** Compara **solo el reparto**: los `personajes_presentes` y los ids que
+   aparecen en `eventos[].personajes`. Si cuadran, el texto retocado pasa a ser el
+   intento aprobado. Si no, **descarta el texto retocado y deja el capitulo como
+   estaba**.
 
    **El canon no se reescribe.** Cambia el fichero de texto y nada mas, y la
-   reemision del cronista se tira despues de comparar. Y no compares prosa -hilos,
-   ubicaciones, `sabe`, resumen-: el cronista los redacta distinto cada vez y
-   tumbarias hasta el retoque que no cambia nada.
+   reemision del cronista se tira despues de comparar. Y no compares nada mas que
+   el reparto -ni prosa, ni cuantos eventos hay-: el cronista redacta distinto y
+   trocea distinto en cada llamada, y tumbarias hasta el retoque que no cambia
+   nada. Pasa, y por eso esta escrito.
 
 ### Cuando VD-13 lo tumba
 
