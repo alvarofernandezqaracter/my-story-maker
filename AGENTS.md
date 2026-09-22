@@ -139,7 +139,8 @@ Si al programar aparece algo que la spec no cubre —una decisión de fondo, no 
 detalle de implementación— **se vuelve a la fase 1** y se amplía la spec. No se
 improvisa sobre la marcha ni se deja anotado para después.
 
-La fase cierra cuando el código hace lo que la spec dice.
+La fase cierra cuando el código hace lo que la spec dice **y se ha
+comprobado contra `docs/validators.md`** según la regla de abajo.
 
 ### Fase 3 — Edición de los docs
 
@@ -169,6 +170,15 @@ que el humano tenga que ejecutar.
 
 ## Cómo trabajar aquí
 
+- **Nada se da por bueno sin verificarlo contra `docs/validators.md`.**
+  Todo lo que el agente entrega —la spec, el código y los docs— se comprueba
+  antes de cerrarlo: para cada cosa producida se busca en `validators.md` con
+  qué método le toca comprobarse y se aplica ese método, con su predicado, su
+  proyección mínima y su evidencia citable. Si lo entregado no tiene método
+  asignado, se le asigna uno con la skill `disenar-verificacion` y se registra
+  en `validators.md` en la fase 3; declararlo `inverificable` es una respuesta
+  válida, inventarse una comprobación no lo es. Una comprobación sin evidencia
+  citable no cuenta como verificación.
 - **Español** en documentación, commits y nombres de entidad.
 - **Nombres:** entidades en `PascalCase` singular (`Escena`, `EventoEstado`);
   relaciones en `snake_case` con verbo orientado (`ocurre_en`, `paga_setup`).
