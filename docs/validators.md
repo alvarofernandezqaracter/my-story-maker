@@ -58,6 +58,16 @@ un agente como un contrato de tres partes, y de ninguna otra forma.
   sin evidencia se descarta antes de llegar al Revisor, así que el contrato debe
   decir qué evidencia acepta.
 
+**La proyección mínima no se rellena por parecido.** Cuando una dimensión se
+comprueba comparando hechos —continuidad de estado, violación epistémica,
+coherencia temporal— su proyección se trae entera y por identificador. Una
+búsqueda por semejanza devuelve una muestra, y el verificador que no recupera la
+contradicción escribe que no la hay: el falso negativo sale con el mismo formato
+que la comprobación correcta y nadie lo distingue. La recuperación por parecido
+solo alimenta comprobaciones cuyo fallo es dejar de encontrar algo, nunca las
+que afirman que algo no existe. En el reparto de §4 eso es una sola dimensión:
+la fatiga léxica.
+
 Una dimensión por tarea: al agente al que se le piden siete comprobaciones a la
 vez solo le salen las dos primeras.
 
@@ -79,7 +89,7 @@ encuentra.
 | Anacronismo conceptual | `inspeccion` | Verificador de continuidad | `Concepto` disponibles en esa fecha y ese ámbito, texto | `mayor` |
 | Anacronismo social e institucional | `inspeccion` | Verificador de continuidad | `Práctica` y cargos vigentes en el marco, texto | `mayor` |
 | Anacronismo léxico | `inspeccion` | Editor de estilo | Texto y lista vetada corta del capítulo, derivada del `Registro lingüístico` de las escenas en juego | `menor` |
-| Fatiga léxica | `analisis` | Editor de estilo | Registro acumulado de imágenes y muletillas ya usadas, texto nuevo | `menor` |
+| Fatiga léxica | `analisis` | Editor de estilo | Ecos recuperados por parecido del registro acumulado de imágenes y muletillas, texto nuevo | `menor` |
 | Tics de modelo | `inspeccion` | Editor de estilo | Lista de patrones recurrentes de superficie, texto | `sugerencia` |
 | Coherencia de voz | `inverificable` | Juez de rúbrica | Réplicas del mismo personaje en dos capítulos, rúbrica de voz | `menor`, ruidosa |
 

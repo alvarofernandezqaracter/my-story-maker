@@ -4,7 +4,7 @@
 
 ## Qué contiene este documento
 
-Todo lo relativo a **cómo está construido el sistema**: la separación en capas y su regla de acoplamiento, las entidades de producción, la gestión de contexto y las tres memorias, la orquestación por guion y el ciclo de vida de un capítulo, el bucle de control de calidad, el gobierno por entidad, la organización del código dentro de cada paquete y las notas de implementación.
+Todo lo relativo a **cómo está construido el sistema**: la separación en capas y su regla de acoplamiento, las entidades de producción, la gestión de contexto con sus tres memorias y su recuperación por parecido, la orquestación por guion y el ciclo de vida de un capítulo, el bucle de control de calidad, el gobierno por entidad, la organización del código dentro de cada paquete y las notas de implementación.
 
 El vocabulario del dominio —qué es una escena, un personaje, un anacronismo— vive en `definitions.md`, y sus diagramas en `domain-knowledge.md`. Este documento referencia esas entidades, no las define.
 
@@ -84,7 +84,7 @@ Reglas de integridad del censo:
 
 - Ningún agente valida su propia salida: el Redactor no emite `Crítica`, y ni Verificador ni Editor de estilo ni Juez escriben `Borrador`.
 - Solo el Contable de estado emite `EventoEstado`. Es el único punto por el que el mundo cambia.
-- Solo el Documentalista escribe `Fuente`. Un dato sin `Fuente` escrita por él es una alucinación por definición.
+- Solo el Documentalista escribe `Fuente`. Un dato sin `Fuente` escrita por él es una alucinación por definición. Es además el único rol que trae material de fuera del sistema: ningún otro busca ni lee nada que no esté ya en el almacén.
 - El Revisor aplica críticas ajenas; no puede crear las suyas.
 - El Archivero no escribe hechos del mundo ni prosa: resume el capítulo cerrado y retira lo que caduca. No decide nada sobre el texto.
 
@@ -95,7 +95,7 @@ Qué artefacto consume cada rol y qué artefacto deja escrito. La salida de un a
 | Agente | Entrada | Salida |
 | --- | --- | --- |
 | Constructor de mundo | `Obra` con su premisa y su marco, elenco declarado por el editor, `Fuente` ya recogidas | Fichas de `Personaje`, `Lugar`, `Objeto` y `Facción` |
-| Documentalista | Marco de la escena —fecha, lugar, ámbito— y afirmaciones históricas pendientes de respaldo | `Fuente`, `Concepto`, `Práctica` y `Registro lingüístico`, filtrados por esa fecha y ese lugar |
+| Documentalista | Marco de la escena —fecha, lugar, ámbito—, afirmaciones históricas pendientes de respaldo y lo que devuelven la búsqueda externa y el índice documental para ese marco | `Fuente`, `Concepto`, `Práctica` y `Registro lingüístico`, filtrados por esa fecha y ese lugar |
 | Arquitecto de arcos | Resúmenes de los capítulos cerrados, arcos declarados, cola de `Compromiso`, `funcion_estructural` de las escenas en orden | `Crítica` de alcance global |
 | Planificador | Canon, estado en N-1, compromisos abiertos, arcos | `Plan`: esqueleto de `Capítulo`, contrato de cada `Escena` y `Compromiso` asignados |
 | Redactor | Contrato de una escena del `Plan` aceptado, voces del elenco presente en ella, cola de continuidad local, documentación recuperada para esa escena | `Borrador` candidato de esa escena, con sus `Párrafo` |
@@ -244,7 +244,7 @@ Lo que se suele llamar memoria a corto y a largo plazo son aquí tres plazos, y 
 
 **Olvidar es un paso del guion, no un descuido.** La memoria de capítulo no caduca sola: la retira el Archivero al destilar (§4). Sin ese paso, el gasto constante deja de serlo a los pocos capítulos.
 
-### Los cinco materiales y su política de residencia
+### Los seis materiales y su política de residencia
 
 | Material | Qué es | Memoria | Política |
 | --- | --- | --- | --- |
@@ -253,6 +253,7 @@ Lo que se suele llamar memoria a corto y a largo plazo son aquí tres plazos, y 
 | Compromisos abiertos | Pistas plantadas sin pagar, subtramas vivas, promesas al lector | Obra | Siempre presente; cola ordenada por vencimiento |
 | Continuidad local | Cola literal de los últimos párrafos del capítulo anterior | Obra | Siempre presente en crudo: el estilo se contagia por adyacencia |
 | Documentación | Fuentes, detalle material, léxico de época | Capítulo | Recuperada por escena, filtrada por fecha y lugar, descartada al cerrar |
+| Ecos de la obra | Fragmentos de lo ya escrito que se parecen a lo que se va a escribir | Obra | Recuperados por parecido con `k` y tope de tokens declarados; nunca la prosa entera |
 
 ### La regla que sostiene las tres
 
@@ -262,7 +263,68 @@ Es la condición para que el capítulo 40 cueste lo mismo que el capítulo 4. De
 
 - **El log de `EventoEstado` no se lee nunca entero.** El pliegue es incremental: estado en N-1 más los eventos de N.
 - **La prosa cerrada no se relee jamás.** La única excepción es la cola de continuidad local, corta y de tamaño fijo.
-- **Solo dos materiales crecen con la obra**, y por eso los dos llevan tope declarado y un único lector: los `Resumen de capítulo`, que lee el Arquitecto de arcos, y el registro acumulado de estilo, que lee el Editor de estilo. Alcanzado el tope, se compactan antes de seguir. Nada más en el sistema tiene permitido crecer sin límite.
+- **Solo dos materiales crecen con la obra**, y por eso los dos llevan tope declarado y un único lector: los `Resumen de capítulo`, que lee el Arquitecto de arcos, y el registro acumulado de estilo, que consulta el Editor de estilo. El primero entra entero y se compacta al alcanzar su tope. El segundo ya no entra entero: se consulta por parecido y de él llegan solo los ecos recuperados, así que su tope vigila el tamaño del índice, no el de la ventana. Nada más en el sistema tiene permitido crecer sin límite.
+
+### Recuperación por parecido
+
+Buena parte de lo que un agente necesita no se localiza por identificador, sino
+por semejanza: qué fuente sirve para una escena de imprenta sevillana, o si la
+imagen que acaba de escribirse ya se escribió treinta capítulos atrás. Para esas
+preguntas hay tres colecciones indexadas, y ninguna más.
+
+| Colección | Qué contiene | Cuándo se escribe | Quién la consulta |
+| --- | --- | --- | --- |
+| Documental | Fragmentos de las `Fuente` recogidas, con su fecha, su lugar y su ámbito al lado | Al recoger la `Fuente` | Documentalista |
+| Obra · prosa | Fragmentos del texto ya aceptado | Al aceptar la unidad, nunca antes | Editor de estilo, y la API de consulta del editor |
+| Obra · estructura | Contratos de escena ya cumplidos y `Resumen de capítulo` | Al cerrar el capítulo | Planificador |
+
+Lo indexado no es una entidad nueva: un fragmento es un trozo de un artefacto
+que ya existe —una `Fuente`, un `Párrafo`, un `Resumen de capítulo`— y vive en
+el índice, no en la ontología. Nada que consultar por parecido se guarda dos
+veces.
+
+**Por qué un índice no rompe la regla del tamaño.** La regla prohíbe que entre
+en una ventana algo que crezca con la obra, y habla de la ventana, no del
+almacén. Una consulta por parecido devuelve siempre los `k` fragmentos más
+próximos, con `k` y un tope de tokens declarados por rol: el índice del capítulo
+40 es diez veces el del capítulo 4 y lo que llega a la ventana mide lo mismo. Es
+justamente lo que permite consultar todo lo escrito sin releer nada.
+
+**Lo recuperado paga en el tope de su rol.** No se suma aparte al presupuesto:
+sale del tope de ventana del agente que consulta, como cualquier otro material.
+Si no cabe, baja `k`, no sube el tope.
+
+**Recuperar no es decidir, así que no es tarea de nadie.** La consulta la sirve
+`almacen/` y la coloca en la ventana el ensamblador de contexto de `nucleo/`. No
+se declara un rol «recuperador»: el censo de §2 no cambia, porque no hay trabajo
+de dominio que ningún tipo de tarea cubra.
+
+**Lo que nunca se consulta por parecido.** Una búsqueda por semejanza devuelve
+lo que se parece, nunca lo que falta, y su fallo es silencioso: el agente que no
+recupera la contradicción concluye que no la hay. De ahí que estos queden fuera,
+y no por falta de ganas:
+
+| Queda fuera | Por qué |
+| --- | --- |
+| Verificador de continuidad | Comparar hechos exige el estado completo, no una muestra parecida. Recuperar aquí fabrica falsos negativos con formato de verificación |
+| Contable de estado | El pliegue es exacto y ya es incremental |
+| Arquitecto de arcos | Audita ausencias —un arco que no avanza, un compromiso sin pagar— y la ausencia es exactamente lo que un índice no devuelve |
+| Redactor | No ve prosa anterior por diseño: la cola de continuidad local le da el contagio de estilo en la dosis que se quiere y ni un párrafo más |
+| Canon, fichas de mundo y estado en N | Se traen por `id` desde el contrato de la escena. Cambiar algo seguro por algo probable no gana nada |
+
+### De dónde sale la documentación
+
+El Documentalista busca fuera del sistema con el marco de la escena —fecha,
+lugar, ámbito— y de cada resultado que acepta el almacén guarda **el texto
+íntegro tal como se leyó**, no solo el enlace. Una `Fuente` cuya cita no se pueda
+volver a comprobar dentro de un año no respalda nada, y el invariante es que un
+dato histórico sin `Fuente` es una alucinación. Lo guardado se trocea y se
+indexa en la colección documental; la página entera no vuelve a entrar en
+ninguna ventana, solo los fragmentos que se recuperan.
+
+Esto es lo que hace que la recogida quepa en el tope de 8 000 del rol: el
+agente ve resultados cortos, decide cuáles valen, y el volumen se queda en el
+almacén.
 
 ### Estado como pliegue, no como campo mutable
 
@@ -281,7 +343,8 @@ flowchart LR
   EDN --> ENS
   COLA[(Compromisos abiertos)] --> ENS
   TAIL[Cola del capitulo anterior] --> ENS
-  RAG[(Documentacion historica)] -- recuperada por escena --> ENS
+  IDOC[(Indice documental)] -- fuentes por parecido --> ENS
+  IOBR[(Indice de obra)] -- ecos de lo ya escrito --> ENS
   ENS --> VP[Vista planificador]
   ENS --> VR[Vista redactor]
   ENS --> VV[Vista verificador]
@@ -297,23 +360,23 @@ Cada agente recibe una vista distinta, y algunas exclusiones son tan importantes
 | Constructor de mundo | Obra, premisa, elenco declarado, fuentes ya recogidas | Plan, prosa, estado en N | Puebla tipos, no reacciona a la trama |
 | Documentalista | Marco de la escena, fuentes | Trama futura | Evita sesgar el dato hacia lo conveniente |
 | Arquitecto de arcos | Resúmenes de todos los capítulos, compromisos, curva de tensión | Prosa completa | Opera a escala de obra |
-| Planificador | Canon, estado en N, compromisos abiertos, arcos | Prosa anterior | Planifica estructura, no imita estilo |
+| Planificador | Canon, estado en N, compromisos abiertos, arcos, contratos y resúmenes de escenas parecidas ya escritas | Prosa anterior | Planifica estructura, no imita estilo: lo recuperado le llega como contrato y resumen, nunca como prosa |
 | Redactor | Contrato de escena, voces del elenco presente, continuidad local, documentación recuperada | Trama futura, críticas previas de otras escenas | Escribe desde dentro de la escena |
 | Contable de estado | Estado en N-1, texto aceptado del capítulo N, vocabulario de eventos | Plan, críticas, canon completo | Transcribe hechos ocurridos, no los interpreta |
 | Verificador de continuidad | Estado derivado, canon, texto producido | Prosa anterior, intención del plan | Compara hechos, no impresiones |
-| Editor de estilo | Texto producido, registro, léxico vetado | Canon, estado | Juzga superficie |
+| Editor de estilo | Texto producido, registro, léxico vetado, ecos de imágenes parecidas ya usadas | Canon, estado | Juzga superficie |
 | Juez de rúbrica | Texto producido, rúbrica de la dimensión juzgada | Canon, estado, críticas de otros | Su ruido no debe contagiar al resto |
 | Revisor | Borrador, críticas a atender, contrato de la unidad | Críticas de otras unidades, trama futura | Corrige lo señalado, no reescribe la obra |
 
 ```mermaid
 flowchart TD
-  VP[Planificador] --> VP1[canon + estado + compromisos + arcos]
+  VP[Planificador] --> VP1[canon + estado + compromisos + arcos + escenas parecidas]
   VP --> VPX[sin prosa anterior]
   VR[Redactor] --> VR1[contrato + voces + cola local + documentacion]
   VR --> VRX[sin trama futura]
   VV[Verificador] --> VV1[estado derivado + canon + texto nuevo]
   VV --> VVX[sin plan ni prosa previa]
-  VE[Editor de estilo] --> VE1[texto + registro + lexico vetado]
+  VE[Editor de estilo] --> VE1[texto + registro + lexico vetado + ecos]
   VE --> VEX[sin canon ni estado]
 ```
 
@@ -342,7 +405,7 @@ El reparto es la asignación de diseño, no una medida: calibrarlo contra las `T
 
 Un efecto de los topes que conviene notar, porque decide el diseño sin que haya que ordenarlo: **al verificador no le cabe un capítulo entero**. Sus instrucciones y su contrato rondan los 1 500 tokens, su proyección mínima otros 1 500 y un capítulo de cuatro escenas unos 5 200. No entra. Así que verifica por escena. Las dimensiones que sí son de alcance de capítulo caben porque son justamente las que no leen prosa, sino datos que otro agente ya dejó escritos —el modo declarado de cada párrafo, las fechas resultantes de cada `EventoEstado`—. El presupuesto y el reparto de `validators.md` llegan a la misma conclusión por caminos distintos.
 
-Reglas de compresión, que son las que hacen que los topes se cumplan: el canon se mantiene como fichas cortas y estables; los capítulos anteriores entran como `Resumen de capítulo`, nunca como prosa, salvo la cola de continuidad local; la documentación entra solo la recuperada para esa escena y se descarta al cerrarla.
+Reglas de compresión, que son las que hacen que los topes se cumplan: el canon se mantiene como fichas cortas y estables; los capítulos anteriores entran como `Resumen de capítulo`, nunca como prosa, salvo la cola de continuidad local; la documentación entra solo la recuperada para esa escena y se descarta al cerrarla; y todo lo que llega por parecido entra con su `k` y su tope de tokens declarados, que se descuentan del tope del rol que consulta.
 
 ## 4. Orquestación: el guion del capítulo
 
@@ -554,5 +617,6 @@ En los tres casos el patrón es el mismo: **convertir un cálculo en un dato esc
 - [ ] ¿El Contable de estado es un rol con su propio modelo y temperatura baja, o el mismo modelo que el resto con otro contrato?
 - [ ] ¿Quién arbitra cuando Verificador y Juez discrepan de forma sistemática en una dimensión?
 - [ ] ¿Se acepta alguna herramienta externa de cálculo (fechas, recuento léxico) sin que eso cuente como harness, o la restricción de cero código es absoluta?
+- [ ] ¿Con qué criterio se admite o se descarta una fuente encontrada fuera del sistema, y quién arbitra cuando dos fuentes admitidas se contradicen?
 - [ ] ¿Dónde vive el almacén de artefactos (`mundo/`, `obra/`, `log/`, `estado/`, `criticas/` de §7) dentro del reparto de `AGENTS.md`, y quién lo escribe?
 - [ ] ¿Los prompts de los once agentes son parte del `backend/` o una carpeta hermana?
