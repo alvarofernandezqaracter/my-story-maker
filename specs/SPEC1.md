@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 0.2.0
+version: 0.3.0
 estado: propuesta
 fecha: 2026-09-21
 ambito: backend/
@@ -26,9 +26,10 @@ lo que se puede resolver razonablemente al programar no está aquí.
 
 ### 1.2 Alcance del sistema especificado
 
-Dentro: el almacén de artefactos, la pieza que camina el guion del capítulo, las
-once carpetas de tarea con su contrato y su prompt, el presupuesto de contexto y
-la API HTTP que el editor usa para lanzar e inspeccionar una obra.
+Dentro: el almacén de artefactos con sus índices de recuperación por parecido,
+la pieza que camina el guion del capítulo, las once carpetas de tarea con su
+contrato y su prompt, el presupuesto de contexto, la recogida de fuentes fuera
+del sistema y la API HTTP que el editor usa para lanzar e inspeccionar una obra.
 
 Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
 lo enumerado en §11.
@@ -123,13 +124,16 @@ algo: un sistema que no cabe en el techo no llega a producir número alguno.
 | OBJ-05 | Artefactos bien formados | Rechazos por campo ausente o valor fuera de vocabulario, por capítulo | Recuento de `Crítica` bloqueante con objeto artefacto | Pendiente | ≤ 1 por capítulo |
 | OBJ-06 | Cobertura documental | Afirmaciones históricas con `Fuente` asociada | Cociente sobre las afirmaciones del capítulo | Pendiente | ≥ 90 % |
 | OBJ-07 | Cero intervención | Órdenes humanas necesarias entre el brief y la obra cerrada | Recuento de llamadas de escritura a la API por obra | Pendiente | Exactamente 1 |
+| OBJ-08 | Recuperación útil | Proporción de fragmentos recuperados que el agente acaba citando o usando | Cociente sobre lo devuelto en cada consulta, de la `Traza` | Pendiente | ≥ 40 % |
 
 **Qué no es objetivo, y por qué.** Bajar el coste por sí solo: se cumple
 trivialmente con un modelo peor y arruina OBJ-03 y OBJ-06 sin que la cifra de
 coste se entere. Bajar el número de críticas: se cumple con verificadores
 ciegos, que es el fallo que `validators.md` §6 llama «el agente que no encuentra
-nada nunca». Y la nota de un juez de rúbrica, que es ruido declarado y no
-mejora medible.
+nada nunca». Subir el número de fragmentos que devuelve
+una consulta: mejora la sensación de cobertura, se come el tope de ventana del
+rol que consulta y empeora OBJ-01 sin que OBJ-06 se mueva. Y la nota de un juez
+de rúbrica, que es ruido declarado y no mejora medible.
 
 ## §4 Requisitos funcionales
 
@@ -206,6 +210,21 @@ flowchart LR
 | RF-52 | Sirve una `Traza` por tarea con contexto enviado, salida, coste, latencia e intento. Se registra en toda tarea, la ejecute quien la ejecute | `analisis` |
 | RF-53 | Sirve el progreso de una ejecución en curso: capítulo, paso, rol, tareas abiertas y tokens concurrentes | `demostracion` |
 | RF-54 | Sirve el estado plegado hasta el capítulo N y el log de eventos, para poder auditar por qué una escena se rechazó | `analisis` |
+| RF-55 | Sirve una búsqueda por parecido sobre el manuscrito ya aceptado de una obra, para localizar un pasaje sin recordar sus palabras exactas | `demostracion` |
+
+### 4.7 Recuperación por parecido y fuentes de fuera
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-60 | El Documentalista busca fuentes fuera del sistema con el marco de la escena —fecha, lugar y ámbito—. Es el único rol con acceso al exterior: ningún otro busca ni lee nada que no esté ya en el almacén | `inspeccion` |
+| RF-61 | De cada resultado aceptado se guarda el texto íntegro tal como se leyó, con su procedencia y la fecha de recogida, antes de trocearlo. Una `Fuente` de la que solo se conserva el enlace no vale como respaldo | `prueba` |
+| RF-62 | El cuerpo entero de una fuente no entra nunca en la ventana de ningún agente: el Documentalista decide sobre resultados cortos y el volumen se queda en el almacén | `analisis` |
+| RF-63 | Toda consulta por parecido lleva `k` y tope de tokens declarados para el rol que la hace, y lo recuperado se descuenta de su tope de ventana en lugar de sumarse aparte. Si no cabe, baja `k` | `prueba` |
+| RF-64 | Se indexa solo el texto aceptado. Un borrador candidato o descartado no puede recuperarse nunca como eco | `prueba` |
+| RF-65 | El Editor de estilo comprueba la fatiga léxica contra los ecos recuperados del registro acumulado, no contra el registro entero | `analisis` |
+| RF-66 | El Planificador recibe contratos de escena y `Resumen de capítulo` parecidos a lo que va a planificar, nunca prosa | `inspeccion` |
+| RF-67 | Ni el Verificador de continuidad, ni el Contable de estado, ni el Arquitecto de arcos, ni el Redactor consultan por parecido. Una búsqueda por semejanza no encuentra lo que falta y su fallo es silencioso | `inspeccion` |
+| RF-68 | Cada recuperación queda en la `Traza`: consulta, colección, `k`, fragmentos devueltos y cuáles acabó usando el agente. Sin eso OBJ-08 no se puede medir | `analisis` |
 
 ## §5 Requisitos de datos
 
@@ -215,7 +234,11 @@ flowchart LR
 | RD-02 | El esquema espeja las tres capas —obra, mundo, producción— más la `Traza`, y toda fila cuelga de un `id_obra` | `inspeccion` |
 | RD-03 | Los artefactos viven en una tabla por tipo con el cuerpo declarativo en una columna y, al lado, solo las columnas por las que se consulta: obra, capítulo, escena, estado, severidad, dimensión, rol | `inspeccion` |
 | RD-04 | Todo campo de vocabulario controlado se declara como valor cerrado en el esquema. Un campo de esos en texto libre es un defecto: es lo que hace incomputable el predicado que lo vigila | `analisis` |
-| RD-05 | Los fragmentos de `Fuente` se indexan con la extensión vectorial, particionados por `id_obra`, para que el Documentalista recupere por parecido y luego filtre por fecha y lugar | `prueba` |
+| RD-05 | Los fragmentos de `Fuente` se indexan con la extensión vectorial, particionados por `id_obra`, para que el Documentalista recupere por parecido y luego filtre por fecha y lugar. El texto íntegro de la fuente se guarda antes de trocearlo (RF-61) | `prueba` |
+| RD-10 | Tres colecciones indexadas y ninguna más: documental, obra·prosa y obra·estructura. Cada fragmento guarda de qué artefacto sale y las columnas por las que se filtra después: obra, capítulo, fecha, lugar y ámbito | `inspeccion` |
+| RD-11 | El fragmento no es una entidad del dominio, es un trozo de un artefacto que ya existe. Indexar no duplica el cuerpo del artefacto | `inspeccion` |
+| RD-12 | Toda consulta por parecido va particionada por `id_obra`. Ninguna obra recupera fragmentos de otra | `prueba` |
+| RD-13 | El modelo de embeddings queda registrado junto a cada fragmento. Cambiar de modelo obliga a reindexar la obra entera; dos modelos conviviendo en el índice de una obra son un defecto | `prueba` |
 | RD-06 | Toda consulta que sirve una proyección está acotada por `id_obra` y por capítulo. Ninguna recorre la prosa acumulada: nada cuyo tamaño crezca con la obra entra en una ventana | `analisis` |
 | RD-07 | No se borra nada. Caducar es marcar; descartar es marcar. El almacén es el registro de por qué la obra es como es | `prueba` |
 | RD-08 | **Nada de lo que el sistema produce toca el sistema de ficheros.** Artefactos, borradores, críticas, log de eventos, estado materializado, resúmenes, decisiones y trazas viven en la base de datos, incluidos los cuerpos de texto y los embeddings. No hay carpeta de trabajo, ni volcados a disco para inspeccionar: lo que hay que ver se sirve por la API (§6) | `inspeccion` |
@@ -280,6 +303,8 @@ donde el backend impone tipos, porque ahí habla con algo que no es un agente.
 | D-02 | **Decisión tomada. Todo se guarda en SQLite y en ningún otro sitio.** No hay almacén de ficheros: los nombres `mundo/`, `obra/`, `log/`, `estado/` y `criticas/` de `architecture.md` §7 son grupos lógicos de artefactos, no carpetas en disco | `AGENTS.md` ya fijaba SQLite como persistencia y `architecture.md` §7 lo describía como ficheros. Queda una sola lectura: lo declarativo es el cuerpo del artefacto y SQLite es el único lugar donde se escribe. Un segundo sitio donde persistir sería un segundo escritor y rompería la frontera única. Cierra una decisión de `architecture.md` §8, y poner al día §7 y §8 es trabajo de la fase 3 |
 | D-03 | **Propuesta de cierre.** El prompt y el contrato de cada rol viven junto a su tarea, en `tareas/<tipo>/` | Mantiene visible en el árbol la regla «un rol, una tarea»: declarar un rol es añadir una carpeta con todo lo suyo dentro. Cierra otra decisión abierta, con la misma condición |
 | D-04 | Una sola orden por obra, y cada obra nace en su propio espacio | Evita de raíz el trabajo manual entre obras: no hay nada que archivar ni vaciar porque nunca se comparte espacio |
+| D-06 | El Documentalista busca en internet, y v1 no trae corpus curado de época | Sin acceso al exterior no hay `Fuente` que recoger y OBJ-06 es inalcanzable. Un buscador no es una herramienta de cálculo: no sustituye ningún juicio del agente, le da material sobre el que juzgar, así que no reabre D-05. El corpus curado daría mejor léxico de época, pero exige trabajo humano de preparación y eso choca con OBJ-07 |
+| D-07 | Recuperar por parecido lo hace `almacen/`, no un rol nuevo | Recuperar elige qué mirar, no decide qué es cierto: no hay trabajo de dominio que el censo no cubra, así que declarar un rol «recuperador» ensancharía el censo sin motivo. Colocar lo recuperado en la ventana es ensamblar una proyección, que ya es trabajo de `nucleo/` |
 | D-05 | v1 no usa herramientas externas de cálculo | La decisión sigue abierta. Mientras lo esté, coherencia temporal, fatiga léxica y léxico vetado van como `analisis` contra el dato ya escrito, y lo que las vigila es la reincidencia por dimensión |
 
 ## §9 Trazabilidad
@@ -292,6 +317,7 @@ donde el backend impone tipos, porque ahí habla con algo que no es un agente.
 | §4.4 Calidad | `architecture.md` §5; `validators.md` §3 y §4 |
 | §4.5 Cierre | `architecture.md` §4 y §6; `validators.md` §4 (alcance global) |
 | §4.6 y §6 Consulta e interfaz | `AGENTS.md` (frontera única); `architecture.md` §7 |
+| §4.7 Recuperación y fuentes | `architecture.md` §3 (recuperación por parecido y de dónde sale la documentación) |
 | §5 Datos | `definitions.md` (vocabularios); `AGENTS.md` (SQLite y extensión vectorial) |
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
 
@@ -319,13 +345,15 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
 La interfaz web. Autenticación y varios usuarios. Varias obras produciéndose a
 la vez —el techo de contexto es de la instalación, no de la obra—. La
 calibración de los topes de ventana contra trazas reales, que necesita trazas
-que todavía no existen. La compactación de los dos materiales que crecen con la
-obra: v1 declara sus topes y avisa al alcanzarlos, pero no compacta. Y cualquier
-herramienta externa de cálculo, por D-05.
+que todavía no existen. La compactación del único material que sigue entrando
+entero, los `Resumen de capítulo`: v1 declara su tope y avisa al alcanzarlo,
+pero no compacta; el registro acumulado de estilo ya no lo necesita porque se
+consulta por parecido. El corpus curado de fuentes de época, por D-06. Y
+cualquier herramienta externa de cálculo, por D-05.
 
 ## §12 Decisiones abiertas
 
-De las diez de `architecture.md` §8, cuatro tocaban al backend. Una queda
+De las once de `architecture.md` §8, cuatro tocaban al backend. Una queda
 cerrada: **dónde vive el almacén de artefactos y quién lo escribe** → SQLite y
 solo SQLite, D-02 y RD-08. Quedan tres, y las tres hay que resolverlas antes de
 la fase 2.
@@ -334,7 +362,7 @@ la fase 2.
 - [ ] Qué umbral de severidad dispara regeneración completa frente a revisión dirigida. RF-32 asume `bloqueante`; si cambia, cambia el enrutado.
 - [ ] Si se acepta alguna herramienta externa de cálculo. Cierra el método de tres dimensiones y afecta a D-05.
 
-Las otras seis de §8 son de dominio y no bloquean esta versión. Además, este
+Las otras siete de §8 son de dominio y no bloquean esta versión. Además, este
 SRS abre tres propias:
 
 - [ ] Con qué contador se miden los tokens de una ventana, dado que el
@@ -342,5 +370,10 @@ SRS abre tres propias:
       estimación.
 - [ ] Cada cuántos capítulos entra `auditar`, y si N es fijo o depende de la
       extensión de la obra.
-- [ ] Qué modelo de embeddings indexa las `Fuente`, y si cambiarlo obliga a
-      reindexar una obra en curso.
+- [ ] Qué modelo de embeddings indexa las tres colecciones. Que cambiarlo
+      obliga a reindexar ya está cerrado en RD-13; falta cuál.
+- [ ] Con qué buscador accede al exterior el Documentalista, y qué hace cuando
+      para un marco de escena no devuelve nada utilizable: ¿escribe menos
+      `Fuente` y baja OBJ-06, o bloquea la escena?
+- [ ] Cuánto mide un fragmento y cuánto se solapa con el siguiente. Troceado
+      corto recupera preciso y pierde contexto; largo al revés.
