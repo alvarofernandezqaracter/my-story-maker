@@ -80,10 +80,12 @@ Estas reglas salen de `architecture.md` y gobiernan cualquier propuesta:
   por los agentes, no en objetos tipados en memoria.
 - **100 000 tokens de contexto a la vez.** El techo es de concurrencia: en
   cualquier instante, la suma del contexto que ocupan los agentes que están
-  corriendo simultáneamente no puede pasar de 100 000 tokens. No es un
-  presupuesto por agente ni un gasto acumulado: el agente que termina libera su
-  parte, así que una cadena secuencial larga no lo agota por larga que sea. Lo
-  que lo agota es abrir demasiados frentes en paralelo.
+  corriendo simultáneamente no puede pasar de 100 000 tokens. **Cuenta solo la
+  entrada**: lo que se le manda a cada agente abierto. Lo que el agente escribe
+  de vuelta se paga en coste, no ocupa techo. No es un presupuesto por agente ni
+  un gasto acumulado: el agente que termina libera su parte, así que una cadena
+  secuencial larga no lo agota por larga que sea. Lo que lo agota es abrir
+  demasiados frentes en paralelo.
 
 ## El ciclo de edición
 

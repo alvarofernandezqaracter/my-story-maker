@@ -92,7 +92,7 @@ disjuntas; un rol, una tarea; ningún agente valida su propia salida; el mundo
 solo cambia por `EventoEstado` emitidos por el Contable al cerrar capítulo; el
 estado se deriva plegando el log; solo el Documentalista escribe `Fuente`; toda
 `Crítica` lleva evidencia citable; sin harness a medida; y el techo de 100 000
-tokens de contexto concurrente.
+tokens de contexto de entrada concurrente.
 
 Pila fijada: Python con FastAPI, y SQLite con extensión vectorial compatible
 detrás de la frontera.
@@ -117,7 +117,7 @@ algo: un sistema que no cabe en el techo no llega a producir número alguno.
 
 | ID | Objetivo | Métrica | Cómo se mide | Línea base | Meta |
 | --- | --- | --- | --- | --- | --- |
-| OBJ-01 | Caber en el techo | Pico de tokens concurrentes en una obra | Máximo de la suma de ventanas abiertas a la vez, de la `Traza` | Pendiente | ≤ 100 000, con pico habitual ≤ 80 000 |
+| OBJ-01 | Caber en el techo | Pico de tokens de entrada concurrentes en una obra | Máximo de la suma de las ventanas abiertas a la vez, de la `Traza`. Lo que devuelven los agentes no entra en la cuenta | Pendiente | ≤ 100 000, con pico habitual ≤ 80 000 |
 | OBJ-02 | Coste plano por capítulo | Tokens totales del capítulo N | Suma de contexto y salida por capítulo, de la `Traza` | Pendiente | Capítulo 40 ≤ 1,2 × capítulo 4 |
 | OBJ-03 | Que el bucle converja | Vueltas hasta `Aceptado` por escena | Recuento de intentos en la `Traza` | Pendiente | ≥ 90 % de escenas en ≤ 2 vueltas; < 10 % de capítulos cerrados marcados |
 | OBJ-04 | Críticas utilizables | Proporción descartada por falta de `evidencia` | Recuento de rechazos sobre críticas emitidas | Pendiente | < 10 % |
@@ -208,7 +208,7 @@ flowchart LR
 | RF-50 | Sirve el manuscrito con solo el texto aceptado, en orden, y marca los capítulos cerrados con críticas abiertas | `inspeccion` |
 | RF-51 | Sirve las críticas filtrables por estado, dimensión, severidad y capítulo, con su evidencia y quién las detectó | `analisis` |
 | RF-52 | Sirve una `Traza` por tarea con contexto enviado, salida, coste, latencia e intento. Se registra en toda tarea, la ejecute quien la ejecute | `analisis` |
-| RF-53 | Sirve el progreso de una ejecución en curso: capítulo, paso, rol, tareas abiertas y tokens concurrentes | `demostracion` |
+| RF-53 | Sirve el progreso de una ejecución en curso: capítulo, paso, rol, tareas abiertas y tokens de entrada concurrentes | `demostracion` |
 | RF-54 | Sirve el estado plegado hasta el capítulo N y el log de eventos, para poder auditar por qué una escena se rechazó | `analisis` |
 | RF-55 | Sirve una búsqueda por parecido sobre el manuscrito ya aceptado de una obra, para localizar un pasaje sin recordar sus palabras exactas | `demostracion` |
 
@@ -286,7 +286,7 @@ donde el backend impone tipos, porque ahí habla con algo que no es un agente.
 
 | ID | Requisito | Verificación |
 | --- | --- | --- |
-| RNF-01 | El pico de contexto concurrente no pasa de 100 000 tokens en ningún instante, con el 20 % reservado como margen (OBJ-01) | `analisis` |
+| RNF-01 | El pico de contexto de entrada concurrente no pasa de 100 000 tokens en ningún instante, con el 20 % reservado como margen (OBJ-01). La salida de las tareas abiertas no cuenta contra el techo | `analisis` |
 | RNF-02 | El coste de un capítulo no crece con la longitud de la obra (OBJ-02) | `analisis` |
 | RNF-03 | Toda tarea deja `Traza`. Sin ella no se puede afirmar que el bucle converge, solo suponerlo | `analisis` |
 | RNF-04 | El guion es reproducible: misma obra y mismos artefactos dan la misma secuencia de pasos, tandas y proyecciones. Lo que varía es la salida del modelo, no el recorrido | `prueba` |
