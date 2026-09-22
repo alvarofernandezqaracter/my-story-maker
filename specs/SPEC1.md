@@ -1,9 +1,9 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 0.3.0
-estado: propuesta
-fecha: 2026-09-21
+version: 1.0.0
+estado: aprobada
+fecha: 2026-09-22
 ambito: backend/
 base:
   - AGENTS.md
@@ -99,10 +99,11 @@ detrás de la frontera.
 
 ### 2.4 Supuestos y dependencias
 
-- Hay un proveedor de modelo accesible; cuál y con qué parámetros por rol es
-  configuración, no requisito.
-- Existe un contador de tokens del mismo proveedor: el presupuesto de §3 y
-  RF-14 no se pueden cumplir estimando a ojo.
+- Las once tareas las ejecutan subagentes de Claude Code con modelo Haiku
+  (D-08). El backend no habla con ninguna API de modelo: delega.
+- El contexto de entrada se estima antes de enviar y se mide exacto después,
+  con lo que el subagente informa al terminar (D-10). La cuenta exacta queda en
+  la `Traza` y es la que gobierna OBJ-01.
 - El brief lo escribe una persona y puede venir incompleto: eso es un caso
   normal, no un error del sistema (RF-01).
 
@@ -217,6 +218,7 @@ flowchart LR
 | ID | Requisito | Verificación |
 | --- | --- | --- |
 | RF-60 | El Documentalista busca fuentes fuera del sistema con el marco de la escena —fecha, lugar y ámbito—. Es el único rol con acceso al exterior: ningún otro busca ni lee nada que no esté ya en el almacén | `inspeccion` |
+| RF-69 | Cuando para un marco de escena no encuentra nada utilizable, el Documentalista deja constancia de la búsqueda infructuosa y la producción continúa. **Una escena sin respaldo no bloquea nunca**: baja OBJ-06 y el Arquitecto de arcos la saca en la auditoría de cierre (D-09) | `prueba` |
 | RF-61 | De cada resultado aceptado se guarda el texto íntegro tal como se leyó, con su procedencia y la fecha de recogida, antes de trocearlo. Una `Fuente` de la que solo se conserva el enlace no vale como respaldo | `prueba` |
 | RF-62 | El cuerpo entero de una fuente no entra nunca en la ventana de ningún agente: el Documentalista decide sobre resultados cortos y el volumen se queda en el almacén | `analisis` |
 | RF-63 | Toda consulta por parecido lleva `k` y tope de tokens declarados para el rol que la hace, y lo recuperado se descuenta de su tope de ventana en lugar de sumarse aparte. Si no cabe, baja `k` | `prueba` |
@@ -239,6 +241,8 @@ flowchart LR
 | RD-11 | El fragmento no es una entidad del dominio, es un trozo de un artefacto que ya existe. Indexar no duplica el cuerpo del artefacto | `inspeccion` |
 | RD-12 | Toda consulta por parecido va particionada por `id_obra`. Ninguna obra recupera fragmentos de otra | `prueba` |
 | RD-13 | El modelo de embeddings queda registrado junto a cada fragmento. Cambiar de modelo obliga a reindexar la obra entera; dos modelos conviviendo en el índice de una obra son un defecto | `prueba` |
+| RD-14 | Toda consulta al índice es **híbrida**: se busca por palabra exacta y por parecido de sentido sobre la misma colección, y los dos órdenes se funden en uno solo antes de recortar a `k`. Ninguna de las dos vías se consulta a solas | `prueba` |
+| RD-15 | Las huellas se calculan en la propia máquina con el modelo declarado en D-10. Ni indexar ni consultar sale al exterior: el único rol que sale es el Documentalista, y sale a buscar fuentes, no a calcular huellas | `inspeccion` |
 | RD-06 | Toda consulta que sirve una proyección está acotada por `id_obra` y por capítulo. Ninguna recorre la prosa acumulada: nada cuyo tamaño crezca con la obra entra en una ventana | `analisis` |
 | RD-07 | No se borra nada. Caducar es marcar; descartar es marcar. El almacén es el registro de por qué la obra es como es | `prueba` |
 | RD-08 | **Nada de lo que el sistema produce toca el sistema de ficheros.** Artefactos, borradores, críticas, log de eventos, estado materializado, resúmenes, decisiones y trazas viven en la base de datos, incluidos los cuerpos de texto y los embeddings. No hay carpeta de trabajo, ni volcados a disco para inspeccionar: lo que hay que ver se sirve por la API (§6) | `inspeccion` |
@@ -305,6 +309,9 @@ donde el backend impone tipos, porque ahí habla con algo que no es un agente.
 | D-04 | Una sola orden por obra, y cada obra nace en su propio espacio | Evita de raíz el trabajo manual entre obras: no hay nada que archivar ni vaciar porque nunca se comparte espacio |
 | D-06 | El Documentalista busca en internet, y v1 no trae corpus curado de época | Sin acceso al exterior no hay `Fuente` que recoger y OBJ-06 es inalcanzable. Un buscador no es una herramienta de cálculo: no sustituye ningún juicio del agente, le da material sobre el que juzgar, así que no reabre D-05. El corpus curado daría mejor léxico de época, pero exige trabajo humano de preparación y eso choca con OBJ-07 |
 | D-07 | Recuperar por parecido lo hace `almacen/`, no un rol nuevo | Recuperar elige qué mirar, no decide qué es cierto: no hay trabajo de dominio que el censo no cubra, así que declarar un rol «recuperador» ensancharía el censo sin motivo. Colocar lo recuperado en la ventana es ensamblar una proyección, que ya es trabajo de `nucleo/` |
+| D-08 | **Las tareas las ejecutan subagentes de Claude Code con modelo Haiku.** El backend lanza el subagente, le entrega la proyección ya ensamblada y recoge el artefacto que devuelve; no llama a ninguna API de modelo ni gestiona claves | Es la lectura estricta de «sin harness a medida»: el agente ya existe como agente, con su propio andamiaje, y el backend solo reparte turnos. Fija además los permisos de verdad (RF-35): cada rol arranca sin ninguna herramienta salvo las que su contrato le concede, de modo que el aislamiento no depende de que el prompt se lo pida. Haiku por coste: son cientos de tareas por obra y ninguna razona sobre la obra entera |
+| D-09 | **El Documentalista agota la búsqueda externa, pero no bloquear es la regla.** Sin fuente utilizable escribe la constancia del intento y la producción sigue | Bloquear una escena por falta de fuente deja la obra parada esperando a una persona, que es justo lo que OBJ-07 y RNF-08 prohíben. El coste se paga donde se puede medir —OBJ-06 baja y la auditoría de cierre lo saca—, no en una intervención manual |
+| D-10 | **Las huellas para buscar por parecido se calculan en la propia máquina, con `fastembed` y el modelo multilingüe `intfloat/multilingual-e5-small`** (384 dimensiones), y la búsqueda es híbrida: palabra exacta y parecido de sentido, fundidos en un solo orden | Sin cuenta, sin clave y sin coste por capítulo, que es lo que permite reindexar la obra entera sin pensárselo (RD-13). Multilingüe porque la obra es en español y el modelo que `fastembed` trae por defecto está entrenado en inglés. Híbrida porque el nombre propio y la fecha exacta son justo lo que peor encuentra el parecido de sentido, y son la mitad de lo que el Documentalista busca |
 | D-05 | v1 no usa herramientas externas de cálculo | La decisión sigue abierta. Mientras lo esté, coherencia temporal, fatiga léxica y léxico vetado van como `analisis` contra el dato ya escrito, y lo que las vigila es la reincidencia por dimensión |
 
 ## §9 Trazabilidad
@@ -326,6 +333,12 @@ donde el backend impone tipos, porque ahí habla con algo que no es un agente.
 La verificación del propio sistema es la de `validators.md` §6 y no se duplica
 aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
 
+0. **Recorrido en seco.** Con un ejecutor fingido que devuelve artefactos
+   preparados en vez de llamar a Claude, el guion recorre los diez pasos de un
+   capítulo de principio a fin: cada paso encarga su tarea al rol que le toca,
+   ningún rol escribe una entidad que no le corresponde, las tandas respetan la
+   anchura calculada y todo lo producido queda guardado y se puede volver a
+   servir. Es el criterio que se comprueba sin producir novela ni gastar.
 1. Una obra de tres capítulos de tres escenas corre de `POST /obras` a obra
    cerrada con **una sola** llamada de escritura (OBJ-07).
 2. La `Traza` permite calcular OBJ-01 a OBJ-06 y fijar con ella las líneas base
@@ -353,27 +366,28 @@ cualquier herramienta externa de cálculo, por D-05.
 
 ## §12 Decisiones abiertas
 
-De las once de `architecture.md` §8, cuatro tocaban al backend. Una queda
-cerrada: **dónde vive el almacén de artefactos y quién lo escribe** → SQLite y
-solo SQLite, D-02 y RD-08. Quedan tres, y las tres hay que resolverlas antes de
-la fase 2.
+De las once de `architecture.md` §8, cuatro tocaban al backend y las cuatro
+quedan cerradas aquí:
 
-- [ ] Si los prompts son parte del `backend/` o una carpeta hermana → propuesta D-03.
-- [ ] Qué umbral de severidad dispara regeneración completa frente a revisión dirigida. RF-32 asume `bloqueante`; si cambia, cambia el enrutado.
-- [ ] Si se acepta alguna herramienta externa de cálculo. Cierra el método de tres dimensiones y afecta a D-05.
+- **Dónde vive el almacén y quién lo escribe** → SQLite y solo SQLite (D-02, RD-08).
+- **Si los prompts son parte del `backend/`** → sí, junto a la tarea de su rol (D-03).
+- **Qué severidad dispara regeneración completa** → `bloqueante`, y solo ella (RF-32).
+- **Si se acepta herramienta externa de cálculo** → no en v1 (D-05), y sigue abierta para las siguientes.
 
-Las otras siete de §8 son de dominio y no bloquean esta versión. Además, este
-SRS abre tres propias:
+Las otras siete de §8 son de dominio y no bloquean esta versión. De las cinco
+que este SRS abrió, cuatro quedan cerradas:
 
-- [ ] Con qué contador se miden los tokens de una ventana, dado que el
-      presupuesto depende de que la cuenta sea la del proveedor y no una
-      estimación.
-- [ ] Cada cuántos capítulos entra `auditar`, y si N es fijo o depende de la
-      extensión de la obra.
-- [ ] Qué modelo de embeddings indexa las tres colecciones. Que cambiarlo
-      obliga a reindexar ya está cerrado en RD-13; falta cuál.
-- [ ] Con qué buscador accede al exterior el Documentalista, y qué hace cuando
-      para un marco de escena no devuelve nada utilizable: ¿escribe menos
-      `Fuente` y baja OBJ-06, o bloquea la escena?
+- **Cómo se ejecuta una tarea y con qué modelo** → subagente de Claude Code con Haiku (D-08).
+- **Qué buscador usa el Documentalista y qué hace sin resultados** → el del propio subagente, y no bloquea nunca (D-09, RF-69).
+- **Qué modelo calcula las huellas** → `intfloat/multilingual-e5-small` en local, con búsqueda híbrida (D-10, RD-14).
+- **Cada cuántos capítulos entra `auditar`** → configuración con valor de partida «solo al cierre de la obra», porque una obra de tres capítulos no da para más y auditar antes de tener resúmenes que comparar no mide nada.
+
+Quedan dos abiertas, y ninguna bloquea:
+
+- [ ] Con qué se cuentan los tokens **antes** de enviar. Hoy la cuenta previa es
+      una estimación calibrada contra las medidas exactas que el subagente
+      devuelve al terminar (D-10 de §2.4). Basta para repartir tandas con el
+      20 % de margen, pero no es la cuenta del proveedor.
 - [ ] Cuánto mide un fragmento y cuánto se solapa con el siguiente. Troceado
-      corto recupera preciso y pierde contexto; largo al revés.
+      corto recupera preciso y pierde contexto; largo al revés. Valor de partida
+      declarado en el código, pendiente de calibrar contra trazas.
