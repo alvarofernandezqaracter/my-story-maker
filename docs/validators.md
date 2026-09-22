@@ -43,15 +43,23 @@ recuperable.
 ## 2. Vocabulario controlado: `metodo_de_verificacion`
 
 Cinco valores cerrados. Todo lo que se verifica lleva exactamente uno, sea
-texto, agente o código.
+texto, agente o código. Son la adaptación al dominio del marco estándar
+**T/A/I/D/U** —test, analysis, inspection, demonstration, unverifiable—, en ese
+mismo orden, y la letra se anota aquí para que la correspondencia sea visible.
 
-| Valor | Sobre la obra y los agentes | Sobre el código | Fiabilidad |
-| --- | --- | --- | --- |
-| `prueba` | Se prepara un caso con defecto conocido y se mira si el sistema lo acierta | Prueba unitaria, de integración o de propiedades con resultado esperado | Alta, solo sobre los casos preparados |
-| `analisis` | Se comparan datos ya escritos sin releer prosa: dos fechas, un estado plegado, una cuenta sobre un registro acumulado | Se razona sobre el código sin ejecutarlo: tipos, contratos de importación, reglas de análisis estático | Alta si el dato de partida es fiable |
-| `inspeccion` | Un agente lee el texto y responde si un predicado se cumple, citando el fragmento | Alguien lee el código o el artefacto y lo juzga | Media: depende de la proyección que reciba |
-| `demostracion` | Se deja correr el sistema entero y se comprueba el resultado agregado al final | Se recorre una obra de punta a punta y se mira lo que quedó | Baja para localizar la causa, alta para detectar que algo falla |
-| `inverificable` | No hay predicado posible: se puntúa con rúbrica y se marca como ruido | No hay método que valga lo que cuesta; se declara en §9 | Ninguna; no dispara regeneración por sí sola |
+| Valor | Marco | Sobre la obra y los agentes | Sobre el código | Fiabilidad |
+| --- | --- | --- | --- | --- |
+| `prueba` | T | Se prepara un caso con defecto conocido y se mira si el sistema lo acierta | Prueba unitaria, de integración o de propiedades con resultado esperado | Alta, solo sobre los casos preparados |
+| `analisis` | A | Se comparan datos ya escritos sin releer prosa: dos fechas, un estado plegado, una cuenta sobre un registro acumulado | Se razona sobre el código sin ejecutarlo: tipos, contratos de importación, reglas de análisis estático | Alta si el dato de partida es fiable |
+| `inspeccion` | I | Un agente lee el texto y responde si un predicado se cumple, citando el fragmento | Alguien lee el código o el artefacto y lo juzga | Media: depende de la proyección que reciba |
+| `demostracion` | D | Se deja correr el sistema entero y se comprueba el resultado agregado al final | Se recorre una obra de punta a punta y se mira lo que quedó | Baja para localizar la causa, alta para detectar que algo falla |
+| `inverificable` | U | No hay predicado posible: se puntúa con rúbrica y se marca como ruido | No hay método que valga lo que cuesta; se declara en §9 | Ninguna; no dispara regeneración por sí sola |
+
+**La letra se queda en esta tabla y no viaja al resto del documento.** El valor
+que se escribe en un artefacto, y por el que después se filtra y se cuenta, es
+siempre el español: dos nombres para la misma cosa son dos vocabularios, y en
+español las iniciales ni siquiera distinguirían `inspeccion` de
+`inverificable`.
 
 `inverificable` es una respuesta legítima y frecuente. Declararla vale más que
 fabricar un predicado falso, que es lo que convierte el bucle de revisión en un
