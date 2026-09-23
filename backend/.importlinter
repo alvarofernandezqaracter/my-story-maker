@@ -32,6 +32,7 @@ source_modules =
     novela.tareas
     novela.ajustes
     novela.vocabularios
+    novela.ejecutor
 forbidden_modules =
     sqlite3
     sqlite_vec
@@ -54,6 +55,7 @@ source_modules =
     novela.tareas
     novela.ajustes
     novela.vocabularios
+    novela.ejecutor
 forbidden_modules =
     pydantic
     fastapi

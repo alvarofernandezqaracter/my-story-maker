@@ -18,6 +18,7 @@ from collections.abc import Sequence
 
 from novela.ajustes import (
     CARACTERES_POR_TOKEN_ESTIMADOS,
+    COSTE_FIJO_DEL_SUBAGENTE_EN_TOKENS,
     K_POR_ROL,
     TECHO_DE_CONTEXTO_CONCURRENTE,
     tokens_repartibles,
@@ -43,11 +44,21 @@ def estimar_tokens(texto: str) -> int:
     return int(len(texto) / CARACTERES_POR_TOKEN_ESTIMADOS) + 1
 
 
+def coste_de_abrir(tope_del_rol: int) -> int:
+    """Lo que ocupa en el techo un agente abierto de ese rol.
+
+    No es solo su proyeccion: un subagente de Claude Code arrastra su propio
+    sistema y sus definiciones de herramienta antes de que entre nada nuestro,
+    y eso son tokens de entrada como cualquier otro.
+    """
+    return tope_del_rol + COSTE_FIJO_DEL_SUBAGENTE_EN_TOKENS
+
+
 def anchura_de_tanda(encargos: Sequence[Encargo]) -> int:
-    """`80 000 / tope del rol mas caro`, redondeado a la baja."""
+    """`80 000 / lo que cuesta abrir el rol mas caro`, redondeado a la baja."""
     if not encargos:
         return 0
-    mas_caro = max(encargo.tope_de_ventana for encargo in encargos)
+    mas_caro = max(coste_de_abrir(encargo.tope_de_ventana) for encargo in encargos)
     return max(1, tokens_repartibles() // mas_caro)
 
 
@@ -90,5 +101,9 @@ def k_que_cabe(
 
 
 def pico_admisible(tokens_abiertos: int, tokens_del_encargo: int) -> bool:
-    """Si abrir este encargo mantiene el techo. Cuenta solo la entrada."""
-    return tokens_abiertos + tokens_del_encargo <= TECHO_DE_CONTEXTO_CONCURRENTE
+    """Si abrir este encargo mantiene el techo. Cuenta solo la entrada, y
+    cuenta tambien lo que el subagente pone de su parte."""
+    return (
+        tokens_abiertos + coste_de_abrir(tokens_del_encargo)
+        <= TECHO_DE_CONTEXTO_CONCURRENTE
+    )

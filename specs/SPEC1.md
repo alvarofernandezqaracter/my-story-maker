@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.0.1
+version: 1.0.2
 estado: aprobada
 fecha: 2026-09-22
 ambito: backend/
@@ -104,6 +104,14 @@ detrás de la frontera.
 - El contexto de entrada se estima antes de enviar y se mide exacto después,
   con lo que el subagente informa al terminar (D-10). La cuenta exacta queda en
   la `Traza` y es la que gobierna OBJ-01.
+- **Un subagente de Claude Code no arranca vacío.** Antes de que entre nada del
+  sistema, arrastra su propio contexto —su instrucción base y las definiciones
+  de las herramientas que tenga concedidas—, y eso son tokens de entrada como
+  cualquier otro: cuentan contra el techo. Medido en la máquina de desarrollo,
+  con todas las herramientas retiradas y con la instrucción del rol en lugar de
+  la de serie, son unos 10 000 tokens por tarea abierta. De ahí el término que
+  RF-13 añade a la anchura de tanda: sin él el techo se respeta sobre el papel
+  y se rompe en la máquina.
 - El brief lo escribe una persona y puede venir incompleto: eso es un caso
   normal, no un error del sistema (RF-01).
 
@@ -166,7 +174,7 @@ flowchart LR
 | RF-10 | El guion del capítulo —paso, rol, proyección, tope de ventana y concurrencia— es un artefacto declarativo, no código. La pieza que lo camina lee cuál es el paso siguiente y lo ejecuta | `inspeccion` |
 | RF-11 | Cada paso encarga una tarea a un rol con la proyección mínima de ese rol (`architecture.md` §3) y nada más. Lo que sobra en la proyección produce falsos positivos y es un defecto | `inspeccion` |
 | RF-12 | Ningún rol invoca a otro ni recibe objetos en memoria: el testigo se pasa siempre por artefacto escrito en el almacén | `analisis` |
-| RF-13 | La anchura de una tanda se calcula: `80 000 ÷ tope del rol más caro de la tanda`, redondeado a la baja. Si hay más tareas, se hacen tandas sucesivas y se espera a que cierre una antes de abrir la siguiente | `analisis` |
+| RF-13 | La anchura de una tanda se calcula: `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)`, redondeado a la baja. Si hay más tareas, se hacen tandas sucesivas y se espera a que cierre una antes de abrir la siguiente | `analisis` |
 | RF-14 | Antes de enviar, cuenta los tokens de la ventana. Si no cabe en el tope del rol, **parte la unidad** (capítulo → escena → párrafo) y nunca recorta la proyección | `prueba` |
 | RF-15 | Las únicas bifurcaciones son el enrutado por severidad y el tope de vueltas. Ningún agente enruta ni manda sobre otro | `inspeccion` |
 

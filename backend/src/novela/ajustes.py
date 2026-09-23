@@ -30,6 +30,13 @@ TECHO_DE_CONTEXTO_CONCURRENTE: int = 100_000
 # Se reserva el 20 % para lo que no se puede prever; el resto es lo repartible.
 MARGEN_DEL_TECHO: float = 0.20
 
+# Lo que cada subagente de Claude Code arrastra de entrada antes de que entre
+# nada nuestro: su propio sistema y sus definiciones de herramienta. Medido en
+# esta maquina con todas las herramientas quitadas y con nuestro propio system
+# prompt: 10 256 tokens. Se redondea al alza y **cuenta contra el techo**, que
+# es de entrada concurrente y no distingue de quien es cada token.
+COSTE_FIJO_DEL_SUBAGENTE_EN_TOKENS: int = 10_500
+
 # Con que se cuentan los tokens antes de enviar sigue abierto (SPEC1 12). La
 # cuenta previa es una estimacion por caracteres, calibrada contra la medida
 # exacta que el subagente devuelve al terminar y que queda en la `Traza`.

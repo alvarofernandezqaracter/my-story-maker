@@ -20,7 +20,7 @@ from novela.ajustes import (
     TOPE_DE_REINTENTOS_POR_TAREA,
     TOPE_DE_REVISIONES_POR_BORRADOR,
 )
-from novela.almacen import Almacen, Artefacto
+from novela.almacen import Almacen, Artefacto, ArtefactoRechazado
 from novela.nucleo import calidad, ciclo, guion, presupuesto
 from novela.nucleo.gobierno import comprobar_escritura
 from novela.nucleo.guion import Encargo
@@ -364,7 +364,11 @@ class Caminante:
                 capitulo=encargo.capitulo,
                 escena=encargo.escena,
                 contexto=ventana.texto,
-                tokens_estimados=ventana.tokens,
+                # Lo que de verdad ocupa techo: la proyeccion mas lo que el
+                # subagente arrastra de su parte. Asi la estimacion previa y la
+                # medida exacta que el subagente devuelve miden lo mismo y se
+                # pueden comparar tarea por tarea.
+                tokens_estimados=presupuesto.coste_de_abrir(ventana.tokens),
             )
             try:
                 resultado = self.ejecutor.ejecutar(encargo, ventana)
@@ -436,8 +440,36 @@ class Caminante:
             artefacto.procedencia_intento = intento
             if artefacto.capitulo is None:
                 artefacto.capitulo = encargo.capitulo
-        if resultado.artefactos:
+        if not resultado.artefactos:
+            return
+        try:
             self.almacen.guardar(resultado.artefactos)
+        except ArtefactoRechazado as rechazo:
+            # Campo obligatorio ausente o valor fuera de vocabulario: el
+            # rechazo es una `Critica` bloqueante cuyo objeto es el artefacto,
+            # no el texto, y no llega al Revisor como si fuera prosa mala.
+            self._critica_por_artefacto_malformado(encargo, rechazo)
+
+    def _critica_por_artefacto_malformado(
+        self, encargo: Encargo, rechazo: ArtefactoRechazado
+    ) -> None:
+        """La escribe el backend, no un rol: ningun agente valida su salida."""
+        self.almacen.guardar_critica(
+            Artefacto(
+                tipo="Critica",
+                cuerpo={
+                    "objeto": encargo.escena or f"capitulo {encargo.capitulo}",
+                    "evidencia": str(rechazo),
+                    "accion_sugerida": "volver a escribir el artefacto con su esquema",
+                    "detectada_por": {"rol": None, "tarea": encargo.tarea},
+                },
+                id_obra=encargo.id_obra,
+                capitulo=encargo.capitulo,
+                escena=encargo.escena,
+                severidad="bloqueante",
+                estado="abierta",
+            )
+        )
 
     # --- Apoyos ------------------------------------------------------------
 

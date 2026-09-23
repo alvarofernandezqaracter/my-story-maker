@@ -92,32 +92,38 @@ def test_una_dimension_por_invocacion() -> None:
 
 
 def test_la_anchura_de_tanda_se_calcula_rol_por_rol() -> None:
-    """La tabla de anchura de tanda: `80 000 / tope del rol`, a la baja."""
+    """La tabla de anchura de tanda: `80 000 / lo que cuesta abrir el rol`.
+
+    Lo que cuesta abrir no es solo la proyeccion: un subagente de Claude Code
+    arrastra su propio sistema y sus definiciones de herramienta, medidos en
+    10 256 tokens, y eso ocupa techo como cualquier otra entrada.
+    """
     tabla = {
-        rol: tokens_repartibles() // tope for rol, tope in TOPE_DE_VENTANA_POR_ROL.items()
+        rol: tokens_repartibles() // presupuesto.coste_de_abrir(tope)
+        for rol, tope in TOPE_DE_VENTANA_POR_ROL.items()
     }
-    assert tabla["verificador_de_continuidad"] == 10
-    assert tabla["juez_de_rubrica"] == 13
-    assert tabla["arquitecto_de_arcos"] == 3
-    assert tabla["planificador"] == 4
-    assert tabla["redactor"] == 6
+    assert tabla["verificador_de_continuidad"] == 4
+    assert tabla["juez_de_rubrica"] == 4
+    assert tabla["arquitecto_de_arcos"] == 2
+    assert tabla["planificador"] == 2
+    assert tabla["redactor"] == 3
     for rol, anchura in tabla.items():
         encargo = guion.Encargo(1, TAREA_DE_ROL[rol], rol, "escena", ())
         assert presupuesto.anchura_de_tanda([encargo]) == anchura
 
 
-def test_veinte_comprobaciones_de_verificador_son_dos_tandas_de_diez() -> None:
+def test_veinte_comprobaciones_de_verificador_son_cinco_tandas_de_cuatro() -> None:
     encargos = guion.expandir(
         guion.paso(4), id_obra="obr_1", capitulo=1, escenas=tuple(f"esc_{n}" for n in range(4))
     )
     tandas = presupuesto.repartir_en_tandas(encargos)
-    assert [len(tanda) for tanda in tandas] == [10, 10]
+    assert [len(tanda) for tanda in tandas] == [4, 4, 4, 4, 4]
 
 
 def test_la_tanda_la_marca_el_rol_mas_caro() -> None:
     caro = guion.Encargo(8, "juzgar", "juez_de_rubrica", "escena", ())
     barato = guion.Encargo(8, "editar_estilo", "editor_de_estilo", "escena", ())
-    assert presupuesto.anchura_de_tanda([caro, barato]) == 10
+    assert presupuesto.anchura_de_tanda([caro, barato]) == 4
 
 
 def test_si_no_cabe_se_parte_la_unidad_y_nunca_se_recorta_la_proyeccion() -> None:
@@ -134,9 +140,9 @@ def test_lo_recuperado_paga_en_el_tope_del_rol_y_si_no_cabe_baja_k() -> None:
     assert presupuesto.k_que_cabe("verificador_de_continuidad", 0, 8_000, 300) == 0
 
 
-def test_el_techo_cuenta_solo_la_entrada() -> None:
-    assert presupuesto.pico_admisible(80_000, 20_000) is True
-    assert presupuesto.pico_admisible(80_000, 20_001) is False
+def test_el_techo_cuenta_solo_la_entrada_pero_toda_la_entrada() -> None:
+    assert presupuesto.pico_admisible(80_000, 9_500) is True
+    assert presupuesto.pico_admisible(80_000, 9_501) is False
 
 
 # --- El enrutado por severidad y los topes de vueltas ----------------------
