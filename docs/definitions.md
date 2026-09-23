@@ -47,6 +47,8 @@ La unidad operativa del sistema es la **escena**, no el capítulo: es el nivel m
 
 **Párrafo.** Unidad textual generada. Atributos: texto, escena a la que pertenece, modo (escena dramatizada, sumario, descripción, digresión, diálogo). Portador de los defectos de alcance local.
 
+**Mención.** Constancia de que un capítulo cerrado nombra un hecho de la biblia. Atributos: el `id` del hecho y el número del capítulo. Es la relación referencial `menciona` escrita como entidad: la capa Obra apunta a la Mundo por `id` y la ficha del hecho no cambia. Es inmutable y solo se añade; **en qué capítulos se usa un hecho no se guarda en ningún sitio, se deriva** de sus menciones. Los hechos de la biblia son las fichas del mundo de las que el texto habla —`Personaje`, `Lugar`, `Objeto`, `Facción` y `Evento`—; `Fuente`, `Concepto`, `Práctica` y `Registro lingüístico` respaldan o filtran el texto sin ser algo que el texto nombre, y el `Recuerdo` es la materia prima de la ficha `personal`, no la ficha. Lo leen la comprobación de que lo personal aparece en la obra y la localización de los capítulos afectados cuando un hecho cambia.
+
 ### El contrato de escena
 
 Toda `Escena` declara, antes de escribirse, estos campos. Si alguno falta, la escena no es generable; si el texto producido no los satisface, la escena se rechaza.
@@ -70,7 +72,11 @@ Toda `Escena` declara, antes de escribirse, estos campos. Si alguno falta, la es
 
 **Lugar.** Espacio con extensión y propiedades sensoriales. Atributos: nombre histórico y actual, jerarquía (reino, ciudad, edificio, estancia), distancias y tiempos de viaje a otros lugares, rasgos materiales de época. La distancia no es decorativa: es la restricción que valida la cronología.
 
-**Evento.** Suceso datable. Atributos: descripción, intervalo temporal, participantes, lugar, estatus (histórico documentado, histórico reinterpretado, ficticio), visibilidad (público, privado, secreto). Relaciones: `precede_a`, `causa`, `posibilita`, `impide`.
+**Evento.** Suceso datable. Atributos: descripción, momento, participantes, lugar, estatus (histórico documentado, histórico reinterpretado, ficticio), visibilidad (público, privado, secreto). Relaciones: `precede_a`, `causa`, `posibilita`, `impide`.
+
+**Fechas.** Toda fecha que entra en la cronología —el nacimiento de un `Personaje`, el momento de un `Evento`, la fecha resultante de un `EventoEstado`— se escribe en fecha ISO parcial: `AAAA`, `AAAA-MM` o `AAAA-MM-DD`, con la precisión que de verdad se sabe y sin inventar el día.
+
+**Cronología.** Los sucesos de la obra en orden: cada `EventoEstado` y cada `Evento` del mundo con su momento, su lugar, su capítulo y los personajes presentes, cada uno con su fecha de nacimiento. **No es una entidad guardada, es una vista**: todo lo que lleva ya está escrito en el evento y en la ficha, y se compone al pedirla sin calcular fechas ni edades. Los presentes de un `EventoEstado` los escribe el Contable de estado; los de un `Evento` del mundo son sus participantes.
 
 **Objeto.** Cosa con historia propia. Atributos: descripción material, disponibilidad temporal (desde cuándo existe ese objeto en ese lugar), poseedor actual, valor simbólico. Los objetos son los reincidentes en fallos de continuidad porque cambian de manos.
 
@@ -115,7 +121,7 @@ Las entidades son el inventario; las relaciones son donde vive la coherencia. Se
 
 **De compromiso** (`planta_setup`, `paga_setup`, `promete_a_lector`). Forman una cola con vencimientos. Un setup sin pago es una promesa rota; un pago sin setup es un *deus ex machina*.
 
-**Referenciales** (`menciona`, `documentado_por`, `deriva_de`). Conectan la capa 1 con la 2 y la 2 con las fuentes. Sostienen la trazabilidad histórica y permiten saber qué párrafos hay que revisar cuando una entidad del mundo cambia.
+**Referenciales** (`menciona`, `documentado_por`, `deriva_de`). Conectan la capa 1 con la 2 y la 2 con las fuentes. Sostienen la trazabilidad histórica y permiten saber qué capítulos hay que revisar cuando una entidad del mundo cambia: `menciona` se escribe como `Mención`, una por hecho y capítulo cerrado.
 
 ## Vocabularios controlados
 

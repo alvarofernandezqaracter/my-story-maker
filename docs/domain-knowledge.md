@@ -28,6 +28,8 @@ flowchart TD
   CAP --> ESC[Escena]
   ESC --> BEAT[Beat]
   ESC --> PAR[Parrafo]
+  CAP --> MEN[Mencion]
+  MEN -.- MA[id del hecho<br/>capitulo]
   OBRA -.- OA[epoca<br/>premisa<br/>politicas globales]
   CAP -.- CA[numero<br/>POV dominante<br/>ventana temporal]
   ESC -.- EA[contrato de escena]
@@ -35,7 +37,7 @@ flowchart TD
   PAR -.- PA[modo<br/>texto]
 ```
 
-Jerarquía mereológica estricta: cada nivel pertenece a uno y solo un padre. `Parte` es opcional. La `Escena` es la unidad operativa: es el nivel más bajo en el que se puede declarar un contrato completo antes de generar.
+Jerarquía mereológica estricta: cada nivel pertenece a uno y solo un padre. `Parte` es opcional. La `Escena` es la unidad operativa: es el nivel más bajo en el que se puede declarar un contrato completo antes de generar. La `Mención` cuelga del capítulo cerrado y apunta por `id` a un hecho de la biblia: no forma parte del texto, dice qué nombra.
 
 ## 2. Árbol de la capa Mundo
 
@@ -59,6 +61,19 @@ flowchart TD
 
 El respaldo tiene dos formas: la `Fuente` respalda una época y el `Recuerdo`
 respalda a una persona, la del destinatario al que va dedicada la obra.
+
+Los hechos de la biblia —los que registran en qué capítulos se usan— son
+`Personaje`, `Facción`, `Lugar`, `Objeto` y `Evento`. La cronología no es un
+nodo de este árbol: es una vista que se compone de los eventos y de las fechas
+de nacimiento de las fichas.
+
+```mermaid
+flowchart LR
+  CRO[Cronologia<br/>vista derivada] --> S1[EventoEstado<br/>fecha, lugar, presentes]
+  CRO --> S2[Evento<br/>momento, lugar, participantes]
+  S1 --> NAC[Personaje<br/>fechas.nacimiento]
+  S2 --> NAC
+```
 
 Toda entidad de esta capa lleva además el campo transversal de licencia:
 
@@ -111,6 +126,8 @@ flowchart LR
   EVT[Evento] -- causa --> EVT2[Evento]
   EVT -- precede_a --> EVT2
   EVT -- documentado_por --> FUE[Fuente]
+  CAP[Capitulo] -- menciona --> PER
+  CAP -- menciona --> LUG
   LECTOR[Lector] -- sabe_que --> PRO
 ```
 
