@@ -38,6 +38,7 @@ class EjecutorFingido:
 
     sembrados: list[CasoSembrado] = field(default_factory=list)
     sin_evidencia: bool = False
+    _fichas: list[Artefacto] = field(default_factory=list)
     llamadas: list[Encargo] = field(default_factory=list)
     ventanas: list[Ventana] = field(default_factory=list)
     _orden_de_escenas: list[str] = field(default_factory=list)
@@ -59,9 +60,17 @@ class EjecutorFingido:
 
     def _poblar_mundo(self, encargo: Encargo) -> Resultado:
         fichas = [
-            Artefacto("Personaje", {"nombre": "Ines de Salcedo", "licencia": "plausible"}),
+            Artefacto(
+                "Personaje",
+                {
+                    "nombre": "Ines de Salcedo",
+                    "licencia": "plausible",
+                    "fechas": {"nacimiento": "1551"},
+                },
+            ),
             Artefacto("Lugar", {"nombre": "Sevilla", "licencia": "canon"}),
         ]
+        self._fichas = fichas
         return Resultado(artefactos=fichas, salida="mundo poblado")
 
     def _planificar(self, encargo: Encargo) -> Resultado:
@@ -190,6 +199,7 @@ class EjecutorFingido:
                         "sujeto": "per_0001",
                         "fecha_resultante": f"1587-04-0{encargo.capitulo}",
                         "lugar_resultante": f"lug_000{encargo.capitulo}",
+                        "presentes": self._personajes_del_indice(),
                     },
                     capitulo=encargo.capitulo,
                 )
@@ -202,13 +212,22 @@ class EjecutorFingido:
         )
 
     def _destilar(self, encargo: Encargo) -> Resultado:
+        """El resumen y una mencion por cada hecho del indice de la biblia."""
+        indice = []
+        if self._ventana is not None:
+            indice = self._ventana.materiales.get("indice_de_la_biblia") or []
+        menciones = [
+            Artefacto("Mencion", {"hecho": fila["id"]}, capitulo=encargo.capitulo)
+            for fila in indice
+        ]
         return Resultado(
             artefactos=[
                 Artefacto(
                     "ResumenCapitulo",
                     {"que_paso": "Imprimieron el pliego", "que_quedo": "el alguacil sospecha"},
                     capitulo=encargo.capitulo,
-                )
+                ),
+                *menciones,
             ],
             salida="capitulo destilado",
         )
@@ -278,6 +297,14 @@ class EjecutorFingido:
             if escena and escena not in escenas:
                 escenas.append(escena)
         return escenas
+
+    def _personajes_del_indice(self) -> list[str]:
+        """Los `id` de los personajes que este doble dio de alta.
+
+        El almacen pone el `id` sobre el mismo artefacto que guarda, asi que el
+        doble lo recuerda sin leer nada que un agente no tendria delante.
+        """
+        return [ficha.id for ficha in self._fichas if ficha.tipo == "Personaje" and ficha.id]
 
     def _contar(self, clave: tuple[Any, ...]) -> int:
         self._vistas[clave] = self._vistas.get(clave, 0) + 1

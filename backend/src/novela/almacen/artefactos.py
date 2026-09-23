@@ -24,7 +24,7 @@ from typing import Any
 from novela.almacen import esquema
 from novela.almacen.conexion import abrir, escritura
 from novela.almacen.esquema import TABLA_POR_TIPO, nombre_de_tabla
-from novela.vocabularios import MEMORIA
+from novela.vocabularios import HECHOS_DE_LA_BIBLIA, MEMORIA
 
 # Prefijo del identificador opaco de cada tipo. Un `id` dice de que es sin
 # tener que abrirlo, que es lo que hace legible una `Critica` cuyo `objeto` es
@@ -37,6 +37,7 @@ PREFIJOS: dict[str, str] = {
     "Beat": "bea",
     "Parrafo": "prf",
     "Compromiso": "cmp",
+    "Mencion": "men",
     "Personaje": "per",
     "Lugar": "lug",
     "Evento": "evn",
@@ -158,6 +159,50 @@ def _cuantos_borradores(
     return int(fila["cuantos"])
 
 
+TIPO_POR_PREFIJO: dict[str, str] = {prefijo: tipo for tipo, prefijo in PREFIJOS.items()}
+
+
+def _comprobar_mencion(conexion: sqlite3.Connection, artefacto: Artefacto) -> None:
+    """Una `Mencion` apunta a un hecho de la biblia de su misma obra (RF-83).
+
+    El `id` del hecho se extrae del cuerpo a su columna, que es por donde se
+    consulta: no se reinterpreta nada. Lo que se comprueba es la referencia,
+    como haria una clave foranea si el hecho viviera en una sola tabla.
+    """
+    hecho = artefacto.propias.get("hecho") or artefacto.cuerpo.get("hecho")
+    if not isinstance(hecho, str) or not hecho:
+        raise ArtefactoRechazado("Mencion [hecho=None]: falta el id del hecho que menciona")
+    if artefacto.capitulo is None:
+        raise ArtefactoRechazado(f"Mencion [hecho={hecho!r}]: falta el capitulo")
+    tipo = TIPO_POR_PREFIJO.get(hecho.split("_", 1)[0])
+    existe = None
+    if tipo in HECHOS_DE_LA_BIBLIA:
+        existe = conexion.execute(
+            f"SELECT 1 FROM {nombre_de_tabla(tipo)} WHERE id = ? AND id_obra = ?",
+            (hecho, artefacto.id_obra),
+        ).fetchone()
+    if existe is None:
+        raise ArtefactoRechazado(
+            f"Mencion [hecho={hecho!r}]: no es un hecho de la biblia de esta obra"
+        )
+    artefacto.propias["hecho"] = hecho
+
+
+def _nombre_del_hecho(ficha: "Artefacto") -> str | None:
+    """Un `Evento` no tiene nombre: se le conoce por su descripcion."""
+    nombre = ficha.cuerpo.get("nombre") or ficha.cuerpo.get("descripcion")
+    return str(nombre) if nombre is not None else None
+
+
+def _nacimiento(ficha: "Artefacto | None") -> str | None:
+    if ficha is None:
+        return None
+    fechas = ficha.cuerpo.get("fechas")
+    if isinstance(fechas, dict) and fechas.get("nacimiento") is not None:
+        return str(fechas["nacimiento"])
+    return None
+
+
 class Almacen:
     """La puerta. Se abre una vez y se pasa a quien la necesite."""
 
@@ -232,6 +277,8 @@ class Almacen:
                 )
         if not artefacto.id_obra:
             raise ArtefactoRechazado("todo artefacto cuelga de un id_obra")
+        if artefacto.tipo == "Mencion":
+            _comprobar_mencion(conexion, artefacto)
 
         valores: dict[str, Any] = {
             "id": artefacto.id,
@@ -451,6 +498,102 @@ class Almacen:
         if estado not in esquema.ESTADO_DE_CRITICA:
             raise ArtefactoRechazado(f"{estado!r} no es un estado de critica")
         self._actualizar("Critica", id_critica, {"estado": estado})
+
+    # --- La biblia: en que capitulos se usa cada hecho ---------------------
+
+    def capitulos_de_uso(self, id_obra: str) -> dict[str, list[int]]:
+        """En que capitulos se usa cada hecho. Se deriva, no se guarda (RF-84).
+
+        Una mencion repetida no duplica el capitulo.
+        """
+        filas = self._lector.execute(
+            "SELECT DISTINCT hecho, capitulo FROM artefacto_mencion "
+            "WHERE id_obra = ? AND caducado_en IS NULL ORDER BY hecho, capitulo",
+            (id_obra,),
+        )
+        usos: dict[str, list[int]] = {}
+        for fila in filas:
+            usos.setdefault(fila["hecho"], []).append(int(fila["capitulo"]))
+        return usos
+
+    def hechos_de_la_biblia(
+        self, id_obra: str, *, tipo: str | None = None, licencia: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Cada hecho con su tipo, nombre, licencia y capitulos de uso (RF-87)."""
+        if tipo is not None and tipo not in HECHOS_DE_LA_BIBLIA:
+            raise KeyError(f"{tipo!r} no es un hecho de la biblia")
+        usos = self.capitulos_de_uso(id_obra)
+        hechos: list[dict[str, Any]] = []
+        for tipo_de_hecho in (tipo,) if tipo else HECHOS_DE_LA_BIBLIA:
+            for ficha in self.listar(tipo_de_hecho, id_obra):
+                if licencia is not None and ficha.cuerpo.get("licencia") != licencia:
+                    continue
+                hechos.append(
+                    {
+                        "id": ficha.id,
+                        "tipo": ficha.tipo,
+                        "nombre": _nombre_del_hecho(ficha),
+                        "licencia": ficha.cuerpo.get("licencia"),
+                        "capitulos": usos.get(ficha.id, []),
+                    }
+                )
+        return hechos
+
+    def cronologia(self, id_obra: str) -> list[dict[str, Any]]:
+        """Los sucesos de la obra en orden, con quien estaba presente (RF-86).
+
+        Es una vista, no una tabla: una fila por `EventoEstado` y por `Evento`
+        del mundo. Copia lo escrito y no calcula fechas ni edades; ordenar por
+        la fecha escrita no es aritmetica de calendario.
+        """
+        personajes = {ficha.id: ficha for ficha in self.listar("Personaje", id_obra)}
+
+        def presentes(identificadores: Any) -> list[dict[str, Any]]:
+            if not isinstance(identificadores, list):
+                return []
+            filas = []
+            for identificador in identificadores:
+                ficha = personajes.get(identificador)
+                filas.append(
+                    {
+                        "id": identificador,
+                        "nombre": _nombre_del_hecho(ficha) if ficha else None,
+                        "nacimiento": _nacimiento(ficha),
+                    }
+                )
+            return filas
+
+        sucesos: list[dict[str, Any]] = []
+        for evento in self.listar("EventoEstado", id_obra, orden="capitulo"):
+            cuerpo = evento.cuerpo
+            sucesos.append(
+                {
+                    "origen": "evento_de_estado",
+                    "id": evento.id,
+                    "capitulo": evento.capitulo,
+                    "suceso": cuerpo.get("tipo_de_evento"),
+                    "momento": cuerpo.get("fecha_resultante"),
+                    "lugar": cuerpo.get("lugar_resultante"),
+                    "presentes": presentes(cuerpo.get("presentes")),
+                }
+            )
+        for evento in self.listar("Evento", id_obra):
+            cuerpo = evento.cuerpo
+            sucesos.append(
+                {
+                    "origen": "evento_del_mundo",
+                    "id": evento.id,
+                    "capitulo": evento.capitulo,
+                    "suceso": _nombre_del_hecho(evento),
+                    "momento": cuerpo.get("momento"),
+                    "lugar": cuerpo.get("lugar"),
+                    "presentes": presentes(cuerpo.get("participantes")),
+                }
+            )
+        sucesos.sort(
+            key=lambda s: (s["momento"] is None, str(s["momento"] or ""), s["capitulo"] or 0)
+        )
+        return sucesos
 
     # --- Log de estado y su pliegue ---------------------------------------
 

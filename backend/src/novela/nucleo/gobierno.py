@@ -45,6 +45,7 @@ QUIEN_ESCRIBE: dict[str, frozenset[str]] = {
     "Beat": frozenset({"planificador"}),
     "Parrafo": frozenset({"redactor", "editor_de_estilo"}),
     "Compromiso": frozenset({"planificador", "redactor"}),
+    "Mencion": frozenset({"archivero"}),
     # Capa Produccion
     "Plan": frozenset({"planificador"}),
     "Borrador": frozenset({"redactor", "revisor", "editor_de_estilo"}),
@@ -124,5 +125,7 @@ assert {
     for rol, herramientas in HERRAMIENTAS_POR_ROL.items()
     if herramientas & HERRAMIENTAS_QUE_SALEN_AL_EXTERIOR
 } == {"documentalista"}
-# El Archivero no escribe hechos del mundo ni prosa.
-assert escrituras_de("archivero") <= {"ResumenCapitulo", "Decision"}
+# El Archivero no escribe hechos del mundo ni prosa: resume y anota que hechos
+# nombra el capitulo cerrado, sin tocar sus fichas.
+assert escrituras_de("archivero") <= {"ResumenCapitulo", "Mencion", "Decision"}
+assert QUIEN_ESCRIBE["Mencion"] == frozenset({"archivero"})

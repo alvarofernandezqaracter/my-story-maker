@@ -94,7 +94,7 @@ tarea = "destilar"
 rol = "archivero"
 concurrencia = "solo"
 unidad = "capitulo"
-proyeccion = ["texto_aceptado_del_capitulo", "cola_de_compromisos", "registro_acumulado_de_estilo"]
+proyeccion = ["texto_aceptado_del_capitulo", "cola_de_compromisos", "registro_acumulado_de_estilo", "indice_de_la_biblia"]
 
 # --- Las dos tareas que no tienen la cadencia del capitulo -----------------
 # Van fuera del guion y siempre solas.

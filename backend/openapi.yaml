@@ -266,6 +266,90 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/hechos:
+    get:
+      summary: Ver Hechos
+      description: Cada hecho de la biblia con los capitulos en que se ha usado.
+      operationId: ver_hechos_obras__id_obra__hechos_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: tipo
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - Personaje
+            - Lugar
+            - Objeto
+            - Faccion
+            - Evento
+            type: string
+          - type: 'null'
+          title: Tipo
+      - name: licencia
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - canon
+            - plausible
+            - licencia
+            - personal
+            type: string
+          - type: 'null'
+          title: Licencia
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HechoDeLaBiblia'
+                title: Response Ver Hechos Obras  Id Obra  Hechos Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/cronologia:
+    get:
+      summary: Ver Cronologia
+      description: Sucesos en orden, con momento, lugar y presentes con su nacimiento.
+      operationId: ver_cronologia_obras__id_obra__cronologia_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cronologia'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /obras/{id_obra}/progreso:
     get:
       summary: Ver Progreso
@@ -622,6 +706,22 @@ components:
       - evidencia
       - accion_sugerida
       title: CriticaServida
+    Cronologia:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        sucesos:
+          items:
+            $ref: '#/components/schemas/Suceso'
+          type: array
+          title: Sucesos
+      type: object
+      required:
+      - id_obra
+      - sucesos
+      title: Cronologia
+      description: 'Los sucesos de la obra en orden. Es una vista: se deriva al pedirla.'
     Destinatario:
       properties:
         nombre:
@@ -760,6 +860,44 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    HechoDeLaBiblia:
+      properties:
+        id:
+          type: string
+          title: Id
+        tipo:
+          type: string
+          title: Tipo
+        nombre:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nombre
+        licencia:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Licencia
+        capitulos:
+          items:
+            type: integer
+          type: array
+          title: Capitulos
+      type: object
+      required:
+      - id
+      - tipo
+      - nombre
+      - licencia
+      - capitulos
+      title: HechoDeLaBiblia
+      description: 'Una ficha del mundo que el texto nombra, con los capitulos en
+        que se usa.
+
+
+        Los capitulos se derivan de las `Mencion` que el Archivero anota al cerrar
+
+        cada capitulo; la ficha no los guarda (RF-84).'
     Manuscrito:
       properties:
         id_obra:
@@ -824,6 +962,29 @@ components:
       - escena
       title: Pasaje
       description: Un trozo del manuscrito aceptado, localizado por parecido.
+    Presente:
+      properties:
+        id:
+          type: string
+          title: Id
+        nombre:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nombre
+        nacimiento:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nacimiento
+          description: 'Fecha ISO parcial: AAAA, AAAA-MM o AAAA-MM-DD'
+      type: object
+      required:
+      - id
+      - nombre
+      - nacimiento
+      title: Presente
+      description: Un personaje presente en un suceso, con su fecha de nacimiento.
     Progreso:
       properties:
         id_obra:
@@ -859,6 +1020,53 @@ components:
       - techo
       title: Progreso
       description: Lo que hay abierto ahora mismo.
+    Suceso:
+      properties:
+        origen:
+          type: string
+          title: Origen
+          description: evento_de_estado o evento_del_mundo
+        id:
+          type: string
+          title: Id
+        capitulo:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo
+        suceso:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Suceso
+        momento:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Momento
+          description: 'Fecha ISO parcial: AAAA, AAAA-MM o AAAA-MM-DD'
+        lugar:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lugar
+        presentes:
+          items:
+            $ref: '#/components/schemas/Presente'
+          type: array
+          title: Presentes
+      type: object
+      required:
+      - origen
+      - id
+      - capitulo
+      - suceso
+      - momento
+      - lugar
+      - presentes
+      title: Suceso
+      description: 'Una fila de la cronologia: un `EventoEstado` o un `Evento` del
+        mundo.'
     TrazaServida:
       properties:
         id:

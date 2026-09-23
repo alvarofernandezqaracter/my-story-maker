@@ -18,6 +18,7 @@ MIGRACIONES: tuple[Migracion, ...] = (
     (1, "esquema inicial de las tres capas y la traza", esquema.sentencias_iniciales),
     (2, "indice hibrido: fragmentos, palabra exacta y huellas", sentencias_del_indice),
     (3, "Recuerdo: lo que el destinatario aporta de su vida", esquema.sentencias_del_recuerdo),
+    (4, "Mencion: en que capitulos se usa cada hecho", esquema.sentencias_de_la_mencion),
 )
 
 

@@ -220,6 +220,7 @@ TIPOS_DE_LA_CAPA_OBRA: tuple[str, ...] = (
     "Beat",
     "Parrafo",
     "Compromiso",
+    "Mencion",
 )
 
 TIPOS_DE_LA_CAPA_MUNDO: tuple[str, ...] = (
@@ -234,6 +235,12 @@ TIPOS_DE_LA_CAPA_MUNDO: tuple[str, ...] = (
     "Fuente",
     "Recuerdo",
 )
+
+# Los hechos de la biblia: las fichas del mundo que el texto nombra. Son las que
+# registran en que capitulos se usan (RF-80). `Fuente`, `Concepto`, `Practica`
+# y `RegistroLinguistico` respaldan o filtran el texto sin ser algo de lo que el
+# texto hable, y el `Recuerdo` es la materia prima de la ficha, no la ficha.
+HECHOS_DE_LA_BIBLIA: tuple[str, ...] = ("Personaje", "Lugar", "Objeto", "Faccion", "Evento")
 
 TIPOS_DE_LA_CAPA_PRODUCCION: tuple[str, ...] = (
     "Agente",

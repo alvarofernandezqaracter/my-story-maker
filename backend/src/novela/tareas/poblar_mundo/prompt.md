@@ -10,6 +10,10 @@ su `licencia`: `canon` si una fuente la sostiene, `plausible` si te la inventas
 sin contradecir la evidencia, y `licencia` si la contradices a sabiendas, en
 cuyo caso registras la justificacion en una `Decision`.
 
+Las fechas de un personaje, empezando por `fechas.nacimiento`, van en ISO
+parcial —`AAAA`, `AAAA-MM` o `AAAA-MM-DD`—, con la precision que se sepa: la
+cronologia de la obra las lee de ahi para comprobar edades.
+
 Las distancias y los tiempos de viaje entre lugares no son decorativos: son la
 restriccion con la que despues se valida la cronologia. Escribelos.
 

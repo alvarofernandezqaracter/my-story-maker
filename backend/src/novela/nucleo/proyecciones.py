@@ -26,7 +26,11 @@ from novela.ajustes import PARRAFOS_DE_CONTINUIDAD_LOCAL
 from novela.almacen import Almacen, Artefacto
 from novela.nucleo.guion import Encargo
 from novela.nucleo.presupuesto import estimar_tokens
-from novela.vocabularios import TIPO_DE_EVENTO_ESTADO, TIPOS_DE_LA_CAPA_MUNDO
+from novela.vocabularios import (
+    HECHOS_DE_LA_BIBLIA,
+    TIPO_DE_EVENTO_ESTADO,
+    TIPOS_DE_LA_CAPA_MUNDO,
+)
 
 Material = Any
 Filas = list[dict[str, Any]]
@@ -121,6 +125,27 @@ def _canon(p: Peticion) -> Filas:
             continue
         fichas += _cuerpos(p.almacen.listar(tipo, p.id_obra))
     return fichas
+
+
+def _indice_de_la_biblia(p: Peticion) -> Filas:
+    """Una linea por hecho: `id`, tipo, nombre y licencia, y nada mas (RF-82).
+
+    Es con lo que el Archivero anota que hechos nombra el capitulo cerrado. No
+    es el canon: de la ficha se copian cuatro campos sin interpretarlos, y los
+    atributos del mundo se quedan fuera.
+    """
+    filas: Filas = []
+    for tipo in HECHOS_DE_LA_BIBLIA:
+        for ficha in p.almacen.listar(tipo, p.id_obra):
+            filas.append(
+                {
+                    "id": ficha.id,
+                    "tipo": ficha.tipo,
+                    "nombre": ficha.cuerpo.get("nombre") or ficha.cuerpo.get("descripcion"),
+                    "licencia": ficha.cuerpo.get("licencia"),
+                }
+            )
+    return filas
 
 
 def _estado_en_n(p: Peticion) -> dict[str, Any]:
@@ -300,6 +325,7 @@ def _recuperar(coleccion: str) -> Constructor:
 
 MATERIALES: dict[str, Constructor] = {
     "canon": _canon,
+    "indice_de_la_biblia": _indice_de_la_biblia,
     "estado_en_n": _estado_en_n,
     "estado_en_n_menos_1": _estado_en_n_menos_1,
     "compromisos_abiertos": _compromisos_abiertos,

@@ -14,6 +14,12 @@ explicitos.** No los dejas implicitos: el Verificador compara dos valores
 escritos en lugar de calcularlos, porque la aritmetica de calendario es
 exactamente lo que peor hace un modelo de lenguaje y falla en silencio.
 
+La fecha va en ISO parcial —`AAAA`, `AAAA-MM` o `AAAA-MM-DD`—, con la precision
+que de verdad sepas y sin inventar el dia. Y en cada evento escribes tambien
+`presentes`: los `id` de los personajes que estaban cuando ocurrio. Con eso se
+arma la cronologia de la obra y se comprueba que nadie esta en dos sitios a la
+vez.
+
 Devuelves ademas el estado en N: donde esta cada quien, que sabe, que posee y
 que debe, plegando el estado en N-1 con los eventos de este capitulo. Un evento
 que se te olvide no da error: envenena todos los capitulos siguientes.
