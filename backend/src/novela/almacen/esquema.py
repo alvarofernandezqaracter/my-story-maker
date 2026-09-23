@@ -401,7 +401,6 @@ def sentencias_del_recuerdo() -> list[str]:
     return _sentencias_de(tablas_de_la_migracion(3))
 
 
-<<<<<<< HEAD
 def _columnas_salvo_la_marca(tabla: Tabla) -> list[str]:
     """Todas las columnas de la tabla menos `caducado_en`."""
     return [
@@ -471,7 +470,6 @@ def sentencias_del_punto_de_guardado() -> list[str]:
                 f"CREATE INDEX indice_{nombre}_por_capitulo ON {nombre} (id_obra, capitulo)"
             )
     return sentencias
-=======
 # --- La entrevista: el espacio anterior a la obra --------------------------
 #
 # No guarda artefactos: el Entrevistador no escribe ninguno (SPEC1 RF-70). Guarda
@@ -523,9 +521,8 @@ SENTENCIAS_DE_LA_ENTREVISTA: tuple[str, ...] = (
 
 
 def sentencias_de_la_entrevista() -> list[str]:
-    """La migracion 4: el espacio de la entrevista y nada mas."""
+    """La migracion 5: el espacio de la entrevista y nada mas."""
     return list(SENTENCIAS_DE_LA_ENTREVISTA)
->>>>>>> t2
 
 
 assert {t.tipo for t in TABLAS} == set(

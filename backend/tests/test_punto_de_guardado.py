@@ -427,7 +427,7 @@ def test_la_migracion_da_por_auditado_lo_ya_cerrado(tmp_path: Path) -> None:
             "VALUES ('evt_1', 'obr_1', 'EventoEstado', '{}', 1, 'obra', 'x')"
         )
 
-    assert aplicar(conexion) == 4
+    assert aplicar(conexion) == len(MIGRACIONES)
 
     fila = conexion.execute(
         "SELECT auditada_hasta FROM control_de_ejecucion WHERE id_obra = 'obr_1'"
