@@ -25,6 +25,7 @@ Monorepo con dos paquetes en la raíz. El `backend/` está implementado y el
 | `frontend/` | La interfaz web desde la que se lanza y se inspecciona una obra. Todavía vacía | Vite + React |
 | `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
 | `specs/` | La spec viva del backend —el contexto específico—: qué tiene que hacer y por qué | Markdown |
+| `.claude/` | El andamiaje de desarrollo con Claude Code: las skills, los comandos `/ciclo` y `/verificar`, el subagente `verificador` y, en `mcp.json`, el servidor de navegador que se carga a propósito con `--mcp-config`. Su guía de uso es `CLAUDE.md`, en la raíz | Markdown + JSON |
 
 Decisiones ya tomadas sobre el reparto:
 
@@ -35,6 +36,9 @@ Decisiones ya tomadas sobre el reparto:
   se genera desde los modelos del borde HTTP y de él deriva `frontend/` su
   cliente. No se redacta a mano: una descripción escrita aparte acabaría
   diciendo algo distinto de lo que hace el servidor.
+- **El andamiaje de desarrollo no entra en la novela.** `CLAUDE.md` y `.claude/`
+  son para quien desarrolla el sistema. Los once roles también son Claude Code,
+  pero el ejecutor los lanza fuera del repositorio y ninguno los lee.
 - **Dos paquetes, dos gestores.** `backend/` se instala con su propio
   `pyproject.toml` y `frontend/` con su propio `package.json`. No hay
   herramienta de monorepo por encima: la raíz solo agrupa.

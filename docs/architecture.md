@@ -237,6 +237,8 @@ La pregunta operativa no es qué sabe el sistema, sino **qué proyección de la 
 
 No hay historial de conversación en ninguna parte. Cada tarea abre una ventana construida desde cero a partir de los artefactos escritos y la cierra al escribir el suyo. Entre dos tareas no viaja nada más que un artefacto en el almacén: es la regla del paso de testigo de §2 vista desde el lado del contexto.
 
+Tampoco arranca con el contexto del sitio desde el que se la lanza. El repositorio lleva instrucciones, skills, comandos y un servidor de navegador para quien lo desarrolla, y nada de eso es de ningún rol: cada tarea corre en un directorio vacío fuera del repositorio que se borra al terminar, de modo que en su ventana no entra más que lo que el propio subagente trae de serie, su instrucción y su proyección.
+
 Esto no es austeridad, es lo que hace el techo **verificable antes de gastar**: una ventana que se arma de cero se puede medir antes de mandarla. Un agente que acumulase memoria propia sería un agente cuyo coste nadie puede acotar.
 
 ### Las tres memorias
@@ -411,7 +413,9 @@ El reparto es la asignación de diseño, no una medida: calibrarlo contra las `T
 
 **Segunda: la anchura de una tanda se calcula, no se elige.** Se reserva el 20 % del techo como margen para lo que no se puede prever y quedan 80 000 útiles. En una tanda caben `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)` agentes simultáneos.
 
-Ese coste fijo no es una precaución: **un subagente no arranca vacío**. Antes de que entre nada del sistema arrastra su propia instrucción y las definiciones de las herramientas que tenga concedidas, y eso son tokens de entrada como cualquier otro. Medido con todas las herramientas retiradas y con la instrucción del rol en lugar de la de serie, son unos 10 000 por tarea abierta. Con verificadores a 8 000 de proyección, cuatro a la vez. Si hay veinte comprobaciones que hacer, son cinco tandas: se abren cuatro, se espera a que cierren y se abren las siguientes. Sin ese término el techo se respeta sobre el papel y se rompe en la máquina.
+Ese coste fijo no es una precaución: **un subagente no arranca vacío**. Antes de que entre nada del sistema arrastra su propia instrucción y las definiciones de las herramientas que tenga concedidas, y eso son tokens de entrada como cualquier otro. Medido con el subagente aislado del repositorio, con la instrucción del rol en lugar de la de serie y con las herramientas del rol más equipado, son 3 191 por tarea abierta, que se declaran redondeados a 3 500, un solo valor para todos los roles. Con verificadores a 8 000 de proyección, seis a la vez. Si hay veinte comprobaciones que hacer, son cuatro tandas: se abren seis, se espera a que cierren y se abren las siguientes, y la última lleva dos. Sin ese término el techo se respeta sobre el papel y se rompe en la máquina.
+
+El aislamiento es parte de la cuenta, no un detalle aparte. Un subagente lanzado desde el repositorio descubre por su cuenta el `CLAUDE.md` del desarrollo, con `AGENTS.md` dentro, y el coste fijo se multiplica varias veces sin que nada lo avise: es material que ninguna proyección declara y que ocupa techo igual. Por eso cada tarea corre en un directorio vacío, propio y fuera del repositorio, y sin servidores MCP.
 
 **Tercera: paralelo donde no se pisan, secuencial donde hay testigo.** Dos tareas corren a la vez solo si ninguna necesita el artefacto de la otra: documentar varias escenas, comprobar varias dimensiones sobre un mismo borrador. Planificar, redactar, revisar y cerrar van en fila porque cada una consume lo que dejó la anterior. Nunca en abanico libre: un abanico cuya anchura no se conoce de antemano es un techo que no se puede prometer.
 
@@ -591,7 +595,8 @@ backend/
     ajustes.py         lo que hoy es configuracion: topes de ventana por rol,
                        k de recuperacion, topes de vueltas, cadencia de auditar
     vocabularios.py    los valores cerrados, en un solo sitio
-    ejecutor.py        lanza el subagente de Claude Code de cada tarea
+    ejecutor.py        lanza el subagente de Claude Code de cada tarea, en un
+                       directorio vacio fuera del repositorio y sin MCP
     tareas/            una carpeta por tipo de tarea del censo (§2), con su
                        contrato, su prompt, su esquema y, si le toca criba, sus
                        contratos de verificacion por dimension

@@ -10,6 +10,7 @@ cada commit. Se lanza a proposito con `pytest -m gasta`.
 """
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -94,6 +95,48 @@ def test_toda_tarea_arranca_en_frio() -> None:
     assert "--resume" not in orden
     assert "--continue" not in orden
     assert orden[orden.index("--model") + 1] == MODELO_DE_LOS_SUBAGENTES
+
+
+def test_el_subagente_arranca_en_un_directorio_vacio_fuera_del_repositorio(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RF-100. Lanzado desde el repositorio, el subagente descubre el `CLAUDE.md`
+    y con el `AGENTS.md` entero. Se intercepta el lanzamiento y se mira desde
+    donde se hizo: un directorio propio de la tarea, vacio, fuera del
+    repositorio, y que ya no existe al terminar."""
+    repositorio = Path(__file__).resolve().parents[2]
+    vistos: list[tuple[Path, list[str]]] = []
+
+    def lanzar(orden: list[str], **opciones: object) -> subprocess.CompletedProcess[str]:
+        directorio = Path(str(opciones["cwd"])).resolve()
+        vistos.append((directorio, [hijo.name for hijo in directorio.iterdir()]))
+        salida = json.dumps({"result": '{"artefactos": []}', "usage": {}})
+        return subprocess.CompletedProcess(orden, 0, stdout=salida, stderr="")
+
+    monkeypatch.setattr(subprocess, "run", lanzar)
+    ejecutor = EjecutorDeSubagentes()
+    ejecutor.ejecutar(_encargo("redactor"), _ventana())
+    ejecutor.ejecutar(_encargo("contable_de_estado"), _ventana())
+
+    assert len(vistos) == 2
+    (primero, contenido), (segundo, _) = vistos
+    assert primero != segundo, "cada tarea tiene su propio directorio"
+    assert contenido == [], "el directorio nace vacio"
+    assert repositorio not in primero.parents and primero != repositorio
+    assert not primero.exists(), "el directorio se descarta al terminar"
+
+
+def test_ningun_subagente_de_tarea_recibe_servidores_mcp() -> None:
+    """RF-102. El servidor de navegador de `.claude/mcp.json` es del desarrollo."""
+    for rol in ROLES:
+        orden = EjecutorDeSubagentes()._orden(_encargo(rol), _ventana())
+        assert "--strict-mcp-config" in orden
+        assert not any(parte.startswith("--mcp-config") for parte in orden)
+
+
+def test_el_ejecutor_no_admite_que_se_le_indique_otro_directorio() -> None:
+    with pytest.raises(TypeError):
+        EjecutorDeSubagentes(directorio=".")  # type: ignore[call-arg]
 
 
 def test_lo_que_viene_de_fuera_entra_como_dato_delimitado() -> None:

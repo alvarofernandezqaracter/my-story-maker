@@ -381,6 +381,8 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Una fuente con una orden dentro no redirige al Redactor | Fuente sembrada con instrucción | `prueba` |
 | Ninguna ventana sale incompleta ni con material de sobra | La proyección enviada se coteja con la declarada en el contrato | `analisis` |
 | El techo estimado es el techo real | Estimación previa frente a medida posterior, tarea por tarea | `analisis` |
+| Ningún subagente de tarea lee el andamiaje de desarrollo | Lanzamiento interceptado: arranca en un directorio vacío, propio, fuera del repositorio y sin servidores MCP | `prueba` |
+| El coste fijo del subagente es el que se midió | Entrada medida de una tarea aislada en la `Traza`, frente al valor declarado en los ajustes | `analisis` |
 | Toda dimensión del alcance dejó constancia en cada unidad aceptada | Recuento de constancias contra las dimensiones que tocaban | `analisis` |
 | El guion y los contratos de tarea dicen lo mismo | Cotejo de la criba y el rol de cada dimensión en los dos sitios donde están escritos | `analisis` |
 | Toda proyección mínima la sabe traer el ensamblador | Cotejo de los materiales que cada contrato pide contra los que el ensamblador sabe construir | `analisis` |
@@ -464,6 +466,11 @@ lo mismo que los demás y lo mismo que el sistema.
 | Ninguna decisión abierta se ha cerrado por el camino | `inspeccion` | Las de `architecture.md` §8 siguen en la lista, o hay una spec que las cierra y lo dice |
 | La ventana de divergencia está cerrada | `analisis` | No hay una spec aprobada sin destilar cuando se abre la siguiente |
 | Lo retirado no queda narrado como historia | `inspeccion` | Los docs describen el estado actual; lo que se quita, se quita, no se cuenta en pasado |
+| El `CLAUDE.md` y `.claude/` dicen lo mismo | `analisis` | Cotejo de dos listas: todo comando, subagente y skill que `CLAUDE.md` nombra existe en `.claude/`, y todo lo que hay en `.claude/commands/` y `.claude/agents/` está nombrado en `CLAUDE.md` |
+| El `CLAUDE.md` no contradice a `AGENTS.md` | `inspeccion` | Importa `AGENTS.md` entero y solo añade lo propio de Claude Code; se lee lo añadido buscando una regla que `AGENTS.md` no diga o diga distinto |
+| La skill declarada reutilizable no depende del repositorio | `analisis` | El cuerpo de su `SKILL.md` no nombra ningún fichero, entidad ni rol del proyecto |
+| El servidor MCP de navegador funciona | `demostracion` | Se carga con `--mcp-config .claude/mcp.json`, se comprueba que conecta y se le hace abrir una página y leer su título |
+| El subagente `verificador` del desarrollo —no es un rol del censo: no toca la obra— detecta lo que debe | `prueba` | Casos sembrados: un entregable con un defecto conocido. Todavía no existen; hasta entonces su salida vale lo que valga la evidencia que cita, y una fila sin evidencia no cuenta |
 
 La spec, además, se comprueba contra sí misma: que cada objetivo tenga métrica,
 línea base y meta, y que todo lo que declara verificable tenga aquí un método
