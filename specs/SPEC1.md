@@ -30,7 +30,8 @@ Dentro: el almacén de artefactos con sus índices de recuperación por parecido
 la pieza que camina el guion del capítulo, las once carpetas de tarea con su
 contrato y su prompt, el presupuesto de contexto, la recogida de fuentes fuera
 del sistema, el destinatario real al que la obra va dedicada con los hechos que
-vienen de su vida, y la API HTTP que el editor usa para lanzar e inspeccionar
+vienen de su vida, el punto de guardado por capítulo con la política de
+reintentos de cada paso, y la API HTTP que el editor usa para lanzar e inspeccionar
 una obra.
 
 Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
@@ -167,8 +168,8 @@ flowchart LR
 | RF-01 | Acepta un brief y da de alta una `Obra` con título, época, ámbito, premisa, tesis temática, elenco declarado, políticas globales y, si lo trae, el destinatario (RF-06). Si falta un campo obligatorio, lo rechaza nombrando el campo con su ruta completa, sin crear nada | `prueba` |
 | RF-02 | El alta arranca la producción completa: `poblar_mundo` y después el guion de cada capítulo hasta cerrar la obra. **No hay ninguna otra orden que el editor deba dar** | `demostracion` |
 | RF-03 | Cada obra nace en su propio espacio de artefactos, identificado por `id_obra`. No existe un espacio de trabajo compartido que haya que archivar ni vaciar entre obras | `analisis` |
-| RF-04 | La producción se puede detener y reanudar por orden explícita. Reanudar retoma el paso siguiente al último cerrado y no repite trabajo ya aceptado | `prueba` |
-| RF-05 | Una tarea fallida se reintenta hasta el tope declarado. Agotado, la obra queda detenida con la tarea, el intento y el motivo registrados, y ningún artefacto a medio escribir | `prueba` |
+| RF-04 | La producción se puede detener y reanudar por orden explícita. Reanudar vuelve al último capítulo cerrado y no repite trabajo ya cerrado (§4.10, RF-91) | `prueba` |
+| RF-05 | Una tarea fallida se reintenta hasta el tope que declara su paso del guion, y lo que pasa al agotarse también lo declara el paso (§4.10, RF-95 a RF-99) | `prueba` |
 | RF-06 | El brief puede llevar un **destinatario**: nombre, edad, rasgos, recuerdos, tono pedido, dedicatoria y las palabras o temas vetados. Es opcional —una obra histórica sin destinatario sigue siendo válida—. Si viene, el nombre, la edad, el tono y la dedicatoria son obligatorios y el rechazo nombra el campo que falta con su ruta, `destinatario.nombre`; las tres listas pueden venir vacías, porque vacío es una respuesta | `prueba` |
 | RF-07 | Cada recuerdo aportado se guarda como `Recuerdo`, entidad de la capa Mundo, inmutable y sin `Fuente`. **Ningún rol del censo lo escribe**: nace con el alta de la obra, igual que la propia `Obra` (D-13) | `prueba` |
 | RF-08 | Todo elemento del mundo que salga de la vida del destinatario se marca `licencia = "personal"` y apunta al `Recuerdo` del que sale. Un elemento `personal` **queda exento de las cuatro dimensiones de anacronismo**: se escribe tal cual, con su nombre de hoy, y no genera `Crítica` (D-12) | `prueba` |
@@ -243,6 +244,76 @@ flowchart LR
 | RF-66 | El Planificador recibe contratos de escena y `Resumen de capítulo` parecidos a lo que va a planificar, nunca prosa | `inspeccion` |
 | RF-67 | Ni el Verificador de continuidad, ni el Contable de estado, ni el Arquitecto de arcos, ni el Redactor consultan por parecido. Una búsqueda por semejanza no encuentra lo que falta y su fallo es silencioso | `inspeccion` |
 | RF-68 | Cada recuperación queda en la `Traza`: consulta, colección, `k`, fragmentos devueltos y cuáles acabó usando el agente. Sin eso OBJ-08 no se puede medir | `analisis` |
+
+### 4.10 Punto de guardado por capítulo y límite de reintentos
+
+**El problema.** RF-04 y RF-05 prometían reanudar sin repetir y reintentar hasta
+un tope, pero no decían qué es «lo último cerrado» cuando la producción se corta
+a destiempo ni qué pasa al agotar el tope salvo detener. En el código eso deja
+tres fallos. Si el proceso muere, el hilo de producción muere con él y nadie lo
+relanza. Un capítulo a medias se vuelve a planificar encima de lo que ya había y
+duplica escenas y borradores. Y un corte entre `plegar` y la marca `cerrado`
+deja `EventoEstado` de un capítulo que no ha cerrado, que es justo lo que RF-40
+prohíbe. A eso se suma que el tope es un único número global y que agotarlo
+detiene siempre la obra, también cuando lo que falló fue una comprobación que no
+produce testigo para nadie.
+
+Va antes que cualquier otro cambio por dos razones. Todas las tareas que vengan
+después añaden pasos al bucle, y cada paso nuevo necesita saber cuántas veces se
+reintenta y qué hace al agotarse. Además, esto es la mitad de lo que habrá que
+especificar en el verificador formal del sistema.
+
+**La decisión, en una frase.** El capítulo cerrado es el único punto de guardado.
+Cerrar un capítulo es una sola transacción. Reanudar, por la causa que sea,
+vuelve a ese punto: descarta lo que quedó a medias y rehace el capítulo
+siguiente desde el paso 1. Y cada paso del guion declara cuántas veces se
+reintenta y qué pasa cuando se agota.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-90 | **Punto de guardado.** Cerrar el capítulo N es una sola transacción: los `EventoEstado` y el estado en N del Contable, lo que escribe el Archivero, la marca `cerrado` del capítulo y la retirada de su memoria de capítulo. Lo que `plegar` y `destilar` devuelven no se escribe hasta que las dos tareas han terminado. Si un artefacto sale malformado, se rechaza dentro de esa misma transacción, igual que en RF-23. Antes del commit no existe nada del cierre; después existe entero | `prueba` |
+| RF-91 | **Reanudar es volver al último punto de guardado.** Cada vez que se camina una obra, sea el arranque, un `reanudar` o un relanzamiento tras una caída, primero se hace lo mismo: las `Traza` que quedaron abiertas se cierran como interrumpidas; todo lo que cuelga de capítulos posteriores al último cerrado se caduca, sin borrar (RD-07); sus fragmentos salen del índice y su estado materializado se descarta; y el índice del último capítulo cerrado se completa si le falta algo. Después, el capítulo siguiente empieza en el paso 1 | `prueba` |
+| RF-92 | **Ni duplica ni pierde.** Tras un corte en cualquier punto, cada capítulo cerrado tiene exactamente un `Capitulo` vivo, un juego de `EventoEstado`, un estado en N y un `Resumen de capítulo`. El manuscrito servido es el mismo que antes del corte más lo que se cierre después. Lo que se pierde es solo el trabajo del capítulo que estaba abierto | `prueba` |
+| RF-93 | **Relanzar tras una caída no pide ninguna orden.** Al arrancar, el backend relanza toda obra que no esté detenida y que no haya terminado. «Terminada» quiere decir que consta la auditoría de cierre (RF-94). Así OBJ-07 sigue valiendo aunque la máquina se reinicie | `prueba` |
+| RF-94 | **La auditoría tiene también su punto de guardado.** Las críticas de `auditar` se escriben en una sola transacción junto con la constancia de hasta qué capítulo se ha auditado. Al reanudar, si el último capítulo cerrado tenía auditoría pendiente y no consta, se audita antes de abrir el siguiente. Cuando la auditoría de cadencia cae en el último capítulo, coincide con la de cierre y corre una sola vez | `prueba` |
+| RF-95 | **El tope y la política están escritos en el guion.** Cada paso de `guion.toml` y cada tarea fuera del guion declaran `reintentos` (el número de intentos, uno o más) y `al_agotarse`. Si falta alguno de los dos, el guion no carga | `prueba` |
+| RF-96 | **`al_agotarse` es un vocabulario cerrado con tres valores.** `detener_obra`: la obra queda detenida con la tarea, el intento y el motivo, y sin ningún artefacto a medio escribir. `critica_abierta`: el backend escribe la `Crítica` de RF-99 y la producción sigue. `seguir`: la producción sigue y la constancia del intento queda en la `Traza`, igual que la búsqueda infructuosa de RF-69 | `prueba` |
+| RF-97 | **Qué política toca a cada paso.** `detener_obra` para lo que produce el testigo del paso siguiente: `planificar`, `redactar`, `revisar`, la costura del paso 7, `plegar`, `destilar` y `poblar_mundo`. `critica_abierta` para las comprobaciones: las cribas de los pasos 4, 6 y 8, y `auditar`. `seguir` para `documentar`, por D-09. El tope de partida es dos intentos en todos los pasos | `inspeccion` |
+| RF-98 | **Qué es un intento fallido y cómo se cuenta.** Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo. Un artefacto malformado no es un intento fallido: sigue siendo la `Crítica` bloqueante de RF-23. Una tarea cortada por una caída tampoco cuenta, porque su `Traza` se cierra como interrumpida. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él. Toda `Traza` fallida registra su intento y su motivo | `prueba` |
+| RF-99 | **La crítica «no comprobado».** La escribe el backend, no un rol, igual que la de un artefacto malformado. Su objeto es la unidad del encargo y su dimensión la del encargo. Sale con severidad `bloqueante`, estado `abierta` y, como evidencia, la `Traza` del último intento y su motivo. No se enruta: no regenera ni manda a revisión. Se queda abierta y el capítulo se cierra marcado, que es como el Arquitecto de arcos la ve (RF-33) | `prueba` |
+
+**Decisiones de este cambio.**
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-30 | **El único punto de guardado es el capítulo cerrado, y lo marca la transacción de cierre.** No se guarda el avance paso a paso dentro del capítulo | Guardar por paso perdería menos trabajo, pero obligaría a reconstruir en qué vuelta del bucle estaba cada escena, y el recorrido dejaría de ser reproducible (RNF-04). El capítulo ya es la frontera en la que el mundo cambia (RF-40): hacer que también sea la frontera de la durabilidad no añade ninguna noción nueva |
+| D-31 | **Lo que quedó a medias se descarta entero y se rehace**, incluidas las `Fuente` ya recogidas en ese capítulo | Salvar las fuentes ahorraría la búsqueda externa, pero cuelgan de escenas que el nuevo plan no tendrá, y dejaría una segunda forma de que algo del capítulo anterior al corte entre en el siguiente. Rehacer desde el paso 1 deja un solo camino, que es el mismo de un capítulo recién abierto |
+| D-32 | **Marcar no es modificar.** A un artefacto inmutable (`EventoEstado`, `Fuente`, `Resumen de capítulo`, `Decisión`, `Recuerdo`) y a un `Borrador` aceptado se les puede poner la marca de caducado. Solo esa marca, solo una vez, y nunca se quita | Sin esto no hay forma de descartar un capítulo a medias sin borrar, y borrar lo prohíbe RD-07. RF-24 no se toca: el contenido de un inmutable sigue sin cambiar. Lo único que se añade es la marca que el propio RD-07 ya llama «caducar» |
+| D-33 | **Tras una caída, la obra se relanza sola al arrancar el backend.** `POST /reanudar` sigue sirviendo para lo que el editor detuvo o para una obra detenida por `detener_obra` | Exigir `reanudar` tras cada caída suma una intervención humana por corte y rompe OBJ-07 y RNF-08. Relanzar al arrancar pasa por el mismo camino que `reanudar` (RF-91), así que no hay dos formas de reanudar que puedan divergir |
+| D-34 | **Qué se hace al agotar los intentos se declara por paso en el guion, con vocabulario cerrado, y el contador vuelve a empezar con el capítulo** | Detener siempre dejaría parada una obra que podría terminar, porque la comprobación que falla no produce testigo para nadie. Rehacer el capítulo entero al agotar una tarea sale caro, y lo normal es que el fallo sea del proveedor y no del capítulo. Acumular intentos a lo largo de las caídas exigiría decidir cuándo dos encargos son «el mismo» después de replanificar. Ponerlo en el guion, y no en `ajustes.py`, deja cada tope junto al paso que gobierna, como pide RF-10 |
+
+**Qué retira.** El tope global de reintentos de `ajustes.py` desaparece, porque
+el tope pasa al guion. RF-04 y RF-05 remiten ahora a esta subsección. El
+criterio 5 de §10 habla de trabajo cerrado y no de trabajo aceptado, porque lo
+aceptado de un capítulo que no llegó a cerrar se descarta a propósito (D-31).
+
+**Qué queda fuera.** No hay puntos de guardado dentro del capítulo. No se
+distingue una tarea que falla siempre de una que falla por casualidad: si el
+mismo capítulo detiene la obra una y otra vez, se ve en la `Traza`, pero nada lo
+corta automáticamente. No hay varias obras produciéndose a la vez (§11). Y la
+interfaz HTTP no cambia: la ficha de obra ya dice si está detenida, y el motivo
+queda en el control de ejecución.
+
+**De dónde sale.** `architecture.md` §4, el ciclo de vida del capítulo, y §5, el
+tope de vueltas; RF-04, RF-05, RF-24, RF-33, RF-40 y RF-69; RD-07; OBJ-07 y
+RNF-08.
+
+**Documentos que hay que poner al día en la fase 3.** En `architecture.md`: §2,
+el vocabulario de proceso `al_agotarse`; §4, el punto de guardado, la
+reanudación y la política por paso; y §7, el árbol de `ajustes.py`. En
+`validators.md`: §6, la tabla de pruebas, y §8, la matriz de cobertura, con los
+métodos de RF-90 a RF-99. `definitions.md` y `domain-knowledge.md` no cambian,
+porque esta enmienda no toca la ontología.
 
 ## §5 Requisitos de datos
 
@@ -375,8 +446,8 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    sin exigir todavía una cifra: la primera medida es la línea base.
 4. Un artefacto malformado a propósito produce `Crítica` bloqueante con objeto
    el artefacto y no llega al Revisor.
-5. Detener y reanudar a mitad de capítulo no duplica ni pierde trabajo
-   aceptado.
+5. Detener, o cortar la producción en cualquier punto, y reanudar no duplica
+   ni pierde trabajo cerrado (RF-92).
 6. Regenerar un capítulo intermedio deja los siguientes replegados y
    consistentes.
 7. Una obra con destinatario llega a cerrada: su nombre real aparece escrito en
