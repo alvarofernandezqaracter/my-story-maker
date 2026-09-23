@@ -110,11 +110,12 @@ detrás de la frontera.
 - **Un subagente de Claude Code no arranca vacío.** Antes de que entre nada del
   sistema, arrastra su propio contexto —su instrucción base y las definiciones
   de las herramientas que tenga concedidas—, y eso son tokens de entrada como
-  cualquier otro: cuentan contra el techo. Medido en la máquina de desarrollo,
-  con todas las herramientas retiradas y con la instrucción del rol en lugar de
-  la de serie, son unos 10 000 tokens por tarea abierta. De ahí el término que
-  RF-13 añade a la anchura de tanda: sin él el techo se respeta sobre el papel
-  y se rompe en la máquina.
+  cualquier otro: cuentan contra el techo. Medido en la máquina de desarrollo
+  con el subagente aislado del repositorio (RF-100), con la instrucción del rol
+  en lugar de la de serie y con las herramientas del rol más equipado, son unos
+  3 200 tokens por tarea abierta (RF-101). De ahí el término que RF-13 añade a
+  la anchura de tanda: sin él el techo se respeta sobre el papel y se rompe en
+  la máquina.
 - El brief lo escribe una persona y puede venir incompleto: eso es un caso
   normal, no un error del sistema (RF-01).
 
@@ -243,6 +244,52 @@ flowchart LR
 | RF-66 | El Planificador recibe contratos de escena y `Resumen de capítulo` parecidos a lo que va a planificar, nunca prosa | `inspeccion` |
 | RF-67 | Ni el Verificador de continuidad, ni el Contable de estado, ni el Arquitecto de arcos, ni el Redactor consultan por parecido. Una búsqueda por semejanza no encuentra lo que falta y su fallo es silencioso | `inspeccion` |
 | RF-68 | Cada recuperación queda en la `Traza`: consulta, colección, `k`, fragmentos devueltos y cuáles acabó usando el agente. Sin eso OBJ-08 no se puede medir | `analisis` |
+
+### 4.11 El subagente de tarea no ve el andamiaje de desarrollo
+
+**Contexto.** El repositorio lleva su andamiaje de desarrollo con Claude Code:
+un `CLAUDE.md` de verdad en la raíz, la skill `grill-me` commiteada en
+`.claude/skills/`, los comandos y subagentes propios de `.claude/commands/` y
+`.claude/agents/`, y en `.claude/mcp.json` un servidor MCP de navegador para
+mirar la futura lectura web. Nada de eso es backend: lo gobierna `AGENTS.md`.
+Lo que sí toca al backend es quién lo acaba leyendo.
+
+**Problema.** El ejecutor lanza cada subagente de tarea con el repositorio como
+directorio de trabajo, y Claude Code descubre por su cuenta el `CLAUDE.md` de
+ese directorio, con `AGENTS.md` dentro. Medido en la máquina de desarrollo con
+la misma orden del ejecutor —sin herramientas y con una instrucción de sistema
+de una línea—: **10 751 tokens de entrada lanzado desde el repositorio, 1 548
+lanzado desde un directorio vacío**. Los 10 256 que hasta ahora se tenían por
+«coste fijo del subagente» eran, casi enteros, el ciclo de edición de este
+repositorio colándose en la ventana del Redactor, del Contable y de los otros
+nueve. Rompía dos cosas a la vez: RF-11, porque es material que ninguna
+proyección declara, y el techo, porque cada `CLAUDE.md` más largo ensanchaba en
+silencio el coste de abrir cualquier tarea. Escribir el `CLAUDE.md` como pieza
+completa lo habría empeorado.
+
+**Alternativas descartadas.** Recortar el `CLAUDE.md` para que pese poco: no
+arregla nada, solo abarata la fuga, y deja instrucciones de desarrollo en la
+ventana de un rol de la novela. El modo `--bare` del CLI: deja de descubrir
+`CLAUDE.md`, pero solo admite autenticación por clave de API, y el backend no
+gestiona claves (D-08). El modo `--safe-mode`: su propia ayuda lo describe como
+modo de diagnóstico para una configuración rota, y apaga toda personalización
+sin distinguir, incluida la que una tarea posterior quiera pasar a propósito por
+la orden.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-100 | Cada subagente de tarea arranca en un directorio de trabajo vacío, propio de esa tarea y fuera del repositorio, que se descarta al terminar. No descubre ni carga el `CLAUDE.md`, el `AGENTS.md` ni nada de `.claude/` del repositorio. El ejecutor no admite que se le indique otro directorio | `prueba` |
+| RF-101 | El coste fijo del subagente es la entrada medida de un subagente aislado según RF-100, con la instrucción de sistema del rol y las herramientas del rol más equipado —el Documentalista—, redondeada al alza al medio millar: **3 500 tokens**, un solo valor para todos los roles. Cambiar de versión del CLI obliga a volver a medirlo | `analisis` |
+| RF-102 | Ningún subagente de tarea recibe servidores MCP: la orden lleva `--strict-mcp-config` y nunca `--mcp-config`. El servidor de navegador de `.claude/mcp.json` es del desarrollo y solo lo carga quien lo pide por su nombre | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-35 | **El aislamiento del subagente de tarea es por directorio de trabajo, no por opción del CLI.** Un directorio temporal vacío por tarea, creado y borrado por el ejecutor | Es lo único que no depende de cómo cada versión del CLI llame a sus modos, no toca la autenticación (D-08) y no apaga nada que la orden pase a propósito. Es además la lectura literal de «toda tarea arranca en frío» (`architecture.md` §3): tampoco arranca con el contexto del sitio desde el que se la lanza. El directorio no guarda nada de lo que el sistema produce: nace vacío y muere vacío, así que no contradice RD-08 |
+| D-36 | **El coste fijo se vuelve a medir con el aislamiento puesto y baja de 10 500 a 3 500.** Un solo valor, el del rol más equipado | Mantener 10 500 sería mantener una medida de algo que ya no ocurre. Un valor por rol afinaría la anchura del Documentalista frente a los demás, pero la diferencia —1 548 sin herramientas frente a 3 191 con las dos de búsqueda— cae dentro del margen del 20 % y un solo número se comprueba de un vistazo. Con él las tandas se ensanchan: el Verificador pasa de cuatro a seis a la vez |
+| D-37 | **El servidor MCP de navegador es Playwright, versión fijada, y vive en `.claude/mcp.json`**, que Claude Code no carga solo: se pasa con `--mcp-config` en la sesión que tiene que mirar la lectura web | Cargarlo en todas las sesiones gastaría las definiciones de sus herramientas en cada conversación que no mira nada. Playwright corre sin cabeza y sin perfil persistente, que es lo que hace repetible una comprobación visual; Chrome DevTools exige un Chrome instalado y es más difícil de lanzar sin nadie delante. Una copia en `.mcp.json` para que se cargase sola serían dos ficheros diciendo lo mismo hasta que dejasen de hacerlo |
+
+Traza de este bloque: `architecture.md` §3 (toda tarea arranca en frío y
+presupuesto), RF-11, RF-13 y D-08.
 
 ## §5 Requisitos de datos
 
