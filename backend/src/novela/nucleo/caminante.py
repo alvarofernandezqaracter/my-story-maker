@@ -122,17 +122,35 @@ class Caminante:
     # --- La obra entera ----------------------------------------------------
 
     def caminar_obra(self, id_obra: str, capitulos: int) -> list[Informe]:
-        """Del alta al ultimo capitulo cerrado, sin que nadie toque nada."""
-        self._fuera_del_guion("poblar_mundo", id_obra)
-        informes = []
-        for numero in range(1, capitulos + 1):
-            informes.append(self.caminar_capitulo(id_obra, numero))
-            if CADA_CUANTOS_CAPITULOS_SE_AUDITA and (
-                numero % CADA_CUANTOS_CAPITULOS_SE_AUDITA == 0
-            ):
-                self._fuera_del_guion("auditar", id_obra, capitulo=numero)
-        self._fuera_del_guion("auditar", id_obra, capitulo=capitulos)
+        """Del alta al ultimo capitulo cerrado, sin que nadie toque nada.
+
+        Detener es una orden normal del editor, no una averia: la produccion se
+        para donde este y lo aceptado se queda escrito.
+        """
+        informes: list[Informe] = []
+        try:
+            if not self.almacen.listar("Personaje", id_obra):
+                self._fuera_del_guion("poblar_mundo", id_obra)
+            for numero in range(1, capitulos + 1):
+                if self._ya_cerrado(id_obra, numero):
+                    continue
+                informes.append(self.caminar_capitulo(id_obra, numero))
+                if CADA_CUANTOS_CAPITULOS_SE_AUDITA and (
+                    numero % CADA_CUANTOS_CAPITULOS_SE_AUDITA == 0
+                ):
+                    self._fuera_del_guion("auditar", id_obra, capitulo=numero)
+            self._fuera_del_guion("auditar", id_obra, capitulo=capitulos)
+        except ProduccionDetenida:
+            return informes
         return informes
+
+    def _ya_cerrado(self, id_obra: str, numero: int) -> bool:
+        """Reanudar retoma el paso siguiente al ultimo cerrado y no repite lo
+        que ya se acepto."""
+        return any(
+            capitulo.estado == "cerrado"
+            for capitulo in self.almacen.listar("Capitulo", id_obra, capitulo=numero)
+        )
 
     def _fuera_del_guion(
         self, nombre: str, id_obra: str, *, capitulo: int | None = None
@@ -184,7 +202,7 @@ class Caminante:
             )
             if numero_de_paso == 2 and self.indice is not None:
                 self.indice.indexar_fuentes(id_obra, numero)
-        informe.estado = ciclo.transitar(informe.estado, "redactado")
+        self._transitar(informe, id_obra, "redactado")
 
         regeneraciones: dict[str, int] = dict.fromkeys(escenas, 0)
         revisiones: dict[str, int] = dict.fromkeys(escenas, 0)
@@ -203,6 +221,7 @@ class Caminante:
                 break
             for escena in a_regenerar:
                 regeneraciones[escena] += 1
+            self._dar_por_atendidas(enrutado.regenerar_escena, a_regenerar)
             self._mandar_en_tandas(
                 guion.expandir(
                     guion.paso(3),
@@ -213,7 +232,7 @@ class Caminante:
                 informe,
             )
             pendientes = a_regenerar
-        informe.estado = ciclo.transitar(informe.estado, "validado")
+        self._transitar(informe, id_obra, "validado")
 
         # Pasos 5 y 6: revision dirigida y criba de mayores. El 5 vuelve al 4.
         for _ in range(TOPE_DE_REVISIONES_POR_BORRADOR + 1):
@@ -231,7 +250,8 @@ class Caminante:
                 break
             for escena in con_mayores:
                 revisiones[escena] += 1
-            informe.estado = ciclo.transitar(informe.estado, "en_revision")
+            self._dar_por_atendidas(enrutado.revision_dirigida, con_mayores)
+            self._transitar(informe, id_obra, "en_revision")
             self._mandar_en_tandas(
                 guion.expandir(
                     guion.paso(5), id_obra=id_obra, capitulo=numero, escenas=con_mayores
@@ -240,7 +260,7 @@ class Caminante:
             )
             # El 5 vuelve al 4: revisar puede meter una bloqueante.
             self._criba(id_obra, numero, con_mayores, 4, informe)
-            informe.estado = ciclo.transitar(informe.estado, "validado")
+            self._transitar(informe, id_obra, "validado")
 
         # Paso 7: costura del capitulo.
         self._mandar_en_tandas(
@@ -264,7 +284,7 @@ class Caminante:
                 self.almacen.aceptar_borrador(vigente.id)
         if self.indice is not None:
             self.indice.indexar_prosa_aceptada(id_obra, numero)
-        informe.estado = ciclo.transitar(informe.estado, "aceptado")
+        self._transitar(informe, id_obra, "aceptado")
 
         # Pasos 9 y 10: plegar y destilar. Cerrar es publicar los hechos y
         # olvidar el andamio.
@@ -274,9 +294,32 @@ class Caminante:
         )
         if self.indice is not None:
             self.indice.indexar_estructura(id_obra, numero)
-        informe.estado = ciclo.transitar(informe.estado, "cerrado")
+        self._transitar(informe, id_obra, "cerrado")
         self.almacen.caducar_memoria_de_capitulo(id_obra, numero)
         return informe
+
+    def _transitar(self, informe: Informe, id_obra: str, hasta: str) -> None:
+        """Mueve el capitulo por su ciclo de vida y lo deja escrito.
+
+        Llevarlo solo en memoria haria que detener y reanudar perdiesen de vista
+        por donde iba el capitulo.
+        """
+        informe.estado = ciclo.transitar(informe.estado, hasta)
+        for capitulo in self.almacen.listar("Capitulo", id_obra, capitulo=informe.capitulo):
+            self.almacen.marcar_capitulo(capitulo.id, hasta)
+
+    def _dar_por_atendidas(
+        self, criticas: list[Artefacto], escenas: tuple[str, ...]
+    ) -> None:
+        """Lo que se manda regenerar o revisar queda atendido.
+
+        Lo que no se atiende se queda abierto, y con ello el capitulo se cierra
+        marcado: es la anotacion que el Arquitecto de arcos vera en su siguiente
+        auditoria.
+        """
+        for critica in criticas:
+            if critica.id and critica.escena in escenas:
+                self.almacen.resolver_critica(critica.id, "atendida")
 
     # --- El pliegue --------------------------------------------------------
 

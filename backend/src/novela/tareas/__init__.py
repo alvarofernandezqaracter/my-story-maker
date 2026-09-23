@@ -101,4 +101,5 @@ class CatalogoDelRepositorio:
         return tuple(contrato_de_tarea(tarea)["escribe"])
 
     def rechaza(self, tarea: str) -> dict[str, list[str]]:
-        return contrato_de_tarea(tarea).get("rechaza", {})
+        rechazo: dict[str, list[str]] = contrato_de_tarea(tarea).get("rechaza", {})
+        return rechazo

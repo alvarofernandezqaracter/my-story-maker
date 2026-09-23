@@ -21,7 +21,6 @@ descartado no puede recuperarse nunca como eco.
 """
 
 import json
-import sqlite3
 from dataclasses import dataclass
 from typing import Any
 
@@ -395,12 +394,3 @@ def _a_blob(huella: list[float]) -> bytes:
     import struct
 
     return struct.pack(f"{len(huella)}f", *huella)
-
-
-def cargar_extension(conexion: sqlite3.Connection) -> None:
-    """Carga `sqlite-vec` en la conexion. Solo `almacen/` hace esto."""
-    import sqlite_vec
-
-    conexion.enable_load_extension(True)
-    sqlite_vec.load(conexion)
-    conexion.enable_load_extension(False)

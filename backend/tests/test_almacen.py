@@ -167,7 +167,7 @@ def test_la_unidad_se_escribe_entera_o_nada(almacen: Almacen, id_obra: str) -> N
 def test_un_artefacto_caducado_deja_de_servirse(almacen: Almacen, id_obra: str) -> None:
     critica = _artefacto_de_prueba("Critica", id_obra)
     identificador = almacen.guardar_critica(critica)
-    assert len(almacen.listar_criticas_abiertas(id_obra)) == 1
+    almacen.resolver_critica(identificador, "atendida")
 
     caducados = almacen.caducar_memoria_de_capitulo(id_obra, 1)
 
@@ -175,6 +175,17 @@ def test_un_artefacto_caducado_deja_de_servirse(almacen: Almacen, id_obra: str) 
     assert almacen.listar("Critica", id_obra) == []
     assert almacen.leer("Critica", identificador) is None
     assert almacen.leer("Critica", identificador, incluir_caducados=True) is not None
+
+
+def test_una_critica_abierta_sobrevive_al_cierre_del_capitulo(
+    almacen: Almacen, id_obra: str
+) -> None:
+    """Es la anotacion con la que el capitulo se cierra marcado (RF-33)."""
+    identificador = almacen.guardar_critica(_artefacto_de_prueba("Critica", id_obra))
+
+    almacen.caducar_memoria_de_capitulo(id_obra, 1)
+
+    assert [c.id for c in almacen.listar_criticas_abiertas(id_obra)] == [identificador]
 
 
 def test_lo_que_es_memoria_de_obra_no_caduca_con_el_capitulo(

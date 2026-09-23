@@ -27,6 +27,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/novela"]
 
+[tool.fastapi]
+entrypoint = "novela.api.principal:app"
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
@@ -47,3 +50,9 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 files = ["src/novela/api"]
 python_version = "3.13"
 strict = true
+
+# Bibliotecas de terceros sin tipos publicados. El unico sitio con tipos
+# declarados es el borde HTTP, y estas no llegan hasta ahi.
+[[tool.mypy.overrides]]
+module = ["sqlite_vec.*", "fastembed.*"]
+ignore_missing_imports = true

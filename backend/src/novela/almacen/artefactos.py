@@ -163,12 +163,32 @@ class Almacen:
     def __init__(self, ruta: Path | str) -> None:
         self.ruta = Path(ruta)
         self._escritor = abrir(self.ruta)
-        self._lector = abrir(self.ruta)
         self._turno_de_escritura = threading.Lock()
+        self._locales = threading.local()
+        self._lectores: list[sqlite3.Connection] = []
+
+    @property
+    def _lector(self) -> sqlite3.Connection:
+        """Una conexion de lectura por hilo.
+
+        Un solo escritor serializado, y lecturas aparte que no lo bloquean. Una
+        conexion de SQLite no se comparte entre hilos que leen a la vez: la
+        produccion corre en su hilo y la API contesta en el suyo, asi que cada
+        uno abre la suya y WAL se encarga de que no se estorben.
+        """
+        conexion: sqlite3.Connection | None = getattr(self._locales, "conexion", None)
+        if conexion is None:
+            conexion = abrir(self.ruta)
+            self._locales.conexion = conexion
+            with self._turno_de_escritura:
+                self._lectores.append(conexion)
+        return conexion
 
     def cerrar(self) -> None:
         self._escritor.close()
-        self._lector.close()
+        for lector in self._lectores:
+            lector.close()
+        self._lectores.clear()
 
     # --- Migraciones -------------------------------------------------------
 
@@ -462,7 +482,10 @@ class Almacen:
     def caducar_memoria_de_capitulo(self, id_obra: str, capitulo: int) -> int:
         """Retira la memoria de capitulo: lo caducado deja de servirse.
 
-        Lo ejecuta el Archivero como paso del guion. No borra: marca.
+        Lo ejecuta el Archivero como paso del guion. No borra: marca. Y no se
+        lleva por delante lo que sigue abierto: una `Critica` que nadie atendio
+        es justamente la anotacion con la que el capitulo se cierra marcado
+        (RF-33), asi que sobrevive al cierre.
         """
         marca = ahora()
         caducados = 0
@@ -470,10 +493,13 @@ class Almacen:
             for tabla in esquema.TABLAS:
                 if "capitulo" not in tabla.consulta:
                     continue
+                sigue_abierta = (
+                    "AND estado IS NOT 'abierta'" if "estado" in tabla.consulta else ""
+                )
                 cursor = conexion.execute(
                     f"UPDATE {nombre_de_tabla(tabla.tipo)} SET caducado_en = ? "
                     "WHERE id_obra = ? AND capitulo = ? AND memoria = 'capitulo' "
-                    "AND caducado_en IS NULL",
+                    f"AND caducado_en IS NULL {sigue_abierta}",
                     (marca, id_obra, capitulo),
                 )
                 caducados += cursor.rowcount
