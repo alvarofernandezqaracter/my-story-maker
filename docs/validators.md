@@ -1,14 +1,14 @@
 # Verificación: con qué se comprueba cada cosa
 
-2026-09-22
+2026-09-23
 
 ## Qué contiene este documento
 
 Cómo se establece que esto funciona. Aquí se dice **qué se verifica, con qué
 método, quién lo comprueba, qué recibe exactamente y qué sale cuando falla**, y
-se dice para las tres cosas que hay que verificar por separado: el texto que se
-produce, el sistema de agentes que lo produce y el código que reparte los
-turnos.
+se dice para las cuatro cosas que hay que verificar por separado: el texto que
+se produce, el sistema de agentes que lo produce, el código que reparte los
+turnos y los documentos con los que se gobierna todo lo anterior.
 
 `definitions.md` enumera las dimensiones de calidad y `architecture.md` §5
 describe en abstracto qué es un contrato de verificación. Este documento no
@@ -17,7 +17,7 @@ define dimensiones nuevas ni roles nuevos: si una dimensión aparece aquí y no 
 se nombran —una herramienta, una biblioteca— pueden cambiar sin que cambie nada
 más; lo que no cambia es el método y lo que se afirma con él.
 
-## 1. Los tres objetos que se verifican
+## 1. Los cuatro objetos que se verifican
 
 No fallan igual, así que no se comprueban igual. Confundirlos es la causa de que
 un sistema generativo parezca validado sin estarlo.
@@ -27,11 +27,14 @@ un sistema generativo parezca validado sin estarlo.
 | La obra | ¿Es correcto el texto producido? | Una contradicción, un anacronismo, una promesa que nadie paga | §4 y §5 |
 | El sistema de agentes | ¿Se comporta de forma fiable? | Un verificador que no ve nada, un bucle que gira sin cerrar, una crítica sin evidencia | §7 |
 | El código | ¿Hace lo que se dijo que haría? | Una frontera rota, un pliegue mal hecho, un presupuesto mal contado | §6 |
+| Los documentos | ¿Dicen lo mismo entre sí y lo mismo que el sistema? | Una dimensión que solo existe en un documento, un rol que se nombra y no está en el censo, un doc que va por detrás del código | §11 |
 
-Y dependen en cadena: **la obra se apoya en el sistema y el sistema se apoya en
-el código**. Un verificador cuya tasa de acierto nadie ha medido no verifica,
-opina con formato de tabla; y un guion que reparte mal las tandas revienta el
-techo antes de que ninguna dimensión llegue a comprobarse.
+Y dependen en cadena: **la obra se apoya en el sistema, el sistema se apoya en
+el código y los tres se apoyan en lo que dicen los documentos**. Un verificador
+cuya tasa de acierto nadie ha medido no verifica, opina con formato de tabla; un
+guion que reparte mal las tandas revienta el techo antes de que ninguna
+dimensión llegue a comprobarse; y una dimensión que este documento nombra y
+`definitions.md` no reconoce es una comprobación que nadie sabe hacer.
 
 La diferencia de fondo es que el código es determinista —la misma entrada da la
 misma salida, así que una pasada buena demuestra algo— y los agentes no lo son:
@@ -80,7 +83,10 @@ un agente como un contrato de tres partes, y de ninguna otra forma.
 - **Forma de la `Crítica`.** Qué va en `objeto`, qué `dimension`, qué
   `severidad` por defecto y qué cuenta como `evidencia` citable. Una `Crítica`
   sin evidencia se descarta antes de llegar al Revisor, así que el contrato debe
-  decir qué evidencia acepta.
+  decir qué evidencia acepta. Y cuando el predicado se cumple, el agente deja
+  constancia de ello: **una comprobación que no deja rastro no se distingue de
+  una que no se hizo**, y sin ese rastro no hay forma de saber si una dimensión
+  se quedó sin comprobar.
 
 **La proyección mínima no se rellena por parecido.** Cuando una dimensión se
 comprueba comparando hechos —continuidad de estado, violación epistémica,
@@ -188,6 +194,28 @@ que lo escribe y el rechazo del agente siguiente, y eso se verifica rompiendo un
 artefacto a propósito y mirando que salga la `Crítica` bloqueante. Es `prueba`,
 no `analisis`.
 
+### La proyección se comprueba antes de mandarla
+
+Un contrato declara su proyección mínima, pero hasta aquí nadie miraba si la
+ventana que sale se parece a la que se declaró. Y esa es la avería más cara que
+puede tener el sistema: si la proyección llega incompleta —el estado en N-1 no
+se materializó, la ficha del objeto no se trajo—, el verificador **no falla,
+contesta que el predicado se cumple**, porque no ha visto lo que lo rompía. El
+falso negativo sale con el mismo formato que la comprobación buena y ya no hay
+forma de distinguirlos.
+
+Por eso el ensamblador compara cada ventana con el contrato antes de mandarla,
+en las dos direcciones:
+
+- **Completa.** Si falta una pieza declarada, la tarea no sale. Parar cuesta una
+  vuelta; mandar un verificador ciego cuesta el resto de la obra.
+- **Mínima.** Lo que va en la ventana sin estar declarado también es defecto: el
+  material de sobra es lo que invita a opinar en vez de comprobar.
+
+Es `analisis`, vive en `nucleo/` y es de lo más barato del documento, porque la
+proyección ya está escrita en el contrato: solo hay que cotejarla con lo que se
+manda.
+
 ### Pruebas
 
 | Qué se prueba | Cómo |
@@ -248,6 +276,8 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 | --- | --- | --- | --- |
 | Que los verificadores detectan | `prueba` | Casos sembrados: un texto con un defecto conocido de una sola dimensión por caso | Tasa de detección por dimensión |
 | Que no inventan defectos | `prueba` | Los mismos casos, con esa dimensión intacta | Falsos positivos por capítulo |
+| Que toda dimensión llegó a comprobarse | `analisis` | Recuento de constancias por unidad aceptada, contra las dimensiones que le tocaban por su alcance | Un paso del guion que se saltó, o una tanda que murió sin que nadie se enterase |
+| Que la cuenta previa no engaña | `analisis` | Contexto estimado antes de mandar frente al medido al terminar, tarea por tarea | Un techo que se respeta sobre el papel y se rompe en la máquina |
 | Que el bucle converge | `analisis` | Recuento de vueltas hasta `Aceptado` en la `Traza` | Escenas y capítulos que giran sin cerrar |
 | Que las críticas son utilizables | `analisis` | Proporción descartada por falta de `evidencia` | Agentes que opinan en vez de comprobar |
 | Que los artefactos están bien formados | `analisis` | Recuento de rechazos por campo ausente, por capítulo | Un rol con demasiado alcance o con pocos ejemplos |
@@ -336,6 +366,11 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Los verificadores no inventan defectos | Los mismos casos con la dimensión intacta | `prueba` |
 | El bucle converge o se declara no convergido | Vueltas hasta `Aceptado` y capítulos cerrados marcados | `analisis` |
 | Una fuente con una orden dentro no redirige al Redactor | Fuente sembrada con instrucción | `prueba` |
+| Ninguna ventana sale incompleta ni con material de sobra | La proyección enviada se coteja con la declarada en el contrato | `analisis` |
+| El techo estimado es el techo real | Estimación previa frente a medida posterior, tarea por tarea | `analisis` |
+| Toda dimensión del alcance dejó constancia en cada unidad aceptada | Recuento de constancias contra las dimensiones que tocaban | `analisis` |
+| Detener y reanudar no duplica ni pierde trabajo aceptado | Parada a mitad de capítulo y reanudación | `prueba` |
+| Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha y el lugar que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |
 
@@ -343,6 +378,13 @@ Las dos últimas filas son deliberadas y están explicadas en §9. La última, s
 todo: ningún método de este documento verifica que la novela sea buena. Es el
 riesgo que todo este aparato existe para hacer más pequeño, y se nombra para que
 nadie confunda una criba en verde con un libro.
+
+**Y falta una distinción que conviene no perder.** Una afirmación sin método
+puede serlo por dos motivos muy distintos: porque no hay método posible, y eso
+es un `inverificable` y va en §9; o porque lo hay de sobra y nadie lo tiene
+asignado todavía, y eso no es un `inverificable`, es un hueco, y va en §10. El
+segundo caso es el peligroso, porque desde fuera las dos cosas se parecen a una
+casilla vacía.
 
 ## 9. Registro de lo inverificable
 
@@ -364,29 +406,76 @@ convertir un cálculo en un dato escrito por el agente que tiene el contexto par
 producirlo. Funciona, pero desplaza el riesgo de «el código puede tener un
 fallo» a «el dato escrito puede ser falso y nadie lo recalcula».
 
-## 10. Orden de adopción
+## 10. Huecos: lo que nadie comprueba todavía
+
+La tabla de gobierno de `architecture.md` §6 dice, entidad por entidad, quién la
+vigila. Cotejada contra el reparto de §4, en cinco sitios ese vigilante **no
+existe**: hay una entidad que alguien escribe, una columna que dice que está
+vigilada y ninguna dimensión, ningún agente y ningún método detrás. Se listan
+aquí en vez de inventarles una comprobación, porque taparlos exige una dimensión
+nueva en `definitions.md` o un rol nuevo en el censo, y este documento no crea ni
+lo uno ni lo otro.
+
+| Hueco | Qué no comprueba nadie | Qué haría falta |
+| --- | --- | --- |
+| El pliegue | Que los `EventoEstado` del capítulo recojan **todo** lo que el texto aceptado dice que cambió. Un evento que falta no da error: envenena el estado de todos los capítulos siguientes, y el fallo aparece lejos de donde está la causa | Una dimensión de completitud del pliegue. La proyección que necesitaría —estado y texto aceptado— ya la tiene el Verificador de continuidad, así que el hueco es de dimensión, no de rol |
+| El resumen | Que el `Resumen de capítulo` sea fiel al capítulo que resume. A partir de ahí es lo único que el Arquitecto de arcos verá nunca de ese capítulo: lo que el resumen se deje fuera desaparece de la obra | Una dimensión, y un agente que vea a la vez la prosa y el resumen. Hoy ninguno la tiene: el Arquitecto no ve prosa por diseño y el Archivero no puede validar lo que él mismo escribe |
+| El canon inicial | Que las fichas del Constructor de mundo sean coherentes entre sí: distancias que cuadren, fechas que no se contradigan, vínculos recíprocos. Toda la continuidad posterior se mide contra ellas, de modo que un error de partida no se detecta jamás, se propaga | Un cotejo de consistencia entre fichas antes de planificar el primer capítulo. Es `analisis` y es barato; lo que falta es a quién se le encarga |
+| La pasada de pulido | Lo que el Revisor toca en la última criba ya no vuelve a comprobarse. Es el único punto del ciclo donde arreglar algo `menor` puede meter un defecto `bloqueante` y salir con el capítulo cerrado | Volver a pasar la criba de bloqueantes sobre lo que la revisión de pulido tocó. Eso es un cambio del bucle de `architecture.md` §5, no un reparto de este documento |
+| El plan | Que el contrato de una escena sea bueno, no solo que esté completo. Que no le falten campos lo caza el rechazo por artefacto malformado; que el `cambio_de_valor` declarado sea de verdad un cambio, o que el obstáculo se oponga al objetivo, no lo mira nadie antes de escribir | Una dimensión que se evalúe sobre el `Plan` y no sobre el texto, para gastar la regeneración antes de redactar y no después |
+
+Los cinco se cierran por el ciclo de edición: son dimensiones o son roles, y eso
+se abre con una spec. Mientras sigan aquí, lo que hay es la constancia de que se
+conocen, que es bastante más de lo que hay cuando un hueco no está escrito.
+
+## 11. Los entregables del ciclo también se verifican
+
+Nada se da por bueno sin comprobarlo, y eso alcanza a lo que se entrega en las
+tres fases del ciclo: la spec, el código y los docs. El código tiene su método
+en §6. Los otros dos son documentos, y un documento se comprueba mirando si dice
+lo mismo que los demás y lo mismo que el sistema.
+
+| Qué se comprueba | Método | Cómo |
+| --- | --- | --- |
+| Toda dimensión que este documento nombra existe en `definitions.md` | `analisis` | Cotejo de las dos listas; una dimensión que solo está aquí es un error de aquí |
+| Todo agente que este documento nombra existe en el censo | `analisis` | Lo mismo, contra `architecture.md` §2 |
+| Cada proyección mínima cabe en el tope de ventana de su rol | `analisis` | Cotejo contra la tabla de topes. La que no cabe parte la tarea en unidades menores; recortar la proyección es fabricar falsos negativos |
+| Ninguna decisión abierta se ha cerrado por el camino | `inspeccion` | Las de `architecture.md` §8 siguen en la lista, o hay una spec que las cierra y lo dice |
+| La ventana de divergencia está cerrada | `analisis` | No hay una spec aprobada sin destilar cuando se abre la siguiente |
+| Lo retirado no queda narrado como historia | `inspeccion` | Los docs describen el estado actual; lo que se quita, se quita, no se cuenta en pasado |
+
+La spec, además, se comprueba contra sí misma: que cada objetivo tenga métrica,
+línea base y meta, y que todo lo que declara verificable tenga aquí un método
+asignado. Una spec que dice «se comprobará que funciona» no ha declarado nada.
+
+## 12. Orden de adopción
 
 No existe todo a la vez. Este orden es el que da más protección por unidad de
 esfuerzo, y los cuatro primeros pasos valen más que todo el resto junto porque
 son los que sostienen la frontera.
 
 1. Contratos de importación y tipos en el borde HTTP. `analisis`
-2. El recorrido en seco con ejecutor fingido. `demostracion`
-3. Pruebas de `nucleo/` y `almacen/`, incluidas las migraciones y la
+2. Cotejo de cada ventana contra la proyección declarada en su contrato, en las
+   dos direcciones. `analisis`
+3. El recorrido en seco con ejecutor fingido. `demostracion`
+4. Pruebas de `nucleo/` y `almacen/`, incluidas las migraciones y la
    reconstrucción del índice. `prueba`
-4. Permisos por rol enumerados y probados, incluida la escritura prohibida.
+5. Permisos por rol enumerados y probados, incluida la escritura prohibida.
    `prueba`
-5. `Traza` completa, capaz de contestar las cuatro preguntas de §7.
+6. `Traza` completa, capaz de contestar las cuatro preguntas de §7, y con ella
+   la constancia de cada comprobación y la estimación frente a la medida.
    `demostracion`
-6. Casos sembrados por dimensión: primero para fijar la línea base, después para
+7. Casos sembrados por dimensión: primero para fijar la línea base, después para
    exigir un umbral. `prueba`
-7. Propiedades sobre el pliegue y sobre el índice. `prueba`
-8. Briefs adversarios y fuente sembrada con instrucción. `prueba`
-9. Pruebas de mutación sobre `nucleo/` y sobre los permisos. `prueba`
+8. Propiedades sobre el pliegue y sobre el índice. `prueba`
+9. Briefs adversarios y fuente sembrada con instrucción. `prueba`
+10. Pruebas de mutación sobre `nucleo/` y sobre los permisos. `prueba`
 
-Nada de esto necesita la interfaz web y nada de esto bloquea producir una obra.
+El segundo puesto no es un capricho: cuesta poco y es lo único que impide que
+todo lo que viene después mida comprobaciones hechas a ciegas. Nada de esta
+lista necesita la interfaz web y nada bloquea producir una obra.
 
-## 11. Qué queda fuera, y por qué
+## 13. Qué queda fuera, y por qué
 
 **Sobre la obra:** verificación formal, comprobación de modelos y ejecución
 simbólica. La razón es la misma para las tres: una novela no tiene
