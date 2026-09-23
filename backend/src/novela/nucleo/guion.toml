@@ -12,9 +12,19 @@
 version = 1
 
 # --- Los diez pasos del capitulo (architecture.md 4) -----------------------
+#
+# Cada paso declara `reintentos` —cuantas veces se intenta su tarea, uno o mas— y
+# `al_agotarse` —que pasa si ninguno sale bien—, con los valores cerrados de
+# `vocabularios.AL_AGOTARSE` (SPEC1 4.10). Un paso sin los dos no carga:
+# improvisar sobre la marcha lo que pasa al agotarse es justo lo que se evita.
+#   detener_obra     lo que produce el testigo del paso siguiente
+#   critica_abierta  las comprobaciones: queda una Critica «no comprobado»
+#   seguir           documentar: sin fuente la produccion sigue (D-09)
 
 [[paso]]
 numero = 1
+reintentos = 2
+al_agotarse = "detener_obra"
 tarea = "planificar"
 rol = "planificador"
 concurrencia = "solo"
@@ -23,6 +33,8 @@ proyeccion = ["canon", "estado_en_n_menos_1", "compromisos_abiertos", "arcos", "
 
 [[paso]]
 numero = 2
+reintentos = 2
+al_agotarse = "seguir"
 tarea = "documentar"
 rol = "documentalista"
 concurrencia = "por_escena"
@@ -31,6 +43,8 @@ proyeccion = ["marco_de_la_escena", "afirmaciones_pendientes_de_respaldo", "docu
 
 [[paso]]
 numero = 3
+reintentos = 2
+al_agotarse = "detener_obra"
 tarea = "redactar"
 rol = "redactor"
 concurrencia = "por_escena"
@@ -39,6 +53,8 @@ proyeccion = ["contrato_de_escena", "voces_del_elenco", "continuidad_local", "do
 
 [[paso]]
 numero = 4
+reintentos = 2
+al_agotarse = "critica_abierta"
 tarea = "verificar"
 criba = "bloqueantes"
 concurrencia = "por_dimension_y_escena"
@@ -49,6 +65,8 @@ proyeccion = ["contrato_de_verificacion"]
 
 [[paso]]
 numero = 5
+reintentos = 2
+al_agotarse = "detener_obra"
 tarea = "revisar"
 rol = "revisor"
 concurrencia = "por_escena"
@@ -58,6 +76,8 @@ vuelve_al_paso = 4
 
 [[paso]]
 numero = 6
+reintentos = 2
+al_agotarse = "critica_abierta"
 tarea = "verificar"
 criba = "mayores"
 concurrencia = "por_dimension_y_escena"
@@ -66,6 +86,8 @@ proyeccion = ["contrato_de_verificacion"]
 
 [[paso]]
 numero = 7
+reintentos = 2
+al_agotarse = "detener_obra"
 tarea = "editar_estilo"
 rol = "editor_de_estilo"
 concurrencia = "solo"
@@ -74,6 +96,8 @@ proyeccion = ["texto_producido", "registro_linguistico", "lexico_vetado", "ecos_
 
 [[paso]]
 numero = 8
+reintentos = 2
+al_agotarse = "critica_abierta"
 tarea = "criba"
 criba = "pulido"
 concurrencia = "por_dimension_y_escena"
@@ -82,6 +106,8 @@ proyeccion = ["contrato_de_verificacion"]
 
 [[paso]]
 numero = 9
+reintentos = 2
+al_agotarse = "detener_obra"
 tarea = "plegar"
 rol = "contable_de_estado"
 concurrencia = "solo"
@@ -90,6 +116,8 @@ proyeccion = ["estado_en_n_menos_1", "texto_aceptado_del_capitulo", "vocabulario
 
 [[paso]]
 numero = 10
+reintentos = 2
+al_agotarse = "detener_obra"
 tarea = "destilar"
 rol = "archivero"
 concurrencia = "solo"
@@ -100,6 +128,8 @@ proyeccion = ["texto_aceptado_del_capitulo", "cola_de_compromisos", "registro_ac
 # Van fuera del guion y siempre solas.
 
 [fuera_del_guion.poblar_mundo]
+reintentos = 2
+al_agotarse = "detener_obra"
 tarea = "poblar_mundo"
 rol = "constructor_de_mundo"
 concurrencia = "solo"
@@ -108,6 +138,8 @@ cuando = "al arrancar la obra y cuando haga falta ampliar el elenco"
 proyeccion = ["obra_y_premisa", "elenco_declarado", "fuentes_recogidas", "destinatario", "recuerdos_del_destinatario"]
 
 [fuera_del_guion.auditar]
+reintentos = 2
+al_agotarse = "critica_abierta"
 tarea = "auditar"
 rol = "arquitecto_de_arcos"
 concurrencia = "solo"

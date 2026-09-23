@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from novela.ajustes import tope_de_ventana
-from novela.vocabularios import TAREA_DE_ROL
+from novela.vocabularios import AL_AGOTARSE, TAREA_DE_ROL
 
 RUTA_DEL_GUION = Path(__file__).parent / "guion.toml"
 
@@ -34,6 +34,8 @@ class Paso:
     concurrencia: str
     unidad: str
     proyeccion: tuple[str, ...]
+    reintentos: int
+    al_agotarse: str
     rol: str | None = None
     criba: str | None = None
     vuelve_al_paso: int | None = None
@@ -46,6 +48,10 @@ class Encargo:
 
     Es la unidad que se reparte en tandas y la que paga en el techo: su
     proyeccion ocupa el tope de ventana de su rol mientras este abierta.
+
+    `reintentos` y `al_agotarse` los copia siempre el guion desde el paso que
+    lo expande. El valor por defecto es el mas prudente —un intento y detener—
+    y solo lo usan los encargos que las pruebas fabrican a mano.
     """
 
     paso: int
@@ -57,6 +63,8 @@ class Encargo:
     capitulo: int | None = None
     escena: str | None = None
     dimension: str | None = None
+    reintentos: int = 1
+    al_agotarse: str = "detener_obra"
 
     @property
     def tope_de_ventana(self) -> int:
@@ -67,13 +75,39 @@ def _leer() -> dict[str, Any]:
     return tomllib.loads(RUTA_DEL_GUION.read_text(encoding="utf-8"))
 
 
+class GuionInvalido(Exception):
+    """El guion no declara algo que la pieza que lo camina necesita saber."""
+
+
+def _politica(bruto: dict[str, Any]) -> tuple[int, str]:
+    """El tope y lo que pasa al agotarse estan escritos, o el guion no carga.
+
+    Un paso sin ellos obligaria a improvisar sobre la marcha lo que pasa cuando
+    su tarea falla, que es lo que RF-95 prohibe.
+    """
+    nombre = bruto.get("numero") or bruto.get("tarea")
+    if "reintentos" not in bruto or "al_agotarse" not in bruto:
+        raise GuionInvalido(f"el paso {nombre} no declara `reintentos` y `al_agotarse`")
+    reintentos = bruto["reintentos"]
+    if not isinstance(reintentos, int) or isinstance(reintentos, bool) or reintentos < 1:
+        raise GuionInvalido(f"el paso {nombre} declara {reintentos!r} intentos")
+    if bruto["al_agotarse"] not in AL_AGOTARSE:
+        raise GuionInvalido(
+            f"el paso {nombre}: {bruto['al_agotarse']!r} no esta en `al_agotarse`"
+        )
+    return reintentos, bruto["al_agotarse"]
+
+
 def _a_paso(bruto: dict[str, Any]) -> Paso:
+    reintentos, al_agotarse = _politica(bruto)
     return Paso(
         numero=bruto.get("numero", 0),
         tarea=bruto["tarea"],
         concurrencia=bruto["concurrencia"],
         unidad=bruto["unidad"],
         proyeccion=tuple(bruto["proyeccion"]),
+        reintentos=reintentos,
+        al_agotarse=al_agotarse,
         rol=bruto.get("rol"),
         criba=bruto.get("criba"),
         vuelve_al_paso=bruto.get("vuelve_al_paso"),
@@ -127,6 +161,8 @@ def expandir(
                 rol=rol,
                 unidad=paso_del_guion.unidad,
                 proyeccion=paso_del_guion.proyeccion,
+                reintentos=paso_del_guion.reintentos,
+                al_agotarse=paso_del_guion.al_agotarse,
                 id_obra=id_obra,
                 capitulo=capitulo,
             )
@@ -143,6 +179,8 @@ def expandir(
                 rol=rol,
                 unidad=paso_del_guion.unidad,
                 proyeccion=paso_del_guion.proyeccion,
+                reintentos=paso_del_guion.reintentos,
+                al_agotarse=paso_del_guion.al_agotarse,
                 id_obra=id_obra,
                 capitulo=capitulo,
                 escena=escena,
@@ -160,6 +198,8 @@ def expandir(
                 rol=contrato.rol,
                 unidad=paso_del_guion.unidad,
                 proyeccion=paso_del_guion.proyeccion,
+                reintentos=paso_del_guion.reintentos,
+                al_agotarse=paso_del_guion.al_agotarse,
                 id_obra=id_obra,
                 capitulo=capitulo,
                 escena=escena,

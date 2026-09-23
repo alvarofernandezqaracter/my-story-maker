@@ -267,6 +267,28 @@ class Indice:
                 conexion.execute("DELETE FROM vec_fragmento WHERE fragmento = ?", (numero,))
             conexion.execute("DELETE FROM fragmento WHERE id_obra = ?", (id_obra,))
 
+    def retirar_desde(self, id_obra: str, capitulo: int) -> int:
+        """Saca del indice lo del capitulo N en adelante (RF-91).
+
+        Es lo que se hace con un capitulo que no llego a cerrar: sus artefactos se
+        caducan y sus fragmentos no pueden seguir recuperandose como eco (RF-64).
+        El indice es derivado, asi que aqui si se borra.
+        """
+        conexion = self.almacen._escritor
+        with self.almacen._turno_de_escritura, escritura(conexion):
+            numeros = [
+                fila["rowid"]
+                for fila in conexion.execute(
+                    "SELECT rowid FROM fragmento WHERE id_obra = ? AND capitulo >= ?",
+                    (id_obra, capitulo),
+                )
+            ]
+            for numero in numeros:
+                conexion.execute("DELETE FROM fts_fragmento WHERE rowid = ?", (numero,))
+                conexion.execute("DELETE FROM vec_fragmento WHERE fragmento = ?", (numero,))
+                conexion.execute("DELETE FROM fragmento WHERE rowid = ?", (numero,))
+        return len(numeros)
+
     def reconstruir(self, id_obra: str) -> int:
         """Borrarlo y rehacerlo desde los artefactos da los mismos fragmentos."""
         self.vaciar(id_obra)

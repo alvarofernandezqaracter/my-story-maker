@@ -91,6 +91,12 @@ CICLO_DE_VIDA_DEL_CAPITULO: tuple[str, ...] = (
     "descartado",
 )
 
+# Que pasa cuando una tarea agota sus intentos (SPEC1 4.10, RF-96). Lo declara
+# cada paso del guion: `detener_obra` para lo que produce el testigo del paso
+# siguiente, `critica_abierta` para las comprobaciones y `seguir` para lo que,
+# como la busqueda documental, no bloquea nunca (D-09).
+AL_AGOTARSE: tuple[str, ...] = ("detener_obra", "critica_abierta", "seguir")
+
 # Las tres memorias (architecture.md 3). Cada artefacto declara a cual pertenece
 # porque es lo que permite al Archivero retirar la de capitulo sin decidir nada.
 MEMORIA: tuple[str, ...] = ("tarea", "capitulo", "obra")

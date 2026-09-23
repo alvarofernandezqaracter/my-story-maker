@@ -62,16 +62,45 @@ class Produccion:
         """Arranca la produccion completa y devuelve el turno enseguida.
 
         Es la unica orden que el editor tiene que dar: de aqui al ultimo
-        capitulo cerrado no hay ninguna otra.
+        capitulo cerrado no hay ninguna otra. Si la misma obra todavia tiene un
+        hilo vivo —se detuvo y se reanudo mientras una tarea seguia abierta—, el
+        nuevo espera a que ese termine antes de volver al punto de guardado: dos
+        caminantes sobre la misma obra se descartarian el trabajo el uno al otro.
         """
-        hilo = threading.Thread(
-            target=self.caminante().caminar_obra,
-            args=(id_obra, capitulos),
-            name=f"produccion-{id_obra}",
-            daemon=True,
-        )
+        anterior = self.hilos.get(id_obra)
+        caminante = self.caminante()
+
+        def caminar() -> None:
+            if anterior is not None:
+                anterior.join()
+            caminante.caminar_obra(id_obra, capitulos)
+
+        hilo = threading.Thread(target=caminar, name=f"produccion-{id_obra}", daemon=True)
         self.hilos[id_obra] = hilo
         hilo.start()
+
+    def terminada(self, obra: Artefacto) -> bool:
+        """Una obra ha terminado cuando consta su auditoria de cierre (RF-93)."""
+        return self.almacen.auditada_hasta(obra.id) >= self.capitulos_objetivo(obra)
+
+    @staticmethod
+    def capitulos_objetivo(obra: Artefacto) -> int:
+        return int(obra.cuerpo.get("capitulos_objetivo", 1))
+
+    def relanzar_las_caidas(self) -> list[str]:
+        """Al arrancar, toda obra que no este detenida ni terminada se relanza.
+
+        Es lo que hace que una caida no pida ninguna orden (D-33): el hilo de
+        produccion murio con el proceso, y relanzar pasa por el mismo camino que
+        reanudar, que vuelve al ultimo capitulo cerrado.
+        """
+        relanzadas: list[str] = []
+        for obra in self.almacen.listar_obras():
+            if self.almacen.esta_detenida(obra.id) or self.terminada(obra):
+                continue
+            self.arrancar(obra.id, self.capitulos_objetivo(obra))
+            relanzadas.append(obra.id)
+        return relanzadas
 
     def cerrar(self) -> None:
         self.almacen.cerrar()
@@ -83,6 +112,7 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
     @asynccontextmanager
     async def ciclo(app: FastAPI) -> AsyncIterator[None]:
         app.state.produccion = Produccion(ruta_de_la_base, ejecutor)
+        app.state.produccion.relanzar_las_caidas()
         yield
         app.state.produccion.cerrar()
 
@@ -383,17 +413,11 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
 
     @app.post("/obras/{id_obra}/reanudar")
     def reanudar(id_obra: IdObra, casa: ProduccionDep) -> Confirmacion:
-        """Retoma el paso siguiente al ultimo cerrado; no repite lo aceptado."""
+        """Vuelve al ultimo capitulo cerrado; no repite nada de lo cerrado."""
         obra = _obra_o_404(casa, id_obra)
         casa.almacen.reanudar(id_obra)
-        cerrados = [
-            c.capitulo or 0
-            for c in casa.almacen.listar("Capitulo", id_obra)
-            if c.estado == "cerrado"
-        ]
-        objetivo = int(obra.cuerpo.get("capitulos_objetivo", 1))
-        if max(cerrados, default=0) < objetivo:
-            casa.arrancar(id_obra, objetivo)
+        if not casa.terminada(obra):
+            casa.arrancar(id_obra, casa.capitulos_objetivo(obra))
         return Confirmacion(id_obra=id_obra, detenida=False, motivo=None)
 
     return app

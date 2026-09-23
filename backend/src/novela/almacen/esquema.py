@@ -400,6 +400,77 @@ def sentencias_del_recuerdo() -> list[str]:
     return _sentencias_de(tablas_de_la_migracion(3))
 
 
+def _columnas_salvo_la_marca(tabla: Tabla) -> list[str]:
+    """Todas las columnas de la tabla menos `caducado_en`."""
+    return [
+        "id", "id_obra", "tipo", "cuerpo",
+        *tabla.consulta,
+        *(propia.nombre for propia in tabla.propias),
+        "memoria", "procedencia_rol", "procedencia_tarea", "procedencia_intento",
+        "creado_en",
+    ]
+
+
+def _disparadores_que_admiten_la_marca(tabla: Tabla) -> list[str]:
+    """Marcar no es modificar (D-32).
+
+    A un inmutable, y a un `Borrador` ya aceptado, se le puede poner la marca
+    de caducado: es lo unico que permite descartar un capitulo a medias sin
+    borrar (RD-07). Solo esa marca, solo una vez, y nunca se quita. Cualquier
+    otra columna sigue sin poder cambiar.
+    """
+    nombre = nombre_de_tabla(tabla.tipo)
+    columnas = ", ".join(_columnas_salvo_la_marca(tabla))
+    if tabla.tipo == "Borrador":
+        viejo = f"{nombre}_aceptado_es_inmutable"
+        aviso = "un borrador aceptado es inmutable: se escribe una version nueva"
+        cuando = "WHEN OLD.estado = 'aceptado' "
+    else:
+        viejo = f"{nombre}_es_inmutable"
+        aviso = f"{tabla.tipo} es inmutable: cambiar algo es escribir una version nueva"
+        cuando = ""
+    aviso_de_la_marca = f"{tabla.tipo} es inmutable: la marca de caducado no se quita"
+    return [
+        f"DROP TRIGGER IF EXISTS {viejo}",
+        f"CREATE TRIGGER {viejo} BEFORE UPDATE OF {columnas} ON {nombre} "
+        f"{cuando}BEGIN SELECT RAISE(ABORT, '{aviso}'); END",
+        f"CREATE TRIGGER {nombre}_la_marca_no_se_quita BEFORE UPDATE OF caducado_en "
+        f"ON {nombre} WHEN OLD.caducado_en IS NOT NULL "
+        f"BEGIN SELECT RAISE(ABORT, '{aviso_de_la_marca}'); END",
+    ]
+
+
+def sentencias_del_punto_de_guardado() -> list[str]:
+    """La migracion 4: lo que necesita volver al ultimo capitulo cerrado.
+
+    La constancia de hasta que capitulo se audito, que es lo que dice si una
+    obra ha terminado (RF-93, RF-94), y los disparadores de inmutabilidad
+    rehechos para admitir la marca de caducado. Las obras que ya existian se
+    dan por auditadas hasta su ultimo capitulo cerrado, para que reanudarlas
+    no repita una auditoria que ya corrio.
+    """
+    sentencias = [
+        "ALTER TABLE control_de_ejecucion ADD COLUMN auditada_hasta INT NOT NULL DEFAULT 0",
+        "UPDATE control_de_ejecucion SET auditada_hasta = COALESCE(("
+        "SELECT MAX(c.capitulo) FROM artefacto_capitulo AS c "
+        "WHERE c.id_obra = control_de_ejecucion.id_obra AND c.estado = 'cerrado' "
+        "AND c.caducado_en IS NULL), 0)",
+    ]
+    for tabla in TABLAS:
+        if tabla.inmutable or tabla.tipo == "Borrador":
+            sentencias += _disparadores_que_admiten_la_marca(tabla)
+        # Descartar desde un capitulo busca por obra y capitulo en toda tabla que
+        # tenga capitulo: ninguna puede quedarse recorriendose entera.
+        if "capitulo" in tabla.consulta and not any(
+            indice[:2] == ("id_obra", "capitulo") for indice in tabla.indices
+        ):
+            nombre = nombre_de_tabla(tabla.tipo)
+            sentencias.append(
+                f"CREATE INDEX indice_{nombre}_por_capitulo ON {nombre} (id_obra, capitulo)"
+            )
+    return sentencias
+
+
 assert {t.tipo for t in TABLAS} == set(
     TIPOS_DE_LA_CAPA_OBRA + TIPOS_DE_LA_CAPA_MUNDO + TIPOS_DE_LA_CAPA_PRODUCCION
 ), "El esquema y el censo de tipos de artefacto no dicen lo mismo"

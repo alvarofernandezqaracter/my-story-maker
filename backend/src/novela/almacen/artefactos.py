@@ -15,7 +15,7 @@ import json
 import sqlite3
 import threading
 import uuid
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -467,13 +467,7 @@ class Almacen:
     def materializar_estado(self, id_obra: str, capitulo: int, cuerpo: dict[str, Any]) -> None:
         """Guarda el estado en N como cache descartable, no como almacen."""
         with self._turno_de_escritura, escritura(self._escritor) as conexion:
-            conexion.execute(
-                "INSERT INTO cache_estado_materializado "
-                "(id_obra, capitulo, cuerpo, calculado_en) VALUES (?, ?, ?, ?) "
-                "ON CONFLICT (id_obra, capitulo) DO UPDATE SET "
-                "cuerpo = excluded.cuerpo, calculado_en = excluded.calculado_en",
-                (id_obra, capitulo, json.dumps(cuerpo, ensure_ascii=False), ahora()),
-            )
+            _materializar(conexion, id_obra, capitulo, cuerpo)
 
     def estado_en(self, id_obra: str, capitulo: int) -> dict[str, Any] | None:
         fila = self._lector.execute(
@@ -505,23 +499,136 @@ class Almacen:
         es justamente la anotacion con la que el capitulo se cierra marcado
         (RF-33), asi que sobrevive al cierre.
         """
+        with self._turno_de_escritura, escritura(self._escritor) as conexion:
+            return _caducar_memoria(conexion, id_obra, capitulo)
+
+    # --- Punto de guardado (SPEC1 4.10) -----------------------------------
+
+    def cerrar_capitulo(
+        self,
+        id_obra: str,
+        capitulo: int,
+        lotes: Sequence[Sequence[Artefacto]],
+        estado_en_n: dict[str, Any] | None,
+        al_rechazar: Callable[[int, ArtefactoRechazado], Artefacto],
+    ) -> list[int]:
+        """El punto de guardado: cerrar el capitulo N en una sola transaccion.
+
+        Entran a la vez lo que devolvieron `plegar` y `destilar`, el estado en N,
+        la marca `cerrado` y la retirada de la memoria de capitulo (RF-90).
+        Antes del commit no existe nada del cierre; despues existe entero. Un
+        lote malformado se deshace solo y en su lugar entra lo que `al_rechazar`
+        devuelva, que es la `Critica` de RF-23. Devuelve los lotes rechazados.
+        """
+        with self._turno_de_escritura, escritura(self._escritor) as conexion:
+            rechazados = self._insertar_lotes(conexion, lotes, al_rechazar)
+            if estado_en_n is not None:
+                _materializar(conexion, id_obra, capitulo, estado_en_n)
+            conexion.execute(
+                "UPDATE artefacto_capitulo SET estado = 'cerrado' "
+                "WHERE id_obra = ? AND capitulo = ? AND caducado_en IS NULL",
+                (id_obra, capitulo),
+            )
+            _caducar_memoria(conexion, id_obra, capitulo)
+        return rechazados
+
+    def guardar_auditoria(
+        self,
+        id_obra: str,
+        hasta: int,
+        lotes: Sequence[Sequence[Artefacto]],
+        al_rechazar: Callable[[int, ArtefactoRechazado], Artefacto],
+    ) -> list[int]:
+        """Las criticas de `auditar` y la constancia de hasta donde se audito,
+        juntas o ninguna (RF-94)."""
+        with self._turno_de_escritura, escritura(self._escritor) as conexion:
+            rechazados = self._insertar_lotes(conexion, lotes, al_rechazar)
+            conexion.execute(
+                "UPDATE control_de_ejecucion SET auditada_hasta = MAX(auditada_hasta, ?), "
+                "actualizado_en = ? WHERE id_obra = ?",
+                (hasta, ahora(), id_obra),
+            )
+        return rechazados
+
+    def _insertar_lotes(
+        self,
+        conexion: sqlite3.Connection,
+        lotes: Sequence[Sequence[Artefacto]],
+        al_rechazar: Callable[[int, ArtefactoRechazado], Artefacto],
+    ) -> list[int]:
+        """Cada lote es lo que devolvio una tarea: entra entero o no entra."""
+        rechazados: list[int] = []
+        for numero, lote in enumerate(lotes):
+            conexion.execute("SAVEPOINT lote")
+            try:
+                for artefacto in lote:
+                    self._insertar(conexion, artefacto)
+            except ArtefactoRechazado as rechazo:
+                conexion.execute("ROLLBACK TO lote")
+                conexion.execute("RELEASE lote")
+                self._insertar(conexion, al_rechazar(numero, rechazo))
+                rechazados.append(numero)
+                continue
+            conexion.execute("RELEASE lote")
+        return rechazados
+
+    def auditada_hasta(self, id_obra: str) -> int:
+        """Hasta que capitulo consta auditada la obra. Cero si nunca."""
+        fila = self._lector.execute(
+            "SELECT auditada_hasta FROM control_de_ejecucion WHERE id_obra = ?", (id_obra,)
+        ).fetchone()
+        return int(fila["auditada_hasta"]) if fila else 0
+
+    def ultimo_capitulo_cerrado(self, id_obra: str) -> int:
+        """El ultimo punto de guardado de la obra. Cero si no hay ninguno."""
+        fila = self._lector.execute(
+            "SELECT COALESCE(MAX(capitulo), 0) AS ultimo FROM artefacto_capitulo "
+            "WHERE id_obra = ? AND estado = 'cerrado' AND caducado_en IS NULL",
+            (id_obra,),
+        ).fetchone()
+        return int(fila["ultimo"])
+
+    def descartar_desde(self, id_obra: str, capitulo: int) -> int:
+        """Descarta todo lo que cuelga del capitulo N en adelante (RF-91).
+
+        Es lo que queda a medias al volver al punto de guardado: se caduca, no se
+        borra (RD-07), incluidos los inmutables, a los que se les admite la marca
+        y solo la marca (D-32). La `Traza` no se toca: es el registro de lo que
+        paso, tambien de lo que se tiro. El estado materializado es cache y se
+        descarta de verdad.
+        """
         marca = ahora()
         caducados = 0
         with self._turno_de_escritura, escritura(self._escritor) as conexion:
             for tabla in esquema.TABLAS:
-                if "capitulo" not in tabla.consulta:
+                if "capitulo" not in tabla.consulta or tabla.tipo == "Traza":
                     continue
-                sigue_abierta = (
-                    "AND estado IS NOT 'abierta'" if "estado" in tabla.consulta else ""
-                )
                 cursor = conexion.execute(
                     f"UPDATE {nombre_de_tabla(tabla.tipo)} SET caducado_en = ? "
-                    "WHERE id_obra = ? AND capitulo = ? AND memoria = 'capitulo' "
-                    f"AND caducado_en IS NULL {sigue_abierta}",
+                    "WHERE id_obra = ? AND capitulo >= ? AND caducado_en IS NULL",
                     (marca, id_obra, capitulo),
                 )
                 caducados += cursor.rowcount
+            conexion.execute(
+                "DELETE FROM cache_estado_materializado WHERE id_obra = ? AND capitulo >= ?",
+                (id_obra, capitulo),
+            )
         return caducados
+
+    def cerrar_trazas_interrumpidas(self, id_obra: str) -> int:
+        """Una traza que sigue abierta al reanudar es de una tarea que corto una
+        caida: no fallo, se interrumpio, y no cuenta como intento (RF-98)."""
+        interrumpidas = self.trazas_abiertas(id_obra)
+        for traza in interrumpidas:
+            self.cerrar_traza(
+                traza.id,
+                salida="interrumpida",
+                tokens_de_entrada_medidos=None,
+                tokens_de_salida=None,
+                coste=None,
+                latencia_ms=0,
+            )
+        return len(interrumpidas)
 
     # --- Traza -------------------------------------------------------------
 
@@ -646,6 +753,35 @@ class Almacen:
             "SELECT detenida FROM control_de_ejecucion WHERE id_obra = ?", (id_obra,)
         ).fetchone()
         return bool(fila and fila["detenida"])
+
+
+def _materializar(
+    conexion: sqlite3.Connection, id_obra: str, capitulo: int, cuerpo: dict[str, Any]
+) -> None:
+    conexion.execute(
+        "INSERT INTO cache_estado_materializado "
+        "(id_obra, capitulo, cuerpo, calculado_en) VALUES (?, ?, ?, ?) "
+        "ON CONFLICT (id_obra, capitulo) DO UPDATE SET "
+        "cuerpo = excluded.cuerpo, calculado_en = excluded.calculado_en",
+        (id_obra, capitulo, json.dumps(cuerpo, ensure_ascii=False), ahora()),
+    )
+
+
+def _caducar_memoria(conexion: sqlite3.Connection, id_obra: str, capitulo: int) -> int:
+    marca = ahora()
+    caducados = 0
+    for tabla in esquema.TABLAS:
+        if "capitulo" not in tabla.consulta:
+            continue
+        sigue_abierta = "AND estado IS NOT 'abierta'" if "estado" in tabla.consulta else ""
+        cursor = conexion.execute(
+            f"UPDATE {nombre_de_tabla(tabla.tipo)} SET caducado_en = ? "
+            "WHERE id_obra = ? AND capitulo = ? AND memoria = 'capitulo' "
+            f"AND caducado_en IS NULL {sigue_abierta}",
+            (marca, id_obra, capitulo),
+        )
+        caducados += cursor.rowcount
+    return caducados
 
 
 def abrir_almacen(ruta: Path | str) -> Almacen:

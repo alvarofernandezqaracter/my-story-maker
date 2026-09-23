@@ -101,7 +101,8 @@ TOPE_DE_REGENERACIONES_POR_ESCENA: int = 2
 # Las tareas las ejecutan subagentes de Claude Code (D-08). El backend no llama
 # a ninguna API de modelo ni gestiona claves.
 MODELO_DE_LOS_SUBAGENTES: str = "claude-haiku-4-5-20251001"
-TOPE_DE_REINTENTOS_POR_TAREA: int = 2
+# Cuantas veces se intenta cada tarea y que pasa al agotarse no esta aqui: lo
+# declara cada paso en `nucleo/guion.toml`, junto al paso que gobierna (D-34).
 ESPERA_MAXIMA_POR_TAREA_EN_SEGUNDOS: int = 900
 
 # --- Cadencia del guion ----------------------------------------------------

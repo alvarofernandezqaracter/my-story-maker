@@ -8,6 +8,12 @@ las criticas, que es un valor cerrado.
 
 El testigo se pasa siempre por artefacto escrito en el almacen: ningun rol
 invoca a otro ni recibe objetos en memoria.
+
+El unico punto de guardado es el capitulo cerrado (SPEC1 4.10). Caminar una
+obra empieza siempre volviendo a el, sea el arranque, un `reanudar` o un
+relanzamiento tras una caida: lo que quedo a medias se descarta y el capitulo
+siguiente empieza en el paso 1. Cuantas veces se intenta cada tarea y que pasa
+al agotarse lo declara su paso en el guion; aqui solo se lee.
 """
 
 from collections.abc import Sequence
@@ -17,7 +23,6 @@ from typing import Any, Protocol
 from novela.ajustes import (
     CADA_CUANTOS_CAPITULOS_SE_AUDITA,
     TOPE_DE_REGENERACIONES_POR_ESCENA,
-    TOPE_DE_REINTENTOS_POR_TAREA,
     TOPE_DE_REVISIONES_POR_BORRADOR,
 )
 from novela.almacen import Almacen, Artefacto, ArtefactoRechazado
@@ -28,7 +33,14 @@ from novela.nucleo.proyecciones import Ventana, ensamblar
 
 
 class ProduccionDetenida(Exception):
-    """El editor ha dado la orden de detener, o una tarea agoto sus intentos."""
+    """El editor ha dado la orden de detener, o una tarea cuyo paso declara
+    `detener_obra` agoto sus intentos."""
+
+
+# Lo que una tarea devolvio y todavia no se ha escrito: el encargo y sus
+# artefactos. Es lo que esperan el cierre del capitulo y la auditoria para
+# escribirse de una vez, en su punto de guardado.
+Aplazados = list[tuple[Encargo, list[Artefacto]]]
 
 
 @dataclass
@@ -70,6 +82,8 @@ class IndiceDeLaObra(Protocol):
     def indexar_prosa_aceptada(self, id_obra: str, capitulo: int) -> int: ...
 
     def indexar_estructura(self, id_obra: str, capitulo: int) -> int: ...
+
+    def retirar_desde(self, id_obra: str, capitulo: int) -> int: ...
 
 
 class Catalogo(Protocol):
@@ -125,35 +139,75 @@ class Caminante:
         """Del alta al ultimo capitulo cerrado, sin que nadie toque nada.
 
         Detener es una orden normal del editor, no una averia: la produccion se
-        para donde este y lo aceptado se queda escrito.
+        para donde este y lo cerrado se queda escrito. Arrancar, reanudar y
+        relanzar tras una caida son este mismo camino: no hay dos formas de
+        reanudar que puedan divergir (D-33).
         """
         informes: list[Informe] = []
         try:
+            self.volver_al_punto_de_guardado(id_obra)
             if not self.almacen.listar("Personaje", id_obra):
                 self._fuera_del_guion("poblar_mundo", id_obra)
             for numero in range(1, capitulos + 1):
-                if self._ya_cerrado(id_obra, numero):
-                    continue
-                informes.append(self.caminar_capitulo(id_obra, numero))
-                if CADA_CUANTOS_CAPITULOS_SE_AUDITA and (
-                    numero % CADA_CUANTOS_CAPITULOS_SE_AUDITA == 0
-                ):
-                    self._fuera_del_guion("auditar", id_obra, capitulo=numero)
-            self._fuera_del_guion("auditar", id_obra, capitulo=capitulos)
+                if not self._ya_cerrado(id_obra, numero):
+                    informes.append(self.caminar_capitulo(id_obra, numero))
+                self._auditar_si_toca(id_obra, numero, capitulos)
         except ProduccionDetenida:
             return informes
         return informes
 
+    def volver_al_punto_de_guardado(self, id_obra: str) -> int:
+        """Deja la obra tal como quedo al cerrar su ultimo capitulo (RF-91).
+
+        Las trazas que siguen abiertas son de tareas que corto una caida y se
+        cierran como interrumpidas. Todo lo del capitulo que estaba abierto se
+        caduca y sale del indice, y lo que el ultimo cerrado no llego a indexar
+        se indexa ahora. Devuelve el ultimo capitulo cerrado.
+        """
+        self.almacen.cerrar_trazas_interrumpidas(id_obra)
+        ultimo = self.almacen.ultimo_capitulo_cerrado(id_obra)
+        self.almacen.descartar_desde(id_obra, ultimo + 1)
+        if self.indice is not None:
+            self.indice.retirar_desde(id_obra, ultimo + 1)
+            if ultimo:
+                self.indice.indexar_fuentes(id_obra, ultimo)
+                self.indice.indexar_prosa_aceptada(id_obra, ultimo)
+                self.indice.indexar_estructura(id_obra, ultimo)
+        return ultimo
+
     def _ya_cerrado(self, id_obra: str, numero: int) -> bool:
-        """Reanudar retoma el paso siguiente al ultimo cerrado y no repite lo
-        que ya se acepto."""
+        """Lo cerrado no se repite: es el punto de guardado."""
         return any(
             capitulo.estado == "cerrado"
             for capitulo in self.almacen.listar("Capitulo", id_obra, capitulo=numero)
         )
 
+    def _auditar_si_toca(self, id_obra: str, numero: int, capitulos: int) -> None:
+        """`auditar` entra cada N capitulos y al cierre, con su propio punto de
+        guardado: sus criticas y la constancia de hasta donde se audito se
+        escriben juntas (RF-94). Si la de cadencia cae en el ultimo capitulo, es
+        la de cierre y corre una sola vez."""
+        toca = numero == capitulos or bool(
+            CADA_CUANTOS_CAPITULOS_SE_AUDITA and numero % CADA_CUANTOS_CAPITULOS_SE_AUDITA == 0
+        )
+        if not toca or self.almacen.auditada_hasta(id_obra) >= numero:
+            return
+        aplazados: Aplazados = []
+        self._fuera_del_guion("auditar", id_obra, capitulo=numero, aplazados=aplazados)
+        self.almacen.guardar_auditoria(
+            id_obra,
+            numero,
+            [artefactos for _, artefactos in aplazados],
+            lambda lote, rechazo: self._critica_de_malformado(aplazados[lote][0], rechazo),
+        )
+
     def _fuera_del_guion(
-        self, nombre: str, id_obra: str, *, capitulo: int | None = None
+        self,
+        nombre: str,
+        id_obra: str,
+        *,
+        capitulo: int | None = None,
+        aplazados: Aplazados | None = None,
     ) -> list[Resultado]:
         """`poblar_mundo` y `auditar` no tienen la cadencia del capitulo y van
         siempre solas."""
@@ -169,12 +223,14 @@ class Caminante:
                     id_obra=id_obra,
                     capitulo=capitulo,
                     dimension=contrato.dimension,
+                    reintentos=paso.reintentos,
+                    al_agotarse=paso.al_agotarse,
                 )
                 for contrato in guion.CRIBAS[paso.criba]
             ]
         else:
             encargos = guion.expandir(paso, id_obra=id_obra, capitulo=capitulo)
-        return self._mandar_en_tandas(encargos)
+        return self._mandar_en_tandas(encargos, aplazados=aplazados)
 
     # --- Un capitulo -------------------------------------------------------
 
@@ -287,15 +343,36 @@ class Caminante:
         self._transitar(informe, id_obra, "aceptado")
 
         # Pasos 9 y 10: plegar y destilar. Cerrar es publicar los hechos y
-        # olvidar el andamio.
-        self._plegar_capitulo(id_obra, numero, informe)
+        # olvidar el andamio, y es el punto de guardado: lo que devuelven las
+        # dos tareas espera a que terminen ambas y entra de una vez, con la
+        # marca `cerrado` y la retirada de la memoria de capitulo (RF-90).
+        cerrado = ciclo.transitar(informe.estado, "cerrado")
+        aplazados: Aplazados = []
+        estado_en_n: dict[str, Any] | None = None
+        for resultado in self._mandar_en_tandas(
+            guion.expandir(guion.paso(9), id_obra=id_obra, capitulo=numero),
+            informe,
+            aplazados=aplazados,
+        ):
+            if resultado.estado_en_n is not None:
+                estado_en_n = resultado.estado_en_n
         self._mandar_en_tandas(
-            guion.expandir(guion.paso(10), id_obra=id_obra, capitulo=numero), informe
+            guion.expandir(guion.paso(10), id_obra=id_obra, capitulo=numero),
+            informe,
+            aplazados=aplazados,
         )
+        self.almacen.cerrar_capitulo(
+            id_obra,
+            numero,
+            [artefactos for _, artefactos in aplazados],
+            estado_en_n,
+            lambda lote, rechazo: self._critica_de_malformado(aplazados[lote][0], rechazo),
+        )
+        informe.estado = cerrado
+        # El indice es derivado: si una caida lo deja a medias, volver al punto
+        # de guardado lo completa.
         if self.indice is not None:
             self.indice.indexar_estructura(id_obra, numero)
-        self._transitar(informe, id_obra, "cerrado")
-        self.almacen.caducar_memoria_de_capitulo(id_obra, numero)
         return informe
 
     def _transitar(self, informe: Informe, id_obra: str, hasta: str) -> None:
@@ -373,8 +450,14 @@ class Caminante:
     # --- Mandar encargos ---------------------------------------------------
 
     def _mandar_en_tandas(
-        self, encargos: Sequence[Encargo], informe: Informe | None = None
+        self,
+        encargos: Sequence[Encargo],
+        informe: Informe | None = None,
+        *,
+        aplazados: Aplazados | None = None,
     ) -> list[Resultado]:
+        """Manda los encargos en tandas. Con `aplazados`, lo que devuelvan no se
+        escribe: se deja ahi para que su punto de guardado lo escriba de una vez."""
         resultados: list[Resultado] = []
         for tanda in presupuesto.repartir_en_tandas(encargos):
             self._tanda += 1
@@ -390,11 +473,16 @@ class Caminante:
                             dimension=encargo.dimension,
                         )
                     )
-                resultados.append(self._mandar(encargo))
+                resultados.append(self._mandar(encargo, aplazados))
         return resultados
 
-    def _mandar(self, encargo: Encargo) -> Resultado:
-        """Ensambla, coteja, manda y guarda lo que vuelva."""
+    def _mandar(self, encargo: Encargo, aplazados: Aplazados | None = None) -> Resultado:
+        """Ensambla, coteja, manda y guarda lo que vuelva.
+
+        Se intenta tantas veces como declara el paso. Falla un intento cuando el
+        ejecutor devuelve un error o no contesta a tiempo; un artefacto
+        malformado no es un intento fallido, es la `Critica` de RF-23 (RF-98).
+        """
         self._parar_si_detenida(encargo.id_obra)
         contrato = None
         proyeccion_del_contrato: tuple[str, ...] = ()
@@ -412,10 +500,11 @@ class Caminante:
             proyeccion_del_contrato=proyeccion_del_contrato,
         )
         if not presupuesto.cabe_en_la_ventana(encargo.tope_de_ventana, ventana.tokens):
-            return self._partir_y_mandar(encargo, ventana)
+            return self._partir_y_mandar(encargo, ventana, aplazados)
 
         ultimo_error: Exception | None = None
-        for intento in range(1, TOPE_DE_REINTENTOS_POR_TAREA + 1):
+        id_traza = ""
+        for intento in range(1, encargo.reintentos + 1):
             id_traza = self.almacen.abrir_traza(
                 encargo.id_obra,
                 rol=encargo.rol,
@@ -432,7 +521,12 @@ class Caminante:
             )
             try:
                 resultado = self.ejecutor.ejecutar(encargo, ventana)
-                self._guardar(encargo, resultado, id_traza, intento)
+                if aplazados is None:
+                    self._guardar(encargo, resultado, id_traza, intento)
+                else:
+                    self._preparar(encargo, resultado, id_traza, intento)
+                    if resultado.artefactos:
+                        aplazados.append((encargo, resultado.artefactos))
             except Exception as error:  # noqa: BLE001
                 ultimo_error = error
                 self.almacen.cerrar_traza(
@@ -454,12 +548,37 @@ class Caminante:
             )
             return resultado
 
-        self.almacen.detener(encargo.id_obra, f"{encargo.tarea}: {ultimo_error}")
-        raise ProduccionDetenida(
-            f"la tarea {encargo.tarea!r} agoto sus intentos: {ultimo_error}"
-        )
+        return self._agotado(encargo, id_traza, ultimo_error, aplazados)
 
-    def _partir_y_mandar(self, encargo: Encargo, ventana: Ventana) -> Resultado:
+    def _agotado(
+        self,
+        encargo: Encargo,
+        id_traza: str,
+        error: Exception | None,
+        aplazados: Aplazados | None,
+    ) -> Resultado:
+        """Lo que pasa cuando se agotan los intentos lo dice el paso, no se
+        improvisa aqui (RF-96)."""
+        motivo = f"{encargo.tarea}: {error}"
+        if encargo.al_agotarse == "seguir":
+            # La constancia del intento ya esta en la `Traza`, como la busqueda
+            # infructuosa de RF-69: la produccion sigue.
+            return Resultado(salida=f"agotado, se sigue: {motivo}")
+        if encargo.al_agotarse == "critica_abierta":
+            critica = self._critica_no_comprobado(encargo, id_traza, error)
+            if aplazados is None:
+                self.almacen.guardar_critica(critica)
+            else:
+                aplazados.append((encargo, [critica]))
+            return Resultado(salida=f"no comprobado: {motivo}")
+        self.almacen.detener(
+            encargo.id_obra, f"{motivo} (intento {encargo.reintentos}, traza {id_traza})"
+        )
+        raise ProduccionDetenida(f"la tarea {encargo.tarea!r} agoto sus intentos: {error}")
+
+    def _partir_y_mandar(
+        self, encargo: Encargo, ventana: Ventana, aplazados: Aplazados | None = None
+    ) -> Resultado:
         """Si la proyeccion no cabe, se parte la unidad. Nunca se recorta."""
         siguiente = presupuesto.partir_unidad(encargo.unidad)
         if siguiente == "escena":
@@ -482,16 +601,17 @@ class Caminante:
             raise presupuesto.NoCabeNiPartiendo(
                 f"la ventana de {encargo.tarea} no cabe y no hay en que partirla"
             )
-        partes = [self._mandar(trozo) for trozo in trozos]
+        partes = [self._mandar(trozo, aplazados) for trozo in trozos]
         return Resultado(
             artefactos=[a for parte in partes for a in parte.artefactos],
             salida="\n".join(parte.salida for parte in partes),
         )
 
-    def _guardar(
+    def _preparar(
         self, encargo: Encargo, resultado: Resultado, id_traza: str, intento: int
     ) -> None:
-        """Guarda lo producido, con los permisos impuestos aqui y no en el prompt."""
+        """Los permisos se imponen aqui y no en el prompt, y la procedencia la
+        pone el backend."""
         for artefacto in resultado.artefactos:
             comprobar_escritura(encargo.rol, artefacto.tipo)
             artefacto.id_obra = artefacto.id_obra or encargo.id_obra
@@ -500,6 +620,12 @@ class Caminante:
             artefacto.procedencia_intento = intento
             if artefacto.capitulo is None:
                 artefacto.capitulo = encargo.capitulo
+
+    def _guardar(
+        self, encargo: Encargo, resultado: Resultado, id_traza: str, intento: int
+    ) -> None:
+        """Guarda lo producido, con los permisos impuestos aqui y no en el prompt."""
+        self._preparar(encargo, resultado, id_traza, intento)
         if not resultado.artefactos:
             return
         try:
@@ -508,27 +634,53 @@ class Caminante:
             # Campo obligatorio ausente o valor fuera de vocabulario: el
             # rechazo es una `Critica` bloqueante cuyo objeto es el artefacto,
             # no el texto, y no llega al Revisor como si fuera prosa mala.
-            self._critica_por_artefacto_malformado(encargo, rechazo)
+            self.almacen.guardar_critica(self._critica_de_malformado(encargo, rechazo))
 
-    def _critica_por_artefacto_malformado(
-        self, encargo: Encargo, rechazo: ArtefactoRechazado
-    ) -> None:
+    @staticmethod
+    def _critica_de_malformado(encargo: Encargo, rechazo: ArtefactoRechazado) -> Artefacto:
         """La escribe el backend, no un rol: ningun agente valida su salida."""
-        self.almacen.guardar_critica(
-            Artefacto(
-                tipo="Critica",
-                cuerpo={
-                    "objeto": encargo.escena or f"capitulo {encargo.capitulo}",
-                    "evidencia": str(rechazo),
-                    "accion_sugerida": "volver a escribir el artefacto con su esquema",
-                    "detectada_por": {"rol": None, "tarea": encargo.tarea},
-                },
-                id_obra=encargo.id_obra,
-                capitulo=encargo.capitulo,
-                escena=encargo.escena,
-                severidad="bloqueante",
-                estado="abierta",
-            )
+        return Artefacto(
+            tipo="Critica",
+            cuerpo={
+                "objeto": encargo.escena or f"capitulo {encargo.capitulo}",
+                "evidencia": str(rechazo),
+                "accion_sugerida": "volver a escribir el artefacto con su esquema",
+                "detectada_por": {"rol": None, "tarea": encargo.tarea},
+            },
+            id_obra=encargo.id_obra,
+            capitulo=encargo.capitulo,
+            escena=encargo.escena,
+            severidad="bloqueante",
+            estado="abierta",
+        )
+
+    @staticmethod
+    def _critica_no_comprobado(
+        encargo: Encargo, id_traza: str, error: Exception | None
+    ) -> Artefacto:
+        """Una comprobacion que agoto sus intentos no se da por buena (RF-99).
+
+        La escribe el backend, como la de un artefacto malformado. No se enruta:
+        no regenera ni manda a revision. Se queda abierta y el capitulo se cierra
+        marcado, que es como el Arquitecto de arcos la ve.
+        """
+        return Artefacto(
+            tipo="Critica",
+            cuerpo={
+                "objeto": encargo.escena or f"capitulo {encargo.capitulo}",
+                "evidencia": (
+                    f"no comprobado: traza {id_traza}, intento {encargo.reintentos} "
+                    f"de {encargo.reintentos}: {error}"
+                ),
+                "accion_sugerida": "volver a comprobar la dimension en la siguiente auditoria",
+                "detectada_por": {"rol": None, "tarea": encargo.tarea},
+            },
+            id_obra=encargo.id_obra,
+            capitulo=encargo.capitulo,
+            escena=encargo.escena,
+            dimension=encargo.dimension,
+            severidad="bloqueante",
+            estado="abierta",
         )
 
     # --- Apoyos ------------------------------------------------------------
@@ -555,8 +707,9 @@ class Caminante:
             raise ProduccionDetenida("la produccion esta detenida por orden del editor")
 
 
+# Los topes de vueltas del bucle. Los de reintentos no estan aqui: cada paso del
+# guion declara el suyo junto a lo que pasa al agotarse (RF-95).
 TOPES = {
     "regeneraciones_por_escena": TOPE_DE_REGENERACIONES_POR_ESCENA,
     "revisiones_por_borrador": TOPE_DE_REVISIONES_POR_BORRADOR,
-    "reintentos_por_tarea": TOPE_DE_REINTENTOS_POR_TAREA,
 }

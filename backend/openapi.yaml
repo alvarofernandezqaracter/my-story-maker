@@ -411,7 +411,7 @@ paths:
   /obras/{id_obra}/reanudar:
     post:
       summary: Reanudar
-      description: Retoma el paso siguiente al ultimo cerrado; no repite lo aceptado.
+      description: Vuelve al ultimo capitulo cerrado; no repite nada de lo cerrado.
       operationId: reanudar_obras__id_obra__reanudar_post
       parameters:
       - name: id_obra
