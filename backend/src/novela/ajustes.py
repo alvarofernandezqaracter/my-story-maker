@@ -32,10 +32,13 @@ MARGEN_DEL_TECHO: float = 0.20
 
 # Lo que cada subagente de Claude Code arrastra de entrada antes de que entre
 # nada nuestro: su propio sistema y sus definiciones de herramienta. Medido en
-# esta maquina con todas las herramientas quitadas y con nuestro propio system
-# prompt: 10 256 tokens. Se redondea al alza y **cuenta contra el techo**, que
-# es de entrada concurrente y no distingue de quien es cada token.
-COSTE_FIJO_DEL_SUBAGENTE_EN_TOKENS: int = 10_500
+# esta maquina con el subagente aislado del repositorio (SPEC1 RF-100), con
+# nuestro propio system prompt y las dos herramientas del Documentalista, que es
+# el rol mas equipado: 3 191 tokens; sin herramientas, 1 548. Se redondea al
+# alza al medio millar y **cuenta contra el techo**, que es de entrada
+# concurrente y no distingue de quien es cada token. Cambiar de version del CLI
+# obliga a volver a medirlo (RF-101).
+COSTE_FIJO_DEL_SUBAGENTE_EN_TOKENS: int = 3_500
 
 # Con que se cuentan los tokens antes de enviar sigue abierto (SPEC1 12). La
 # cuenta previa es una estimacion por caracteres, calibrada contra la medida

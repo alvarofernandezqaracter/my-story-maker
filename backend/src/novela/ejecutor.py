@@ -16,11 +16,18 @@ Redactor.
 
 Toda tarea arranca en frio: no se reanuda ninguna sesion ni se guarda ninguna,
 asi que entre dos tareas no viaja nada mas que un artefacto en el almacen.
+
+**Tampoco arranca con el contexto del sitio desde el que se la lanza.** Cada
+subagente corre en un directorio vacio, propio de su tarea y fuera del
+repositorio, que se borra al terminar (SPEC1 RF-100, D-35). Lanzado desde el
+repositorio, Claude Code descubre su `CLAUDE.md` y con el `AGENTS.md` entero: el
+ciclo de edicion acabaria en la ventana del Redactor.
 """
 
 import json
 import shutil
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -76,21 +83,24 @@ class EjecutorDeSubagentes:
 
     catalogo: CatalogoDeTareas | None = None
     modelo: str = MODELO_DE_LOS_SUBAGENTES
-    directorio: str | None = None
     ordenes_dadas: list[list[str]] = field(default_factory=list)
 
     def ejecutar(self, encargo: Encargo, ventana: Ventana) -> Resultado:
         orden = self._orden(encargo, ventana)
         self.ordenes_dadas.append(orden)
         empezo = time.monotonic()
-        terminado = subprocess.run(
-            orden,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=ESPERA_MAXIMA_POR_TAREA_EN_SEGUNDOS,
-            cwd=self.directorio,
-        )
+        # Nace vacio y muere vacio: no guarda nada de lo que el sistema produce.
+        with tempfile.TemporaryDirectory(
+            prefix="novela-tarea-", ignore_cleanup_errors=True
+        ) as neutro:
+            terminado = subprocess.run(
+                orden,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=ESPERA_MAXIMA_POR_TAREA_EN_SEGUNDOS,
+                cwd=neutro,
+            )
         latencia_ms = int((time.monotonic() - empezo) * 1000)
         if terminado.returncode != 0:
             raise SubagenteFallo(
@@ -120,6 +130,8 @@ class EjecutorDeSubagentes:
             ",".join(herramientas),
             # En frio: ni se reanuda una sesion ni se guarda ninguna.
             "--no-session-persistence",
+            # Ningun servidor MCP, tampoco el de navegador del desarrollo: sin
+            # `--mcp-config`, la lista estricta es la vacia (RF-102).
             "--strict-mcp-config",
         ]
 
