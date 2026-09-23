@@ -43,6 +43,7 @@ class Resultado:
     latencia_ms: int = 0
     constancia: dict[str, Any] | None = None
     recuperaciones: list[dict[str, Any]] = field(default_factory=list)
+    estado_en_n: dict[str, Any] | None = None
 
 
 class Ejecutor(Protocol):
@@ -168,24 +169,25 @@ class Caminante:
         revisiones: dict[str, int] = dict.fromkeys(escenas, 0)
 
         # Paso 4: criba de bloqueantes. Una bloqueante regenera la escena.
-        pendientes = set(escenas)
+        pendientes = escenas
         while pendientes:
-            enrutado = self._criba(id_obra, numero, tuple(sorted(pendientes)), 4, informe)
+            enrutado = self._criba(id_obra, numero, pendientes, 4, informe)
             informe.descartadas_sin_evidencia += len(enrutado.descartadas_sin_evidencia)
             afectadas = {c.escena for c in enrutado.regenerar_escena if c.escena}
-            a_regenerar = {
-                escena
-                for escena in afectadas
-                if calidad.queda_regeneracion(regeneraciones[escena])
-            }
+            a_regenerar = self._en_orden(
+                escenas,
+                {e for e in afectadas if calidad.queda_regeneracion(regeneraciones[e])},
+            )
             if not a_regenerar:
                 break
             for escena in a_regenerar:
                 regeneraciones[escena] += 1
             self._mandar_en_tandas(
                 guion.expandir(
-                    guion.paso(3), id_obra=id_obra, capitulo=numero,
-                    escenas=tuple(sorted(a_regenerar)),
+                    guion.paso(3),
+                    id_obra=id_obra,
+                    capitulo=numero,
+                    escenas=a_regenerar,
                 ),
                 informe,
             )
@@ -196,14 +198,13 @@ class Caminante:
         for _ in range(TOPE_DE_REVISIONES_POR_BORRADOR + 1):
             enrutado = self._criba(id_obra, numero, escenas, 6, informe)
             informe.descartadas_sin_evidencia += len(enrutado.descartadas_sin_evidencia)
-            con_mayores = tuple(
-                sorted(
-                    {
-                        c.escena
-                        for c in enrutado.revision_dirigida
-                        if c.escena and calidad.queda_revision(revisiones[c.escena])
-                    }
-                )
+            con_mayores = self._en_orden(
+                escenas,
+                {
+                    c.escena
+                    for c in enrutado.revision_dirigida
+                    if c.escena and calidad.queda_revision(revisiones[c.escena])
+                },
             )
             if not con_mayores:
                 break
@@ -232,15 +233,29 @@ class Caminante:
         abiertas = self.almacen.listar_criticas_abiertas(id_obra)
         informe.criticas_abiertas = len(abiertas)
         informe.marcado = any(c.severidad == "bloqueante" for c in abiertas)
+
+        # De `Validado` a `Aceptado`: sin criticas bloqueantes, o con el tope
+        # agotado y sus criticas abiertas anotadas. Solo al aceptar la unidad
+        # se indexa su texto, nunca antes.
+        for escena in escenas:
+            vigente = self.almacen.borrador_vigente(id_obra, escena)
+            if vigente is not None and vigente.estado != "aceptado":
+                self.almacen.aceptar_borrador(vigente.id)
         informe.estado = ciclo.transitar(informe.estado, "aceptado")
 
         # Pasos 9 y 10: plegar y destilar. Cerrar es publicar los hechos y
         # olvidar el andamio.
         for numero_de_paso in (9, 10):
-            self._mandar_en_tandas(
+            resultados = self._mandar_en_tandas(
                 guion.expandir(guion.paso(numero_de_paso), id_obra=id_obra, capitulo=numero),
                 informe,
             )
+            if numero_de_paso == 9:
+                for resultado in resultados:
+                    if resultado.estado_en_n is not None:
+                        self.almacen.materializar_estado(
+                            id_obra, numero, resultado.estado_en_n
+                        )
         informe.estado = ciclo.transitar(informe.estado, "cerrado")
         self.almacen.caducar_memoria_de_capitulo(id_obra, numero)
         return informe
@@ -397,6 +412,15 @@ class Caminante:
             self.almacen.guardar(resultado.artefactos)
 
     # --- Apoyos ------------------------------------------------------------
+
+    @staticmethod
+    def _en_orden(escenas: tuple[str, ...], elegidas: set[str | None]) -> tuple[str, ...]:
+        """El orden lo pone el capitulo, nunca el `id` opaco de la escena.
+
+        Ordenar por `id` haria que dos recorridos identicos dieran secuencias
+        distintas, y el guion tiene que ser reproducible (RNF-04).
+        """
+        return tuple(escena for escena in escenas if escena in elegidas)
 
     def _escenas(self, id_obra: str, capitulo: int) -> tuple[str, ...]:
         return tuple(

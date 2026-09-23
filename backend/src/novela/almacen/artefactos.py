@@ -141,6 +141,17 @@ def _fila_a_artefacto(fila: sqlite3.Row) -> Artefacto:
     )
 
 
+def _cuantos_borradores(
+    conexion: sqlite3.Connection, id_obra: str, escena: str | None
+) -> int:
+    fila = conexion.execute(
+        "SELECT COUNT(*) AS cuantos FROM artefacto_borrador "
+        "WHERE id_obra = ? AND escena IS ?",
+        (id_obra, escena),
+    ).fetchone()
+    return int(fila["cuantos"])
+
+
 class Almacen:
     """La puerta. Se abre una vez y se pasa a quien la necesite."""
 
@@ -187,6 +198,12 @@ class Almacen:
             )
         if artefacto.tipo == "Obra":
             artefacto.id_obra = artefacto.id_obra or artefacto.id
+        if artefacto.tipo == "Borrador":
+            artefacto.estado = artefacto.estado or "redactado"
+            if artefacto.version is None:
+                artefacto.version = 1 + _cuantos_borradores(
+                    conexion, artefacto.id_obra, artefacto.escena
+                )
         if not artefacto.id_obra:
             raise ArtefactoRechazado("todo artefacto cuelga de un id_obra")
 
@@ -332,11 +349,6 @@ class Almacen:
         """Guarda un borrador candidato, con su numero de version."""
         if borrador.tipo != "Borrador":
             raise ArtefactoRechazado("guardar_borrador solo guarda borradores")
-        borrador.estado = borrador.estado or "redactado"
-        if borrador.version is None:
-            borrador.version = 1 + len(
-                self.listar("Borrador", borrador.id_obra, escena=borrador.escena)
-            )
         return self.guardar([borrador])[0]
 
     def borrador_vigente(self, id_obra: str, escena: str) -> Artefacto | None:

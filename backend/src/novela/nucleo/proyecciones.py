@@ -81,7 +81,16 @@ Constructor = Callable[[Peticion], Material]
 
 
 def _cuerpos(artefactos: list[Artefacto]) -> Filas:
-    return [artefacto.cuerpo | {"id": artefacto.id} for artefacto in artefactos]
+    """El cuerpo integro mas el envoltorio minimo para saber que se mira."""
+    filas: Filas = []
+    for artefacto in artefactos:
+        envoltorio: dict[str, Any] = {"id": artefacto.id, "tipo": artefacto.tipo}
+        if artefacto.capitulo is not None:
+            envoltorio["capitulo"] = artefacto.capitulo
+        if artefacto.escena is not None:
+            envoltorio["escena"] = artefacto.escena
+        filas.append(artefacto.cuerpo | envoltorio)
+    return filas
 
 
 def _la_escena(p: Peticion) -> Artefacto | None:
@@ -128,7 +137,7 @@ def _continuidad_local(p: Peticion) -> Filas:
 
 def _contrato_de_escena(p: Peticion) -> dict[str, Any]:
     escena = _la_escena(p)
-    return (escena.cuerpo | {"id": escena.id}) if escena else {}
+    return (escena.cuerpo | {"id": escena.id, "tipo": "Escena"}) if escena else {}
 
 
 def _voces_del_elenco(p: Peticion) -> Filas:
@@ -142,7 +151,7 @@ def _voces_del_elenco(p: Peticion) -> Filas:
             continue
         ficha = p.almacen.leer("Personaje", identificador)
         if ficha is not None:
-            fichas.append(ficha.cuerpo | {"id": ficha.id})
+            fichas.append(ficha.cuerpo | {"id": ficha.id, "tipo": "Personaje"})
     return fichas
 
 
