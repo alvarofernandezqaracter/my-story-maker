@@ -228,20 +228,3 @@ def test_replegar_desde_n_da_lo_mismo_que_plegar_el_log_entero(tmp_path: Path) -
     replegado = [almacen.estado_en(id_obra, n) for n in (1, 2, 3)]
     assert replegado == de_una_pasada
     almacen.cerrar()
-
-
-# --- Los casos sembrados, que fijan la linea base --------------------------
-
-
-@pytest.mark.gasta
-def test_linea_base_de_deteccion_por_dimension(tmp_path: Path) -> None:
-    """Un texto con un defecto conocido de una sola dimension por caso, y los
-    mismos casos con esa dimension intacta para contar falsos positivos.
-
-    La primera medida **fija la linea base, no exige umbral**. Lo que esta
-    prueba deja es la tabla, no un aprobado.
-    """
-    pytest.skip(
-        "Los casos sembrados se preparan en la etapa 8, con la obra de tres "
-        "capitulos: antes no hay texto real sobre el que sembrar."
-    )
