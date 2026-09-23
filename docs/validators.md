@@ -230,7 +230,9 @@ manda.
 | Qué se prueba | Cómo |
 | --- | --- |
 | El guion, el enrutado por severidad, el tope de vueltas y la anchura de tanda | Se recorren enteros: el guion son diez pasos declarados, así que se enumera en lugar de razonar sobre él |
-| El almacén | Escritura y lectura de cada tipo de artefacto, inmutabilidad de los que no cambian, rechazo por valor fuera de vocabulario, caducidad de la memoria de capítulo |
+| El almacén | Escritura y lectura de cada tipo de artefacto, inmutabilidad de los que no cambian —que admiten la marca de caducado una vez y nada más—, rechazo por valor fuera de vocabulario, caducidad de la memoria de capítulo |
+| El punto de guardado | Caídas sembradas: un ejecutor que tumba el proceso a mitad de cada tarea del capítulo y de la auditoría, y otro proceso que reanuda. Lo cerrado antes del corte sigue igual y la obra reanudada deja lo mismo que una sin cortes: un `Capitulo`, un juego de `EventoEstado`, un estado en N y un `Resumen de capítulo` por capítulo, el mismo manuscrito y ninguna traza abierta. Una caída entre `plegar` y el cierre no deja ningún evento. Lo del capítulo descartado sale del índice. Al arrancar se relanza la obra caída y ni la detenida ni la terminada |
+| La política de reintentos | Averías sembradas en una tarea de cada política: la que produce testigo detiene la obra con tarea, intento y motivo y sin nada a medio escribir; la comprobación deja su `Crítica` «no comprobado» abierta y la obra cierra; `documentar` sigue sin crítica. Un paso del guion sin tope o sin política no carga, y la tarea cortada por una caída no cuenta como intento |
 | El pliegue | Propiedad: plegar el estado en N-1 más los eventos de N da lo mismo que plegar el log entero. Regenerar el capítulo 12 y replegar hacia delante da lo mismo que plegar desde cero |
 | El índice de parecido | Propiedad: borrarlo y reconstruirlo desde los artefactos devuelve los mismos fragmentos. El índice es derivado; los artefactos no |
 | La persistencia | Cada migración sobre una copia de una obra de prueba; el bloqueo por escrituras concurrentes se ejercita con una tanda de verdad, no se supone |
@@ -286,6 +288,7 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 | Que los verificadores detectan | `prueba` | Casos sembrados: un texto con un defecto conocido de una sola dimensión por caso | Tasa de detección por dimensión |
 | Que no inventan defectos | `prueba` | Los mismos casos, con esa dimensión intacta | Falsos positivos por capítulo |
 | Que toda dimensión llegó a comprobarse | `analisis` | Recuento de constancias por unidad aceptada, contra las dimensiones que le tocaban por su alcance | Un paso del guion que se saltó, o una tanda que murió sin que nadie se enterase |
+| Que ninguna comprobación se agota en silencio | `analisis` | Recuento de críticas «no comprobado» por dimensión y de trazas fallidas por paso, en la `Traza` | Un proveedor que falla siempre en el mismo rol, o una dimensión que se da por cerrada sin haberse comprobado nunca |
 | Que la cuenta previa no engaña | `analisis` | Contexto estimado antes de mandar frente al medido al terminar, tarea por tarea. La cuenta previa incluye lo que el subagente arrastra de su parte: si solo cuenta la proyección, mide otra cosa | Un techo que se respeta sobre el papel y se rompe en la máquina |
 | Que el bucle converge | `analisis` | Recuento de vueltas hasta `Aceptado` en la `Traza` | Escenas y capítulos que giran sin cerrar |
 | Que las críticas son utilizables | `analisis` | Proporción descartada por falta de `evidencia` | Agentes que opinan en vez de comprobar |
@@ -382,7 +385,12 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | El guion y los contratos de tarea dicen lo mismo | Cotejo de la criba y el rol de cada dimensión en los dos sitios donde están escritos | `analisis` |
 | Toda proyección mínima la sabe traer el ensamblador | Cotejo de los materiales que cada contrato pide contra los que el ensamblador sabe construir | `analisis` |
 | Lo que cada rol declara escribir es lo que la tabla de gobierno le asigna | Cotejo del contrato de cada tarea contra la tabla | `analisis` |
-| Detener y reanudar no duplica ni pierde trabajo aceptado | Parada a mitad de capítulo y reanudación | `prueba` |
+| Detener, o cortar la producción en cualquier punto, y reanudar no duplica ni pierde trabajo cerrado | Caída sembrada en cada tarea y reanudación desde otro proceso | `prueba` |
+| Cerrar un capítulo es una sola transacción | Caída sembrada entre `plegar` y el cierre, y recuento de lo que quedó escrito | `prueba` |
+| Tras una caída la obra se relanza sin ninguna orden | Arranque del backend sobre una base con una obra caída, una detenida y una terminada | `prueba` |
+| Todo paso del guion declara su tope y lo que pasa al agotarse | Carga de un paso sin ellos | `prueba` |
+| La política de cada paso es la que fija la spec | Lectura de `guion.toml` contra la tabla de SPEC1 RF-97, además enumerada en una prueba | `inspeccion` |
+| Cada política de agotamiento hace lo que declara | Avería sembrada en una tarea de cada política | `prueba` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha y el lugar que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |

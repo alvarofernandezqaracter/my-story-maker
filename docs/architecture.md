@@ -197,6 +197,8 @@ Valores cerrados de la capa de producción. Los vocabularios de forma textual y 
 
 **Estado de crítica:** `abierta`, `atendida`, `rechazada`, `descartada`. Es el que hace filtrable el registro de defectos y el que permite contar lo que mide la convergencia del bucle: una crítica se descarta sin evidencia, se atiende o se rechaza con motivo en la `Revisión`, y la que no llega a ninguna de esas tres se queda abierta y cierra el capítulo marcado.
 
+**Al agotarse:** `detener_obra`, `critica_abierta`, `seguir`. Es lo que declara cada paso del guion para cuando su tarea agota los intentos (§4): detener la obra, dejar una `Crítica` «no comprobado» y seguir, o seguir sin más.
+
 **Tipo de EventoEstado:** `aparece`, `muere`, `viaja_a`, `adquiere`, `pierde`, `aprende` (cambio epistémico), `revela_a`, `cambia_relacion`, `cambia_estado_civil_o_rango`, `transcurre_tiempo`.
 
 ```mermaid
@@ -204,6 +206,7 @@ flowchart TD
   PROC[Vocabularios de proceso] --> SEV[severidad: bloqueante / mayor /<br/>menor / sugerencia]
   PROC --> EST[estado de produccion: planificado / redactado /<br/>en revision / aceptado / descartado]
   PROC --> CRI[estado de critica: abierta / atendida /<br/>rechazada / descartada]
+  PROC --> AGO[al agotarse: detener obra /<br/>critica abierta / seguir]
 ```
 
 ```mermaid
@@ -470,6 +473,39 @@ stateDiagram-v2
 
 El paso de `Aceptado` a `Cerrado` es el que actualiza el mundo: hasta que un capítulo no se cierra, sus eventos no existen para el resto del sistema. Eso es lo que permite regenerar un capítulo sin corromper los siguientes. Y es el mismo paso el que retira la memoria de capítulo: cerrar es a la vez publicar los hechos y olvidar el andamio.
 
+### El capítulo cerrado es el punto de guardado
+
+Una obra puede cortarse en cualquier momento: el editor la detiene, una tarea agota sus intentos o el proceso se cae. En los tres casos se vuelve al mismo sitio, que es **el último capítulo cerrado**. No hay puntos de guardado dentro del capítulo. El capítulo ya es la frontera en la que el mundo cambia, y hacer que también sea la frontera de la durabilidad no añade ninguna noción nueva. Guardar paso a paso obligaría a reconstruir en qué vuelta del bucle estaba cada escena, y el recorrido dejaría de ser reproducible.
+
+**Cerrar es una sola transacción.** Lo que devuelven `plegar` y `destilar` no se escribe al terminar cada una: espera a que terminen las dos y entra de una vez, junto con el estado en N, la marca `cerrado` y la retirada de la memoria de capítulo. Si el corte llega antes del commit, del cierre no existe nada; si llega después, existe entero. Esperar no rompe el paso de testigo, porque el Archivero no lee lo que escribe el Contable.
+
+**Reanudar es volver al punto de guardado, y siempre por el mismo camino.** Arrancar una obra, reanudarla por orden del editor y relanzarla tras una caída empiezan igual:
+
+1. Las `Traza` que quedaron abiertas se cierran como interrumpidas. Una tarea cortada no ha fallado, así que no cuenta como intento.
+2. Todo lo que cuelga de capítulos posteriores al último cerrado se caduca, sin borrar. Eso incluye los borradores ya aceptados y las `Fuente` recogidas. A un inmutable se le admite la marca de caducado, pero solo esa, solo una vez y sin poder quitarla: marcar no es modificar. Sus fragmentos salen del índice y su estado materializado se descarta.
+3. Si al último capítulo cerrado le falta algo en el índice, se completa, porque el índice es derivado.
+4. El capítulo siguiente empieza en el paso 1.
+
+Lo único que se pierde es el trabajo del capítulo que estaba abierto. Salvar parte de ese trabajo, por ejemplo las fuentes, dejaría una segunda forma de que algo de antes del corte entre en lo de después.
+
+**La auditoría tiene su propio punto de guardado.** Las críticas de `auditar` se escriben junto con la constancia de hasta qué capítulo está auditada la obra. Si el último capítulo cerrado tenía auditoría pendiente y no consta, se audita antes de abrir el siguiente. Una obra ha terminado cuando consta su auditoría de cierre. Si la auditoría de cadencia cae en el último capítulo, es la de cierre y corre una sola vez.
+
+**Tras una caída no hace falta ninguna orden.** Al arrancar, el backend relanza toda obra que no esté detenida ni terminada. Así, que la máquina se reinicie no añade ninguna intervención humana.
+
+### Cuántas veces se intenta cada paso
+
+Cada paso del guion, y cada tarea de fuera del guion, declara junto a su rol y su concurrencia dos cosas más: `reintentos`, que es cuántas veces se intenta su tarea, y `al_agotarse`, que es qué pasa si ninguno de los intentos sale bien. Un paso que no las declara no carga, porque lo que pasa al agotarse no se improvisa sobre la marcha.
+
+Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo. Un artefacto malformado no es un intento fallido: es la `Crítica` bloqueante de siempre. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él.
+
+| Al agotarse | Pasos | Qué pasa |
+| --- | --- | --- |
+| `detener_obra` | `planificar`, `redactar`, `revisar`, la costura del paso 7, `plegar`, `destilar` y `poblar_mundo`: los que producen el testigo del paso siguiente | La obra queda detenida con la tarea, el intento y el motivo, y sin nada a medio escribir |
+| `critica_abierta` | Las cribas de los pasos 4, 6 y 8, y `auditar`: las comprobaciones | El backend escribe una `Crítica` «no comprobado», `bloqueante` y abierta, con la `Traza` del último intento como evidencia. No se enruta: el capítulo se cierra marcado y el Arquitecto de arcos la ve |
+| `seguir` | `documentar` | La producción sigue y la constancia del intento queda en la `Traza`, igual que una búsqueda sin resultados |
+
+El tope de partida es dos intentos en todos los pasos. Detener siempre dejaría parada una obra que podría terminar, porque una comprobación que falla no produce testigo para nadie.
+
 ## 5. Bucle de control de calidad
 
 **Estrategia de validación.** Toda dimensión de calidad debe seguir expresándose como predicado sobre entidades de la ontología: "continuidad" no es un juicio, es `∀ escena: estado_implicado ⊆ estado_derivado`. Lo que cambia aquí es quién evalúa el predicado. No hay validadores deterministas: el predicado se entrega a un agente como **contrato de verificación**, es decir, un enunciado comprobable más los datos exactos que se necesitan para comprobarlo y nada más.
@@ -518,7 +554,7 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `EventoEstado` | Contable de estado, al cerrar capítulo | Inmutable | Nunca directo: se pliega en estado | Consistencia del log |
 | `Resumen de capítulo` | Archivero, al cerrar capítulo | Inmutable | En la vista del Arquitecto de arcos, nunca la prosa que resume | Fidelidad al capítulo resumido |
 | `Compromiso` | Planificador y redactor | Se cierra al pagarse | Siempre, cola abierta | Economía narrativa |
-| `Crítica` | Verificador, Editor de estilo, Arquitecto de arcos, Juez | Se resuelve en revisión | Solo al agente que revisa | Convergencia del bucle |
+| `Crítica` | Verificador, Editor de estilo, Arquitecto de arcos, Juez; y el backend, cuando rechaza un artefacto malformado o cuando una comprobación agota sus intentos | Se resuelve en revisión | Solo al agente que revisa | Convergencia del bucle |
 | `Decisión` | Cualquier agente | Inmutable | Canon comprimido | Coherencia de diseño |
 
 Dos reglas que la tabla implica y conviene explicitar: ninguna entidad del mundo se modifica por escritura directa del redactor, solo mediante eventos emitidos al cerrar un capítulo; y ningún agente valida su propia salida.
@@ -559,8 +595,10 @@ backend/
     tareas/            una carpeta por tipo de tarea del censo (§2), con su
                        contrato, su prompt, su esquema y, si le toca criba, sus
                        contratos de verificacion por dimension
-    nucleo/            el guion declarativo del capitulo y la pieza que lo
-                       camina (§4), el ensamblador de proyecciones (§3), el
+    nucleo/            el guion declarativo del capitulo, con los reintentos y
+                       la politica al agotarse de cada paso, y la pieza que lo
+                       camina y vuelve al punto de guardado (§4), el
+                       ensamblador de proyecciones (§3), el
                        enrutado por severidad y los topes de vueltas (§5), el
                        presupuesto de contexto (§3) y los permisos por rol (§6)
     almacen/           unica puerta de lectura y escritura, incluido el indice
