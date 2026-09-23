@@ -1,0 +1,24 @@
+{
+  "artefactos": [],
+  "constancia": {
+    "hechos": [
+      {
+        "campo": "destinatario.edad",
+        "valor": 9,
+        "cita": "el sabado cumple nueve anos"
+      },
+      {
+        "campo": "destinatario.recuerdos",
+        "valor": "se escondia en el horno de la abuela para oler el pan",
+        "cita": "se escondia en el horno de la abuela para oler el pan"
+      }
+    ],
+    "contradicciones": [
+      {
+        "tipo": "edad_contra_tono",
+        "campos": ["destinatario.edad", "destinatario.tono"],
+        "evidencia": "edad 9 y tono «terror sin concesiones»"
+      }
+    ]
+  }
+}

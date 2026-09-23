@@ -38,6 +38,10 @@ class EjecutorFingido:
 
     sembrados: list[CasoSembrado] = field(default_factory=list)
     sin_evidencia: bool = False
+    # Lo que contesta el Entrevistador fingido: sus hechos y contradicciones, y
+    # los artefactos que no deberia devolver y el backend no debe guardar.
+    entrevista: dict[str, Any] = field(default_factory=dict)
+    artefactos_de_entrevista: list[Artefacto] = field(default_factory=list)
     llamadas: list[Encargo] = field(default_factory=list)
     ventanas: list[Ventana] = field(default_factory=list)
     _orden_de_escenas: list[str] = field(default_factory=list)
@@ -199,6 +203,17 @@ class EjecutorFingido:
                 "ubicacion": f"lug_000{encargo.capitulo}",
             },
             salida="capitulo plegado",
+        )
+
+    def _entrevistar(self, encargo: Encargo) -> Resultado:
+        return Resultado(
+            artefactos=list(self.artefactos_de_entrevista),
+            constancia=dict(self.entrevista),
+            salida="pasada de entrevista",
+            tokens_de_entrada_medidos=(self._ventana.tokens if self._ventana else 0) + 10_000,
+            tokens_de_salida=120,
+            coste=0.001,
+            latencia_ms=5,
         )
 
     def _destilar(self, encargo: Encargo) -> Resultado:

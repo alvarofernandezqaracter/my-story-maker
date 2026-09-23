@@ -54,6 +54,10 @@ TOPE_DE_VENTANA_POR_ROL: dict[str, int] = {
     "verificador_de_continuidad": 8_000,
     "editor_de_estilo": 8_000,
     "juez_de_rubrica": 6_000,
+    # Abierto ocupa 8 000 mas el coste fijo del subagente, y eso cabe en el 20 %
+    # de margen del techo: una pasada de entrevista no le quita nada a la tanda
+    # de una obra en curso (SPEC1 RF-70).
+    "entrevistador": 8_000,
 }
 
 # --- Recuperacion por parecido ---------------------------------------------
@@ -74,6 +78,7 @@ K_POR_ROL: dict[str, int] = {
     "juez_de_rubrica": 0,
     "revisor": 0,
     "archivero": 0,
+    "entrevistador": 0,
 }
 
 TOPE_DE_TOKENS_RECUPERADOS_POR_ROL: dict[str, int] = {
@@ -128,6 +133,11 @@ def tope_de_ventana(rol: str) -> int:
     return TOPE_DE_VENTANA_POR_ROL[rol]
 
 
+# Cuantas pasadas de entrevista pueden estar abiertas a la vez en la
+# instalacion. Es una, y por eso su coste cabe en el margen (SPEC1 RF-70).
+PASADAS_DE_ENTREVISTA_A_LA_VEZ: int = 1
+
+
 def tokens_repartibles() -> int:
     """Lo que queda del techo una vez apartado el margen: 80 000 utiles."""
     return int(TECHO_DE_CONTEXTO_CONCURRENTE * (1 - MARGEN_DEL_TECHO))
@@ -135,3 +145,8 @@ def tokens_repartibles() -> int:
 
 assert set(TOPE_DE_VENTANA_POR_ROL) == set(ROLES), "Falta el tope de ventana de algun rol"
 assert set(K_POR_ROL) == set(ROLES), "Falta la `k` de algun rol"
+assert (
+    TOPE_DE_VENTANA_POR_ROL["entrevistador"] + COSTE_FIJO_DEL_SUBAGENTE_EN_TOKENS
+) * PASADAS_DE_ENTREVISTA_A_LA_VEZ <= TECHO_DE_CONTEXTO_CONCURRENTE * MARGEN_DEL_TECHO, (
+    "La entrevista no cabe en el margen del techo"
+)

@@ -257,7 +257,12 @@ def test_solo_el_documentalista_escribe_fuente() -> None:
 
 @pytest.mark.parametrize("rol", ROLES)
 def test_cada_rol_tiene_enumerado_lo_que_puede_escribir(rol: str) -> None:
+    """Todo rol de la obra puede dejar una `Decision`. El Entrevistador actua
+    antes de que la obra exista y no escribe nada (SPEC1 RF-70)."""
     escrituras = escrituras_de(rol)
+    if rol == "entrevistador":
+        assert escrituras == frozenset()
+        return
     assert "Decision" in escrituras
     assert "Obra" not in escrituras
     assert "Traza" not in escrituras

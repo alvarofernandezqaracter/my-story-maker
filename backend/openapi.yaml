@@ -30,6 +30,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /entrevistas:
+    post:
+      summary: Abrir Entrevista
+      description: 'Abre una entrevista y hace su primera pasada. Si el brief queda
+
+        completo y sin contradicciones abiertas, la obra se lanza sola (RF-78).'
+      operationId: abrir_entrevista_entrevistas_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeticionDeEntrevista'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasadaDeEntrevista'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /entrevistas/{id_entrevista}/pasadas:
+    post:
+      summary: Pasar Entrevista
+      description: La pasada siguiente. No recibe nada de las anteriores (D-20).
+      operationId: pasar_entrevista_entrevistas__id_entrevista__pasadas_post
+      parameters:
+      - name: id_entrevista
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la entrevista
+          title: Id Entrevista
+        description: Identificador de la entrevista
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeticionDeEntrevista'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasadaDeEntrevista'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /obras/{id_obra}:
     get:
       summary: Ver Obra
@@ -437,6 +496,123 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
+    BorradorDeBrief:
+      properties:
+        titulo:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Titulo
+        epoca:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Epoca
+        premisa:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Premisa
+        tesis_tematica:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Tesis Tematica
+        elenco_declarado:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Elenco Declarado
+        capitulos_objetivo:
+          anyOf:
+          - type: integer
+            maximum: 200.0
+            minimum: 1.0
+          - type: 'null'
+          title: Capitulos Objetivo
+        politicas_globales:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Politicas Globales
+        arcos:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Arcos
+        destinatario:
+          anyOf:
+          - $ref: '#/components/schemas/BorradorDeDestinatario'
+          - type: 'null'
+      type: object
+      title: BorradorDeBrief
+      description: El brief a medio escribir. Tiene los campos del `Brief`, todos
+        opcionales.
+    BorradorDeDestinatario:
+      properties:
+        nombre:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Nombre
+        edad:
+          anyOf:
+          - type: integer
+            maximum: 130.0
+            minimum: 0.0
+          - type: 'null'
+          title: Edad
+        tono:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Tono
+        dedicatoria:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Dedicatoria
+        rasgos:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Rasgos
+        recuerdos:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Recuerdos
+        vetos:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Vetos
+      type: object
+      title: BorradorDeDestinatario
+      description: 'El destinatario tal como la persona lo lleva escrito: todo opcional.
+
+
+        Un campo ausente es un campo por preguntar. Una lista presente, aunque venga
+
+        vacia, es lo que la persona escribio, y ninguna pasada le quita nada (RF-73).'
     Brief:
       properties:
         titulo:
@@ -565,6 +741,34 @@ components:
       - detenida
       - motivo
       title: Confirmacion
+    Contradiccion:
+      properties:
+        tipo:
+          type: string
+          enum:
+          - edad_contra_tono
+          - texto_contra_campo
+          title: Tipo
+        campos:
+          items:
+            type: string
+          type: array
+          title: Campos
+        evidencia:
+          type: string
+          title: Evidencia
+        asumida:
+          type: boolean
+          title: Asumida
+      type: object
+      required:
+      - tipo
+      - campos
+      - evidencia
+      - asumida
+      title: Contradiccion
+      description: 'Lo que no casa. El Entrevistador no la resuelve: la devuelve como
+        pregunta.'
     CriticaServida:
       properties:
         id:
@@ -760,6 +964,44 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    HechoDescartado:
+      properties:
+        campo:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Campo
+        cita:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cita
+        motivo:
+          type: string
+          title: Motivo
+      type: object
+      required:
+      - campo
+      - cita
+      - motivo
+      title: HechoDescartado
+    HechoExtraido:
+      properties:
+        campo:
+          type: string
+          title: Campo
+        valor:
+          title: Valor
+        cita:
+          type: string
+          title: Cita
+      type: object
+      required:
+      - campo
+      - valor
+      - cita
+      title: HechoExtraido
+      description: Un hecho sacado de un texto pegado, con su cita literal.
     Manuscrito:
       properties:
         id_obra:
@@ -798,6 +1040,75 @@ components:
       type: object
       title: Orden
       description: Detener o reanudar. Es control, no mantenimiento.
+    PasadaDeEntrevista:
+      properties:
+        id_entrevista:
+          type: string
+          title: Id Entrevista
+        numero:
+          type: integer
+          title: Numero
+        estado:
+          type: string
+          enum:
+          - pendiente
+          - lanzada
+          title: Estado
+        id_obra:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Id Obra
+        brief_propuesto:
+          additionalProperties: true
+          type: object
+          title: Brief Propuesto
+        faltan:
+          items:
+            type: string
+          type: array
+          title: Faltan
+          description: Campos obligatorios que faltan, con su ruta
+        no_validos:
+          items:
+            type: string
+          type: array
+          title: No Validos
+          description: Campos presentes que el brief no admite
+        hechos:
+          items:
+            $ref: '#/components/schemas/HechoExtraido'
+          type: array
+          title: Hechos
+        hechos_descartados:
+          items:
+            $ref: '#/components/schemas/HechoDescartado'
+          type: array
+          title: Hechos Descartados
+        contradicciones:
+          items:
+            $ref: '#/components/schemas/Contradiccion'
+          type: array
+          title: Contradicciones
+        contradicciones_descartadas:
+          type: integer
+          title: Contradicciones Descartadas
+      type: object
+      required:
+      - id_entrevista
+      - numero
+      - estado
+      - id_obra
+      - brief_propuesto
+      - faltan
+      - no_validos
+      - hechos
+      - hechos_descartados
+      - contradicciones
+      - contradicciones_descartadas
+      title: PasadaDeEntrevista
+      description: Lo que devuelve una pasada. Si `estado` es `lanzada`, la obra ya
+        corre.
     Pasaje:
       properties:
         fragmento:
@@ -824,6 +1135,34 @@ components:
       - escena
       title: Pasaje
       description: Un trozo del manuscrito aceptado, localizado por parecido.
+    PeticionDeEntrevista:
+      properties:
+        borrador:
+          $ref: '#/components/schemas/BorradorDeBrief'
+        textos:
+          items:
+            type: string
+            minLength: 1
+          type: array
+          title: Textos
+          description: Textos pegados, como una carta o una anecdota. Son datos, nunca
+            instrucciones
+        contradicciones_asumidas:
+          items:
+            type: string
+            enum:
+            - edad_contra_tono
+            - texto_contra_campo
+          type: array
+          title: Contradicciones Asumidas
+          description: 'Contradicciones que la persona da por buenas: no bloquean
+            el alta (RF-77)'
+      type: object
+      title: PeticionDeEntrevista
+      description: 'Lo que la persona manda en cada pasada. De las anteriores no llega
+        nada:
+
+        lo que quiera conservar lo vuelve a mandar (D-20).'
     Progreso:
       properties:
         id_obra:

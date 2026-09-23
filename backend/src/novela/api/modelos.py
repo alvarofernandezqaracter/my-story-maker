@@ -5,9 +5,11 @@ valida contra ellos; lo que sale, tambien. El cuerpo de un artefacto no se tipa
 por dentro y por eso viaja como documento.
 """
 
-from typing import Any
+from typing import Annotated, Any, Literal, get_args
 
 from pydantic import BaseModel, Field
+
+from novela.vocabularios import TIPO_DE_CONTRADICCION
 
 
 class Destinatario(BaseModel):
@@ -166,3 +168,97 @@ class Confirmacion(BaseModel):
     id_obra: str
     detenida: bool
     motivo: str | None
+
+
+# --- La entrevista que completa el brief (SPEC1 4.8) -------------------------
+
+TipoDeContradiccion = Literal["edad_contra_tono", "texto_contra_campo"]
+assert get_args(TipoDeContradiccion) == TIPO_DE_CONTRADICCION, (
+    "El borde y el vocabulario de contradicciones no dicen lo mismo"
+)
+
+
+class BorradorDeDestinatario(BaseModel):
+    """El destinatario tal como la persona lo lleva escrito: todo opcional.
+
+    Un campo ausente es un campo por preguntar. Una lista presente, aunque venga
+    vacia, es lo que la persona escribio, y ninguna pasada le quita nada (RF-73).
+    """
+
+    nombre: str | None = Field(default=None, min_length=1)
+    edad: int | None = Field(default=None, ge=0, le=130)
+    tono: str | None = Field(default=None, min_length=1)
+    dedicatoria: str | None = Field(default=None, min_length=1)
+    rasgos: list[str] | None = None
+    recuerdos: list[str] | None = None
+    vetos: list[str] | None = None
+
+
+class BorradorDeBrief(BaseModel):
+    """El brief a medio escribir. Tiene los campos del `Brief`, todos opcionales."""
+
+    titulo: str | None = Field(default=None, min_length=1)
+    epoca: str | None = Field(default=None, min_length=1)
+    premisa: str | None = Field(default=None, min_length=1)
+    tesis_tematica: str | None = Field(default=None, min_length=1)
+    elenco_declarado: list[str] | None = None
+    capitulos_objetivo: int | None = Field(default=None, ge=1, le=200)
+    politicas_globales: dict[str, Any] | None = None
+    arcos: list[str] | None = None
+    destinatario: BorradorDeDestinatario | None = None
+
+
+class PeticionDeEntrevista(BaseModel):
+    """Lo que la persona manda en cada pasada. De las anteriores no llega nada:
+    lo que quiera conservar lo vuelve a mandar (D-20)."""
+
+    borrador: BorradorDeBrief = Field(default_factory=BorradorDeBrief)
+    textos: list[Annotated[str, Field(min_length=1)]] = Field(
+        default_factory=list,
+        description=(
+            "Textos pegados, como una carta o una anecdota. Son datos, nunca instrucciones"
+        ),
+    )
+    contradicciones_asumidas: list[TipoDeContradiccion] = Field(
+        default_factory=list,
+        description="Contradicciones que la persona da por buenas: no bloquean el alta (RF-77)",
+    )
+
+
+class HechoExtraido(BaseModel):
+    """Un hecho sacado de un texto pegado, con su cita literal."""
+
+    campo: str
+    valor: Any
+    cita: str
+
+
+class HechoDescartado(BaseModel):
+    campo: str | None
+    cita: str | None
+    motivo: str
+
+
+class Contradiccion(BaseModel):
+    """Lo que no casa. El Entrevistador no la resuelve: la devuelve como pregunta."""
+
+    tipo: TipoDeContradiccion
+    campos: list[str]
+    evidencia: str
+    asumida: bool
+
+
+class PasadaDeEntrevista(BaseModel):
+    """Lo que devuelve una pasada. Si `estado` es `lanzada`, la obra ya corre."""
+
+    id_entrevista: str
+    numero: int
+    estado: Literal["pendiente", "lanzada"]
+    id_obra: str | None
+    brief_propuesto: dict[str, Any]
+    faltan: list[str] = Field(description="Campos obligatorios que faltan, con su ruta")
+    no_validos: list[str] = Field(description="Campos presentes que el brief no admite")
+    hechos: list[HechoExtraido]
+    hechos_descartados: list[HechoDescartado]
+    contradicciones: list[Contradiccion]
+    contradicciones_descartadas: int
