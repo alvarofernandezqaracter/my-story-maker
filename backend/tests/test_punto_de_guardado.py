@@ -372,8 +372,14 @@ def test_a_un_inmutable_se_le_pone_la_marca_una_vez_y_nada_mas(
     almacen: Almacen, tipo: str
 ) -> None:
     id_obra = almacen.crear_obra(BRIEF)
+    # Cada tipo se guarda con lo que su propia comprobacion le exige: la
+    # `Mencion` apunta a un hecho de la biblia de su obra.
+    hecho = almacen.guardar(
+        [Artefacto("Personaje", {"nombre": "Ines"}, id_obra=id_obra)]
+    )[0]
+    cuerpo = {"hecho": hecho} if tipo == "Mencion" else {"nota": "x"}
     identificador = almacen.guardar(
-        [Artefacto(tipo, {"nota": "x"}, id_obra=id_obra, capitulo=1)]
+        [Artefacto(tipo, cuerpo, id_obra=id_obra, capitulo=1)]
     )[0]
     almacen._actualizar(tipo, identificador, {"caducado_en": "2026-01-01"})
     with pytest.raises(EscrituraProhibida):

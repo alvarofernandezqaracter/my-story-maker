@@ -16,7 +16,7 @@ El dominio se parte en tres capas disjuntas, y la mayoría de los fallos de dise
 
 | Capa | Qué contiene | Pregunta que responde | Quién la escribe |
 | --- | --- | --- | --- |
-| 1. Obra | Unidades textuales: obra, parte, capítulo, escena, beat, párrafo | ¿Cómo está hecho el texto? | Planificador y redactor |
+| 1. Obra | Unidades textuales: obra, parte, capítulo, escena, beat, párrafo, y las menciones que dicen qué hechos del mundo nombra cada capítulo | ¿Cómo está hecho el texto? | Planificador y redactor; las menciones, el archivero |
 | 2. Mundo | Referentes: personajes, lugares, eventos, objetos, instituciones, cronología | ¿De qué habla el texto? | Constructor de mundo y documentalista |
 | 3. Producción | Agentes, tareas, planes, borradores, críticas, decisiones | ¿Cómo se ha llegado hasta aquí? | El harness |
 
@@ -88,7 +88,7 @@ Reglas de integridad del censo:
 - Solo el Documentalista escribe `Fuente`. Un dato sin `Fuente` escrita por él es una alucinación por definición. Es además el único rol que trae material de fuera del sistema: ningún otro busca ni lee nada que no esté ya en el almacén.
 - Ningún rol escribe `Recuerdo`. Llega con el encargo y es inmutable, que es lo que deja intacta la regla anterior: si el respaldo de una persona pudiera escribirse desde dentro, «dato sin `Fuente`» dejaría de ser sinónimo de alucinación.
 - El Revisor aplica críticas ajenas; no puede crear las suyas.
-- El Archivero no escribe hechos del mundo ni prosa: resume el capítulo cerrado y retira lo que caduca. No decide nada sobre el texto.
+- El Archivero no escribe hechos del mundo ni prosa: resume el capítulo cerrado, anota qué hechos de la biblia nombra y retira lo que caduca. No decide nada sobre el texto. Anotar una `Mención` no toca la ficha del hecho, así que el mundo sigue cambiando solo por `EventoEstado`.
 - El Entrevistador no escribe ninguna entidad: devuelve una propuesta de brief. De un texto pegado solo vale lo que trae cita literal, y un recuerdo es esa misma cita, así que tampoco él escribe `Recuerdo`: el recuerdo es texto de la persona, no del agente.
 
 ### Entrada y salida de cada agente
@@ -102,12 +102,12 @@ Qué artefacto consume cada rol y qué artefacto deja escrito. La salida de un a
 | Arquitecto de arcos | Resúmenes de los capítulos cerrados, arcos declarados, cola de `Compromiso`, `funcion_estructural` de las escenas en orden | `Crítica` de alcance global |
 | Planificador | Canon, estado en N-1, compromisos abiertos, arcos, y —si la obra va dedicada— el destinatario con sus `Recuerdo` | `Plan`: esqueleto de `Capítulo`, contrato de cada `Escena`, `Compromiso` asignados y el papel del destinatario en la obra |
 | Redactor | Contrato de una escena del `Plan` aceptado, voces del elenco presente en ella, cola de continuidad local, documentación recuperada para esa escena | `Borrador` candidato de esa escena, con sus `Párrafo` |
-| Contable de estado | Estado en N-1 ya materializado, texto aceptado del capítulo N, vocabulario de tipos de evento | `EventoEstado` del capítulo N, con fecha y lugar resultantes ya calculados, y estado en N |
+| Contable de estado | Estado en N-1 ya materializado, texto aceptado del capítulo N, vocabulario de tipos de evento | `EventoEstado` del capítulo N, con fecha —ISO parcial— y lugar resultantes ya calculados y los personajes presentes, y estado en N |
 | Verificador de continuidad | Un contrato de verificación por dimensión —predicado y proyección mínima, `validators.md` §4— y el texto producido | `Crítica` de alcance escena y capítulo con evidencia citable, o la constancia de que el predicado se cumple |
 | Editor de estilo | Texto producido, `Registro lingüístico` de las escenas en juego, lista vetada corta del capítulo, ecos recuperados del registro acumulado de imágenes y muletillas | `Crítica` local y `Borrador` de superficie. El registro acumulado no es un artefacto que él escriba: es la colección de prosa aceptada, que se alimenta sola al aceptar cada unidad y de la que él recupera por parecido |
 | Juez de rúbrica | Texto producido y rúbrica de la única dimensión que puntúa | `Crítica` ruidosa, marcada aparte, que por sí sola no dispara regeneración |
 | Revisor | `Borrador` vigente, críticas a atender ya filtradas por severidad, contrato de la unidad | `Revisión` —críticas atendidas y rechazadas con motivo— y el `Borrador` siguiente |
-| Archivero | Texto aceptado del capítulo N, cola de `Compromiso`, ecos del registro acumulado de estilo | `Resumen de capítulo`, con qué compromisos quedan pagados y cuáles siguen abiertos. La memoria de capítulo la retira el almacén al cerrar, marcándola como caducada; lo que sigue abierto sobrevive |
+| Archivero | Texto aceptado del capítulo N, cola de `Compromiso`, ecos del registro acumulado de estilo, índice de la biblia —`id`, tipo, nombre y licencia de cada hecho, no el canon— | `Resumen de capítulo`, con qué compromisos quedan pagados y cuáles siguen abiertos, y una `Mención` por hecho de la biblia que el capítulo nombra, en la misma unidad. La memoria de capítulo la retira el almacén al cerrar, marcándola como caducada; lo que sigue abierto sobrevive |
 | Entrevistador | Borrador de brief que la persona lleva escrito, textos pegados —una carta, una anécdota— y contradicciones que ya da por asumidas | Una propuesta, no un artefacto: hechos extraídos, cada uno con su campo y una cita literal, y contradicciones con su evidencia. Cuando el brief queda completo y sin contradicciones abiertas, la pasada da de alta la `Obra` con sus `Recuerdo` |
 
 La `Traza` no es salida de ningún rol: se registra en toda tarea, la ejecute quien la ejecute, y por eso no aparece en la tabla.
@@ -258,7 +258,7 @@ Lo que se suele llamar memoria a corto y a largo plazo son aquí tres plazos, y 
 | --- | --- | --- |
 | De tarea | La ventana de un agente para un encargo concreto | Al terminar el encargo. Solo sobrevive el artefacto escrito |
 | De capítulo | Borradores descartados, documentación recuperada por escena, críticas ya resueltas | Al cerrar el capítulo, y lo hace el Archivero |
-| De obra | Canon y fichas, log de `EventoEstado`, estado materializado, `Resumen de capítulo`, cola de `Compromiso`, registro acumulado de estilo, `Decisión` | Nunca |
+| De obra | Canon y fichas, log de `EventoEstado`, estado materializado, `Resumen de capítulo`, `Mención`, cola de `Compromiso`, registro acumulado de estilo, `Decisión` | Nunca |
 
 **Olvidar es un paso del guion, no un descuido.** La memoria de capítulo no caduca sola: la retira el Archivero al destilar (§4). Sin ese paso, el gasto constante deja de serlo a los pocos capítulos.
 
@@ -351,6 +351,8 @@ Cada capítulo, al cerrarse, emite `EventoEstado` tipados. El estado en el capí
 **El pliegue es incremental y lo hace el Contable de estado.** No relee el log entero: recibe el estado en N-1 ya materializado y los `EventoEstado` del capítulo N, y emite el estado en N. Esto es lo que hace el pliegue viable sin código: la tarea no crece con la longitud de la obra, siempre es "un estado más un puñado de eventos". Si se regenera el capítulo 12, se descartan los estados materializados de 12 en adelante y se repliega hacia delante capítulo a capítulo.
 
 Corolario práctico: el estado epistémico de cada personaje es una proyección del mismo log filtrando eventos `aprende` y `revela_a`. No hace falta modelarlo aparte.
+
+Por la misma razón hay otras dos cosas que tampoco se guardan. **La cronología** se compone al pedirla con los `EventoEstado` —fecha, lugar y presentes—, los `Evento` del mundo y la fecha de nacimiento de cada `Personaje`, en orden de fecha escrita y sin calcular nada. Y **en qué capítulos se usa cada hecho** se deriva de las `Mención` que el Archivero anota al cerrar. Las dos las sirve la API en rutas de lectura.
 
 ```mermaid
 flowchart LR
@@ -587,6 +589,7 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `Capítulo` | Planificador | Revisor | Resumen siempre; texto solo el anterior | Ritmo, arcos |
 | `Escena` | Planificador | Revisor | Contrato completo al redactar | Contrato, POV, epistémica |
 | `Párrafo` | Redactor | Editor de estilo | Cola de continuidad local | Fatiga léxica, voz, léxico |
+| `Mención` | Archivero, al cerrar capítulo | Inmutable | Nunca: se consulta para derivar en qué capítulos se usa cada hecho | Nadie todavía (`validators.md` §10) |
 | `EventoEstado` | Contable de estado, al cerrar capítulo | Inmutable | Nunca directo: se pliega en estado | Consistencia del log |
 | `Resumen de capítulo` | Archivero, al cerrar capítulo | Inmutable | En la vista del Arquitecto de arcos, nunca la prosa que resume | Fidelidad al capítulo resumido |
 | `Compromiso` | Planificador y redactor | Se cierra al pagarse | Siempre, cola abierta | Economía narrativa |

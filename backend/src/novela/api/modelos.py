@@ -158,6 +158,47 @@ class Pasaje(BaseModel):
     escena: str | None
 
 
+class HechoDeLaBiblia(BaseModel):
+    """Una ficha del mundo que el texto nombra, con los capitulos en que se usa.
+
+    Los capitulos se derivan de las `Mencion` que el Archivero anota al cerrar
+    cada capitulo; la ficha no los guarda (RF-84).
+    """
+
+    id: str
+    tipo: str
+    nombre: str | None
+    licencia: str | None
+    capitulos: list[int]
+
+
+class Presente(BaseModel):
+    """Un personaje presente en un suceso, con su fecha de nacimiento."""
+
+    id: str
+    nombre: str | None
+    nacimiento: str | None = Field(description="Fecha ISO parcial: AAAA, AAAA-MM o AAAA-MM-DD")
+
+
+class Suceso(BaseModel):
+    """Una fila de la cronologia: un `EventoEstado` o un `Evento` del mundo."""
+
+    origen: str = Field(description="evento_de_estado o evento_del_mundo")
+    id: str
+    capitulo: int | None
+    suceso: str | None
+    momento: str | None = Field(description="Fecha ISO parcial: AAAA, AAAA-MM o AAAA-MM-DD")
+    lugar: str | None
+    presentes: list[Presente]
+
+
+class Cronologia(BaseModel):
+    """Los sucesos de la obra en orden. Es una vista: se deriva al pedirla."""
+
+    id_obra: str
+    sucesos: list[Suceso]
+
+
 class Orden(BaseModel):
     """Detener o reanudar. Es control, no mantenimiento."""
 

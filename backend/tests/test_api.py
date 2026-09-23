@@ -97,7 +97,7 @@ def test_la_api_ofrece_exactamente_cinco_operaciones_de_escritura(
     ]
 
 
-def test_el_esquema_publicado_trae_las_catorce_rutas(cliente: TestClient) -> None:
+def test_el_esquema_publicado_trae_todas_las_rutas(cliente: TestClient) -> None:
     esquema = cliente.get("/openapi.json").json()
     rutas = sorted(esquema["paths"])
     assert rutas == [
@@ -107,8 +107,10 @@ def test_el_esquema_publicado_trae_las_catorce_rutas(cliente: TestClient) -> Non
         "/obras/{id_obra}",
         "/obras/{id_obra}/capitulos/{numero}",
         "/obras/{id_obra}/criticas",
+        "/obras/{id_obra}/cronologia",
         "/obras/{id_obra}/detener",
         "/obras/{id_obra}/estado",
+        "/obras/{id_obra}/hechos",
         "/obras/{id_obra}/manuscrito",
         "/obras/{id_obra}/pasajes",
         "/obras/{id_obra}/progreso",

@@ -57,7 +57,9 @@ def id_obra(almacen: Almacen) -> str:
     )
 
 
-def _artefacto_de_prueba(tipo: str, id_obra: str) -> Artefacto:
+def _artefacto_de_prueba(
+    tipo: str, id_obra: str, almacen: Almacen | None = None
+) -> Artefacto:
     tabla = esquema.TABLA_POR_TIPO[tipo]
     artefacto = Artefacto(tipo=tipo, cuerpo={"nota": f"{tipo} de prueba"}, id_obra=id_obra)
     if "capitulo" in tabla.consulta:
@@ -75,6 +77,11 @@ def _artefacto_de_prueba(tipo: str, id_obra: str) -> Artefacto:
     for propia in tabla.propias:
         if propia.nombre in {"orden", "version", "intento"}:
             setattr(artefacto, propia.nombre, 1)
+    if tipo == "Mencion" and almacen is not None:
+        # Una mencion apunta a un hecho de la biblia que existe (RF-83).
+        artefacto.propias["hecho"] = almacen.guardar(
+            [Artefacto(tipo="Personaje", cuerpo={"nombre": "Ines"}, id_obra=id_obra)]
+        )[0]
     return artefacto
 
 
@@ -85,7 +92,7 @@ def _artefacto_de_prueba(tipo: str, id_obra: str) -> Artefacto:
 def test_cada_tipo_de_artefacto_se_escribe_y_se_lee(
     almacen: Almacen, id_obra: str, tipo: str
 ) -> None:
-    identificador = almacen.guardar([_artefacto_de_prueba(tipo, id_obra)])[0]
+    identificador = almacen.guardar([_artefacto_de_prueba(tipo, id_obra, almacen)])[0]
     leido = almacen.leer(tipo, identificador)
     assert leido is not None
     assert leido.tipo == tipo
@@ -105,7 +112,7 @@ def test_la_obra_se_crea_y_cuelga_de_si_misma(almacen: Almacen, id_obra: str) ->
 
 @pytest.mark.parametrize("tipo", esquema.TIPOS_INMUTABLES)
 def test_un_cambio_sobre_un_inmutable_falla(almacen: Almacen, id_obra: str, tipo: str) -> None:
-    identificador = almacen.guardar([_artefacto_de_prueba(tipo, id_obra)])[0]
+    identificador = almacen.guardar([_artefacto_de_prueba(tipo, id_obra, almacen)])[0]
     with pytest.raises(EscrituraProhibida):
         almacen._actualizar(tipo, identificador, {"cuerpo": json.dumps({"nota": "otra"})})
 
@@ -121,7 +128,7 @@ def test_un_borrador_aceptado_es_inmutable(almacen: Almacen, id_obra: str) -> No
 
 @pytest.mark.parametrize("tipo", [t.tipo for t in esquema.TABLAS if t.tipo != "Obra"])
 def test_ningun_artefacto_se_borra(almacen: Almacen, id_obra: str, tipo: str) -> None:
-    almacen.guardar([_artefacto_de_prueba(tipo, id_obra)])
+    almacen.guardar([_artefacto_de_prueba(tipo, id_obra, almacen)])
     with pytest.raises(sqlite3.IntegrityError, match="no se borra nada"):
         almacen._escritor.execute(f"DELETE FROM {nombre_de_tabla(tipo)}")
 

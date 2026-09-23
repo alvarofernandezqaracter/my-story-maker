@@ -49,6 +49,7 @@ QUIEN_ESCRIBE: dict[str, frozenset[str]] = {
     "Beat": frozenset({"planificador"}),
     "Parrafo": frozenset({"redactor", "editor_de_estilo"}),
     "Compromiso": frozenset({"planificador", "redactor"}),
+    "Mencion": frozenset({"archivero"}),
     # Capa Produccion
     "Plan": frozenset({"planificador"}),
     "Borrador": frozenset({"redactor", "revisor", "editor_de_estilo"}),
@@ -131,5 +132,7 @@ assert {
 # El Entrevistador no escribe ninguna entidad: ni siquiera `Recuerdo`, que nace
 # del alta de la obra con la cita literal que la persona entrego.
 assert escrituras_de("entrevistador") == frozenset()
-# El Archivero no escribe hechos del mundo ni prosa.
-assert escrituras_de("archivero") <= {"ResumenCapitulo", "Decision"}
+# El Archivero no escribe hechos del mundo ni prosa: resume y anota que hechos
+# nombra el capitulo cerrado, sin tocar sus fichas.
+assert escrituras_de("archivero") <= {"ResumenCapitulo", "Mencion", "Decision"}
+assert QUIEN_ESCRIBE["Mencion"] == frozenset({"archivero"})

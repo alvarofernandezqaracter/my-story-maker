@@ -9,7 +9,7 @@ muestra lo pide aqui.
 import threading
 from collections.abc import AsyncIterable, AsyncIterator, Iterator
 from contextlib import asynccontextmanager
-from typing import Annotated, Any, get_origin
+from typing import Annotated, Any, Literal, get_origin
 
 from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -33,9 +33,11 @@ from novela.api.modelos import (
     Confirmacion,
     Contradiccion,
     CriticaServida,
+    Cronologia,
     Destinatario,
     EstadoPlegado,
     FichaDeObra,
+    HechoDeLaBiblia,
     HechoDescartado,
     HechoExtraido,
     Manuscrito,
@@ -45,6 +47,7 @@ from novela.api.modelos import (
     Pasaje,
     PeticionDeEntrevista,
     Progreso,
+    Suceso,
     TrazaServida,
     UnidadDelManuscrito,
 )
@@ -533,6 +536,35 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
                 for evento in casa.almacen.listar("EventoEstado", id_obra, orden="capitulo")
                 if (evento.capitulo or 0) <= capitulo
             ],
+        )
+
+    # --- RF-87. La biblia con su uso por capitulo, y la cronologia --------
+
+    @app.get("/obras/{id_obra}/hechos")
+    def ver_hechos(
+        id_obra: IdObra,
+        casa: ProduccionDep,
+        tipo: Annotated[
+            Literal["Personaje", "Lugar", "Objeto", "Faccion", "Evento"] | None, Query()
+        ] = None,
+        licencia: Annotated[
+            Literal["canon", "plausible", "licencia", "personal"] | None, Query()
+        ] = None,
+    ) -> list[HechoDeLaBiblia]:
+        """Cada hecho de la biblia con los capitulos en que se ha usado."""
+        _obra_o_404(casa, id_obra)
+        return [
+            HechoDeLaBiblia(**hecho)
+            for hecho in casa.almacen.hechos_de_la_biblia(id_obra, tipo=tipo, licencia=licencia)
+        ]
+
+    @app.get("/obras/{id_obra}/cronologia")
+    def ver_cronologia(id_obra: IdObra, casa: ProduccionDep) -> Cronologia:
+        """Sucesos en orden, con momento, lugar y presentes con su nacimiento."""
+        _obra_o_404(casa, id_obra)
+        return Cronologia(
+            id_obra=id_obra,
+            sucesos=[Suceso(**suceso) for suceso in casa.almacen.cronologia(id_obra)],
         )
 
     # --- RI-08. Ver la ejecucion en vivo -----------------------------------

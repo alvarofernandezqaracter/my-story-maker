@@ -405,8 +405,13 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | El Entrevistador detecta las contradicciones de su vocabulario | Casos sembrados, uno por tipo, todavía por escribir. La detección en sí es `inspeccion`; lo que la mide, como con los verificadores, es la prueba sembrada | `prueba` |
 | Una orden en el texto pegado no cambia el brief ni escribe nada | Agente fingido que obedece la orden | `prueba` |
 | La pasada que completa el brief lanza la obra, y la entrevista ya no admite otra | Pasada completa y otra detrás | `prueba` |
+| Anotar el uso de un hecho no toca su ficha, y solo el Archivero lo anota | Menciones escritas sobre una ficha que se compara antes y después, e intento de escribir `Mención` desde otro rol | `prueba` |
+| Una `Mención` apunta siempre a un hecho de la biblia de su obra | Mención sin hecho, a un `id` inventado, a algo que no es hecho y a un hecho de otra obra: las cuatro se rechazan como `Crítica` bloqueante | `prueba` |
+| En qué capítulos se usa un hecho y la cronología se derivan, no se guardan | Capítulos de uso sin repetir y en orden desde menciones duplicadas; cronología ordenada por fecha escrita, con lo que no trae fecha al final; ninguna tabla propia de cronología | `prueba` |
+| El Archivero ve el índice de la biblia y no el canon | Cotejo de la proyección del paso 10 y de las cuatro claves de cada línea del índice | `prueba` |
+| Un capítulo cerrado deja sus menciones y su suceso en la cronología | Recorrido en seco de un capítulo, mirando lo que quedó | `demostracion` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
-| La fecha y el lugar que el Contable escribe son correctos | — | `inverificable` |
+| La fecha, el lugar y los presentes que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |
 
 Las dos últimas filas son deliberadas y están explicadas en §9. La última, sobre
@@ -444,7 +449,7 @@ fallo» a «el dato escrito puede ser falso y nadie lo recalcula».
 ## 10. Huecos: lo que nadie comprueba todavía
 
 La tabla de gobierno de `architecture.md` §6 dice, entidad por entidad, quién la
-vigila. Cotejada contra el reparto de §4, en cinco sitios ese vigilante **no
+vigila. Cotejada contra el reparto de §4, en seis sitios ese vigilante **no
 existe**: hay una entidad que alguien escribe, una columna que dice que está
 vigilada y ninguna dimensión, ningún agente y ningún método detrás. Se listan
 aquí en vez de inventarles una comprobación, porque taparlos exige una dimensión
@@ -457,9 +462,10 @@ lo uno ni lo otro.
 | El resumen | Que el `Resumen de capítulo` sea fiel al capítulo que resume. A partir de ahí es lo único que el Arquitecto de arcos verá nunca de ese capítulo: lo que el resumen se deje fuera desaparece de la obra | Una dimensión, y un agente que vea a la vez la prosa y el resumen. Hoy ninguno la tiene: el Arquitecto no ve prosa por diseño y el Archivero no puede validar lo que él mismo escribe |
 | El canon inicial | Que las fichas del Constructor de mundo sean coherentes entre sí: distancias que cuadren, fechas que no se contradigan, vínculos recíprocos. Toda la continuidad posterior se mide contra ellas, de modo que un error de partida no se detecta jamás, se propaga | Un cotejo de consistencia entre fichas antes de planificar el primer capítulo. Es `analisis` y es barato; lo que falta es a quién se le encarga |
 | La pasada de pulido | Lo que el Revisor toca en la última criba ya no vuelve a comprobarse. Es el único punto del ciclo donde arreglar algo `menor` puede meter un defecto `bloqueante` y salir con el capítulo cerrado | Volver a pasar la criba de bloqueantes sobre lo que la revisión de pulido tocó. Eso es un cambio del bucle de `architecture.md` §5, no un reparto de este documento |
+| Las menciones | Que el Archivero haya anotado **todos** los hechos que el capítulo nombra. Una mención que falta no da error: el hecho parece no usarse, la comprobación de que lo personal aparece en la obra lo da por ausente y el cambio de ese hecho no alcanza al capítulo que lo nombra | Un agente que vea a la vez el texto aceptado y el índice de la biblia y que no sea el Archivero, que no puede validar lo que él mismo escribe. Es la misma forma que el hueco del resumen |
 | El plan | Que el contrato de una escena sea bueno, no solo que esté completo. Que no le falten campos lo caza el rechazo por artefacto malformado; que el `cambio_de_valor` declarado sea de verdad un cambio, o que el obstáculo se oponga al objetivo, no lo mira nadie antes de escribir | Una dimensión que se evalúe sobre el `Plan` y no sobre el texto, para gastar la regeneración antes de redactar y no después |
 
-Los cinco se cierran por el ciclo de edición: son dimensiones o son roles, y eso
+Los seis se cierran por el ciclo de edición: son dimensiones o son roles, y eso
 se abre con una spec. Mientras sigan aquí, lo que hay es la constancia de que se
 conocen, que es bastante más de lo que hay cuando un hueco no está escrito.
 

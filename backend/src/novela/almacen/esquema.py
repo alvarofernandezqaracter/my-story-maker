@@ -128,6 +128,20 @@ TABLAS: tuple[Tabla, ...] = (
         vocabulario_de_estado=ESTADO_DE_COMPROMISO,
         indices=(("id_obra", "estado"),),
     ),
+    # Que hecho de la biblia nombra un capitulo cerrado (RF-80): la relacion
+    # referencial `menciona`, escrita por el Archivero al destilar. La ficha no
+    # se toca; en que capitulos se usa un hecho se deriva de aqui (RF-84).
+    Tabla(
+        "Mencion",
+        "obra",
+        "obra",
+        consulta=("capitulo",),
+        inmutable=True,
+        propias=(Columna("hecho", "TEXT"),),
+        indices=(("id_obra", "hecho"), ("id_obra", "capitulo")),
+        desde_migracion=4,
+        notas="Solo la escribe el Archivero; solo de anadir",
+    ),
     # --- Capa 2, el mundo: de que habla el texto --------------------------
     # Las fichas del Constructor de mundo se traen por `id` desde el contrato de
     # la escena, no por consulta: de ahi que no lleven mas columnas que las
@@ -442,7 +456,7 @@ def _disparadores_que_admiten_la_marca(tabla: Tabla) -> list[str]:
 
 
 def sentencias_del_punto_de_guardado() -> list[str]:
-    """La migracion 4: lo que necesita volver al ultimo capitulo cerrado.
+    """La migracion 6: lo que necesita volver al ultimo capitulo cerrado.
 
     La constancia de hasta que capitulo se audito, que es lo que dice si una
     obra ha terminado (RF-93, RF-94), y los disparadores de inmutabilidad
@@ -523,6 +537,9 @@ SENTENCIAS_DE_LA_ENTREVISTA: tuple[str, ...] = (
 def sentencias_de_la_entrevista() -> list[str]:
     """La migracion 5: el espacio de la entrevista y nada mas."""
     return list(SENTENCIAS_DE_LA_ENTREVISTA)
+def sentencias_de_la_mencion() -> list[str]:
+    """La migracion 4: la tabla de `Mencion` y nada mas."""
+    return _sentencias_de(tablas_de_la_migracion(4))
 
 
 assert {t.tipo for t in TABLAS} == set(

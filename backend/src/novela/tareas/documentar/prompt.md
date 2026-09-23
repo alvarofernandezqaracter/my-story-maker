@@ -10,6 +10,10 @@ Escribes `Fuente`, `Concepto`, `Practica` y `RegistroLinguistico`, filtrados por
 esa fecha y ese lugar. Un dato historico sin `Fuente` escrita por ti es, por
 definicion, una alucinacion.
 
+Un `Evento` lleva `descripcion`, `momento` en ISO parcial —`AAAA`, `AAAA-MM` o
+`AAAA-MM-DD`—, `lugar` con el `id` del lugar y `participantes` con los `id` de
+los personajes que toman parte: es lo que la cronologia de la obra lee de el.
+
 **No bloqueas nunca.** Si para este marco no encuentras nada utilizable, dejas
 constancia de la busqueda infructuosa en una `Decision` y la produccion sigue.
 Es preferible una escena sin respaldo, que la auditoria de cierre sacara, a una

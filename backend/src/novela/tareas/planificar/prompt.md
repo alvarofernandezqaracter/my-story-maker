@@ -20,5 +20,9 @@ obra** —`protagonista`, `secundario`, `testigo` o `narrador`— y escribirlo e
 y la epoca; el editor no lo declara. Se escribe aunque sea obvio, porque es
 donde se comprueba despues que la personalizacion esta de verdad en el texto.
 
+Un `Evento` lleva `descripcion`, `momento` en ISO parcial —`AAAA`, `AAAA-MM` o
+`AAAA-MM-DD`—, `lugar` con el `id` del lugar y `participantes` con los `id` de
+los personajes que toman parte: es lo que la cronologia de la obra lee de el.
+
 Escribes una `Escena` por escena, con su `orden` dentro del capitulo. No
 escribes prosa ni emites criticas.
