@@ -1,0 +1,918 @@
+# Contrato de la frontera entre backend/ y frontend/ (SPEC1 RI-10, D-11).
+# Generado desde los modelos del borde; no se edita a mano. Lo vuelca la
+# prueba tests/test_contrato_de_frontera.py cuando el borde cambia.
+openapi: 3.1.0
+info:
+  title: Generador de novela historica por agentes
+  summary: Lanza una obra desde un brief e inspecciona lo que los agentes producen
+  version: 0.1.3
+paths:
+  /obras:
+    post:
+      summary: Lanzar Obra
+      operationId: lanzar_obra_obras_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Brief'
+        required: true
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObraCreada'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}:
+    get:
+      summary: Ver Obra
+      operationId: ver_obra_obras__id_obra__get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FichaDeObra'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/manuscrito:
+    get:
+      summary: Leer Manuscrito
+      description: Solo el texto aceptado, en orden, con los capitulos marcados.
+      operationId: leer_manuscrito_obras__id_obra__manuscrito_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Manuscrito'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/capitulos/{numero}:
+    get:
+      summary: Ver Capitulo
+      operationId: ver_capitulo_obras__id_obra__capitulos__numero__get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: numero
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          title: Numero
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapituloInspeccionado'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/criticas:
+    get:
+      summary: Ver Criticas
+      operationId: ver_criticas_obras__id_obra__criticas_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: estado
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Estado
+      - name: dimension
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dimension
+      - name: severidad
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severidad
+      - name: capitulo
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          title: Capitulo
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CriticaServida'
+                title: Response Ver Criticas Obras  Id Obra  Criticas Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/trazas:
+    get:
+      summary: Ver Trazas
+      operationId: ver_trazas_obras__id_obra__trazas_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: capitulo
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          title: Capitulo
+      - name: rol
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Rol
+      - name: tarea
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tarea
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrazaServida'
+                title: Response Ver Trazas Obras  Id Obra  Trazas Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/estado:
+    get:
+      summary: Ver Estado
+      operationId: ver_estado_obras__id_obra__estado_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: capitulo
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Capitulo
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstadoPlegado'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/progreso:
+    get:
+      summary: Ver Progreso
+      description: Flujo de eventos de progreso mientras la obra corre.
+      operationId: ver_progreso_obras__id_obra__progreso_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      responses:
+        '200':
+          description: Flujo abierto mientras la obra corre. Cada evento `progreso`
+            lleva un `Progreso`; el evento `terminada` lo cierra.
+          content:
+            text/event-stream:
+              itemSchema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                  event:
+                    type: string
+                  id:
+                    type: string
+                  retry:
+                    type: integer
+                    minimum: 0
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/progreso/ahora:
+    get:
+      summary: Ver Progreso Ahora
+      description: El mismo progreso de una sola vez, para quien no quiera el flujo.
+      operationId: ver_progreso_ahora_obras__id_obra__progreso_ahora_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Progreso'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/pasajes:
+    get:
+      summary: Buscar Pasaje
+      operationId: buscar_pasaje_obras__id_obra__pasajes_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: consulta
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 2
+          title: Consulta
+      - name: k
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 20
+          minimum: 1
+          default: 5
+          title: K
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pasaje'
+                title: Response Buscar Pasaje Obras  Id Obra  Pasajes Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/detener:
+    post:
+      summary: Detener
+      operationId: detener_obras__id_obra__detener_post
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Orden'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Confirmacion'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/reanudar:
+    post:
+      summary: Reanudar
+      description: Retoma el paso siguiente al ultimo cerrado; no repite lo aceptado.
+      operationId: reanudar_obras__id_obra__reanudar_post
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Confirmacion'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    Brief:
+      properties:
+        titulo:
+          type: string
+          minLength: 1
+          title: Titulo
+          description: Titulo de la obra
+        epoca:
+          type: string
+          minLength: 1
+          title: Epoca
+          description: Epoca y ambito geografico
+        premisa:
+          type: string
+          minLength: 1
+          title: Premisa
+          description: De que va
+        tesis_tematica:
+          type: string
+          minLength: 1
+          title: Tesis Tematica
+          description: Que sostiene la obra
+        elenco_declarado:
+          items:
+            type: string
+          type: array
+          title: Elenco Declarado
+          description: Personajes que el editor fija
+        capitulos_objetivo:
+          type: integer
+          maximum: 200.0
+          minimum: 1.0
+          title: Capitulos Objetivo
+          description: Cuantos capitulos
+        politicas_globales:
+          additionalProperties: true
+          type: object
+          title: Politicas Globales
+          description: POV dominante, tiempo verbal, nivel de arcaismo, extension
+        arcos:
+          items:
+            type: string
+          type: array
+          title: Arcos
+          description: Arcos declarados
+      type: object
+      required:
+      - titulo
+      - epoca
+      - premisa
+      - tesis_tematica
+      - elenco_declarado
+      - capitulos_objetivo
+      title: Brief
+      description: 'Lo que el editor escribe para lanzar una obra.
+
+
+        Si falta un campo obligatorio, la obra se rechaza nombrando el campo y sin
+
+        crear nada. Un brief incompleto es un caso normal, no un error del sistema.'
+    CapituloInspeccionado:
+      properties:
+        capitulo:
+          type: integer
+          title: Capitulo
+        estado:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Estado
+        plan:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Plan
+        escenas:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Escenas
+        borrador_vigente_por_escena:
+          additionalProperties:
+            additionalProperties: true
+            type: object
+          type: object
+          title: Borrador Vigente Por Escena
+        criticas:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Criticas
+      type: object
+      required:
+      - capitulo
+      - estado
+      - plan
+      - escenas
+      - borrador_vigente_por_escena
+      - criticas
+      title: CapituloInspeccionado
+    Confirmacion:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        detenida:
+          type: boolean
+          title: Detenida
+        motivo:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Motivo
+      type: object
+      required:
+      - id_obra
+      - detenida
+      - motivo
+      title: Confirmacion
+    CriticaServida:
+      properties:
+        id:
+          type: string
+          title: Id
+        capitulo:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo
+        escena:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Escena
+        estado:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Estado
+        severidad:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severidad
+        dimension:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dimension
+        detectada_por:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detectada Por
+        evidencia:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Evidencia
+        accion_sugerida:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Accion Sugerida
+      type: object
+      required:
+      - id
+      - capitulo
+      - escena
+      - estado
+      - severidad
+      - dimension
+      - detectada_por
+      - evidencia
+      - accion_sugerida
+      title: CriticaServida
+    EstadoPlegado:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        capitulo:
+          type: integer
+          title: Capitulo
+        estado:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Estado
+        eventos:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Eventos
+      type: object
+      required:
+      - id_obra
+      - capitulo
+      - estado
+      - eventos
+      title: EstadoPlegado
+      description: El estado plegado hasta el capitulo indicado, y el log de eventos.
+    FichaDeObra:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        titulo:
+          type: string
+          title: Titulo
+        detenida:
+          type: boolean
+          title: Detenida
+        capitulo_en_curso:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo En Curso
+        capitulos_cerrados:
+          type: integer
+          title: Capitulos Cerrados
+        capitulos_marcados:
+          type: integer
+          title: Capitulos Marcados
+        criticas_abiertas:
+          type: integer
+          title: Criticas Abiertas
+      type: object
+      required:
+      - id_obra
+      - titulo
+      - detenida
+      - capitulo_en_curso
+      - capitulos_cerrados
+      - capitulos_marcados
+      - criticas_abiertas
+      title: FichaDeObra
+      description: Estado de la obra, capitulo en curso y recuento de cerrados y marcados.
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    Manuscrito:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        unidades:
+          items:
+            $ref: '#/components/schemas/UnidadDelManuscrito'
+          type: array
+          title: Unidades
+      type: object
+      required:
+      - id_obra
+      - unidades
+      title: Manuscrito
+    ObraCreada:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        estado:
+          type: string
+          title: Estado
+      type: object
+      required:
+      - id_obra
+      - estado
+      title: ObraCreada
+    Orden:
+      properties:
+        motivo:
+          type: string
+          title: Motivo
+          description: Por que se detiene
+          default: ''
+      type: object
+      title: Orden
+      description: Detener o reanudar. Es control, no mantenimiento.
+    Pasaje:
+      properties:
+        fragmento:
+          type: string
+          title: Fragmento
+        texto:
+          type: string
+          title: Texto
+        capitulo:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo
+        escena:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Escena
+      type: object
+      required:
+      - fragmento
+      - texto
+      - capitulo
+      - escena
+      title: Pasaje
+      description: Un trozo del manuscrito aceptado, localizado por parecido.
+    Progreso:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        detenida:
+          type: boolean
+          title: Detenida
+        capitulo_en_curso:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo En Curso
+        tareas_abiertas:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Tareas Abiertas
+        tokens_de_entrada_concurrentes:
+          type: integer
+          title: Tokens De Entrada Concurrentes
+        techo:
+          type: integer
+          title: Techo
+      type: object
+      required:
+      - id_obra
+      - detenida
+      - capitulo_en_curso
+      - tareas_abiertas
+      - tokens_de_entrada_concurrentes
+      - techo
+      title: Progreso
+      description: Lo que hay abierto ahora mismo.
+    TrazaServida:
+      properties:
+        id:
+          type: string
+          title: Id
+        capitulo:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo
+        escena:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Escena
+        rol:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Rol
+        tarea:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tarea
+        intento:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Intento
+        tokens_de_entrada_estimados:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tokens De Entrada Estimados
+        tokens_de_entrada_medidos:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tokens De Entrada Medidos
+        tokens_de_salida:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Tokens De Salida
+        coste:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Coste
+        latencia_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Latencia Ms
+        abierta_en:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Abierta En
+        cerrada_en:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cerrada En
+      type: object
+      required:
+      - id
+      - capitulo
+      - escena
+      - rol
+      - tarea
+      - intento
+      - tokens_de_entrada_estimados
+      - tokens_de_entrada_medidos
+      - tokens_de_salida
+      - coste
+      - latencia_ms
+      - abierta_en
+      - cerrada_en
+      title: TrazaServida
+    UnidadDelManuscrito:
+      properties:
+        capitulo:
+          type: integer
+          title: Capitulo
+        escena:
+          type: string
+          title: Escena
+        texto:
+          type: string
+          title: Texto
+        capitulo_marcado:
+          type: boolean
+          title: Capitulo Marcado
+      type: object
+      required:
+      - capitulo
+      - escena
+      - texto
+      - capitulo_marcado
+      title: UnidadDelManuscrito
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError

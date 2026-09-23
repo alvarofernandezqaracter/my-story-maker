@@ -18,6 +18,10 @@ dev = [
     "mypy>=1.13",
     "import-linter>=2",
     "httpx>=0.27",
+    # Vuelcan y comprueban el contrato de la frontera (RNF-09); el servidor no
+    # los carga.
+    "pyyaml>=6",
+    "types-PyYAML>=6",
 ]
 
 [build-system]

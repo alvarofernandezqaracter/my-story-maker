@@ -309,7 +309,7 @@ ese contrato se publica en OpenAPI: es el único acuerdo entre `backend/` y
 | RNF-06 | Un fallo del proveedor o un corte no deja artefactos a medias ni estados materializados inconsistentes: se escribe la unidad completa o nada | `prueba` |
 | RNF-07 | Español en documentación, commits, nombres de entidad y mensajes de error de la API | `inspeccion` |
 | RNF-08 | Ninguna operación de mantenimiento recurrente recae en el editor. Un paso manual periódico es un defecto de diseño, no una instrucción de uso | `inspeccion` |
-| RNF-09 | El contrato volcado en `backend/openapi.yaml` es el que genera el código. Si el borde cambia y el contrato no se regenera, la comprobación falla y dice con qué orden se arregla | `prueba` |
+| RNF-09 | El contrato volcado en `backend/openapi.yaml` es el que genera el código. Si el borde cambia y el contrato no se regenera, la comprobación lo vuelve a volcar y falla una vez, para que el movimiento de la frontera pase por el diff. No hay orden de mantenimiento que recordar (RNF-08) | `prueba` |
 
 ## §8 Decisiones de diseño de esta versión
 

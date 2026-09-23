@@ -15,6 +15,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 
+from novela import __version__
 from novela.ajustes import RUTA_DE_LA_BASE, TECHO_DE_CONTEXTO_CONCURRENTE
 from novela.almacen import Almacen, Artefacto
 from novela.almacen.artefactos import abrir_almacen
@@ -88,6 +89,7 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
     app = FastAPI(
         title="Generador de novela historica por agentes",
         summary="Lanza una obra desde un brief e inspecciona lo que los agentes producen",
+        version=__version__,
         lifespan=ciclo,
     )
 
@@ -309,7 +311,18 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
             techo=TECHO_DE_CONTEXTO_CONCURRENTE,
         )
 
-    @app.get("/obras/{id_obra}/progreso", response_class=EventSourceResponse)
+    @app.get(
+        "/obras/{id_obra}/progreso",
+        response_class=EventSourceResponse,
+        responses={
+            200: {
+                "description": (
+                    "Flujo abierto mientras la obra corre. Cada evento `progreso` "
+                    "lleva un `Progreso`; el evento `terminada` lo cierra."
+                ),
+            }
+        },
+    )
     async def ver_progreso(
         id_obra: IdObra, casa: ProduccionDep
     ) -> AsyncIterable[ServerSentEvent]:
