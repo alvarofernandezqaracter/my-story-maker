@@ -2,7 +2,7 @@
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
 version: 1.0.2
-estado: aprobada
+estado: aplicada
 fecha: 2026-09-22
 ambito: backend/
 base:

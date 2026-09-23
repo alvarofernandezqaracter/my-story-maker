@@ -2,7 +2,7 @@
 name: SPEC1-plan-de-implementacion
 titulo: Plan de implementación de SPEC1 — Backend v1
 version: 1.0.0
-estado: propuesto
+estado: aplicado
 fecha: 2026-09-22
 ambito: backend/
 base:

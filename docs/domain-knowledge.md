@@ -152,10 +152,16 @@ flowchart TD
   MED --> CNT[Continuidad de estado]
   MED --> TEM[Coherencia temporal]
   MED --> RIT[Ritmo]
+  MED --> CAM[Cambio de valor]
+  MED --> POV[Integridad de POV]
+  LOC --> TIC[Tics de modelo]
   GLO --> ARC[Progresion de arcos]
   GLO --> ECO[Economia narrativa]
   GLO --> TEN[Curva de tension]
+  GLO --> REV[Distribucion de revelaciones]
   GLO --> FID[Fidelidad historica]
+  GLO --> DOC[Cobertura documental]
+  GLO --> CIE[Obra cerrada sin defectos abiertos]
 ```
 
 Cada hoja es una dimensión observable solo en su alcance, y formulada como predicado sobre entidades de la ontología, no como impresión sobre el texto.

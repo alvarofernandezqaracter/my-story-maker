@@ -277,7 +277,7 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 | Que los verificadores detectan | `prueba` | Casos sembrados: un texto con un defecto conocido de una sola dimensión por caso | Tasa de detección por dimensión |
 | Que no inventan defectos | `prueba` | Los mismos casos, con esa dimensión intacta | Falsos positivos por capítulo |
 | Que toda dimensión llegó a comprobarse | `analisis` | Recuento de constancias por unidad aceptada, contra las dimensiones que le tocaban por su alcance | Un paso del guion que se saltó, o una tanda que murió sin que nadie se enterase |
-| Que la cuenta previa no engaña | `analisis` | Contexto estimado antes de mandar frente al medido al terminar, tarea por tarea | Un techo que se respeta sobre el papel y se rompe en la máquina |
+| Que la cuenta previa no engaña | `analisis` | Contexto estimado antes de mandar frente al medido al terminar, tarea por tarea. La cuenta previa incluye lo que el subagente arrastra de su parte: si solo cuenta la proyección, mide otra cosa | Un techo que se respeta sobre el papel y se rompe en la máquina |
 | Que el bucle converge | `analisis` | Recuento de vueltas hasta `Aceptado` en la `Traza` | Escenas y capítulos que giran sin cerrar |
 | Que las críticas son utilizables | `analisis` | Proporción descartada por falta de `evidencia` | Agentes que opinan en vez de comprobar |
 | Que los artefactos están bien formados | `analisis` | Recuento de rechazos por campo ausente, por capítulo | Un rol con demasiado alcance o con pocos ejemplos |
@@ -369,6 +369,9 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Ninguna ventana sale incompleta ni con material de sobra | La proyección enviada se coteja con la declarada en el contrato | `analisis` |
 | El techo estimado es el techo real | Estimación previa frente a medida posterior, tarea por tarea | `analisis` |
 | Toda dimensión del alcance dejó constancia en cada unidad aceptada | Recuento de constancias contra las dimensiones que tocaban | `analisis` |
+| El guion y los contratos de tarea dicen lo mismo | Cotejo de la criba y el rol de cada dimensión en los dos sitios donde están escritos | `analisis` |
+| Toda proyección mínima la sabe traer el ensamblador | Cotejo de los materiales que cada contrato pide contra los que el ensamblador sabe construir | `analisis` |
+| Lo que cada rol declara escribir es lo que la tabla de gobierno le asigna | Cotejo del contrato de cada tarea contra la tabla | `analisis` |
 | Detener y reanudar no duplica ni pierde trabajo aceptado | Parada a mitad de capítulo y reanudación | `prueba` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha y el lugar que el Contable escribe son correctos | — | `inverificable` |

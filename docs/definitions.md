@@ -172,3 +172,4 @@ Dimensiones formulables como regla estrecha sobre un fragmento corto.
 | Distribución de revelaciones | Espaciado de los cambios epistémicos del lector |
 | Fidelidad histórica | Ratio `canon` / `plausible` / `licencia`; toda `licencia` con justificación registrada |
 | Cobertura documental | Proporción de afirmaciones históricas con `Fuente` asociada |
+| Obra cerrada sin defectos abiertos | La obra está cerrada y no le queda ninguna crítica `bloqueante` abierta |

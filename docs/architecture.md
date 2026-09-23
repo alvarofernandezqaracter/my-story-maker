@@ -82,7 +82,7 @@ Dos roles estaban antes implícitos y ahora son explícitos: el **Constructor de
 
 Reglas de integridad del censo:
 
-- Ningún agente valida su propia salida: el Redactor no emite `Crítica`, y ni Verificador ni Editor de estilo ni Juez escriben `Borrador`.
+- Ningún agente valida su propia salida: el Redactor no emite `Crítica`, y ni el Verificador ni el Juez escriben `Borrador`. El Editor de estilo es el único que hace las dos cosas, y por eso el guion las separa en dos pasos distintos: cose el capítulo en el paso 7 escribiendo un `Borrador` de superficie, y en el paso 8 comprueba predicados de superficie sobre el texto ya cosido. Sin esa costura, lo que el paso 7 produjera serían críticas que ningún paso posterior aplica.
 - Solo el Contable de estado emite `EventoEstado`. Es el único punto por el que el mundo cambia.
 - Solo el Documentalista escribe `Fuente`. Un dato sin `Fuente` escrita por él es una alucinación por definición. Es además el único rol que trae material de fuera del sistema: ningún otro busca ni lee nada que no esté ya en el almacén.
 - El Revisor aplica críticas ajenas; no puede crear las suyas.
@@ -101,10 +101,10 @@ Qué artefacto consume cada rol y qué artefacto deja escrito. La salida de un a
 | Redactor | Contrato de una escena del `Plan` aceptado, voces del elenco presente en ella, cola de continuidad local, documentación recuperada para esa escena | `Borrador` candidato de esa escena, con sus `Párrafo` |
 | Contable de estado | Estado en N-1 ya materializado, texto aceptado del capítulo N, vocabulario de tipos de evento | `EventoEstado` del capítulo N, con fecha y lugar resultantes ya calculados, y estado en N |
 | Verificador de continuidad | Un contrato de verificación por dimensión —predicado y proyección mínima, `validators.md` §4— y el texto producido | `Crítica` de alcance escena y capítulo con evidencia citable, o la constancia de que el predicado se cumple |
-| Editor de estilo | Texto producido, `Registro lingüístico` de las escenas en juego, lista vetada corta del capítulo, registro acumulado de imágenes y muletillas | `Crítica` local, `Borrador` de superficie y el registro acumulado actualizado al cerrar el capítulo |
+| Editor de estilo | Texto producido, `Registro lingüístico` de las escenas en juego, lista vetada corta del capítulo, ecos recuperados del registro acumulado de imágenes y muletillas | `Crítica` local y `Borrador` de superficie. El registro acumulado no es un artefacto que él escriba: es la colección de prosa aceptada, que se alimenta sola al aceptar cada unidad y de la que él recupera por parecido |
 | Juez de rúbrica | Texto producido y rúbrica de la única dimensión que puntúa | `Crítica` ruidosa, marcada aparte, que por sí sola no dispara regeneración |
 | Revisor | `Borrador` vigente, críticas a atender ya filtradas por severidad, contrato de la unidad | `Revisión` —críticas atendidas y rechazadas con motivo— y el `Borrador` siguiente |
-| Archivero | Texto aceptado del capítulo N, cola de `Compromiso`, registro acumulado de estilo | `Resumen de capítulo`, las dos colas actualizadas y la memoria de capítulo retirada |
+| Archivero | Texto aceptado del capítulo N, cola de `Compromiso`, ecos del registro acumulado de estilo | `Resumen de capítulo`, con qué compromisos quedan pagados y cuáles siguen abiertos. La memoria de capítulo la retira el almacén al cerrar, marcándola como caducada; lo que sigue abierto sobrevive |
 
 La `Traza` no es salida de ningún rol: se registra en toda tarea, la ejecute quien la ejecute, y por eso no aparece en la tabla.
 
@@ -194,12 +194,15 @@ Valores cerrados de la capa de producción. Los vocabularios de forma textual y 
 
 **Estado de producción:** `planificado`, `redactado`, `en_revision`, `aceptado`, `descartado`.
 
+**Estado de crítica:** `abierta`, `atendida`, `rechazada`, `descartada`. Es el que hace filtrable el registro de defectos y el que permite contar lo que mide la convergencia del bucle: una crítica se descarta sin evidencia, se atiende o se rechaza con motivo en la `Revisión`, y la que no llega a ninguna de esas tres se queda abierta y cierra el capítulo marcado.
+
 **Tipo de EventoEstado:** `aparece`, `muere`, `viaja_a`, `adquiere`, `pierde`, `aprende` (cambio epistémico), `revela_a`, `cambia_relacion`, `cambia_estado_civil_o_rango`, `transcurre_tiempo`.
 
 ```mermaid
 flowchart TD
   PROC[Vocabularios de proceso] --> SEV[severidad: bloqueante / mayor /<br/>menor / sugerencia]
-  PROC --> EST[estado: planificado / redactado /<br/>en revision / aceptado / descartado]
+  PROC --> EST[estado de produccion: planificado / redactado /<br/>en revision / aceptado / descartado]
+  PROC --> CRI[estado de critica: abierta / atendida /<br/>rechazada / descartada]
 ```
 
 ```mermaid
@@ -263,7 +266,7 @@ Es la condición para que el capítulo 40 cueste lo mismo que el capítulo 4. De
 
 - **El log de `EventoEstado` no se lee nunca entero.** El pliegue es incremental: estado en N-1 más los eventos de N.
 - **La prosa cerrada no se relee jamás.** La única excepción es la cola de continuidad local, corta y de tamaño fijo.
-- **Solo dos materiales crecen con la obra**, y por eso los dos llevan tope declarado y un único lector: los `Resumen de capítulo`, que lee el Arquitecto de arcos, y el registro acumulado de estilo, que consulta el Editor de estilo. El primero entra entero y se compacta al alcanzar su tope. El segundo ya no entra entero: se consulta por parecido y de él llegan solo los ecos recuperados, así que su tope vigila el tamaño del índice, no el de la ventana. Nada más en el sistema tiene permitido crecer sin límite.
+- **Solo dos materiales crecen con la obra**, y por eso los dos llevan tope declarado y un único lector: los `Resumen de capítulo`, que lee el Arquitecto de arcos, y el registro acumulado de estilo, que consulta el Editor de estilo. El primero entra entero, lleva tope declarado y avisa al alcanzarlo; compactarlo queda fuera de esta versión. El segundo ya no entra entero: se consulta por parecido y de él llegan solo los ecos recuperados, así que su tope vigila el tamaño del índice, no el de la ventana. Nada más en el sistema tiene permitido crecer sin límite.
 
 ### Recuperación por parecido
 
@@ -402,11 +405,13 @@ manda, no la tarea entera.
 
 El reparto es la asignación de diseño, no una medida: calibrarlo contra las `Traza` reales es trabajo de implementación, y la `Traza` existe en parte para eso.
 
-**Segunda: la anchura de una tanda se calcula, no se elige.** Se reserva el 20 % del techo como margen para lo que no se puede prever y quedan 80 000 útiles. En una tanda caben `80 000 ÷ tope del rol más caro de la tanda` agentes simultáneos. Con verificadores a 8 000, diez a la vez. Si hay veinte comprobaciones que hacer, son dos tandas: se abren diez, se espera a que cierren las diez y se abren las otras diez.
+**Segunda: la anchura de una tanda se calcula, no se elige.** Se reserva el 20 % del techo como margen para lo que no se puede prever y quedan 80 000 útiles. En una tanda caben `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)` agentes simultáneos.
+
+Ese coste fijo no es una precaución: **un subagente no arranca vacío**. Antes de que entre nada del sistema arrastra su propia instrucción y las definiciones de las herramientas que tenga concedidas, y eso son tokens de entrada como cualquier otro. Medido con todas las herramientas retiradas y con la instrucción del rol en lugar de la de serie, son unos 10 000 por tarea abierta. Con verificadores a 8 000 de proyección, cuatro a la vez. Si hay veinte comprobaciones que hacer, son cinco tandas: se abren cuatro, se espera a que cierren y se abren las siguientes. Sin ese término el techo se respeta sobre el papel y se rompe en la máquina.
 
 **Tercera: paralelo donde no se pisan, secuencial donde hay testigo.** Dos tareas corren a la vez solo si ninguna necesita el artefacto de la otra: documentar varias escenas, comprobar varias dimensiones sobre un mismo borrador. Planificar, redactar, revisar y cerrar van en fila porque cada una consume lo que dejó la anterior. Nunca en abanico libre: un abanico cuya anchura no se conoce de antemano es un techo que no se puede prometer.
 
-Un efecto de los topes que conviene notar, porque decide el diseño sin que haya que ordenarlo: **al verificador no le cabe un capítulo entero**. Sus instrucciones y su contrato rondan los 1 500 tokens, su proyección mínima otros 1 500 y un capítulo de cuatro escenas unos 5 200. No entra. Así que verifica por escena. Las dimensiones que sí son de alcance de capítulo caben porque son justamente las que no leen prosa, sino datos que otro agente ya dejó escritos —el modo declarado de cada párrafo, las fechas resultantes de cada `EventoEstado`—. El presupuesto y el reparto de `validators.md` llegan a la misma conclusión por caminos distintos.
+Un efecto de los topes que conviene notar, porque decide el diseño sin que haya que ordenarlo: **al verificador no le cabe un capítulo entero**. Su contrato de verificación ronda los 1 500 tokens, su proyección mínima otros 1 500 y un capítulo de cuatro escenas unos 5 200. No entra. Así que verifica por escena. Las dimensiones que sí son de alcance de capítulo caben porque son justamente las que no leen prosa, sino datos que otro agente ya dejó escritos —el modo declarado de cada párrafo, las fechas resultantes de cada `EventoEstado`—. El presupuesto y el reparto de `validators.md` llegan a la misma conclusión por caminos distintos.
 
 Reglas de compresión, que son las que hacen que los topes se cumplan: el canon se mantiene como fichas cortas y estables; los capítulos anteriores entran como `Resumen de capítulo`, nunca como prosa, salvo la cola de continuidad local; la documentación entra solo la recuperada para esa escena y se descarta al cerrarla; y todo lo que llega por parecido entra con su `k` y su tope de tokens declarados, que se descuentan del tope del rol que consulta.
 
@@ -451,7 +456,7 @@ No rompe la regla de un rol una tarea: el Editor de estilo sigue teniendo un sol
 stateDiagram-v2
   [*] --> Planificado
   Planificado --> Redactado: redactor escribe escenas
-  Redactado --> Validado: validadores deterministas
+  Redactado --> Validado: criba de bloqueantes
   Validado --> EnRevision: criticas mayores
   EnRevision --> Validado: revision dirigida
   Validado --> Redactado: critica bloqueante
@@ -520,7 +525,7 @@ Dos reglas que la tabla implica y conviene explicitar: ninguna entidad del mundo
 
 **Principio.** No hay harness a medida. El sistema es un conjunto de agentes, un formato de artefacto y un protocolo de paso de testigo entre ellos. Lo que antes era una función es ahora un rol con contrato.
 
-**Representación: artefactos, no objetos.** El estado vive en ficheros declarativos legibles por los agentes, no en modelos tipados en memoria. Un árbol posible: `mundo/` con una ficha por entidad, `obra/` con plan y borradores por capítulo, `log/` con un fichero de `EventoEstado` por capítulo cerrado, `estado/` con el estado materializado en N, `criticas/` abiertas y resueltas. El esquema de cada artefacto se declara en prosa estructurada dentro de la propia ontología; el vocabulario controlado hace de validación de tipos.
+**Representación: artefactos, no objetos.** El estado vive en documentos declarativos legibles por los agentes, no en modelos tipados en memoria. Los artefactos se agrupan lógicamente en mundo —una ficha por entidad—, obra —plan y borradores por capítulo—, log de `EventoEstado` por capítulo cerrado, estado materializado en N y críticas abiertas y resueltas. Son grupos, no carpetas: **todo vive en SQLite y en ningún otro sitio**, incluidos los cuerpos de texto y los embeddings, porque un segundo lugar donde persistir sería un segundo escritor. El esquema de cada artefacto se declara en prosa estructurada dentro de la propia ontología; el vocabulario controlado hace de validación de tipos y se impone además como `CHECK` en el esquema.
 
 **Quién impone la forma.** Sin Pydantic, lo que garantiza que un artefacto esté bien formado es que el agente que lo escribe tenga el esquema en su contexto y que el siguiente agente lo rechace si falta un campo. El rechazo es una `Crítica` de severidad `bloqueante` con objeto el artefacto, no el texto. Conviene medir cuántos artefactos malformados aparecen por capítulo: es el indicador temprano de que un rol necesita más ejemplos o menos alcance.
 
@@ -543,15 +548,23 @@ carpetas y esa regla deja de verse.
 ```
 backend/
   pyproject.toml
+  .importlinter        los contratos de importacion que sostienen el corte
   src/novela/
-    tareas/     una carpeta por tipo de tarea del censo (§2): poblar_mundo,
-                documentar, auditar, planificar, redactar, plegar, destilar,
-                verificar, editar_estilo, juzgar, revisar
-    nucleo/     funciones puras, sin entrada ni salida: el guion del capitulo
-                y la pieza que lo camina (§4), el enrutado por severidad y el
-                tope de vueltas (§5) y el presupuesto de contexto (§3)
-    almacen/    unica puerta de lectura y escritura del almacen de artefactos
-    api/        routers FastAPI, un procedimiento por caso de uso del editor
+    ajustes.py         lo que hoy es configuracion: topes de ventana por rol,
+                       k de recuperacion, topes de vueltas, cadencia de auditar
+    vocabularios.py    los valores cerrados, en un solo sitio
+    ejecutor.py        lanza el subagente de Claude Code de cada tarea
+    tareas/            una carpeta por tipo de tarea del censo (§2), con su
+                       contrato, su prompt, su esquema y, si le toca criba, sus
+                       contratos de verificacion por dimension
+    nucleo/            el guion declarativo del capitulo y la pieza que lo
+                       camina (§4), el ensamblador de proyecciones (§3), el
+                       enrutado por severidad y los topes de vueltas (§5), el
+                       presupuesto de contexto (§3) y los permisos por rol (§6)
+    almacen/           unica puerta de lectura y escritura, incluido el indice
+                       de recuperacion por parecido
+    api/               un procedimiento por caso de uso del editor
+  tests/               las pruebas y los casos sembrados, fuera de tareas/
 ```
 
 Cuatro reglas sostienen el corte:
@@ -614,12 +627,9 @@ En los tres casos el patrón es el mismo: **convertir un cálculo en un dato esc
 
 - [ ] ¿El estado epistémico del lector se modela explícitamente o se deriva de lo aparecido en texto?
 - [ ] ¿Los `Compromiso` los declara el planificador o se extraen del texto tras redactar?
-- [ ] ¿Qué umbral de severidad dispara regeneración completa frente a revisión dirigida?
 - [ ] ¿La lista de léxico vetado se construye a mano, se deriva de corpus de época, o ambas?
 - [ ] ¿Se versiona la biblia junto a la novela o evoluciona monotónicamente?
 - [ ] ¿El Contable de estado es un rol con su propio modelo y temperatura baja, o el mismo modelo que el resto con otro contrato?
 - [ ] ¿Quién arbitra cuando Verificador y Juez discrepan de forma sistemática en una dimensión?
-- [ ] ¿Se acepta alguna herramienta externa de cálculo (fechas, recuento léxico) sin que eso cuente como harness, o la restricción de cero código es absoluta?
+- [ ] ¿Se acepta alguna herramienta externa de cálculo (fechas, recuento léxico) sin que eso cuente como harness, o la restricción de cero código es absoluta? **No en v1**, y por eso coherencia temporal, fatiga léxica y léxico vetado se comprueban contra el dato ya escrito y lo que las vigila es la reincidencia por dimensión.
 - [ ] ¿Con qué criterio se admite o se descarta una fuente encontrada fuera del sistema, y quién arbitra cuando dos fuentes admitidas se contradicen?
-- [ ] ¿Dónde vive el almacén de artefactos (`mundo/`, `obra/`, `log/`, `estado/`, `criticas/` de §7) dentro del reparto de `AGENTS.md`, y quién lo escribe?
-- [ ] ¿Los prompts de los once agentes son parte del `backend/` o una carpeta hermana?

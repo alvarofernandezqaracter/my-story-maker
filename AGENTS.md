@@ -5,27 +5,24 @@ manuscrito verificado.
 
 ## Alcance de esta rama (importante)
 
-Esta rama es `v2`, un arranque desde cero: contiene `docs/`, la carpeta `specs/`
-—todavía vacía— y las dos carpetas vacías del monorepo, `backend/` y
-`frontend/`. No hay código todavía.
+Esta rama es `v2`, un arranque desde cero. Contiene `docs/`, la spec del backend
+y su plan en `specs/`, el `backend/` implementado según ese plan y la carpeta
+`frontend/`, que sigue vacía.
 
 - Considera como fuente de verdad únicamente lo que existe en esta rama. Ignora
   `main` y cualquier historial, convención o código anterior: no aplica aquí.
 - Si algo no está en `docs/` ni en esta rama, no existe todavía. No lo asumas:
   pregúntalo o propónlo explícitamente.
-- Al crear la estructura del proyecto, parte de cero siguiendo
-  `docs/architecture.md` y la estructura de repositorio de más abajo, no de un
-  esqueleto heredado.
 
 ## Estructura del repositorio
 
-Monorepo con dos paquetes en la raíz. Ninguno tiene código todavía: por ahora
-solo está fijada la frontera entre ambos.
+Monorepo con dos paquetes en la raíz. El `backend/` está implementado y el
+`frontend/` todavía no; la frontera entre ambos es la misma desde el principio.
 
 | Carpeta | Qué contendrá | Pila |
 | --- | --- | --- |
-| `backend/` | El servidor: expone por HTTP lo que los agentes producen y recibe las órdenes del editor | Python + FastAPI |
-| `frontend/` | La interfaz web desde la que se lanza y se inspecciona una obra | Vite + React |
+| `backend/` | El servidor: guarda y sirve artefactos, camina el guion encargando tareas a los agentes y expone por HTTP lo que el editor necesita ver | Python + FastAPI |
+| `frontend/` | La interfaz web desde la que se lanza y se inspecciona una obra. Todavía vacía | Vite + React |
 | `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
 | `specs/` | Una spec por cambio —el contexto específico—: qué se cambia y por qué | Markdown |
 
