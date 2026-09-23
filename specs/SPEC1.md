@@ -244,6 +244,57 @@ flowchart LR
 | RF-67 | Ni el Verificador de continuidad, ni el Contable de estado, ni el Arquitecto de arcos, ni el Redactor consultan por parecido. Una búsqueda por semejanza no encuentra lo que falta y su fallo es silencioso | `inspeccion` |
 | RF-68 | Cada recuperación queda en la `Traza`: consulta, colección, `k`, fragmentos devueltos y cuáles acabó usando el agente. Sin eso OBJ-08 no se puede medir | `analisis` |
 
+### 4.9 Uso de los hechos por capítulo y cronología
+
+**El problema.** Tres trabajos posteriores necesitan saber dónde vive cada
+hecho de la biblia en el texto y cuándo ocurre cada cosa: el validador que
+comprueba que cada elemento personalizado aparece en algún capítulo, el
+fichero que se le pasa al demostrador formal y la propagación de un cambio del
+lector a los capítulos afectados. Hoy ninguno de los dos datos existe: una
+ficha no sabe en qué capítulos se ha usado y no hay forma de listar los sucesos
+de la obra en orden con quién estaba presente. Sin esto, los tres se quedan sin
+suelo o tienen que releer la prosa cerrada, que es justo lo que la regla del
+tamaño prohíbe.
+
+**Qué es un hecho de la biblia.** Las fichas de la capa Mundo que el texto
+nombra: `Personaje`, `Lugar`, `Objeto`, `Faccion` y `Evento`. Quedan fuera
+`Fuente`, `Concepto`, `Practica` y `RegistroLinguistico`, que respaldan o
+filtran el texto sin ser algo de lo que el texto hable, y `Recuerdo`, que es la
+materia prima de la que sale la ficha `personal` y no la ficha misma.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-80 | Cada uso de un hecho de la biblia en un capítulo cerrado queda registrado como una `Mencion`: artefacto de la capa Obra, inmutable y de memoria de obra, con el `id` del hecho y el número del capítulo. Materializa la relación referencial `menciona`. **La ficha del hecho no se toca** (D-26) | `prueba` |
+| RF-81 | Las `Mencion` las escribe el Archivero en el paso 10, `destilar`, en la misma unidad que el `Resumen de capítulo`: o se guardan las dos cosas o ninguna. Ningún otro rol las escribe (D-25) | `prueba` |
+| RF-82 | Para anotarlas, la ventana del Archivero lleva un material nuevo, `indice_de_la_biblia`: una línea por hecho con su `id`, su tipo, su nombre y su licencia, y nada más de la ficha. No es el canon: el Archivero sigue sin ver atributos del mundo | `prueba` |
+| RF-83 | El almacén rechaza una `Mencion` que no traiga el `id` del hecho o cuyo `id` no sea un hecho de la biblia de esa misma obra. El rechazo es el de RF-23: `Crítica` bloqueante con objeto el artefacto | `prueba` |
+| RF-84 | En qué capítulos se usa un hecho **se deriva, no se guarda**: son los capítulos distintos de sus `Mencion`, en orden. Una mención repetida no duplica el capítulo | `prueba` |
+| RF-85 | Todo `EventoEstado` lleva, además de la fecha y el lugar resultantes, `presentes`: los `id` de los `Personaje` que estaban cuando ocurrió, escritos por el Contable. La fecha resultante del evento, el momento de un `Evento` del mundo y el nacimiento de un `Personaje` —`fechas.nacimiento`— se escriben en fecha ISO parcial: `AAAA`, `AAAA-MM` o `AAAA-MM-DD` (D-28) | `inspeccion` |
+| RF-86 | La cronología es **una vista derivada, no una tabla guardada**: una fila por `EventoEstado` y por `Evento` del mundo, con el suceso, el momento, el lugar, el capítulo —vacío si el `Evento` no pertenece a ninguno— y los presentes, cada uno con su `id`, su nombre y su fecha de nacimiento. Se ordena por momento y, a igualdad, por capítulo; lo que no trae momento va al final. Copia lo escrito: no calcula fechas ni edades (D-27) | `prueba` |
+| RF-87 | La API sirve las dos cosas en dos rutas de lectura: `GET /obras/{id}/hechos`, cada hecho con su tipo, su nombre, su licencia y los capítulos en que se usa, filtrable por tipo y por licencia; y `GET /obras/{id}/cronologia`, la vista de RF-86. No añaden ninguna operación de escritura y entran en `backend/openapi.yaml` (RI-10) | `prueba` |
+| RF-88 | En el recorrido en seco, cerrar un capítulo deja escritas sus menciones y la cronología trae el suceso del capítulo con sus presentes y su fecha de nacimiento | `demostracion` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-25 | **Las menciones las anota el Archivero al destilar.** No el Redactor, ni el Contable, ni un rol nuevo | «Quien escribe lo anota al cerrar» no puede ser el Redactor: actúa por escena en el paso 3 y lo que declarase quedaría desfasado en cuanto el Revisor o el Editor de estilo tocan el texto. El Contable es el único punto por el que el mundo cambia, y un uso no es un cambio del mundo: meterlo ahí mezcla dos cosas en el rol que más cuesta vigilar. Un rol doce ensancharía el censo sin trabajo de dominio nuevo, porque destilar ya es escribir lo que queda de un capítulo cuando su prosa deja de leerse, y qué hechos nombra es exactamente eso. La regla del Archivero se mantiene: no escribe hechos del mundo ni prosa |
+| D-26 | **El uso es un artefacto aparte, no un campo de la ficha.** Tampoco un campo del `Resumen de capítulo` | Un campo en la ficha que crece capítulo a capítulo choca con la inmutabilidad de `canon` y `personal` y con «el mundo solo cambia por `EventoEstado`». Dentro del resumen, saber dónde se usa un hecho obliga a recorrer todos los resúmenes, y eso crece con la obra. Con un artefacto de solo añadir la pregunta es una consulta por `id`, y «en qué capítulos» se deriva igual que el estado. El índice de la biblia que recibe el Archivero lee cuatro campos por ficha sin interpretarlos: es proyección, no decisión. Crece con la biblia, no con la prosa, y es mucho más corto que el canon que ya reciben el Planificador y el Verificador |
+| D-27 | **La cronología se deriva al consultar.** No es un artefacto del Contable ni una caché | Todo lo que lleva ya está escrito: la fecha, el lugar y los presentes en el `EventoEstado`, el suceso histórico en el `Evento` y el nacimiento en la ficha. Guardarlo otra vez sería un segundo sitio que mantener al día, y «el estado no se almacena, se deriva». Ordenar por la fecha escrita no es aritmética de calendario: no reabre D-05 |
+| D-28 | **`presentes` en el `EventoEstado` y fechas ISO parciales.** El formato lo piden el prompt y el esquema del rol que escribe; el almacén no lo comprueba en esta versión | Sin presencia por suceso no se puede afirmar que un personaje no está en dos sitios a la vez, y sin un formato de fecha fijo el volcado formal tendría que interpretar texto libre. La parcial admite lo que de verdad se sabe de una época —a veces solo el año— sin inventar el día. Comprobar el formato al escribir es trabajo del volcado formal, que es quien lo consume |
+| D-29 | **Alcance: registrar, derivar y servir.** Quedan fuera el validador de elementos personalizados, el fichero del demostrador formal y la propagación de cambios del lector | Son los tres consumidores de esto y cada uno tiene su propia pasada del ciclo. Servirlo por la API ya ahora es lo que permite a la interfaz enlazar cada ficha con sus capítulos sin volver a mover la frontera |
+
+**Lo que queda fuera.** Qué pasa con las menciones de un capítulo que se
+regenera entero —hoy ningún camino regenera un capítulo cerrado—, la
+comprobación de que el Archivero no se ha dejado ningún hecho sin anotar, y la
+validación del formato de fecha al escribir (D-28).
+
+**Documentos que pone al día la fase 3.** `definitions.md` (la `Mencion` en la
+capa Obra, la cronología como vista y el formato de fecha) y el árbol de la
+obra y las relaciones de `domain-knowledge.md`; `architecture.md` (entrada y
+salida del Archivero y del Contable, proyecciones, memorias y tabla de
+gobierno); y `validators.md` (lo nuevo en la matriz de cobertura, y el hueco de
+completitud de las menciones). Trazabilidad: sale de `definitions.md`
+(relaciones referenciales) y de `architecture.md` §2, §3 y §6.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
