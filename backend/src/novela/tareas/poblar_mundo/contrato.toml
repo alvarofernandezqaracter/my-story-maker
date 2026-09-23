@@ -13,11 +13,15 @@ cuando = "Al arrancar la obra y cuando haga falta ampliar el elenco"
 herramientas = []
 
 # Que ve y que no ve (architecture.md 3).
-entrada = ["obra_y_premisa", "elenco_declarado", "fuentes_recogidas"]
+entrada = ["obra_y_premisa", "elenco_declarado", "fuentes_recogidas", "destinatario", "recuerdos_del_destinatario"]
 no_ve = ["el plan", "la prosa", "el estado en N"]
 
 # Que deja escrito. Lo que no este aqui, el backend no se lo deja escribir.
 escribe = ["Personaje", "Lugar", "Objeto", "Faccion", "Decision"]
+
+# Lo que escriba a partir de la vida del destinatario lleva `licencia` con valor
+# `personal` y el `id` del `Recuerdo` del que sale (RF-08). El `Recuerdo` no lo
+# escribe: llega con el brief y es inmutable.
 
 # Que rechaza de lo que recibe: campos obligatorios del artefacto de entrada.
 [rechaza]

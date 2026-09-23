@@ -13,11 +13,15 @@ cuando = "Al abrir capitulo"
 herramientas = []
 
 # Que ve y que no ve (architecture.md 3).
-entrada = ["canon", "estado_en_n_menos_1", "compromisos_abiertos", "arcos", "ecos_de_estructura"]
+entrada = ["canon", "estado_en_n_menos_1", "compromisos_abiertos", "arcos", "ecos_de_estructura", "destinatario", "recuerdos_del_destinatario"]
 no_ve = ["la prosa anterior"]
 
 # Que deja escrito. Lo que no este aqui, el backend no se lo deja escribir.
 escribe = ["Plan", "Capitulo", "Escena", "Beat", "Parte", "Compromiso", "Evento", "Decision"]
+
+# Si la obra lleva destinatario, el `Plan` declara `papel_del_destinatario` con
+# uno de los cuatro valores del vocabulario. Lo decide el Planificador, no el
+# editor, y el validador lo lee de ahi en vez de suponerlo (RF-09).
 
 # Que rechaza de lo que recibe: campos obligatorios del artefacto de entrada.
 [rechaza]

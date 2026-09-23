@@ -46,6 +46,7 @@ PREFIJOS: dict[str, str] = {
     "Concepto": "cnc",
     "RegistroLinguistico": "reg",
     "Fuente": "fue",
+    "Recuerdo": "rcd",
     "Agente": "age",
     "Tarea": "tar",
     "Plan": "pla",
@@ -339,17 +340,34 @@ class Almacen:
 
     # --- Obra --------------------------------------------------------------
 
-    def crear_obra(self, cuerpo: dict[str, Any]) -> str:
-        """Da de alta la obra. Cada obra nace en su propio espacio (RF-03)."""
+    def crear_obra(self, cuerpo: dict[str, Any], recuerdos: list[str] | None = None) -> str:
+        """Da de alta la obra. Cada obra nace en su propio espacio (RF-03).
+
+        Los recuerdos del destinatario entran en la misma transaccion que la
+        obra: o nace entera o no nace. Se guardan como `Recuerdo`, que ningun
+        rol del censo escribe (RF-07).
+        """
         artefacto = Artefacto(tipo="Obra", cuerpo=cuerpo)
         with self._turno_de_escritura, escritura(self._escritor) as conexion:
             id_obra = self._insertar(conexion, artefacto)
+            for orden, texto in enumerate(recuerdos or [], start=1):
+                self._insertar(
+                    conexion,
+                    Artefacto(
+                        tipo="Recuerdo",
+                        id_obra=id_obra,
+                        cuerpo={"orden": orden, "texto": texto},
+                    ),
+                )
             conexion.execute(
                 "INSERT INTO control_de_ejecucion (id_obra, detenida, actualizado_en) "
                 "VALUES (?, 0, ?)",
                 (id_obra, ahora()),
             )
         return id_obra
+
+    def listar_recuerdos(self, id_obra: str) -> list[Artefacto]:
+        return self.listar("Recuerdo", id_obra)
 
     def leer_obra(self, id_obra: str) -> Artefacto | None:
         return self.leer("Obra", id_obra)

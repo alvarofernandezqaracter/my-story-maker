@@ -146,7 +146,23 @@ ESTADO_DE_COMPROMISO: tuple[str, ...] = ("abierto", "reforzado", "pagado", "aban
 
 ESTATUS_ONTOLOGICO: tuple[str, ...] = ("historico", "ficticio", "compuesto")
 
-LICENCIA: tuple[str, ...] = ("canon", "plausible", "licencia")
+# `personal` es lo que viene de la vida del destinatario (RD-17). Es inmutable
+# como `canon`, pero su respaldo no es una `Fuente` sino un `Recuerdo`, y por eso
+# queda exento de las cuatro dimensiones de anacronismo: el nombre de hoy se
+# escribe tal cual (D-12).
+LICENCIA: tuple[str, ...] = ("canon", "plausible", "licencia", "personal")
+
+LICENCIA_EXENTA_DE_ANACRONISMO: str = "personal"
+
+# Que papel se le da al destinatario dentro de la obra. Lo decide el
+# Planificador y lo deja escrito en el `Plan`: ni el editor lo elige ni el
+# validador lo supone (D-14).
+PAPEL_DEL_DESTINATARIO: tuple[str, ...] = (
+    "protagonista",
+    "secundario",
+    "testigo",
+    "narrador",
+)
 
 TIPO_DE_FUENTE: tuple[str, ...] = ("primaria", "secundaria", "divulgativa", "sin_respaldo")
 
@@ -216,6 +232,7 @@ TIPOS_DE_LA_CAPA_MUNDO: tuple[str, ...] = (
     "Concepto",
     "RegistroLinguistico",
     "Fuente",
+    "Recuerdo",
 )
 
 TIPOS_DE_LA_CAPA_PRODUCCION: tuple[str, ...] = (

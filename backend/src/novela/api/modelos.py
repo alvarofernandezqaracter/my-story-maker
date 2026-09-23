@@ -10,6 +10,33 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class Destinatario(BaseModel):
+    """La persona real a la que la obra va dedicada.
+
+    Aparece en la novela con su nombre de verdad, sin traducir a la epoca: lo
+    que sale de su vida se marca `licencia = "personal"` y el detector de
+    anacronismos lo deja en paz (D-12). Que papel tiene en la obra no se declara
+    aqui: lo decide el Planificador y lo escribe en el `Plan` (D-14).
+
+    Obligatorios el nombre, la edad, el tono y la dedicatoria. Los tres que son
+    listas pueden venir vacias, porque vacio es una respuesta: no veto nada, no
+    aporto recuerdos.
+    """
+
+    nombre: str = Field(min_length=1, description="Su nombre real, tal como se escribira")
+    edad: int = Field(ge=0, le=130, description="Edad del destinatario")
+    tono: str = Field(min_length=1, description="Tono que se le pide a la obra")
+    dedicatoria: str = Field(min_length=1, description="Lo que va en la portada")
+    rasgos: list[str] = Field(default_factory=list, description="Como es")
+    recuerdos: list[str] = Field(
+        default_factory=list,
+        description="Anecdotas de su vida. Cada una se guarda como Recuerdo (RF-07)",
+    )
+    vetos: list[str] = Field(
+        default_factory=list, description="Palabras o temas que no quiere leer"
+    )
+
+
 class Brief(BaseModel):
     """Lo que el editor escribe para lanzar una obra.
 
@@ -28,6 +55,10 @@ class Brief(BaseModel):
         description="POV dominante, tiempo verbal, nivel de arcaismo, extension",
     )
     arcos: list[str] = Field(default_factory=list, description="Arcos declarados")
+    destinatario: Destinatario | None = Field(
+        default=None,
+        description="A quien va dedicada. Opcional: sin el, la obra es historica y nada mas",
+    )
 
 
 class ObraCreada(BaseModel):

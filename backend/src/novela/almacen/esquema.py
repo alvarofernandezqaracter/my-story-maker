@@ -64,7 +64,12 @@ class Columna:
 
 @dataclass(frozen=True)
 class Tabla:
-    """Lo que hay que saber de un tipo de artefacto para darle tabla."""
+    """Lo que hay que saber de un tipo de artefacto para darle tabla.
+
+    `desde_migracion` es en cual nace la tabla. Una migracion ya aplicada no se
+    reescribe, asi que un tipo nuevo no se cuela en la 1: declara la suya y las
+    bases viejas y las recien creadas acaban con el mismo esquema.
+    """
 
     tipo: str
     capa: str
@@ -75,6 +80,7 @@ class Tabla:
     propias: tuple[Columna, ...] = ()
     indices: tuple[tuple[str, ...], ...] = ()
     notas: str = ""
+    desde_migracion: int = 1
 
 
 TABLAS: tuple[Tabla, ...] = (
@@ -129,7 +135,20 @@ TABLAS: tuple[Tabla, ...] = (
     *(
         Tabla(tipo, "mundo", "obra")
         for tipo in TIPOS_DE_LA_CAPA_MUNDO
-        if tipo not in DOCUMENTALES
+        if tipo not in DOCUMENTALES and tipo != "Recuerdo"
+    ),
+    # Lo que el destinatario aporta de su vida (RF-07, D-13). Ningun rol del
+    # censo lo escribe: nace con el alta de la obra, como la propia `Obra`. No
+    # es una `Fuente` de tipo nuevo porque no es evidencia de una epoca sino de
+    # una persona, y abrir esa puerta a un segundo escritor vaciaria de sentido
+    # el invariante que hace detectable una alucinacion historica.
+    Tabla(
+        "Recuerdo",
+        "mundo",
+        "obra",
+        inmutable=True,
+        desde_migracion=3,
+        notas="Lo aporta el editor en el brief; ningun rol lo escribe",
     ),
     *(
         Tabla(
@@ -359,13 +378,26 @@ OTRAS_TABLAS: tuple[str, ...] = (
 )
 
 
-def sentencias_iniciales() -> list[str]:
-    """Todo el esquema de la migracion 1, en el orden en que se aplica."""
-    sentencias: list[str] = [_sentencia_de_tabla(tabla) for tabla in TABLAS]
-    for tabla in TABLAS:
+def _sentencias_de(tablas: tuple[Tabla, ...]) -> list[str]:
+    sentencias: list[str] = [_sentencia_de_tabla(tabla) for tabla in tablas]
+    for tabla in tablas:
         sentencias += _sentencias_de_indices(tabla)
         sentencias += _sentencias_de_disparadores(tabla)
-    return sentencias + list(OTRAS_TABLAS)
+    return sentencias
+
+
+def tablas_de_la_migracion(numero: int) -> tuple[Tabla, ...]:
+    return tuple(tabla for tabla in TABLAS if tabla.desde_migracion == numero)
+
+
+def sentencias_iniciales() -> list[str]:
+    """Todo el esquema de la migracion 1, en el orden en que se aplica."""
+    return _sentencias_de(tablas_de_la_migracion(1)) + list(OTRAS_TABLAS)
+
+
+def sentencias_del_recuerdo() -> list[str]:
+    """La migracion 3: la tabla de `Recuerdo` y nada mas."""
+    return _sentencias_de(tablas_de_la_migracion(3))
 
 
 assert {t.tipo for t in TABLAS} == set(

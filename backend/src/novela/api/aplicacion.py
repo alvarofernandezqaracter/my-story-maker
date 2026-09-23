@@ -129,7 +129,14 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
 
     @app.post("/obras", status_code=status.HTTP_202_ACCEPTED)
     def lanzar_obra(brief: Brief, casa: ProduccionDep) -> ObraCreada:
-        id_obra = casa.almacen.crear_obra(brief.model_dump())
+        cuerpo = brief.model_dump()
+        recuerdos: list[str] = []
+        if brief.destinatario is not None:
+            # Los recuerdos salen del cuerpo de la `Obra` y pasan a ser
+            # `Recuerdo`: la capa Obra referencia la capa Mundo, no la duplica.
+            recuerdos = list(brief.destinatario.recuerdos)
+            cuerpo["destinatario"].pop("recuerdos", None)
+        id_obra = casa.almacen.crear_obra(cuerpo, recuerdos)
         casa.arrancar(id_obra, brief.capitulos_objetivo)
         return ObraCreada(id_obra=id_obra, estado="en produccion")
 

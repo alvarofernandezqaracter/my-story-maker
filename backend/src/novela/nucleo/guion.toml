@@ -19,7 +19,7 @@ tarea = "planificar"
 rol = "planificador"
 concurrencia = "solo"
 unidad = "capitulo"
-proyeccion = ["canon", "estado_en_n_menos_1", "compromisos_abiertos", "arcos", "ecos_de_estructura"]
+proyeccion = ["canon", "estado_en_n_menos_1", "compromisos_abiertos", "arcos", "ecos_de_estructura", "destinatario", "recuerdos_del_destinatario"]
 
 [[paso]]
 numero = 2
@@ -105,7 +105,7 @@ rol = "constructor_de_mundo"
 concurrencia = "solo"
 unidad = "obra"
 cuando = "al arrancar la obra y cuando haga falta ampliar el elenco"
-proyeccion = ["obra_y_premisa", "elenco_declarado", "fuentes_recogidas"]
+proyeccion = ["obra_y_premisa", "elenco_declarado", "fuentes_recogidas", "destinatario", "recuerdos_del_destinatario"]
 
 [fuera_del_guion.auditar]
 tarea = "auditar"

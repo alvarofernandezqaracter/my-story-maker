@@ -5,7 +5,7 @@ openapi: 3.1.0
 info:
   title: Generador de novela historica por agentes
   summary: Lanza una obra desde un brief e inspecciona lo que los agentes producen
-  version: 0.1.3
+  version: 0.2.0
 paths:
   /obras:
     post:
@@ -482,6 +482,12 @@ components:
           type: array
           title: Arcos
           description: Arcos declarados
+        destinatario:
+          anyOf:
+          - $ref: '#/components/schemas/Destinatario'
+          - type: 'null'
+          description: 'A quien va dedicada. Opcional: sin el, la obra es historica
+            y nada mas'
       type: object
       required:
       - titulo
@@ -616,6 +622,71 @@ components:
       - evidencia
       - accion_sugerida
       title: CriticaServida
+    Destinatario:
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          title: Nombre
+          description: Su nombre real, tal como se escribira
+        edad:
+          type: integer
+          maximum: 130.0
+          minimum: 0.0
+          title: Edad
+          description: Edad del destinatario
+        tono:
+          type: string
+          minLength: 1
+          title: Tono
+          description: Tono que se le pide a la obra
+        dedicatoria:
+          type: string
+          minLength: 1
+          title: Dedicatoria
+          description: Lo que va en la portada
+        rasgos:
+          items:
+            type: string
+          type: array
+          title: Rasgos
+          description: Como es
+        recuerdos:
+          items:
+            type: string
+          type: array
+          title: Recuerdos
+          description: Anecdotas de su vida. Cada una se guarda como Recuerdo (RF-07)
+        vetos:
+          items:
+            type: string
+          type: array
+          title: Vetos
+          description: Palabras o temas que no quiere leer
+      type: object
+      required:
+      - nombre
+      - edad
+      - tono
+      - dedicatoria
+      title: Destinatario
+      description: 'La persona real a la que la obra va dedicada.
+
+
+        Aparece en la novela con su nombre de verdad, sin traducir a la epoca: lo
+
+        que sale de su vida se marca `licencia = "personal"` y el detector de
+
+        anacronismos lo deja en paz (D-12). Que papel tiene en la obra no se declara
+
+        aqui: lo decide el Planificador y lo escribe en el `Plan` (D-14).
+
+
+        Obligatorios el nombre, la edad, el tono y la dedicatoria. Los tres que son
+
+        listas pueden venir vacias, porque vacio es una respuesta: no veto nada, no
+
+        aporto recuerdos.'
     EstadoPlegado:
       properties:
         id_obra:

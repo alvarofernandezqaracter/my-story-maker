@@ -10,9 +10,13 @@ metodo_de_verificacion = "inspeccion"
 alcance = "local"
 criba = "mayores"
 
-predicado = "Practicas y cargos del texto son coherentes con los vigentes en el marco."
+predicado = "Practicas y cargos del texto son coherentes con los vigentes en el marco, salvo lo marcado con licencia personal."
 proyeccion_minima = ["canon", "texto_producido"]
 
 [critica]
 severidad = "mayor"
 evidencia_aceptada = "La practica o el cargo nombrado y la ficha que lo contradice."
+
+# El grado de licencia `personal` es una exencion declarada, no un descuido:
+# el destinatario aparece con su nombre real y por eso su nombre no es un
+# anacronismo (D-12).

@@ -109,9 +109,16 @@ def _la_escena(p: Peticion) -> Artefacto | None:
 
 def _canon(p: Peticion) -> Filas:
     """Fichas del mundo. Se traen por `id`, no por parecido: cambiar algo
-    seguro por algo probable no gana nada."""
+    seguro por algo probable no gana nada.
+
+    El `Recuerdo` queda fuera aunque sea de la capa Mundo: no es una ficha, es
+    la materia prima con la que el Constructor escribe fichas, y tiene material
+    propio para los dos roles que lo necesitan (RF-16).
+    """
     fichas: Filas = []
     for tipo in TIPOS_DE_LA_CAPA_MUNDO:
+        if tipo == "Recuerdo":
+            continue
         fichas += _cuerpos(p.almacen.listar(tipo, p.id_obra))
     return fichas
 
@@ -181,8 +188,29 @@ def _criticas_a_atender(p: Peticion) -> Filas:
 
 
 def _la_obra(p: Peticion) -> dict[str, Any]:
+    """El brief sin el destinatario: quien lo necesita lo pide por su nombre.
+
+    Colarlo aqui dentro lo haria llegar a todo rol que pida la obra y la
+    premisa, que es justo lo que RF-16 prohibe.
+    """
     obra = p.almacen.leer_obra(p.id_obra)
-    return obra.cuerpo if obra else {}
+    if obra is None:
+        return {}
+    return {clave: valor for clave, valor in obra.cuerpo.items() if clave != "destinatario"}
+
+
+def _destinatario(p: Peticion) -> dict[str, Any]:
+    """A quien va dedicada la obra. Vacio si no va dedicada a nadie."""
+    obra = p.almacen.leer_obra(p.id_obra)
+    if obra is None:
+        return {}
+    destinatario = obra.cuerpo.get("destinatario")
+    return destinatario if isinstance(destinatario, dict) else {}
+
+
+def _recuerdos_del_destinatario(p: Peticion) -> Filas:
+    """Lo que el editor aporto de su vida, como dato delimitado (RD-16)."""
+    return _cuerpos(p.almacen.listar("Recuerdo", p.id_obra))
 
 
 def _resumenes_de_capitulos(p: Peticion) -> Filas:
@@ -287,6 +315,8 @@ MATERIALES: dict[str, Constructor] = {
     "arcos": _la_obra,
     "obra_y_premisa": _la_obra,
     "elenco_declarado": _la_obra,
+    "destinatario": _destinatario,
+    "recuerdos_del_destinatario": _recuerdos_del_destinatario,
     "resumenes_de_capitulos": _resumenes_de_capitulos,
     "fuentes_recogidas": _fuentes_recogidas,
     "registro_linguistico": _registro_linguistico,

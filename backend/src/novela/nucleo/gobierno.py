@@ -25,8 +25,8 @@ class HerramientaNoConcedida(Exception):
 
 
 # Quien puede escribir cada entidad. Lo que no esta aqui no lo escribe nadie:
-# `Obra` la da de alta el editor, y `Agente`, `Tarea` y `Traza` las registra el
-# backend al repartir turnos, no un rol.
+# `Obra` y `Recuerdo` los da de alta el editor con el brief, y `Agente`, `Tarea`
+# y `Traza` las registra el backend al repartir turnos, no un rol.
 QUIEN_ESCRIBE: dict[str, frozenset[str]] = {
     # Capa Mundo
     "Personaje": frozenset({"constructor_de_mundo"}),
@@ -61,6 +61,7 @@ QUIEN_ESCRIBE: dict[str, frozenset[str]] = {
     "ResumenCapitulo": frozenset({"archivero"}),
     "Decision": TODOS_LOS_ROLES,
     "Obra": frozenset(),
+    "Recuerdo": frozenset(),
     "Agente": frozenset(),
     "Tarea": frozenset(),
     "Traza": frozenset(),
@@ -115,6 +116,9 @@ assert QUIEN_ESCRIBE["EventoEstado"] == frozenset({"contable_de_estado"})
 # Un dato historico sin Fuente es una alucinacion, y solo el Documentalista la
 # escribe; ademas es el unico con salida al exterior.
 assert QUIEN_ESCRIBE["Fuente"] == frozenset({"documentalista"})
+# Un `Recuerdo` no es una `Fuente` de tipo nuevo: nace con el alta de la obra y
+# ningun rol lo escribe, que es lo que deja intacto el invariante de arriba.
+assert QUIEN_ESCRIBE["Recuerdo"] == frozenset()
 assert {
     rol
     for rol, herramientas in HERRAMIENTAS_POR_ROL.items()
