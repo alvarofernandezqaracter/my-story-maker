@@ -23,7 +23,9 @@ Después, el ciclo:
 2. **Spec.** Si la tarea toca `backend/`, enmienda `specs/SPEC1.md` con lo
    decidido y la justificación del interrogatorio. Lo que el cambio retire sale
    del documento, no se narra como pasado. La versión de la cabecera,
-   `backend/pyproject.toml` y `novela/__init__.py` suben juntas.
+   `backend/pyproject.toml` y `novela/__init__.py` suben juntas. Sin spec
+   aprobada no hay fase 2: si el humano ha pedido revisar la spec antes del
+   código, para aquí y espera.
 3. **Código.** Abre antes la skill de la parte de la pila que vas a tocar
    (`fastapi`, `frontend-react`, `backend-sqlite`, `sqlite-vec`) e implementa lo
    que dice la spec y nada más. Si aparece una decisión de fondo que la spec no

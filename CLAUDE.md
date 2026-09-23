@@ -38,8 +38,9 @@ y RF-102). Así que:
 ### La skill reutilizable
 
 `grill-me` (`.claude/skills/grill-me/`) es la skill del repositorio que no
-depende de él: no nombra ningún fichero ni ninguna entidad del proyecto y
-sirve tal cual en cualquier otro. Está commiteada porque `AGENTS.md` la hace
+depende de él: su cuerpo no nombra ningún fichero ni ninguna entidad del
+proyecto y sirve tal cual en cualquier otro; solo la cabecera dice quién la
+invoca aquí. Está commiteada porque `AGENTS.md` la hace
 obligatoria en la fase 1, y una fase obligatoria no puede depender de lo que
 cada uno tenga instalado en su máquina. Las otras cinco skills de
 `.claude/skills/` son específicas de esta pila o de este dominio.
@@ -95,8 +96,9 @@ python -m venv .venv
 ## Trampas conocidas
 
 - **La versión va en trío.** La cabecera de `specs/SPEC1.md`,
-  `backend/pyproject.toml` y `backend/src/novela/__init__.py` dicen siempre el
-  mismo número. Si uno se mueve y los otros no, el cambio está a medias.
+  `backend/pyproject.toml` y `backend/src/novela/__init__.py` tienen que decir
+  el mismo número (`AGENTS.md`, fase 1). Si no lo dicen, hay un cambio a medias
+  y se dice antes de seguir.
 - **Los identificadores no se reutilizan.** Un `RF-`, `RD-` o `D-` retirado de
   la spec deja su número vacío (SPEC1 §1.4).
 - **Las decisiones abiertas.** Las de `docs/architecture.md` §8 no se cierran

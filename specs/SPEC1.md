@@ -112,10 +112,10 @@ detrás de la frontera.
   de las herramientas que tenga concedidas—, y eso son tokens de entrada como
   cualquier otro: cuentan contra el techo. Medido en la máquina de desarrollo
   con el subagente aislado del repositorio (RF-100), con la instrucción del rol
-  en lugar de la de serie y con las herramientas del rol más equipado, son unos
-  3 200 tokens por tarea abierta (RF-101). De ahí el término que RF-13 añade a
-  la anchura de tanda: sin él el techo se respeta sobre el papel y se rompe en
-  la máquina.
+  en lugar de la de serie y con las herramientas del rol más equipado, son
+  3 191 tokens por tarea abierta, que se declaran redondeados a 3 500
+  (RF-101). De ahí el término que RF-13 añade a la anchura de tanda: sin él el
+  techo se respeta sobre el papel y se rompe en la máquina.
 - El brief lo escribe una persona y puede venir incompleto: eso es un caso
   normal, no un error del sistema (RF-01).
 

@@ -16,3 +16,6 @@ Thumbs.db
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm
+
+# Salida del servidor MCP de navegador (.claude/mcp.json)
+.playwright-mcp/

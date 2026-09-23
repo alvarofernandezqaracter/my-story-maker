@@ -4,8 +4,9 @@ allowed-tools: Bash(cd:*), Bash(python -m ruff:*), Bash(python -m mypy:*), Bash(
 ---
 
 Corre, desde `backend/` y con el entorno de `backend/.venv` activo, estas cuatro
-comprobaciones. Son las de `docs/validators.md` §6 que no gastan: ninguna invoca
-un agente real.
+comprobaciones: las tres de `docs/validators.md` §6 que no gastan —tipos en el
+borde, contratos de importación y pruebas— más el linter de estilo que el
+proyecto declara en `pyproject.toml`. Ninguna invoca un agente real.
 
 | Comprobación | Orden | Método | Qué sostiene |
 | --- | --- | --- | --- |
