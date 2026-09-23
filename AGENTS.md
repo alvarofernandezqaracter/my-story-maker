@@ -37,7 +37,7 @@ Decisiones ya tomadas sobre el reparto:
   cliente. No se redacta a mano: una descripción escrita aparte acabaría
   diciendo algo distinto de lo que hace el servidor.
 - **El andamiaje de desarrollo no entra en la novela.** `CLAUDE.md` y `.claude/`
-  son para quien desarrolla el sistema. Los once roles también son Claude Code,
+  son para quien desarrolla el sistema. Los doce roles también son Claude Code,
   pero el ejecutor los lanza fuera del repositorio y ninguno los lee.
 - **Dos paquetes, dos gestores.** `backend/` se instala con su propio
   `pyproject.toml` y `frontend/` con su propio `package.json`. No hay

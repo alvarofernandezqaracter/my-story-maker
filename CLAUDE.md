@@ -11,7 +11,7 @@ trabajar aquí.
 
 ## Este fichero es del desarrollo, no de la novela
 
-Los once roles del censo también son Claude Code, pero **no leen este fichero**:
+Los doce roles del censo también son Claude Code, pero **no leen este fichero**:
 el ejecutor lanza cada subagente de tarea en un directorio vacío fuera del
 repositorio, sin `CLAUDE.md`, sin `.claude/` y sin servidores MCP (SPEC1 RF-100
 y RF-102). Así que:
