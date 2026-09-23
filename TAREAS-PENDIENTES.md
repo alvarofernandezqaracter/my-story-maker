@@ -314,8 +314,9 @@ red-team log—, la carpeta `/presentacion/` con el deck y sus anexos, y el víd
 de demo.
 
 Va al final porque cuenta lo que se hizo, y para contarlo hay que haberlo hecho.
-Lo único que conviene ir escribiendo por el camino es el registro de iteraciones
-y el red-team log: reconstruirlos de memoria al final sale mal.
+El registro de iteraciones y el red-team log no: esos ya existen vacíos en
+`docs/registro-de-iteraciones.md` y `docs/red-team-log.md`, y cada tarea les
+añade su línea según pasa. Reconstruirlos de memoria al final sale mal.
 
 ---
 
@@ -345,6 +346,9 @@ ninguna fase y sin parar entre fases:
    sección «Estructura del repositorio» de AGENTS.md si cambia el reparto.
 5. Antes de darlo por cerrado, comprueba cada cosa entregada contra
    docs/validators.md y dime con qué método la has verificado.
+6. Si el cambio movió alguna medida, anótalo en docs/registro-de-iteraciones.md;
+   si probaste algún ataque contra el sistema, anótalo en docs/red-team-log.md.
+   Si no aplica ninguno de los dos, no inventes una entrada.
 
 Déjalo en los commits mínimos que expliquen el cambio.
 

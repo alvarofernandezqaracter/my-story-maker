@@ -24,7 +24,7 @@ Monorepo con dos paquetes en la raíz. El `backend/` está implementado y el
 | `backend/` | El servidor: guarda y sirve artefactos, camina el guion encargando tareas a los agentes y expone por HTTP lo que el editor necesita ver | Python + FastAPI |
 | `frontend/` | La interfaz web desde la que se lanza y se inspecciona una obra. Todavía vacía | Vite + React |
 | `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
-| `specs/` | La spec viva del backend —el contexto específico— con su plan de implementación: qué tiene que hacer y por qué | Markdown |
+| `specs/` | La spec viva del backend —el contexto específico—: qué tiene que hacer y por qué | Markdown |
 
 Decisiones ya tomadas sobre el reparto:
 
