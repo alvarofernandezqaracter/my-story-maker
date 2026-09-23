@@ -1,0 +1,205 @@
+# El guion del capitulo.
+#
+# Es un artefacto declarativo versionado con el repositorio, no codigo: la
+# pieza que lo camina lee cual es el paso siguiente y lo ejecuta sin criterio
+# propio. Cambiar el orden de los pasos, la concurrencia o la proyeccion de un
+# rol se hace aqui, y no es un cambio de codigo.
+#
+# Las unicas bifurcaciones del guion son el enrutado por severidad y el tope de
+# vueltas, y ninguna de las dos esta aqui: viven en `calidad.py` porque
+# dependen de lo que salga de las cribas.
+
+version = 1
+
+# --- Los diez pasos del capitulo (architecture.md 4) -----------------------
+
+[[paso]]
+numero = 1
+tarea = "planificar"
+rol = "planificador"
+concurrencia = "solo"
+unidad = "capitulo"
+proyeccion = ["canon", "estado_en_n_menos_1", "compromisos_abiertos", "arcos", "ecos_de_estructura"]
+
+[[paso]]
+numero = 2
+tarea = "documentar"
+rol = "documentalista"
+concurrencia = "por_escena"
+unidad = "escena"
+proyeccion = ["marco_de_la_escena", "afirmaciones_pendientes_de_respaldo", "documentacion"]
+
+[[paso]]
+numero = 3
+tarea = "redactar"
+rol = "redactor"
+concurrencia = "por_escena"
+unidad = "escena"
+proyeccion = ["contrato_de_escena", "voces_del_elenco", "continuidad_local", "documentacion"]
+
+[[paso]]
+numero = 4
+tarea = "verificar"
+criba = "bloqueantes"
+concurrencia = "por_dimension_y_escena"
+unidad = "escena"
+proyeccion = ["contrato_de_verificacion", "texto_producido"]
+
+[[paso]]
+numero = 5
+tarea = "revisar"
+rol = "revisor"
+concurrencia = "por_escena"
+unidad = "escena"
+proyeccion = ["borrador_vigente", "criticas_a_atender", "contrato_de_escena"]
+vuelve_al_paso = 4
+
+[[paso]]
+numero = 6
+tarea = "verificar"
+criba = "mayores"
+concurrencia = "por_dimension_y_escena"
+unidad = "escena"
+proyeccion = ["contrato_de_verificacion", "texto_producido"]
+
+[[paso]]
+numero = 7
+tarea = "editar_estilo"
+rol = "editor_de_estilo"
+concurrencia = "solo"
+unidad = "capitulo"
+proyeccion = ["texto_producido", "registro_linguistico", "lexico_vetado", "ecos_del_registro"]
+
+[[paso]]
+numero = 8
+tarea = "criba"
+criba = "pulido"
+concurrencia = "por_dimension_y_escena"
+unidad = "capitulo"
+proyeccion = ["contrato_de_verificacion", "texto_producido"]
+
+[[paso]]
+numero = 9
+tarea = "plegar"
+rol = "contable_de_estado"
+concurrencia = "solo"
+unidad = "capitulo"
+proyeccion = ["estado_en_n_menos_1", "texto_aceptado_del_capitulo", "vocabulario_de_eventos"]
+
+[[paso]]
+numero = 10
+tarea = "destilar"
+rol = "archivero"
+concurrencia = "solo"
+unidad = "capitulo"
+proyeccion = ["texto_aceptado_del_capitulo", "cola_de_compromisos", "registro_acumulado_de_estilo"]
+
+# --- Las dos tareas que no tienen la cadencia del capitulo -----------------
+# Van fuera del guion y siempre solas.
+
+[fuera_del_guion.poblar_mundo]
+tarea = "poblar_mundo"
+rol = "constructor_de_mundo"
+concurrencia = "solo"
+unidad = "obra"
+cuando = "al arrancar la obra y cuando haga falta ampliar el elenco"
+proyeccion = ["obra_y_premisa", "elenco_declarado", "fuentes_recogidas"]
+
+[fuera_del_guion.auditar]
+tarea = "auditar"
+rol = "arquitecto_de_arcos"
+concurrencia = "solo"
+unidad = "obra"
+cuando = "cada N capitulos y al cierre de la obra"
+criba = "global"
+proyeccion = ["contrato_de_verificacion", "resumenes_de_capitulos", "arcos", "cola_de_compromisos"]
+
+# --- Las cribas: que dimension entra en que vuelta ------------------------
+#
+# Que dimension cae en cual lo fija su severidad de partida en validators.md 4;
+# lo que fija esto es en que vuelta entra cada una y a que rol le toca. Una
+# dimension por invocacion, sin excepcion.
+
+[[criba.bloqueantes]]
+dimension = "cumplimiento_del_contrato"
+rol = "verificador_de_continuidad"
+
+[[criba.bloqueantes]]
+dimension = "integridad_de_pov"
+rol = "verificador_de_continuidad"
+
+[[criba.bloqueantes]]
+dimension = "violacion_epistemica"
+rol = "verificador_de_continuidad"
+
+[[criba.bloqueantes]]
+dimension = "continuidad_de_estado"
+rol = "verificador_de_continuidad"
+
+[[criba.bloqueantes]]
+dimension = "coherencia_temporal"
+rol = "verificador_de_continuidad"
+
+[[criba.mayores]]
+dimension = "anacronismo_material"
+rol = "verificador_de_continuidad"
+
+[[criba.mayores]]
+dimension = "anacronismo_conceptual"
+rol = "verificador_de_continuidad"
+
+[[criba.mayores]]
+dimension = "anacronismo_social_e_institucional"
+rol = "verificador_de_continuidad"
+
+[[criba.mayores]]
+dimension = "cambio_de_valor"
+rol = "verificador_de_continuidad"
+
+[[criba.pulido]]
+dimension = "ritmo"
+rol = "verificador_de_continuidad"
+
+[[criba.pulido]]
+dimension = "anacronismo_lexico"
+rol = "editor_de_estilo"
+
+[[criba.pulido]]
+dimension = "fatiga_lexica"
+rol = "editor_de_estilo"
+
+[[criba.pulido]]
+dimension = "tics_de_modelo"
+rol = "editor_de_estilo"
+
+[[criba.pulido]]
+dimension = "coherencia_de_voz"
+rol = "juez_de_rubrica"
+
+[[criba.global]]
+dimension = "progresion_de_arcos"
+rol = "arquitecto_de_arcos"
+
+[[criba.global]]
+dimension = "economia_narrativa"
+rol = "arquitecto_de_arcos"
+
+[[criba.global]]
+dimension = "curva_de_tension"
+rol = "arquitecto_de_arcos"
+
+[[criba.global]]
+dimension = "distribucion_de_revelaciones"
+rol = "arquitecto_de_arcos"
+
+[[criba.global]]
+dimension = "fidelidad_historica"
+rol = "arquitecto_de_arcos"
+
+[[criba.global]]
+dimension = "cobertura_documental"
+rol = "arquitecto_de_arcos"
+
+[[criba.global]]
+dimension = "obra_cerrada_sin_defectos_abiertos"
+rol = "arquitecto_de_arcos"

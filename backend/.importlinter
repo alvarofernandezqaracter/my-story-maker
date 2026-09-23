@@ -23,6 +23,9 @@ modules =
 [importlinter:contract:persistencia-solo-en-almacen]
 name = Solo almacen abre la base de datos
 type = forbidden
+# Lo prohibido es abrirla, no llegar a ella: `nucleo` pide artefactos a
+# `almacen` y es `almacen` quien toca sqlite3.
+allow_indirect_imports = True
 source_modules =
     novela.api
     novela.nucleo

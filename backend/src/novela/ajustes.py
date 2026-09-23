@@ -30,6 +30,11 @@ TECHO_DE_CONTEXTO_CONCURRENTE: int = 100_000
 # Se reserva el 20 % para lo que no se puede prever; el resto es lo repartible.
 MARGEN_DEL_TECHO: float = 0.20
 
+# Con que se cuentan los tokens antes de enviar sigue abierto (SPEC1 12). La
+# cuenta previa es una estimacion por caracteres, calibrada contra la medida
+# exacta que el subagente devuelve al terminar y que queda en la `Traza`.
+CARACTERES_POR_TOKEN_ESTIMADOS: float = 3.6
+
 TOPE_DE_VENTANA_POR_ROL: dict[str, int] = {
     "arquitecto_de_arcos": 25_000,
     "planificador": 20_000,
