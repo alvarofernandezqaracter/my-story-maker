@@ -85,6 +85,7 @@ Reglas de integridad del censo:
 - Ningún agente valida su propia salida: el Redactor no emite `Crítica`, y ni el Verificador ni el Juez escriben `Borrador`. El Editor de estilo es el único que hace las dos cosas, y por eso el guion las separa en dos pasos distintos: cose el capítulo en el paso 7 escribiendo un `Borrador` de superficie, y en el paso 8 comprueba predicados de superficie sobre el texto ya cosido. Sin esa costura, lo que el paso 7 produjera serían críticas que ningún paso posterior aplica.
 - Solo el Contable de estado emite `EventoEstado`. Es el único punto por el que el mundo cambia.
 - Solo el Documentalista escribe `Fuente`. Un dato sin `Fuente` escrita por él es una alucinación por definición. Es además el único rol que trae material de fuera del sistema: ningún otro busca ni lee nada que no esté ya en el almacén.
+- Ningún rol escribe `Recuerdo`. Llega con el encargo y es inmutable, que es lo que deja intacta la regla anterior: si el respaldo de una persona pudiera escribirse desde dentro, «dato sin `Fuente`» dejaría de ser sinónimo de alucinación.
 - El Revisor aplica críticas ajenas; no puede crear las suyas.
 - El Archivero no escribe hechos del mundo ni prosa: resume el capítulo cerrado y retira lo que caduca. No decide nada sobre el texto.
 
@@ -94,10 +95,10 @@ Qué artefacto consume cada rol y qué artefacto deja escrito. La salida de un a
 
 | Agente | Entrada | Salida |
 | --- | --- | --- |
-| Constructor de mundo | `Obra` con su premisa y su marco, elenco declarado por el editor, `Fuente` ya recogidas | Fichas de `Personaje`, `Lugar`, `Objeto` y `Facción` |
+| Constructor de mundo | `Obra` con su premisa y su marco, elenco declarado por el editor, `Fuente` ya recogidas, y —si la obra va dedicada— el destinatario con sus `Recuerdo` | Fichas de `Personaje`, `Lugar`, `Objeto` y `Facción`. Las que salen de la vida del destinatario llevan licencia `personal` y su nombre real |
 | Documentalista | Marco de la escena —fecha, lugar, ámbito—, afirmaciones históricas pendientes de respaldo y lo que devuelven la búsqueda externa y el índice documental para ese marco | `Fuente`, `Concepto`, `Práctica` y `Registro lingüístico`, filtrados por esa fecha y ese lugar |
 | Arquitecto de arcos | Resúmenes de los capítulos cerrados, arcos declarados, cola de `Compromiso`, `funcion_estructural` de las escenas en orden | `Crítica` de alcance global |
-| Planificador | Canon, estado en N-1, compromisos abiertos, arcos | `Plan`: esqueleto de `Capítulo`, contrato de cada `Escena` y `Compromiso` asignados |
+| Planificador | Canon, estado en N-1, compromisos abiertos, arcos, y —si la obra va dedicada— el destinatario con sus `Recuerdo` | `Plan`: esqueleto de `Capítulo`, contrato de cada `Escena`, `Compromiso` asignados y el papel del destinatario en la obra |
 | Redactor | Contrato de una escena del `Plan` aceptado, voces del elenco presente en ella, cola de continuidad local, documentación recuperada para esa escena | `Borrador` candidato de esa escena, con sus `Párrafo` |
 | Contable de estado | Estado en N-1 ya materializado, texto aceptado del capítulo N, vocabulario de tipos de evento | `EventoEstado` del capítulo N, con fecha y lugar resultantes ya calculados, y estado en N |
 | Verificador de continuidad | Un contrato de verificación por dimensión —predicado y proyección mínima, `validators.md` §4— y el texto producido | `Crítica` de alcance escena y capítulo con evidencia citable, o la constancia de que el predicado se cumple |
@@ -360,10 +361,10 @@ Cada agente recibe una vista distinta, y algunas exclusiones son tan importantes
 
 | Agente | Ve | No ve | Por qué |
 | --- | --- | --- | --- |
-| Constructor de mundo | Obra, premisa, elenco declarado, fuentes ya recogidas | Plan, prosa, estado en N | Puebla tipos, no reacciona a la trama |
+| Constructor de mundo | Obra, premisa, elenco declarado, fuentes ya recogidas, destinatario y sus recuerdos | Plan, prosa, estado en N | Puebla tipos, no reacciona a la trama |
 | Documentalista | Marco de la escena, fuentes | Trama futura | Evita sesgar el dato hacia lo conveniente |
 | Arquitecto de arcos | Resúmenes de todos los capítulos, compromisos, curva de tensión | Prosa completa | Opera a escala de obra |
-| Planificador | Canon, estado en N, compromisos abiertos, arcos, contratos y resúmenes de escenas parecidas ya escritas | Prosa anterior | Planifica estructura, no imita estilo: lo recuperado le llega como contrato y resumen, nunca como prosa |
+| Planificador | Canon, estado en N, compromisos abiertos, arcos, contratos y resúmenes de escenas parecidas ya escritas, destinatario y sus recuerdos | Prosa anterior | Planifica estructura, no imita estilo: lo recuperado le llega como contrato y resumen, nunca como prosa |
 | Redactor | Contrato de escena, voces del elenco presente, continuidad local, documentación recuperada | Trama futura, críticas previas de otras escenas | Escribe desde dentro de la escena |
 | Contable de estado | Estado en N-1, texto aceptado del capítulo N, vocabulario de eventos | Plan, críticas, canon completo | Transcribe hechos ocurridos, no los interpreta |
 | Verificador de continuidad | Estado derivado, canon, texto producido | Prosa anterior, intención del plan | Compara hechos, no impresiones |
@@ -510,6 +511,7 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `Objeto` | Constructor de mundo | Solo por `EventoEstado` del Contable | Si aparece o lo posee el elenco | Continuidad, anacronismo material |
 | `Concepto` y `Práctica` | Documentalista | Documentalista | Filtrado por fecha y lugar | Anacronismo conceptual y social |
 | `Fuente` | Documentalista | Inmutable | Junto al dato que respalda | Cobertura documental |
+| `Recuerdo` | Nadie: llega con el encargo | Inmutable | Solo al Constructor de mundo y al Planificador | Personalización |
 | `Capítulo` | Planificador | Revisor | Resumen siempre; texto solo el anterior | Ritmo, arcos |
 | `Escena` | Planificador | Revisor | Contrato completo al redactar | Contrato, POV, epistémica |
 | `Párrafo` | Redactor | Editor de estilo | Cola de continuidad local | Fatiga léxica, voz, léxico |

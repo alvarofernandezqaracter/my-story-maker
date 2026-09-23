@@ -54,7 +54,11 @@ flowchart TD
   AB --> CON[Concepto]
   AB --> REG[Registro linguistico]
   DOC --> FUE[Fuente]
+  DOC --> RCD[Recuerdo]
 ```
+
+El respaldo tiene dos formas: la `Fuente` respalda una época y el `Recuerdo`
+respalda a una persona, la del destinatario al que va dedicada la obra.
 
 Toda entidad de esta capa lleva además el campo transversal de licencia:
 
@@ -64,8 +68,11 @@ flowchart LR
   LIC --> C[canon<br/>documentado, inmutable]
   LIC --> P[plausible<br/>inventado, compatible]
   LIC --> D[licencia<br/>contradice la evidencia]
+  LIC --> PE[personal<br/>de la vida del destinatario]
   C --> F[Fuente]
   D --> J[Justificacion registrada]
+  PE --> R[Recuerdo]
+  PE --> X[Exento de anacronismo]
 ```
 
 Ese campo es lo que permite al validador distinguir un error de una decisión artística.
@@ -178,7 +185,8 @@ flowchart TD
   FORMA --> FUN[funcion: setup / escalada / giro /<br/>revelacion / respiro / pago / resolucion]
   FORMA --> BEAT[beat: accion / reaccion / decision /<br/>revelacion / transicion]
   MUNDO --> ONT[estatus: historico / ficticio / compuesto]
-  MUNDO --> LIC[licencia: canon / plausible / licencia]
+  MUNDO --> LIC[licencia: canon / plausible /<br/>licencia / personal]
+  MUNDO --> PAP[papel del destinatario: protagonista /<br/>secundario / testigo / narrador]
   MUNDO --> FTE[fuente: primaria / secundaria /<br/>divulgativa / sin respaldo]
   MUNDO --> ANA[anacronismo: material / lexico /<br/>conceptual / social / institucional]
   NARR --> COM[compromiso: abierto / reforzado /<br/>pagado / abandonado]

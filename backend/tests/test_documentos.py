@@ -12,7 +12,13 @@ from pathlib import Path
 import pytest
 
 from novela.tareas import contrato_de_verificacion, dimensiones_de
-from novela.vocabularios import DIMENSIONES, ROLES, TIPOS_DE_TAREA
+from novela.vocabularios import (
+    DIMENSIONES,
+    LICENCIA,
+    ROLES,
+    TIPOS_DE_LA_CAPA_MUNDO,
+    TIPOS_DE_TAREA,
+)
 
 DOCS = Path(__file__).resolve().parent.parent.parent / "docs"
 AGENTES = Path(__file__).resolve().parent.parent.parent / "AGENTS.md"
@@ -128,6 +134,42 @@ def test_una_sola_dimension_no_admite_predicado(documentos: dict[str, str]) -> N
     ]
     assert inverificables == ["coherencia_de_voz"]
     assert "coherencia de voz" in documentos["validators"].lower()
+
+
+def _nombre_en_prosa(tipo: str) -> str:
+    """De `RegistroLinguistico` a «registro linguistico», como se escribe."""
+    partes: list[str] = []
+    for letra in tipo:
+        if letra.isupper() and partes:
+            partes.append(" ")
+        partes.append(letra)
+    return _sin_tildes("".join(partes))
+
+
+@pytest.mark.parametrize("tipo", TIPOS_DE_LA_CAPA_MUNDO)
+def test_toda_entidad_de_la_capa_mundo_esta_definida(
+    documentos: dict[str, str], tipo: str
+) -> None:
+    """Un tipo que el codigo guarda y la ontologia no nombra no existe: o se
+    define, o sobra."""
+    nombre = _nombre_en_prosa(tipo)
+    for documento in ("definitions", "domain-knowledge"):
+        assert nombre in _sin_tildes(documentos[documento]), (
+            f"{tipo} no aparece en {documento}.md"
+        )
+
+
+@pytest.mark.parametrize("grado", LICENCIA)
+def test_todo_grado_de_licencia_esta_en_los_dos_documentos(
+    documentos: dict[str, str], grado: str
+) -> None:
+    """El grado de licencia es lo que separa un error de una decision, y desde
+    que existe `personal`, tambien de un regalo. Los tres sitios donde esta
+    escrito tienen que decir lo mismo."""
+    for nombre in ("definitions", "domain-knowledge"):
+        assert grado in _sin_tildes(documentos[nombre]), (
+            f"el grado {grado} no aparece en {nombre}.md"
+        )
 
 
 def test_el_techo_es_el_mismo_en_los_tres_sitios_donde_esta_escrito(

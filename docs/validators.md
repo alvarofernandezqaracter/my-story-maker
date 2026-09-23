@@ -113,12 +113,21 @@ conceptual y el social exigen ver el canon, que el Editor de estilo no recibe
 por diseño. El alcance local describe dónde está el defecto, no quién lo
 encuentra.
 
+**Las cuatro dimensiones de anacronismo tienen una exención declarada.** Lo que
+lleva licencia `personal` viene de la vida del destinatario al que va dedicada
+la obra y se escribe con su nombre de hoy: no es un defecto, es el encargo. Los
+tres del Verificador la reconocen por el grado de licencia de la ficha, que ven
+en el canon; el Editor de estilo no ve el canon, así que recibe el destinatario
+en su proyección y reconoce por ahí los nombres que no debe señalar. Sin esta
+exención el nombre real saldría como defecto en cada capítulo y la obra se
+atascaría corrigiendo el regalo.
+
 | Dimensión | Método | Agente | Proyección mínima | Severidad |
 | --- | --- | --- | --- | --- |
-| Anacronismo material | `inspeccion` | Verificador de continuidad | Fecha y lugar de la escena, fichas de los `Objeto` mencionados con su disponibilidad temporal | `mayor` |
-| Anacronismo conceptual | `inspeccion` | Verificador de continuidad | `Concepto` disponibles en esa fecha y ese ámbito, texto | `mayor` |
-| Anacronismo social e institucional | `inspeccion` | Verificador de continuidad | `Práctica` y cargos vigentes en el marco, texto | `mayor` |
-| Anacronismo léxico | `inspeccion` | Editor de estilo | Texto y lista vetada corta del capítulo, derivada del `Registro lingüístico` de las escenas en juego | `menor` |
+| Anacronismo material | `inspeccion` | Verificador de continuidad | Fecha y lugar de la escena, fichas de los `Objeto` mencionados con su disponibilidad temporal y su licencia | `mayor` |
+| Anacronismo conceptual | `inspeccion` | Verificador de continuidad | `Concepto` disponibles en esa fecha y ese ámbito con su licencia, texto | `mayor` |
+| Anacronismo social e institucional | `inspeccion` | Verificador de continuidad | `Práctica` y cargos vigentes en el marco con su licencia, texto | `mayor` |
+| Anacronismo léxico | `inspeccion` | Editor de estilo | Texto, lista vetada corta del capítulo derivada del `Registro lingüístico` de las escenas en juego, y el destinatario | `menor` |
 | Fatiga léxica | `analisis` | Editor de estilo | Ecos recuperados por parecido del registro acumulado de imágenes y muletillas, texto nuevo | `menor` |
 | Tics de modelo | `inspeccion` | Editor de estilo | Lista de patrones recurrentes de superficie, texto | `sugerencia` |
 | Coherencia de voz | `inverificable` | Juez de rúbrica | Réplicas del mismo personaje en dos capítulos, rúbrica de voz | `menor`, ruidosa |

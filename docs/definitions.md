@@ -27,7 +27,7 @@ Las entidades del dominio se reparten en dos capas disjuntas, que este documento
 - **Capa 1 — Obra:** unidades textuales (obra, parte, capítulo, escena, beat, párrafo). Responde a cómo está hecho el texto.
 - **Capa 2 — Mundo:** referentes (personajes, lugares, eventos, objetos, instituciones, cronología). Responde a de qué habla el texto.
 
-La capa 2 se desdobla además en **mundo documentado** (lo que la evidencia histórica sostiene) y **mundo ficcional** (lo inventado sobre él). Son el mismo tipo de entidad con distinto grado de licencia, no dos ontologías.
+La capa 2 se desdobla además en **mundo documentado** (lo que la evidencia histórica sostiene), **mundo ficcional** (lo inventado sobre él) y **mundo personal** (lo que viene de la vida de la persona a la que va dedicada la obra). Son el mismo tipo de entidad con distinto grado de licencia, no tres ontologías.
 
 Existe una tercera capa, la de producción, que observa a estas dos y está definida en `architecture.md` junto con las reglas de acoplamiento entre capas.
 
@@ -84,15 +84,22 @@ Toda `Escena` declara, antes de escribirse, estos campos. Si alguno falta, la es
 
 **Fuente.** Documento o referencia que respalda un elemento. Atributos: cita, tipo (primaria, secundaria, divulgativa), fiabilidad, qué afirma exactamente. Sin `Fuente` no hay forma de distinguir un dato de una alucinación plausible.
 
+**Recuerdo.** Hecho de la vida del destinatario, aportado por quien encarga la obra. Atributos: texto íntegro tal como se entregó y orden en que llegó. Es a una persona lo que la `Fuente` es a una época: respalda un elemento del mundo, pero no declara fiabilidad ni tipo documental, porque nadie va a contrastarlo. Es inmutable y no lo escribe ningún agente: nace con el encargo. Relación: `recordado_por`, que une un elemento del mundo con el `Recuerdo` del que sale.
+
+**Destinatario.** La persona real a la que la obra va dedicada. No es una entidad del mundo sino un atributo del encargo —nombre, edad, rasgos, tono pedido, dedicatoria y lo que no quiere leer—, y es opcional: una obra histórica sin destinatario sigue siendo válida. Lo que hace es sembrar la capa Mundo: sus recuerdos se convierten en `Personaje`, `Lugar` y `Objeto` con licencia `personal`. Dentro de la obra aparece **con su nombre real, sin traducir a la época**. Qué papel tiene —protagonista, secundario, testigo o narrador— no lo declara el encargo: lo decide quien planifica y queda escrito en el plan, que es donde se comprueba después.
+
 ### Grado de licencia
 
-Todo elemento de esta capa lleva un campo `licencia` con uno de tres valores. Sin él, el validador de anacronismos no puede distinguir un error de una decisión artística.
+Todo elemento de esta capa lleva un campo `licencia` con uno de cuatro valores. Sin él, el validador de anacronismos no puede distinguir un error de una decisión artística.
 
 | Valor | Significado | Tratamiento |
 | --- | --- | --- |
 | `canon` | Documentado por una `Fuente`; inmutable | Contradecirlo es defecto grave |
 | `plausible` | Inventado, compatible con la evidencia | Debe respetar el marco material y conceptual |
 | `licencia` | Contradice la evidencia a sabiendas | Exige justificación registrada y, si procede, nota final |
+| `personal` | Sale de un `Recuerdo` del destinatario; inmutable | **Exento de las cuatro dimensiones de anacronismo.** Se escribe con su nombre de hoy y contradecirlo es defecto grave |
+
+`personal` es lo que permite que el destinatario se reconozca en la obra sin que el sistema corrija su propio regalo: una perra llamada Nala existe en la Sevilla de 1587 porque la persona a la que va dedicada la obra tiene una perra que se llama así. No cuenta en la cobertura documental ni en la fidelidad histórica, porque su respaldo no es una `Fuente`.
 
 ## Relaciones transversales
 
@@ -124,7 +131,9 @@ Valores cerrados. Cualquier atributo que los use rechaza texto libre; así los p
 
 **Estatus ontológico:** `historico`, `ficticio`, `compuesto` (personaje ficticio armado con rasgos de varios reales).
 
-**Grado de licencia:** `canon`, `plausible`, `licencia`.
+**Grado de licencia:** `canon`, `plausible`, `licencia`, `personal`.
+
+**Papel del destinatario:** `protagonista`, `secundario`, `testigo`, `narrador`.
 
 **Tipo de fuente:** `primaria`, `secundaria`, `divulgativa`, `sin_respaldo`.
 
