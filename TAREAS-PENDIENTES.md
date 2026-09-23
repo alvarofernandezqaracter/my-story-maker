@@ -1,13 +1,38 @@
 # Tareas pendientes — del backend actual a la rúbrica del examen
 
 Lista secuencial del trabajo que falta. **Cada tarea es una pasada completa del
-ciclo de edición de `AGENTS.md`**: un interrogatorio, una enmienda a
-`specs/SPEC1.md` con subida de versión, el código, la destilación en `docs/` y
-la comprobación contra `docs/validators.md`. El prompt con el que se lanza cada
-una está al final de este documento.
+ciclo de edición de `AGENTS.md`**: una enmienda a `specs/SPEC1.md` con subida de
+versión, el código, la destilación en `docs/` y la comprobación contra
+`docs/validators.md`. El prompt con el que se lanza cada una está al final de
+este documento.
 
 El orden no es caprichoso: cada tarea deja construido lo que la siguiente da por
 hecho. Saltarse una obliga a rehacerla.
+
+## Cómo se ejecuta esto
+
+**Una sola spec.** Todo va a `specs/SPEC1.md`: cada tarea la enmienda y le sube
+la versión, y con ella suben `backend/pyproject.toml` y `novela/__init__.py`. No
+se abre un documento nuevo por cambio. La regla ya está reescrita así en la fase
+1 de `AGENTS.md`.
+
+**Un interrogatorio por fase, no por tarea.** Preguntarte el porqué de cada uno
+de los quince pasos es hacerte perder el tiempo. El `grill-me` se hace al abrir
+cada fase y cubre todas sus tareas de golpe, con una excepción: **T1 lleva el
+suyo aparte**, porque ahí se decide cómo entra una persona real en una novela de
+época y eso condiciona el resto. Quedan seis interrupciones en total:
+
+| Interrogatorio | Cubre |
+| --- | --- |
+| 1 | T1, solo |
+| 2 | T2 y T3 |
+| 3 | Fase B: T4, T5, T6 y T7 |
+| 4 | Fase C: T8 |
+| 5 | Fase D: T9, T10, T11, T12 y T13 |
+| 6 | Fase E: T14 y T15 |
+
+Fuera de esos seis momentos no se te interrumpe: se ejecuta y se te cuenta al
+terminar.
 
 ## Estado de partida
 
@@ -32,8 +57,8 @@ de Claude Code, la API de diez rutas y la batería de 274 pruebas.
 | T9 | Validadores programáticos y puerta de publicación | 5a |
 | T10 | Validador formal de la historia en Lean 4 | 5c |
 | T11 | Validador formal del sistema en TLA+ | 5d |
-| T12 | Juicio semántico, cinco briefs y tuning | 5b y evaluación |
-| T13 | Langfuse | 6 · aplazado por decisión tuya |
+| T12 | Langfuse | 6 |
+| T13 | Juicio semántico, cinco briefs y tuning | 5b y evaluación |
 | T14 | Lectura interactiva y cambio del lector | 2 · después del backend |
 | T15 | Entregables del repositorio | — · al final |
 
@@ -174,7 +199,7 @@ T7 (el hook donde se engancha).
 
 ---
 
-## Fase D · Validación
+## Fase D · Validación y medida
 
 ### T9 · Validadores programáticos y puerta de publicación
 
@@ -223,7 +248,26 @@ igual, y T14 se implementa después contra lo especificado.
 **Lo que hay que guardar por el camino.** Si TLC saca un contraejemplo, se anota
 junto al cambio que provocó en el código. Es una evidencia que la rúbrica pide.
 
-### T12 · Juicio semántico, cinco briefs y tuning
+### T12 · Langfuse
+
+**Qué entrega.** Una traza por novela agrupada por sesión —la entrevista y las
+regeneraciones posteriores caen dentro de la misma—, un span con nombre
+reconocible por cada rol y por cada llamada a herramienta, tokens, coste y
+latencia visibles por llamada, por capítulo y por novela, los resultados de
+todos los validadores enviados como scores de la traza que les corresponde, y
+los prompts de las once tareas versionados en Langfuse. Hoy no hay ni una línea
+en el repositorio.
+
+**Depende de** T9, T10 y T11: conviene que existan los validadores cuyos
+resultados se van a enviar.
+
+**Por qué va antes de la evaluación y no al final.** La rúbrica exige que el
+coste por novela y la tabla de evaluaciones salgan de Langfuse, y que la
+iteración de tuning enseñe **qué versión de prompt produjo cada resultado**. Si
+entra después de T13, T13 hay que repetirla entera para que quede registrada.
+De aquí sale también la slide obligatoria de coste de la presentación.
+
+### T13 · Juicio semántico, cinco briefs y tuning
 
 **Qué entrega.** La rúbrica del juez ampliada para puntuar tres cosas a la vez:
 que la personalización esté integrada con naturalidad, que la novela funcione
@@ -235,29 +279,15 @@ injection y uno diseñado para provocar una incoherencia temporal. La tabla de
 qué validador pasó y cuál falló en cada brief. Y una iteración de tuning con los
 números de antes y después.
 
-**Depende de** todo lo anterior: mide el sistema entero.
+**Depende de** todo lo anterior, y de T12 en particular: mide el sistema entero
+y sus números salen de Langfuse, no de una hoja aparte.
 
-**Aviso de orden.** Esta tarea produce las evidencias que hay que enseñar en la
-presentación, y la rúbrica dice que salgan de Langfuse: el coste por novela, los
-scores y **qué versión de prompt produjo cada resultado**. Si T13 sigue
-aplazada, T12 hay que rehacerla entera después. Recomendación: mover T13 justo
-antes de T12.
+**Con esto cierra la fase D**, y con ella todo lo que la rúbrica exige del
+backend.
 
 ---
 
-## Fase E · Lo que aplazaste
-
-### T13 · Langfuse
-
-Una traza por novela agrupada por sesión, un span por rol y por herramienta,
-tokens, coste y latencia por llamada, por capítulo y por novela, los resultados
-de todos los validadores enviados como scores, y los prompts versionados. Hoy no
-hay ni una línea en el repositorio.
-
-Lo dejas para luego y es tu decisión, pero arrastra tres cosas: la tabla de
-evals de T12, la slide obligatoria de coste por novela y la mitad de las
-evidencias de la presentación. Cuanto más tarde entre, más trabajo ya hecho hay
-que repetir para que quede registrado.
+## Fase E · Lo que va encima del backend terminado
 
 ### T14 · Lectura interactiva y cambio del lector
 
@@ -291,6 +321,9 @@ y el red-team log: reconstruirlos de memoria al final sale mal.
 
 ## El prompt con el que se lanza cada tarea
 
+La primera tarea de cada fase lleva el punto 1; las siguientes empiezan
+directamente por el 2, porque el interrogatorio de la fase ya se hizo.
+
 ```
 Quiero añadir esto al sistema:
 
@@ -299,19 +332,21 @@ Quiero añadir esto al sistema:
 Hazlo recorriendo el ciclo de edición completo de AGENTS.md, sin saltarte
 ninguna fase y sin parar entre fases:
 
-1. Interrógame primero con la skill grill-me sobre el porqué de cada cosa.
-   Es el único momento en que me puedes interrumpir; a partir de ahí ejecuta
-   todo seguido y me lo cuentas al final.
-2. Actualiza specs/SPEC1.md con lo que se decida, subiendo su version y la de
-   backend/pyproject.toml y novela/__init__.py en el mismo movimiento.
+1. Interrógame primero con la skill grill-me sobre el porqué de esta fase
+   entera. Es el único momento en que me puedes interrumpir; a partir de ahí
+   ejecuta todo seguido y me lo cuentas al final.
+2. Enmienda specs/SPEC1.md con lo que se decida, subiendo su version y la de
+   backend/pyproject.toml y novela/__init__.py en el mismo movimiento. Lo que
+   el cambio retire sale del documento, no se narra como pasado.
 3. Implementa exactamente lo que diga la spec y nada más.
 4. Destila los cambios en docs/: definitions.md y el diagrama de
    domain-knowledge.md si toca la ontología, architecture.md si toca capas,
    agentes o flujo, validators.md si hay algo nuevo que verificar, y la
    sección «Estructura del repositorio» de AGENTS.md si cambia el reparto.
-   Lo que se retire desaparece del documento, no se narra como pasado.
 5. Antes de darlo por cerrado, comprueba cada cosa entregada contra
    docs/validators.md y dime con qué método la has verificado.
+
+Déjalo en los commits mínimos que expliquen el cambio.
 
 Al terminar, cuéntame en lenguaje llano qué has cambiado y en qué ficheros,
 y si algo que has tocado deja abierta o cerrada una decisión de

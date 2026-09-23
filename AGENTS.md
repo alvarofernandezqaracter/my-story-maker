@@ -24,7 +24,7 @@ Monorepo con dos paquetes en la raíz. El `backend/` está implementado y el
 | `backend/` | El servidor: guarda y sirve artefactos, camina el guion encargando tareas a los agentes y expone por HTTP lo que el editor necesita ver | Python + FastAPI |
 | `frontend/` | La interfaz web desde la que se lanza y se inspecciona una obra. Todavía vacía | Vite + React |
 | `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
-| `specs/` | Una spec por cambio —el contexto específico—: qué se cambia y por qué | Markdown |
+| `specs/` | La spec viva del backend —el contexto específico— con su plan de implementación: qué tiene que hacer y por qué | Markdown |
 
 Decisiones ya tomadas sobre el reparto:
 
@@ -101,20 +101,23 @@ flowchart LR
 ### Fase 1 — Edición de la spec
 
 Abre el ciclo. La spec es el **contexto específico**: qué se cambia en este
-cambio concreto y por qué. Vive en `specs/NNN-nombre.md`, con numeración
-correlativa que no se reutiliza nunca, y **se queda en el repositorio para
-siempre**: la carpeta es el registro de por qué el sistema es como es.
+cambio concreto y por qué. Hay **una sola spec viva**, `specs/SPEC1.md`, que
+describe cómo tiene que ser el backend ahora. Cada cambio la enmienda y le sube
+el número de versión de la cabecera, y en el mismo movimiento suben
+`backend/pyproject.toml` y `novela/__init__.py`, que van siempre al mismo
+número. El registro de por qué el sistema es como es lo lleva el historial de
+git; `specs/` no crece con un documento por cambio.
 
 1. **Interrogatorio.** Antes de escribir una línea, el agente invoca la skill
    `grill-me` y pregunta el porqué del cambio: qué problema real resuelve, qué
    alternativa se descarta y qué regla existente choca con él. Este es el
    **único punto del ciclo en el que se interrumpe al humano**; de aquí en
    adelante se ejecuta.
-2. **Redacción.** El agente escribe la spec: el problema, la decisión tomada con
-   su justificación, lo que queda fuera y qué documentos de `docs/` habrá que
-   poner al día en la fase 3. Corta —se lee en cinco minutos— y centrada en
-   decisiones: lo que se puede resolver razonablemente al implementar no va en
-   la spec.
+2. **Redacción.** El agente enmienda la spec: el problema, la decisión tomada
+   con su justificación, lo que queda fuera y qué documentos de `docs/` habrá
+   que poner al día en la fase 3. Lo que el cambio retira sale del documento en
+   la misma enmienda. Centrada en decisiones: lo que se puede resolver
+   razonablemente al implementar no va en la spec.
 3. **Aprobación.** Sin spec aprobada no hay fase 2.
 
 Si la razón dada no sostiene el cambio, el agente lo dice en lugar de escribir
@@ -152,8 +155,8 @@ el **contexto general** de `docs/`, que describe el sistema tal como es ahora:
 | El reparto del repositorio | La sección «Estructura del repositorio» de este fichero |
 
 Los docs **describen el estado actual, no la historia**: lo que se retira
-desaparece del documento, no se narra como pasado. Al terminar, la spec queda
-marcada como aplicada y el ciclo se cierra.
+desaparece del documento, no se narra como pasado. Al terminar, la spec y los
+docs cuentan lo mismo que hace el código y el ciclo se cierra.
 
 ### La ventana de divergencia
 
@@ -161,9 +164,9 @@ La spec aprobada es la fuente de verdad mientras el ciclo está abierto. Los
 documentos de `docs/` pueden ir por detrás del código **desde que la spec se
 aprueba hasta que la fase 3 cierra, y solo en esa ventana**.
 
-Esa ventana no se acumula: **no se abre una spec nueva con la anterior sin
-destilar**. Y cerrarla es trabajo del agente: la fase 3 no es un recordatorio
-que el humano tenga que ejecutar.
+Esa ventana no se acumula: **no se enmienda la spec otra vez con la enmienda
+anterior sin destilar**. Y cerrarla es trabajo del agente: la fase 3 no es un
+recordatorio que el humano tenga que ejecutar.
 
 ## Cómo trabajar aquí
 
