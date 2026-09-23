@@ -11,3 +11,8 @@ dist/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Almacen de artefactos
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm

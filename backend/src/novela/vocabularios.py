@@ -1,0 +1,236 @@
+"""Vocabularios controlados: los valores cerrados del sistema.
+
+Nada de texto libre donde hay vocabulario controlado: los valores cerrados son
+lo que hace computables los predicados de calidad. Los de proceso salen de
+`architecture.md` 2 y los de forma y de mundo de `definitions.md`. Este fichero
+no inventa ninguno: si un valor esta aqui y no en esos documentos, es un
+defecto de aqui.
+"""
+
+# --- Censo de agentes (architecture.md 2) ---------------------------------
+
+ROLES: tuple[str, ...] = (
+    "constructor_de_mundo",
+    "documentalista",
+    "arquitecto_de_arcos",
+    "planificador",
+    "redactor",
+    "contable_de_estado",
+    "verificador_de_continuidad",
+    "editor_de_estilo",
+    "juez_de_rubrica",
+    "revisor",
+    "archivero",
+)
+
+TIPOS_DE_TAREA: tuple[str, ...] = (
+    "poblar_mundo",
+    "documentar",
+    "auditar",
+    "planificar",
+    "redactar",
+    "plegar",
+    "verificar",
+    "editar_estilo",
+    "juzgar",
+    "revisar",
+    "destilar",
+)
+
+# Un rol, una tarea: la correspondencia es biyectiva por invariante.
+TAREA_DE_ROL: dict[str, str] = {
+    "constructor_de_mundo": "poblar_mundo",
+    "documentalista": "documentar",
+    "arquitecto_de_arcos": "auditar",
+    "planificador": "planificar",
+    "redactor": "redactar",
+    "contable_de_estado": "plegar",
+    "verificador_de_continuidad": "verificar",
+    "editor_de_estilo": "editar_estilo",
+    "juez_de_rubrica": "juzgar",
+    "revisor": "revisar",
+    "archivero": "destilar",
+}
+
+ROL_DE_TAREA: dict[str, str] = {tarea: rol for rol, tarea in TAREA_DE_ROL.items()}
+
+# --- Vocabularios de proceso (architecture.md 2) ---------------------------
+
+SEVERIDAD: tuple[str, ...] = ("bloqueante", "mayor", "menor", "sugerencia")
+
+ESTADO_DE_PRODUCCION: tuple[str, ...] = (
+    "planificado",
+    "redactado",
+    "en_revision",
+    "aceptado",
+    "descartado",
+)
+
+TIPO_DE_EVENTO_ESTADO: tuple[str, ...] = (
+    "aparece",
+    "muere",
+    "viaja_a",
+    "adquiere",
+    "pierde",
+    "aprende",
+    "revela_a",
+    "cambia_relacion",
+    "cambia_estado_civil_o_rango",
+    "transcurre_tiempo",
+)
+
+# Ciclo de vida del capitulo (architecture.md 4). No es el estado de produccion
+# de un borrador: nombra en que punto del guion esta el capitulo entero.
+CICLO_DE_VIDA_DEL_CAPITULO: tuple[str, ...] = (
+    "planificado",
+    "redactado",
+    "validado",
+    "en_revision",
+    "aceptado",
+    "cerrado",
+    "descartado",
+)
+
+# Las tres memorias (architecture.md 3). Cada artefacto declara a cual pertenece
+# porque es lo que permite al Archivero retirar la de capitulo sin decidir nada.
+MEMORIA: tuple[str, ...] = ("tarea", "capitulo", "obra")
+
+METODO_DE_VERIFICACION: tuple[str, ...] = (
+    "prueba",
+    "analisis",
+    "inspeccion",
+    "demostracion",
+    "inverificable",
+)
+
+# --- Vocabularios de forma textual (definitions.md) ------------------------
+
+POV: tuple[str, ...] = (
+    "primera",
+    "tercera_limitada",
+    "tercera_omnisciente",
+    "epistolar",
+    "mixta",
+)
+
+MODO_DEL_PARRAFO: tuple[str, ...] = (
+    "escena",
+    "sumario",
+    "descripcion",
+    "dialogo",
+    "monologo_interior",
+    "digresion",
+)
+
+FUNCION_ESTRUCTURAL: tuple[str, ...] = (
+    "setup",
+    "escalada",
+    "giro",
+    "revelacion",
+    "respiro",
+    "pago",
+    "resolucion",
+)
+
+TIPO_DE_BEAT: tuple[str, ...] = (
+    "accion",
+    "reaccion",
+    "decision",
+    "revelacion",
+    "transicion",
+)
+
+ESTADO_DE_COMPROMISO: tuple[str, ...] = ("abierto", "reforzado", "pagado", "abandonado")
+
+# --- Vocabularios de mundo (definitions.md) --------------------------------
+
+ESTATUS_ONTOLOGICO: tuple[str, ...] = ("historico", "ficticio", "compuesto")
+
+LICENCIA: tuple[str, ...] = ("canon", "plausible", "licencia")
+
+TIPO_DE_FUENTE: tuple[str, ...] = ("primaria", "secundaria", "divulgativa", "sin_respaldo")
+
+TIPO_DE_ANACRONISMO: tuple[str, ...] = (
+    "material",
+    "lexico",
+    "conceptual",
+    "social",
+    "institucional",
+)
+
+# --- Dimensiones de calidad (definitions.md, repartidas en validators.md 4) -
+
+DIMENSIONES_LOCALES: tuple[str, ...] = (
+    "anacronismo_material",
+    "anacronismo_conceptual",
+    "anacronismo_social_e_institucional",
+    "anacronismo_lexico",
+    "fatiga_lexica",
+    "tics_de_modelo",
+    "coherencia_de_voz",
+)
+
+DIMENSIONES_DE_ESCENA_Y_CAPITULO: tuple[str, ...] = (
+    "cumplimiento_del_contrato",
+    "cambio_de_valor",
+    "integridad_de_pov",
+    "violacion_epistemica",
+    "continuidad_de_estado",
+    "coherencia_temporal",
+    "ritmo",
+)
+
+DIMENSIONES_GLOBALES: tuple[str, ...] = (
+    "progresion_de_arcos",
+    "economia_narrativa",
+    "curva_de_tension",
+    "distribucion_de_revelaciones",
+    "fidelidad_historica",
+    "cobertura_documental",
+    "obra_cerrada_sin_defectos_abiertos",
+)
+
+DIMENSIONES: tuple[str, ...] = (
+    DIMENSIONES_LOCALES + DIMENSIONES_DE_ESCENA_Y_CAPITULO + DIMENSIONES_GLOBALES
+)
+
+# --- Tipos de artefacto ----------------------------------------------------
+
+TIPOS_DE_LA_CAPA_OBRA: tuple[str, ...] = (
+    "Obra",
+    "Parte",
+    "Capitulo",
+    "Escena",
+    "Beat",
+    "Parrafo",
+    "Compromiso",
+)
+
+TIPOS_DE_LA_CAPA_MUNDO: tuple[str, ...] = (
+    "Personaje",
+    "Lugar",
+    "Evento",
+    "Objeto",
+    "Faccion",
+    "Practica",
+    "Concepto",
+    "RegistroLinguistico",
+    "Fuente",
+)
+
+TIPOS_DE_LA_CAPA_PRODUCCION: tuple[str, ...] = (
+    "Agente",
+    "Tarea",
+    "Plan",
+    "Borrador",
+    "Critica",
+    "Revision",
+    "Decision",
+    "EventoEstado",
+    "ResumenCapitulo",
+    "Traza",
+)
+
+TIPOS_DE_ARTEFACTO: tuple[str, ...] = (
+    TIPOS_DE_LA_CAPA_OBRA + TIPOS_DE_LA_CAPA_MUNDO + TIPOS_DE_LA_CAPA_PRODUCCION
+)

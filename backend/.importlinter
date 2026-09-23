@@ -1,0 +1,56 @@
+# Contratos de importacion: la frontera se comprueba sin ejecutar nada.
+# Salen de validators.md 6 y son el paso 1 del orden de adopcion (validators.md 12).
+
+[importlinter]
+root_packages =
+    novela
+include_external_packages = True
+
+[importlinter:contract:capas]
+name = El apilado es api sobre nucleo sobre almacen
+type = layers
+layers =
+    novela.api
+    novela.nucleo
+    novela.almacen
+
+[importlinter:contract:tareas-independientes]
+name = Ninguna carpeta de tareas importa otra: se comunican por artefactos
+type = independence
+modules =
+    novela.tareas.*
+
+[importlinter:contract:persistencia-solo-en-almacen]
+name = Solo almacen abre la base de datos
+type = forbidden
+source_modules =
+    novela.api
+    novela.nucleo
+    novela.tareas
+    novela.ajustes
+    novela.vocabularios
+forbidden_modules =
+    sqlite3
+    sqlite_vec
+    fastembed
+
+[importlinter:contract:nucleo-no-importa-tareas]
+name = nucleo no importa ninguna tarea ni decide nada del dominio
+type = forbidden
+source_modules =
+    novela.nucleo
+forbidden_modules =
+    novela.tareas
+
+[importlinter:contract:tipos-solo-en-el-borde]
+name = El unico sitio con tipos declarados es el borde HTTP
+type = forbidden
+source_modules =
+    novela.nucleo
+    novela.almacen
+    novela.tareas
+    novela.ajustes
+    novela.vocabularios
+forbidden_modules =
+    pydantic
+    fastapi
