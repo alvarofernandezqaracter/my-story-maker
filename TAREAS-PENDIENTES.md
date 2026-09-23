@@ -39,26 +39,35 @@ de Claude Code, la API de diez rutas y la batería de 274 pruebas.
 
 ---
 
-## Fase A · El dominio del examen
+## Fase A · La personalización, encima de lo que ya hay
 
-Sin esto no hay examen que valga: hoy el sistema escribe novela histórica para
-un editor profesional, y lo que se pide es novela personalizada de regalo.
+**La novela sigue siendo histórica. Eso no se toca.** Se quedan en pie la época,
+las `Fuente`, el Documentalista y las dimensiones de anacronismo; lo que se
+añade es una capa nueva encima: un destinatario real al que la obra va dedicada
+y que debe reconocerse en ella. El examen no sustituye el dominio del proyecto,
+se monta sobre él.
 
 ### T1 · El brief del destinatario
 
-**Qué entrega.** Un `Brief` que describe a una persona real y la ocasión del
-regalo —nombre, edad, rasgos, recuerdos, género, tono, extensión, dedicatoria y
-las palabras o temas vetados—, validado con esquema y rechazado por su nombre
-cuando le falta algo. La capa Mundo pasa a admitir hechos que vienen de la vida
-del destinatario y no de una fuente histórica.
+**Qué entrega.** El `Brief` conserva lo que ya pide —época, premisa, tesis
+temática, elenco— y gana encima al destinatario: nombre, edad, rasgos,
+recuerdos, tono, extensión, dedicatoria y las palabras o temas vetados.
+Validado con esquema y rechazado por su nombre cuando le falta algo. La capa
+Mundo pasa a admitir hechos que vienen de la vida del destinatario además de los
+que vienen de una fuente histórica, y los distingue.
 
-**Qué hay que decidir antes.** La grande: si la novela histórica desaparece o si
-conviven las dos. De la respuesta depende qué pasa con `epoca`,
-`tesis_tematica`, el Documentalista, las `Fuente` y las diez dimensiones de
-anacronismo que hoy sostienen medio `validators.md`. Segunda: si un recuerdo
-aportado por el comprador es una `Fuente` de un tipo nuevo o una entidad
-distinta, porque el invariante «solo el Documentalista escribe `Fuente`» lo
-toca de lleno.
+**Qué hay que decidir antes.** La grande ya no es cuál de los dos dominios gana,
+sino **cómo se transpone un dato de la vida real a la época elegida**: si el
+destinatario aparece con su nombre como personaje de época, si sus recuerdos se
+traducen a un equivalente del siglo que toque, o si se admite alguna forma de
+marco contemporáneo. De ahí depende que el validador de personalización y el de
+anacronismo no se peleen: el perro que se llama Nala tiene que poder existir en
+la Sevilla de 1587 sin que salte una crítica.
+
+La segunda: si un recuerdo aportado por el comprador es una `Fuente` de un tipo
+nuevo o una entidad distinta, porque el invariante «solo el Documentalista
+escribe `Fuente`» lo toca de lleno. Y si una novela sin destinatario —la
+histórica pelada de hoy— sigue siendo válida o todas pasan a llevar dedicatoria.
 
 **Docs que se tocan.** `definitions.md` y el diagrama del árbol del mundo de
 `domain-knowledge.md`; `architecture.md` si cambia el censo de agentes;
@@ -216,10 +225,11 @@ junto al cambio que provocó en el código. Es una evidencia que la rúbrica pid
 
 ### T12 · Juicio semántico, cinco briefs y tuning
 
-**Qué entrega.** La rúbrica del juez ampliada para puntuar las dos cosas a la
-vez: que la personalización esté integrada con naturalidad y que la novela
-funcione como novela —arco, coherencia de personajes, ritmo—, con nota y
-justificación por criterio. Una revisión humana de una novela completa con esa
+**Qué entrega.** La rúbrica del juez ampliada para puntuar tres cosas a la vez:
+que la personalización esté integrada con naturalidad, que la novela funcione
+como novela —arco, coherencia de personajes, ritmo— y que siga siendo fiel a su
+época, que es lo que el sistema ya juzga hoy. Con nota y justificación por
+criterio. Una revisión humana de una novela completa con esa
 misma rúbrica, para contrastar. Cinco briefs de prueba, con uno adversario de
 injection y uno diseñado para provocar una incoherencia temporal. La tabla de
 qué validador pasó y cuál falló en cada brief. Y una iteración de tuning con los
