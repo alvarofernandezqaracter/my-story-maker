@@ -31,6 +31,10 @@ Decisiones ya tomadas sobre el reparto:
 - **Frontera única.** `frontend/` nunca lee ficheros del sistema; todo lo que
   muestra lo pide al `backend/`. Así el almacén de artefactos tiene un solo
   lector y un solo escritor.
+- **El contrato de esa frontera es OpenAPI.** Vive en `backend/openapi.yaml`,
+  se genera desde los modelos del borde HTTP y de él deriva `frontend/` su
+  cliente. No se redacta a mano: una descripción escrita aparte acabaría
+  diciendo algo distinto de lo que hace el servidor.
 - **Dos paquetes, dos gestores.** `backend/` se instala con su propio
   `pyproject.toml` y `frontend/` con su propio `package.json`. No hay
   herramienta de monorepo por encima: la raíz solo agrupa.

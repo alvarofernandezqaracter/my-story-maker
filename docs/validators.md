@@ -225,7 +225,7 @@ manda.
 | El pliegue | Propiedad: plegar el estado en N-1 más los eventos de N da lo mismo que plegar el log entero. Regenerar el capítulo 12 y replegar hacia delante da lo mismo que plegar desde cero |
 | El índice de parecido | Propiedad: borrarlo y reconstruirlo desde los artefactos devuelve los mismos fragmentos. El índice es derivado; los artefactos no |
 | La persistencia | Cada migración sobre una copia de una obra de prueba; el bloqueo por escrituras concurrentes se ejercita con una tanda de verdad, no se supone |
-| La frontera con la interfaz | Esquema HTTP y cliente generado a partir de él: si el esquema cambia y el cliente no se regenera, falla |
+| La frontera con la interfaz | El contrato OpenAPI versionado frente al que genera el código: si el borde cambia, la prueba lo vuelve a volcar y falla una vez, para que el movimiento pase por el diff. Comprueba además que toda operación declare la forma de lo que devuelve, porque un contrato con respuestas sin tipar no sirve para generar cliente. La mitad del cliente espera a que `frontend/` exista |
 | Que las pruebas afirmen algo | Pruebas de mutación sobre `nucleo/` y sobre los permisos por rol, en periodo y no en cada commit, porque son lentas |
 
 ### El recorrido en seco
@@ -350,6 +350,7 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Ningún agente valida su propia salida | Enumeración por rol de lo que puede escribir, contra la tabla de gobierno | `prueba` |
 | El mundo solo cambia por `EventoEstado` del Contable | Intento de escritura del mundo desde otro rol | `prueba` |
 | El estado no se almacena, se deriva | El pliegue incremental da lo mismo que plegar el log entero | `prueba` |
+| El contrato de la frontera dice lo que el servidor hace | El documento OpenAPI versionado se coteja con el que generan los modelos del borde | `prueba` |
 | Solo el Documentalista escribe `Fuente` y es el único con salida al exterior | Permisos por rol y enumeración de las herramientas de cada tarea | `prueba` |
 | Toda `Crítica` lleva evidencia citable | Recuento de descartes por falta de evidencia sobre las críticas emitidas | `analisis` |
 | Sin harness a medida: `nucleo/` no decide nada del dominio | Contrato de importación, más vigilar su tamaño | `analisis` |

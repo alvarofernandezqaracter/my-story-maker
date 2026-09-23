@@ -593,7 +593,10 @@ artefacto la imponga el rechazo del agente siguiente.
 **Frontend: agrupación por funcionalidad.** Una carpeta por funcionalidad
 —lanzar una obra, leer el manuscrito, inspeccionar críticas, revisar trazas—
 con sus componentes y sus llamadas dentro, y `compartido/` para el cliente de
-API y lo transversal. No hay capas de dominio en el cliente: la interfaz lanza
+API y lo transversal. Ese cliente no se escribe: se genera del contrato
+OpenAPI que el `backend/` publica en `backend/openapi.yaml`, de modo que
+mover la frontera rompe la compilación de la interfaz en vez de romperla en
+ejecución. No hay capas de dominio en el cliente: la interfaz lanza
 ejecuciones y muestra artefactos.
 
 ```
@@ -601,7 +604,7 @@ frontend/
   package.json
   src/
     features/    lanzar, manuscrito, criticas, trazas
-    compartido/  cliente de API y componentes comunes
+    compartido/  cliente de API generado del contrato, y componentes comunes
 ```
 
 **Sin estado global en el cliente.** Casi todo lo que la interfaz muestra es
