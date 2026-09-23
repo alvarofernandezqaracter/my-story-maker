@@ -10,11 +10,13 @@ from collections.abc import Callable
 
 from novela.almacen import esquema
 from novela.almacen.conexion import escritura
+from novela.almacen.indice import sentencias_del_indice
 
 Migracion = tuple[int, str, Callable[[], list[str]]]
 
 MIGRACIONES: tuple[Migracion, ...] = (
     (1, "esquema inicial de las tres capas y la traza", esquema.sentencias_iniciales),
+    (2, "indice hibrido: fragmentos, palabra exacta y huellas", sentencias_del_indice),
 )
 
 

@@ -42,7 +42,18 @@ def abrir(ruta: Path | str, *, solo_lectura: bool = False) -> sqlite3.Connection
     conexion.execute(f"PRAGMA busy_timeout = {ESPERA_POR_BLOQUEO_MS}")
     conexion.execute("PRAGMA foreign_keys = ON")
     conexion.row_factory = sqlite3.Row
+    _cargar_sqlite_vec(conexion)
     return conexion
+
+
+def _cargar_sqlite_vec(conexion: sqlite3.Connection) -> None:
+    """La extension vectorial se carga en toda conexion: el indice esta detras
+    de la misma puerta que el resto del almacen."""
+    import sqlite_vec
+
+    conexion.enable_load_extension(True)
+    sqlite_vec.load(conexion)
+    conexion.enable_load_extension(False)
 
 
 @contextmanager

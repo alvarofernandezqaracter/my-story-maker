@@ -24,7 +24,7 @@ from novela.almacen import Almacen, Artefacto
 from novela.nucleo import calidad, ciclo, guion, presupuesto
 from novela.nucleo.gobierno import comprobar_escritura
 from novela.nucleo.guion import Encargo
-from novela.nucleo.proyecciones import Indice, Ventana, ensamblar
+from novela.nucleo.proyecciones import Ventana, ensamblar
 
 
 class ProduccionDetenida(Exception):
@@ -42,6 +42,7 @@ class Resultado:
     coste: float | None = None
     latencia_ms: int = 0
     constancia: dict[str, Any] | None = None
+    fragmentos_usados: list[str] = field(default_factory=list)
     recuperaciones: list[dict[str, Any]] = field(default_factory=list)
     estado_en_n: dict[str, Any] | None = None
 
@@ -51,6 +52,24 @@ class Ejecutor(Protocol):
     lanza un subagente de Claude Code."""
 
     def ejecutar(self, encargo: Encargo, ventana: Ventana) -> Resultado: ...
+
+
+class IndiceDeLaObra(Protocol):
+    """El indice visto desde el guion: se consulta y se alimenta.
+
+    Se alimenta en tres momentos y ninguno mas: al recoger la `Fuente`, al
+    aceptar la unidad —nunca antes— y al cerrar el capitulo.
+    """
+
+    def recuperar(
+        self, id_obra: str, coleccion: str, consulta: str, rol: str
+    ) -> list[dict[str, Any]]: ...
+
+    def indexar_fuentes(self, id_obra: str, capitulo: int) -> int: ...
+
+    def indexar_prosa_aceptada(self, id_obra: str, capitulo: int) -> int: ...
+
+    def indexar_estructura(self, id_obra: str, capitulo: int) -> int: ...
 
 
 class Catalogo(Protocol):
@@ -92,7 +111,7 @@ class Caminante:
         ejecutor: Ejecutor,
         *,
         catalogo: Catalogo | None = None,
-        indice: Indice | None = None,
+        indice: IndiceDeLaObra | None = None,
     ) -> None:
         self.almacen = almacen
         self.ejecutor = ejecutor
@@ -163,6 +182,8 @@ class Caminante:
                 ),
                 informe,
             )
+            if numero_de_paso == 2 and self.indice is not None:
+                self.indice.indexar_fuentes(id_obra, numero)
         informe.estado = ciclo.transitar(informe.estado, "redactado")
 
         regeneraciones: dict[str, int] = dict.fromkeys(escenas, 0)
@@ -241,6 +262,8 @@ class Caminante:
             vigente = self.almacen.borrador_vigente(id_obra, escena)
             if vigente is not None and vigente.estado != "aceptado":
                 self.almacen.aceptar_borrador(vigente.id)
+        if self.indice is not None:
+            self.indice.indexar_prosa_aceptada(id_obra, numero)
         informe.estado = ciclo.transitar(informe.estado, "aceptado")
 
         # Pasos 9 y 10: plegar y destilar. Cerrar es publicar los hechos y
@@ -256,6 +279,8 @@ class Caminante:
                         self.almacen.materializar_estado(
                             id_obra, numero, resultado.estado_en_n
                         )
+        if self.indice is not None:
+            self.indice.indexar_estructura(id_obra, numero)
         informe.estado = ciclo.transitar(informe.estado, "cerrado")
         self.almacen.caducar_memoria_de_capitulo(id_obra, numero)
         return informe
@@ -358,7 +383,10 @@ class Caminante:
                 tokens_de_salida=resultado.tokens_de_salida,
                 coste=resultado.coste,
                 latencia_ms=resultado.latencia_ms,
-                recuperaciones=resultado.recuperaciones,
+                recuperaciones=[
+                    recuperacion | {"usados": resultado.fragmentos_usados}
+                    for recuperacion in ventana.recuperaciones
+                ],
             )
             return resultado
 

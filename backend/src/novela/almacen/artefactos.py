@@ -72,10 +72,15 @@ class EscrituraProhibida(Exception):
     """Se ha intentado cambiar algo inmutable o borrar algo que no se borra."""
 
 
+def nuevo_identificador(prefijo: str) -> str:
+    """Un `id` opaco con su prefijo de tres letras."""
+    return f"{prefijo}_{uuid.uuid4().hex[:8]}"
+
+
 def nuevo_id(tipo: str) -> str:
     if tipo not in PREFIJOS:
         raise KeyError(f"{tipo!r} no es un tipo de artefacto declarado")
-    return f"{PREFIJOS[tipo]}_{uuid.uuid4().hex[:8]}"
+    return nuevo_identificador(PREFIJOS[tipo])
 
 
 def ahora() -> str:

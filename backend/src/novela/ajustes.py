@@ -81,7 +81,7 @@ SOLAPE_ENTRE_FRAGMENTOS_EN_CARACTERES: int = 150
 
 # Las huellas se calculan en la propia maquina (D-10). Cambiar de modelo obliga
 # a reindexar la obra entera: dos modelos conviviendo en el indice son defecto.
-MODELO_DE_HUELLAS: str = "intfloat/multilingual-e5-small"
+MODELO_DE_HUELLAS: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 DIMENSIONES_DE_LA_HUELLA: int = 384
 
 # --- Bucle de control de calidad (architecture.md 5) -----------------------

@@ -18,6 +18,7 @@ import pytest
 
 from novela.almacen import Almacen, Artefacto, ArtefactoRechazado, EscrituraProhibida, esquema
 from novela.almacen.artefactos import abrir_almacen, nombre_de_tabla
+from novela.almacen.migraciones import MIGRACIONES
 
 PATRON_DE_ID = re.compile(r"^[a-z]{3}_[0-9a-f]{8}$")
 
@@ -280,10 +281,10 @@ def _referencias_que_no_son_id(almacen: Almacen, id_obra: str) -> list[str]:
 def test_las_migraciones_son_idempotentes(tmp_path: Path) -> None:
     ruta = tmp_path / "migrada.sqlite3"
     primera = abrir_almacen(ruta)
-    assert primera.migrar() == 1
+    assert primera.migrar() == len(MIGRACIONES)
     primera.cerrar()
     segunda = abrir_almacen(ruta)
-    assert segunda.migrar() == 1
+    assert segunda.migrar() == len(MIGRACIONES)
     segunda.cerrar()
 
 

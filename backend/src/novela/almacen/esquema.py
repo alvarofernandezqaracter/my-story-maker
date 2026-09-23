@@ -37,6 +37,10 @@ from novela.vocabularios import (
 # (RF-33)—, pero `definitions.md` no las declara todavia como vocabulario.
 ESTADO_DE_CRITICA: tuple[str, ...] = ("abierta", "atendida", "rechazada", "descartada")
 
+# Lo que el Documentalista recoge para una escena concreta, y que por eso se
+# consulta por capitulo y escena en vez de traerse por `id`.
+DOCUMENTALES: tuple[str, ...] = ("Fuente", "Concepto", "Practica", "RegistroLinguistico")
+
 # Las columnas por las que se consulta, mas alla de la obra. Ninguna tabla las
 # lleva todas: cada tipo declara las suyas.
 COLUMNAS_DE_CONSULTA: dict[str, str] = {
@@ -118,10 +122,31 @@ TABLAS: tuple[Tabla, ...] = (
         indices=(("id_obra", "estado"),),
     ),
     # --- Capa 2, el mundo: de que habla el texto --------------------------
-    # Se traen por `id` desde el contrato de la escena, no por consulta: de ahi
-    # que no lleven mas columnas que las comunes.
-    *(Tabla(tipo, "mundo", "obra") for tipo in TIPOS_DE_LA_CAPA_MUNDO if tipo != "Fuente"),
-    Tabla("Fuente", "mundo", "obra", inmutable=True, notas="Solo la escribe el Documentalista"),
+    # Las fichas del Constructor de mundo se traen por `id` desde el contrato de
+    # la escena, no por consulta: de ahi que no lleven mas columnas que las
+    # comunes. Lo que recoge el Documentalista, en cambio, se recupera por
+    # escena y se filtra por fecha y lugar, asi que lleva capitulo y escena.
+    *(
+        Tabla(tipo, "mundo", "obra")
+        for tipo in TIPOS_DE_LA_CAPA_MUNDO
+        if tipo not in DOCUMENTALES
+    ),
+    *(
+        Tabla(
+            tipo,
+            "mundo",
+            "obra",
+            consulta=("capitulo", "escena"),
+            inmutable=(tipo == "Fuente"),
+            indices=(("id_obra", "capitulo"),),
+            notas=(
+                "Solo la escribe el Documentalista"
+                if tipo == "Fuente"
+                else "Lo recoge el Documentalista"
+            ),
+        )
+        for tipo in DOCUMENTALES
+    ),
     # --- Capa 3, la produccion: como se ha llegado hasta aqui -------------
     Tabla("Agente", "produccion", "obra", consulta=("rol",)),
     Tabla(

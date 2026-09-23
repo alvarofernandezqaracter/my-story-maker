@@ -278,7 +278,8 @@ la palabra exacta sobre la misma colección, con los dos órdenes fundidos en un
 solo antes de recortar a `k`. Ninguna de las dos vías se consulta a solas.
 
 Las huellas se calculan en la propia máquina con `fastembed` y el modelo
-`intfloat/multilingual-e5-small`, de 384 dimensiones. El modelo queda registrado
+`sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, de 384
+dimensiones. El modelo queda registrado
 junto a cada fragmento: dos modelos conviviendo en el índice de una obra son un
 defecto. Solo se indexa texto aceptado, y el fragmento apunta a su artefacto sin
 duplicar el cuerpo. `k` y el tope de tokens van declarados por rol y **se

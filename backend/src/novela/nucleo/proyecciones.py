@@ -19,6 +19,7 @@ artefactos escritos. Eso es lo que hace el techo verificable antes de gastar.
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
+from dataclasses import field as dcfield
 from typing import Any, Protocol
 
 from novela.ajustes import PARRAFOS_DE_CONTINUIDAD_LOCAL
@@ -46,7 +47,7 @@ class ProyeccionConMaterialDeSobra(Exception):
     """Va en la ventana algo que el contrato no declaro."""
 
 
-@dataclass(frozen=True)
+@dataclass
 class Peticion:
     """Todo lo que un material necesita para traerse a si mismo."""
 
@@ -54,6 +55,7 @@ class Peticion:
     encargo: Encargo
     contrato: dict[str, Any] | None = None
     indice: Indice | None = None
+    recuperaciones: list[dict[str, Any]] = dcfield(default_factory=list)
 
     @property
     def id_obra(self) -> str:
@@ -70,11 +72,16 @@ class Peticion:
 
 @dataclass
 class Ventana:
-    """Lo que se le manda a un agente, ya medido."""
+    """Lo que se le manda a un agente, ya medido.
+
+    `recuperaciones` guarda que se pidio al indice y que devolvio, porque sin
+    eso OBJ-08 no se puede medir.
+    """
 
     materiales: dict[str, Material]
     texto: str
     tokens: int
+    recuperaciones: list[dict[str, Any]] = dcfield(default_factory=list)
 
 
 Constructor = Callable[[Peticion], Material]
@@ -220,7 +227,16 @@ def _recuperar(coleccion: str) -> Constructor:
         if p.indice is None:
             return []
         consulta = p.escena or f"capitulo {p.capitulo}"
-        return p.indice.recuperar(p.id_obra, coleccion, consulta, p.encargo.rol)
+        fragmentos = p.indice.recuperar(p.id_obra, coleccion, consulta, p.encargo.rol)
+        p.recuperaciones.append(
+            {
+                "consulta": consulta,
+                "coleccion": coleccion,
+                "k": len(fragmentos),
+                "devueltos": [f.get("id") for f in fragmentos],
+            }
+        )
+        return fragmentos
 
     return constructor
 
@@ -279,7 +295,12 @@ def ensamblar(
 
     cotejar(materiales, declarada)
     texto = json.dumps(materiales, ensure_ascii=False, sort_keys=True)
-    return Ventana(materiales=materiales, texto=texto, tokens=estimar_tokens(texto))
+    return Ventana(
+        materiales=materiales,
+        texto=texto,
+        tokens=estimar_tokens(texto),
+        recuperaciones=peticion.recuperaciones,
+    )
 
 
 def cotejar(materiales: dict[str, Material], declarada: tuple[str, ...]) -> None:
