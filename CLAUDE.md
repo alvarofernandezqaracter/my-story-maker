@@ -95,10 +95,12 @@ python -m venv .venv
 
 ## Trampas conocidas
 
-- **La versión va en trío.** La cabecera de `specs/SPEC1.md`,
-  `backend/pyproject.toml` y `backend/src/novela/__init__.py` tienen que decir
-  el mismo número (`AGENTS.md`, fase 1). Si no lo dicen, hay un cambio a medias
-  y se dice antes de seguir.
+- **Las tres versiones suben juntas.** Cada enmienda a la spec sube la cabecera
+  de `specs/SPEC1.md` y, en el mismo movimiento, `backend/pyproject.toml` y
+  `backend/src/novela/__init__.py`, que van siempre al mismo número **entre
+  ellos dos**; la spec lleva su propia numeración y no coincide con la del
+  paquete (`AGENTS.md`, fase 1). Si el paquete y la spec no suben a la vez, hay
+  un cambio a medias y se dice antes de seguir.
 - **Los identificadores no se reutilizan.** Un `RF-`, `RD-` o `D-` retirado de
   la spec deja su número vacío (SPEC1 §1.4).
 - **Las decisiones abiertas.** Las de `docs/architecture.md` §8 no se cierran
