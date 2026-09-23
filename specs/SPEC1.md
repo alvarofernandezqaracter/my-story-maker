@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.0.3
+version: 1.1.0
 estado: aplicada
 fecha: 2026-09-23
 ambito: backend/
@@ -29,7 +29,9 @@ lo que se puede resolver razonablemente al programar no está aquí.
 Dentro: el almacén de artefactos con sus índices de recuperación por parecido,
 la pieza que camina el guion del capítulo, las once carpetas de tarea con su
 contrato y su prompt, el presupuesto de contexto, la recogida de fuentes fuera
-del sistema y la API HTTP que el editor usa para lanzar e inspeccionar una obra.
+del sistema, el destinatario real al que la obra va dedicada con los hechos que
+vienen de su vida, y la API HTTP que el editor usa para lanzar e inspeccionar
+una obra.
 
 Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
 lo enumerado en §11.
@@ -82,6 +84,7 @@ reapareciendo el harness a medida que el proyecto prohíbe.
 | Actor | Qué aporta | Qué recibe |
 | --- | --- | --- |
 | Editor (persona) | Un brief y, como mucho, una orden de detener o reanudar | Manuscrito, críticas, trazas y progreso |
+| Destinatario (persona real) | Nada directamente: su vida entra por el brief que escribe el editor | La obra, dedicada a él |
 | Agente (uno de los once roles) | El artefacto que escribe | Su proyección mínima y su contrato |
 | `frontend/` | Órdenes del editor | Solo respuestas de la API; nunca ficheros |
 
@@ -161,11 +164,15 @@ flowchart LR
 
 | ID | Requisito | Verificación |
 | --- | --- | --- |
-| RF-01 | Acepta un brief y da de alta una `Obra` con título, época, ámbito, premisa, tesis temática, elenco declarado y políticas globales. Si falta un campo obligatorio, lo rechaza nombrando el campo, sin crear nada | `prueba` |
+| RF-01 | Acepta un brief y da de alta una `Obra` con título, época, ámbito, premisa, tesis temática, elenco declarado, políticas globales y, si lo trae, el destinatario (RF-06). Si falta un campo obligatorio, lo rechaza nombrando el campo con su ruta completa, sin crear nada | `prueba` |
 | RF-02 | El alta arranca la producción completa: `poblar_mundo` y después el guion de cada capítulo hasta cerrar la obra. **No hay ninguna otra orden que el editor deba dar** | `demostracion` |
 | RF-03 | Cada obra nace en su propio espacio de artefactos, identificado por `id_obra`. No existe un espacio de trabajo compartido que haya que archivar ni vaciar entre obras | `analisis` |
 | RF-04 | La producción se puede detener y reanudar por orden explícita. Reanudar retoma el paso siguiente al último cerrado y no repite trabajo ya aceptado | `prueba` |
 | RF-05 | Una tarea fallida se reintenta hasta el tope declarado. Agotado, la obra queda detenida con la tarea, el intento y el motivo registrados, y ningún artefacto a medio escribir | `prueba` |
+| RF-06 | El brief puede llevar un **destinatario**: nombre, edad, rasgos, recuerdos, tono pedido, dedicatoria y las palabras o temas vetados. Es opcional —una obra histórica sin destinatario sigue siendo válida—, pero si viene, viene completo: el rechazo nombra el campo que falta con su ruta, `destinatario.nombre` | `prueba` |
+| RF-07 | Cada recuerdo aportado se guarda como `Recuerdo`, entidad de la capa Mundo, inmutable y sin `Fuente`. **Ningún rol del censo lo escribe**: nace con el alta de la obra, igual que la propia `Obra` (D-13) | `prueba` |
+| RF-08 | Todo elemento del mundo que salga de la vida del destinatario se marca `licencia = "personal"` y apunta al `Recuerdo` del que sale. Un elemento `personal` **queda exento de las cuatro dimensiones de anacronismo**: se escribe tal cual, con su nombre de hoy, y no genera `Crítica` (D-12) | `prueba` |
+| RF-09 | El Planificador decide qué papel tiene el destinatario en la obra —`protagonista`, `secundario`, `testigo` o `narrador`— y lo deja escrito en el `Plan`. Ni el editor lo elige ni el validador lo supone: lo lee de ahí (D-14) | `prueba` |
 
 ### 4.2 Ejecución del guion
 
@@ -177,6 +184,7 @@ flowchart LR
 | RF-13 | La anchura de una tanda se calcula: `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)`, redondeado a la baja. Si hay más tareas, se hacen tandas sucesivas y se espera a que cierre una antes de abrir la siguiente | `analisis` |
 | RF-14 | Antes de enviar, cuenta los tokens de la ventana. Si no cabe en el tope del rol, **parte la unidad** (capítulo → escena → párrafo) y nunca recorta la proyección | `prueba` |
 | RF-15 | Las únicas bifurcaciones son el enrutado por severidad y el tope de vueltas. Ningún agente enruta ni manda sobre otro | `inspeccion` |
+| RF-16 | El destinatario y sus recuerdos entran en la ventana del Constructor de mundo y del Planificador, y en ninguna otra, declarados como material propio y no colados dentro del cuerpo de la `Obra`. Lo que los demás roles necesitan de él ya está en las fichas del mundo que el Constructor escribió | `inspeccion` |
 
 ### 4.3 Almacén y forma de los artefactos
 
@@ -255,6 +263,8 @@ flowchart LR
 | RD-07 | No se borra nada. Caducar es marcar; descartar es marcar. El almacén es el registro de por qué la obra es como es | `prueba` |
 | RD-08 | **Nada de lo que el sistema produce toca el sistema de ficheros.** Artefactos, borradores, críticas, log de eventos, estado materializado, resúmenes, decisiones y trazas viven en la base de datos, incluidos los cuerpos de texto y los embeddings. No hay carpeta de trabajo, ni volcados a disco para inspeccionar: lo que hay que ver se sirve por la API (§6) | `inspeccion` |
 | RD-09 | Los prompts de los once roles y el guion declarativo son entrada versionada con el repositorio, no almacenamiento: son lo único que el sistema lee de fuera de la base de datos, y nunca los escribe | `inspeccion` |
+| RD-16 | `Recuerdo` tiene tabla propia en la capa Mundo, con el texto íntegro tal como lo entregó el editor. Entra en la ventana de un agente como dato delimitado, nunca como instrucción, igual que el cuerpo de una `Fuente` | `inspeccion` |
+| RD-17 | `licencia` admite un cuarto valor, `personal`, para lo que viene de la vida del destinatario. Es inmutable como `canon`, pero su respaldo no es una `Fuente` sino un `Recuerdo`, y por eso no cuenta en la cobertura documental (OBJ-06) ni en la fidelidad histórica | `analisis` |
 
 Un único ejemplo, que fija el estilo del cuerpo de todo artefacto. Los demás no
 se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe.
@@ -325,6 +335,9 @@ ese contrato se publica en OpenAPI: es el único acuerdo entre `backend/` y
 | D-09 | **El Documentalista agota la búsqueda externa, pero no bloquear es la regla.** Sin fuente utilizable escribe la constancia del intento y la producción sigue | Bloquear una escena por falta de fuente deja la obra parada esperando a una persona, que es justo lo que OBJ-07 y RNF-08 prohíben. El coste se paga donde se puede medir —OBJ-06 baja y la auditoría de cierre lo saca—, no en una intervención manual |
 | D-10 | **Las huellas para buscar por parecido se calculan en la propia máquina, con `fastembed` y el modelo multilingüe `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`** (384 dimensiones), y la búsqueda es híbrida: palabra exacta y parecido de sentido, fundidos en un solo orden | Sin cuenta, sin clave y sin coste por capítulo, que es lo que permite reindexar la obra entera sin pensárselo (RD-13). Multilingüe porque la obra es en español y el modelo que `fastembed` trae por defecto está entrenado en inglés. Es el único multilingüe de 384 dimensiones del catálogo de `fastembed`; el resto o no es multilingüe, o tiene la huella más larga y pesa diez veces más. Híbrida porque el nombre propio y la fecha exacta son justo lo que peor encuentra el parecido de sentido, y son la mitad de lo que el Documentalista busca |
 | D-11 | **El contrato de la frontera es un documento OpenAPI generado desde el código, nunca redactado a mano.** v1 lo genera, lo publica y lo versiona; derivar de él el cliente de la interfaz es trabajo de `frontend/`, que está fuera del alcance de v1 | OpenAPI es el estándar con el que se acuerdan los contratos de API, y tenerlo escrito y versionado es lo que permite ver en un diff cuándo se mueve la frontera, en lugar de descubrirlo cuando el cliente rompe. Generarlo desde los modelos del borde evita la única forma real de perder calidad con esto: mantener dos descripciones del mismo sistema hasta que divergen. La dirección contraria —redactar el documento primero y obligar al código a cumplirlo— duplicaría lo que D-01 concentra a propósito en un solo sitio |
+| D-12 | **El destinatario y los suyos aparecen en la obra con sus nombres reales, sin traducir a la época.** La transposición la absorbe el grado de licencia: lo que viene de su vida se marca `personal` y el detector de anacronismos lo deja en paz | Es lo único que garantiza que se reconozca sin que nadie le explique la clave, que es para lo que se encarga la obra. Traducir cada dato a un equivalente del siglo daba una novela más limpia de época y un regalo que hay que descifrar. La alternativa del marco contemporáneo dejaba lo personal en los bordes —dedicatoria y prólogo— sin entrar en la historia. El coste es una excepción declarada en cuatro dimensiones, que es preferible a una lista de palabras a mano dentro del validador |
+| D-13 | **Un recuerdo del destinatario es un `Recuerdo`, no una `Fuente` de tipo nuevo.** Nace con el alta de la obra y ningún rol del censo lo escribe | El invariante «solo el Documentalista escribe `Fuente`» es lo que hace que un dato histórico sin respaldo sea detectable como alucinación. Meter ahí las anécdotas del comprador obligaría a abrir esa puerta a un segundo escritor y el invariante dejaría de significar nada. Son además cosas distintas: una `Fuente` es evidencia de una época y un `Recuerdo` es evidencia de una persona, sin fiabilidad ni tipo documental que declarar. El precio es un segundo sitio donde mirar de dónde sale un dato |
+| D-14 | **El papel del destinatario en la obra lo decide el Planificador y lo deja escrito en el `Plan`.** No es un campo del brief | Preguntárselo al editor es una pregunta más antes de tener una novela, y puede pedir un papel que no case con la premisa. Dejarlo implícito haría inverificable la personalización, porque el validador no sabría dónde mirar: escribirlo en el `Plan` da las dos cosas, libertad narrativa y un sitio fijo donde comprobarlo |
 | D-05 | v1 no usa herramientas externas de cálculo | La decisión sigue abierta. Mientras lo esté, coherencia temporal, fatiga léxica y léxico vetado van como `analisis` contra el dato ya escrito, y lo que las vigila es la reincidencia por dimensión |
 
 ## §9 Trazabilidad
@@ -339,6 +352,7 @@ ese contrato se publica en OpenAPI: es el único acuerdo entre `backend/` y
 | §4.6 y §6 Consulta e interfaz | `AGENTS.md` (frontera única); `architecture.md` §7 |
 | §4.7 Recuperación y fuentes | `architecture.md` §3 (recuperación por parecido y de dónde sale la documentación) |
 | §5 Datos | `definitions.md` (vocabularios); `AGENTS.md` (SQLite y extensión vectorial) |
+| RF-06 a RF-09, RD-16, RD-17 | `definitions.md` (capa Mundo y grado de licencia); D-12, D-13 y D-14 |
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
 
 ## §10 Verificación y criterios de aceptación
@@ -365,6 +379,9 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    aceptado.
 6. Regenerar un capítulo intermedio deja los siguientes replegados y
    consistentes.
+7. Una obra con destinatario llega a cerrada: su nombre real aparece escrito en
+   el manuscrito, el `Plan` declara qué papel se le dio, y ninguna de las cuatro
+   dimensiones de anacronismo lo saca como defecto.
 
 ## §11 Fuera del alcance de v1
 
@@ -376,6 +393,12 @@ entero, los `Resumen de capítulo`: v1 declara su tope y avisa al alcanzarlo,
 pero no compacta; el registro acumulado de estilo ya no lo necesita porque se
 consulta por parecido. El corpus curado de fuentes de época, por D-06. Y
 cualquier herramienta externa de cálculo, por D-05.
+
+También queda fuera todo lo que rodea al destinatario sin ser él: la
+conversación con quien encarga la obra para rellenar el brief —aquí el
+destinatario llega escrito de una vez—, la comprobación de que cada elemento
+personalizado acaba apareciendo en algún capítulo, y el filtro de las palabras
+vetadas, que esta versión guarda pero todavía no aplica.
 
 ## §12 Decisiones abiertas
 
