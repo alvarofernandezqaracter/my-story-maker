@@ -1,9 +1,12 @@
 """Casos sembrados: un defecto conocido de una sola dimension por caso.
 
-Cada caso trae dos textos: uno con el defecto puesto a proposito y otro con esa
-dimension intacta. El primero mide la tasa de deteccion; el segundo, los falsos
-positivos. Un agente que no encuentra nada nunca y uno que encuentra algo
-siempre son las dos averias de verificacion que esto detecta.
+Hay **una sola escena buena**, que cumple su contrato entero, y catorce
+variantes que rompen exactamente una cosa cada una. El texto con el defecto
+mide la tasa de deteccion; la escena buena, los falsos positivos.
+
+Que el gemelo intacto sea la misma escena y no otro texto cualquiera no es un
+detalle: si el texto «sin defecto» tampoco cumple el contrato, lo que se mide
+no es al verificador sino a quien preparo el caso.
 
 **Vive en `tests/`, fuera de `tareas/`, a proposito**: el material con el que se
 juzga a un agente no puede estar donde el agente puede leerlo. Si esto viviera
@@ -17,21 +20,6 @@ from typing import Any
 ESCENA = "esc_00000001"
 CAPITULO = 1
 
-
-@dataclass(frozen=True)
-class Caso:
-    """Un defecto sembrado y su gemelo intacto."""
-
-    dimension: str
-    tarea: str
-    con_defecto: str
-    intacto: str
-    contrato_de_escena: dict[str, Any] = field(default_factory=dict)
-    canon: list[dict[str, Any]] = field(default_factory=list)
-    estado: dict[str, Any] = field(default_factory=dict)
-    extra: dict[str, Any] = field(default_factory=dict)
-
-
 CONTRATO = {
     "id": ESCENA,
     "tipo": "Escena",
@@ -39,10 +27,10 @@ CONTRATO = {
     "focalizacion": "tercera_limitada",
     "marco": {"lugar": "lug_taller", "instante": "1587-04-02", "duracion": "una tarde"},
     "elenco_presente": ["per_ines"],
-    "objetivo": "acabar la tirada antes de la ronda",
-    "obstaculo": "falta plomo y el oficial se ha ido",
+    "objetivo": "acabar la tirada antes de que pase la ronda",
+    "obstaculo": "falta plomo y el oficial Bermudo se ha ido del taller",
     "cambio_de_valor": {"entra": "confiada", "sale": "acorralada"},
-    "informacion_revelada": {"per_ines": "el oficial la delato"},
+    "informacion_revelada": {"per_ines": "Bermudo la ha denunciado"},
     "funcion_estructural": "escalada",
     "compromisos_abiertos": [],
     "compromisos_pagados": [],
@@ -54,7 +42,18 @@ CANON = [
         "tipo": "Personaje",
         "nombre": "Ines de Salcedo",
         "oficio": "impresora",
-        "voz": {"muletillas": ["a fe mia"], "lexico": ["pliego", "prensa", "rama"]},
+        "voz": {
+            "muletillas": ["a fe mia"],
+            "lexico": ["pliego", "prensa", "rama", "husillo", "tirada"],
+            "cadencia": "frases cortas, sin adorno",
+        },
+        "licencia": "plausible",
+    },
+    {
+        "id": "per_bermudo",
+        "tipo": "Personaje",
+        "nombre": "Bermudo",
+        "oficio": "oficial de imprenta",
         "licencia": "plausible",
     },
     {
@@ -66,8 +65,15 @@ CANON = [
     {
         "id": "lug_taller",
         "tipo": "Lugar",
-        "nombre": "taller de la calle de las Sierpes",
+        "nombre": "taller de la calle de las Sierpes, Sevilla",
         "licencia": "plausible",
+    },
+    {
+        "id": "lug_corte",
+        "tipo": "Lugar",
+        "nombre": "la corte, en Madrid",
+        "distancia_a_lug_taller": "doce jornadas de camino",
+        "licencia": "canon",
     },
     {
         "id": "obj_prensa",
@@ -79,217 +85,248 @@ CANON = [
     {
         "id": "cnc_intimidad",
         "tipo": "Concepto",
-        "nombre": "intimidad domestica",
+        "nombre": "intimidad domestica y privacidad del individuo frente al Estado",
         "disponibilidad_temporal": "desde el siglo XIX",
         "licencia": "canon",
     },
     {
         "id": "pra_tratamiento",
         "tipo": "Practica",
-        "nombre": "tratamiento de vuestra merced entre desiguales",
+        "nombre": "tratamiento de vuestra merced entre desiguales; nadie tutea al alguacil",
         "licencia": "canon",
     },
 ]
 
 ESTADO = {
     "capitulo": 0,
-    "ubicaciones": {"per_ines": "lug_taller", "per_conde": "lug_corte"},
-    "posesiones": {"per_ines": ["obj_prensa"]},
-    "sabe": {"per_ines": []},
     "fecha": "1587-04-01",
+    "ubicaciones": {
+        "per_ines": "lug_taller",
+        "per_bermudo": "lug_taller",
+        "per_conde": "lug_corte",
+    },
+    "posesiones": {"per_ines": ["obj_prensa"]},
+    "sabe": {"per_ines": [], "per_bermudo": ["que ha firmado la denuncia"]},
 }
 
-_BUENO = (
-    "Ines apreto el husillo hasta que la rama quedo firme. Fuera, la calle de "
-    "las Sierpes olia a cuero mojado. Contaba los pliegos y le faltaban dos "
-    "docenas para la tirada. A fe mia que no llegaba, penso, y volvio a apretar."
-)
+# La escena buena. Cumple el contrato entero: el objetivo se lee, el obstaculo
+# se opone, el foco no sale de Ines, entra confiada y sale acorralada, y se
+# entera de la denuncia dentro de la escena, no antes.
+ESCENA_BUENA = """Ines conto los pliegos dos veces y las dos le salio la misma cuenta: faltaban
+dos docenas para cerrar la tirada, y la ronda pasaba al filo de la noche.
+Apreto el husillo hasta que la rama quedo firme y metio el pliego.
+
+—A fe mia que llego —dijo en voz alta, para oirse—, si el plomo alcanza.
+
+No alcanzaba. Abrio el cajon de los tipos y encontro el fondo rayado y limpio.
+El banco de Bermudo estaba vacio y el mandil doblado, como el no lo dejaba
+nunca. Busco en el arca de las fundiciones y tampoco habia plomo alli.
+
+Entonces reparo en el papel que asomaba bajo el mandil. Lo saco despacio. Era
+una copia de la denuncia, con su nombre escrito de mano del propio Bermudo.
+
+Se quedo quieta, con el pliego a medio meter. Fuera, en la calle de las
+Sierpes, alguien arrastro un banco. Ines miro la puerta, miro la prensa y
+entendio que no habia tirada que salvar: habia una casa de la que salir."""
+
+
+@dataclass(frozen=True)
+class Caso:
+    """Un defecto sembrado y la misma escena sin el."""
+
+    dimension: str
+    tarea: str
+    con_defecto: str
+    intacto: str = ESCENA_BUENA
+    contrato_de_escena: dict[str, Any] = field(default_factory=lambda: CONTRATO)
+    canon: list[dict[str, Any]] = field(default_factory=lambda: CANON)
+    estado: dict[str, Any] = field(default_factory=lambda: ESTADO)
+    extra: dict[str, Any] = field(default_factory=dict)
+
+
+def _rompiendo(viejo: str, nuevo: str) -> str:
+    """La escena buena con un solo trozo cambiado."""
+    assert viejo in ESCENA_BUENA, viejo[:40]
+    return ESCENA_BUENA.replace(viejo, nuevo)
+
+
+LEXICO_VETADO = [
+    {
+        "id": "reg_0001",
+        "tipo": "RegistroLinguistico",
+        "vetados": ["gestionar", "priorizar", "validar", "tema", "impactar", "optimizar"],
+    }
+]
+
+PATRONES = [
+    {
+        "id": "reg_0002",
+        "tipo": "RegistroLinguistico",
+        "patrones_recurrentes": [
+            "no se trataba solo de X, se trataba de Y",
+            "en un mundo donde",
+            "no era simplemente X: era mucho mas que eso",
+        ],
+    }
+]
+
+ECOS = [
+    {"id": "frg_0001", "texto": "la noche cayo sobre el taller como un telon de plomo"},
+    {"id": "frg_0002", "texto": "el silencio pesaba sobre ella como un telon de plomo"},
+]
+
+PLAN = [
+    {
+        "id": "pla_0001",
+        "tipo": "Plan",
+        "capitulo": CAPITULO,
+        "banda_objetivo": {"escena": "60-80 %", "sumario": "0-20 %", "dialogo": "10-30 %"},
+    }
+]
+
 
 CASOS: tuple[Caso, ...] = (
     Caso(
         dimension="integridad_de_pov",
         tarea="verificar",
-        con_defecto=(
-            "Ines apreto el husillo. Al otro lado de la ciudad, el conde leyo la "
-            "denuncia y sonrio antes de firmarla. Ines supo entonces que ya estaba "
-            "firmada y siguio apretando."
+        con_defecto=_rompiendo(
+            "Se quedo quieta, con el pliego a medio meter.",
+            "Se quedo quieta, con el pliego a medio meter. Lejos de alli, en la "
+            "corte, el conde leyo la denuncia y sonrio antes de guardarla en la "
+            "manga, satisfecho de lo barato que le habia salido el oficial.",
         ),
-        intacto=_BUENO,
-        contrato_de_escena=CONTRATO,
     ),
     Caso(
         dimension="cumplimiento_del_contrato",
         tarea="verificar",
         con_defecto=(
-            "Ines miro la prensa parada y no hizo nada. Se sento en el banco, "
-            "bebio agua y espero a que anocheciera sin que nada se lo impidiera."
+            "Ines se sento en el banco del taller y estuvo alli toda la tarde. "
+            "Bebio agua. Miro la prensa parada sin tocarla y no se le ocurrio nada "
+            "que hiciera falta hacer. Cuando oscurecio, cerro la puerta y se fue a "
+            "dormir tan tranquila como habia llegado."
         ),
-        intacto=_BUENO,
-        contrato_de_escena=CONTRATO,
     ),
     Caso(
         dimension="cambio_de_valor",
         tarea="verificar",
-        con_defecto=(
-            "Ines entro confiada al taller, apreto el husillo y salio igual de "
-            "confiada, sin que nada de lo ocurrido la moviera un punto."
+        con_defecto=_rompiendo(
+            "Se quedo quieta, con el pliego a medio meter. Fuera, en la calle de las\n"
+            "Sierpes, alguien arrastro un banco. Ines miro la puerta, miro la prensa y\n"
+            "entendio que no habia tirada que salvar: habia una casa de la que salir.",
+            "Ines doblo el papel y lo guardo sin mas. A fe mia que llego igual, "
+            "penso, tan segura como al empezar la tarde, y volvio a apretar el "
+            "husillo con el mismo animo de antes.",
         ),
-        intacto=_BUENO,
-        contrato_de_escena=CONTRATO,
     ),
     Caso(
         dimension="violacion_epistemica",
         tarea="verificar",
-        con_defecto=(
-            "Ines escondio el pliego porque sabia que el oficial la habia delatado "
-            "aquella misma manana, aunque nadie se lo habia dicho todavia."
+        con_defecto=_rompiendo(
+            "No alcanzaba. Abrio el cajon de los tipos",
+            "No alcanzaba. Como sabia desde por la manana que Bermudo la habia "
+            "denunciado, escondio los pliegos bajo el arca antes de nada. Luego "
+            "abrio el cajon de los tipos",
         ),
-        intacto=_BUENO,
-        contrato_de_escena=CONTRATO,
-        estado=ESTADO,
     ),
     Caso(
         dimension="continuidad_de_estado",
         tarea="verificar",
-        con_defecto=(
-            "El conde entro en el taller sin llamar y se planto junto a la prensa. "
-            "Ines, que ya no tenia prensa desde el invierno, le sostuvo la mirada."
+        con_defecto=_rompiendo(
+            "Apreto el husillo hasta que la rama quedo firme y metio el pliego.",
+            "Apreto el husillo de la prensa que habia vendido en invierno, cuando "
+            "ya no le quedaba ninguna, y metio el pliego. El conde, sentado en el "
+            "banco del taller desde el mediodia, la miraba trabajar.",
         ),
-        intacto=_BUENO,
-        contrato_de_escena=CONTRATO,
-        estado=ESTADO,
     ),
     Caso(
         dimension="coherencia_temporal",
         tarea="verificar",
-        con_defecto=(
-            "Aquella misma tarde del dos de abril, tras cerrar el taller en Sevilla, "
-            "Ines llego a la corte de Madrid a tiempo para la cena."
+        con_defecto=_rompiendo(
+            "Fuera, en la calle de las\nSierpes, alguien arrastro un banco.",
+            "Esa misma tarde cerro el taller de Sevilla, tomo el camino y llego a "
+            "la corte de Madrid a tiempo de cenar alli y volver antes del alba.",
         ),
-        intacto=_BUENO,
-        contrato_de_escena=CONTRATO,
-        estado=ESTADO,
     ),
     Caso(
         dimension="anacronismo_material",
         tarea="verificar",
-        con_defecto=(
-            "Ines encendio la bombilla del taller y acerco el pliego a la luz para "
-            "ver si la tinta habia prendido."
+        con_defecto=_rompiendo(
+            "Lo saco despacio.",
+            "Lo saco despacio y encendio la bombilla del taller para leerlo mejor.",
         ),
-        intacto=_BUENO,
-        contrato_de_escena=CONTRATO,
-        canon=CANON,
     ),
     Caso(
         dimension="anacronismo_conceptual",
         tarea="verificar",
-        con_defecto=(
-            "Ines cerro la puerta pensando en su derecho a la intimidad domestica y "
-            "en lo mal que el Estado respetaba la privacidad de sus ciudadanos."
+        con_defecto=_rompiendo(
+            "Se quedo quieta, con el pliego a medio meter.",
+            "Se quedo quieta, indignada por aquella violacion de su derecho a la "
+            "intimidad domestica y de la privacidad que el Estado debia garantizar "
+            "a cualquier ciudadana.",
         ),
-        intacto=_BUENO,
-        contrato_de_escena=CONTRATO,
-        canon=CANON,
     ),
     Caso(
         dimension="anacronismo_social_e_institucional",
         tarea="verificar",
-        con_defecto=(
-            "El alguacil entro, le tendio la mano a Ines y la llamo por su nombre de "
-            "pila delante de todos, como se hace entre colegas de oficina."
+        con_defecto=_rompiendo(
+            "Fuera, en la calle de las\nSierpes, alguien arrastro un banco.",
+            "El alguacil entro sin quitarse el sombrero, le tendio la mano y la "
+            "llamo Ines a secas delante de los oficiales, como se hacen las cosas "
+            "entre companeros de trabajo.",
         ),
-        intacto=_BUENO,
-        contrato_de_escena=CONTRATO,
-        canon=CANON,
     ),
     Caso(
         dimension="ritmo",
         tarea="verificar",
         con_defecto=(
             "Durante los tres meses siguientes el taller siguio trabajando. Hubo "
-            "encargos, hubo deudas y hubo visitas. El invierno paso sin nada digno "
-            "de contarse y llego la primavera."
+            "encargos, hubo deudas y hubo visitas del alguacil. Bermudo se fue y no "
+            "volvio. El invierno paso sin nada que merezca contarse y llego la "
+            "primavera, y con ella la denuncia, que Ines leyo una tarde cualquiera."
         ),
-        intacto=_BUENO,
-        extra={
-            "plan_del_capitulo": [
-                {
-                    "banda_objetivo": {"escena": "60-80 %", "sumario": "0-20 %"},
-                    "capitulo": CAPITULO,
-                }
-            ]
-        },
+        extra={"plan_del_capitulo": PLAN},
     ),
     Caso(
         dimension="anacronismo_lexico",
         tarea="editar_estilo",
-        con_defecto=(
-            "Ines gestiono el tema de la tirada, priorizo los pliegos urgentes y "
-            "valido el resultado antes de irse."
+        con_defecto=_rompiendo(
+            "Apreto el husillo hasta que la rama quedo firme y metio el pliego.",
+            "Gestiono el tema de la tirada, priorizo los pliegos urgentes y valido "
+            "el resultado antes de seguir.",
         ),
-        intacto=_BUENO,
-        extra={
-            "lexico_vetado": [
-                {
-                    "id": "reg_0001",
-                    "tipo": "RegistroLinguistico",
-                    "vetados": ["gestionar", "priorizar", "validar", "tema", "impactar"],
-                }
-            ]
-        },
+        extra={"lexico_vetado": LEXICO_VETADO},
     ),
     Caso(
         dimension="fatiga_lexica",
         tarea="editar_estilo",
-        con_defecto=(
-            "La noche cayo sobre el taller como un telon de plomo. Ines penso que "
-            "el silencio era un telon de plomo y que el miedo, tambien, caia como "
-            "un telon de plomo."
+        con_defecto=_rompiendo(
+            "Se quedo quieta, con el pliego a medio meter.",
+            "La tarde cayo sobre el taller como un telon de plomo. El silencio era "
+            "tambien un telon de plomo, y el miedo, cuando llego, cayo como un "
+            "telon de plomo sobre los hombros de Ines.",
         ),
-        intacto=_BUENO,
-        extra={
-            "ecos_del_registro": [
-                {"id": "frg_0001", "texto": "la noche cayo como un telon de plomo"},
-                {"id": "frg_0002", "texto": "el silencio pesaba como un telon de plomo"},
-            ]
-        },
+        extra={"ecos_del_registro": ECOS},
     ),
     Caso(
         dimension="tics_de_modelo",
         tarea="editar_estilo",
-        con_defecto=(
+        con_defecto=_rompiendo(
+            "Ines miro la puerta, miro la prensa y\nentendio que no habia tirada que salvar: "
+            "habia una casa de la que salir.",
             "No se trataba solo de imprimir. Se trataba de resistir. En un mundo "
             "donde la palabra era peligrosa, Ines no era simplemente una impresora: "
-            "era mucho mas que eso."
+            "era mucho mas que eso.",
         ),
-        intacto=_BUENO,
-        extra={
-            "registro_linguistico": [
-                {
-                    "id": "reg_0002",
-                    "tipo": "RegistroLinguistico",
-                    "patrones_recurrentes": [
-                        "no se trataba solo de X, se trataba de Y",
-                        "en un mundo donde",
-                        "no era simplemente X: era mucho mas",
-                    ],
-                }
-            ]
-        },
+        extra={"registro_linguistico": PATRONES},
     ),
     Caso(
         dimension="coherencia_de_voz",
         tarea="juzgar",
-        con_defecto=(
+        con_defecto=_rompiendo(
+            "—A fe mia que llego —dijo en voz alta, para oirse—, si el plomo alcanza.",
             "—Vale, o sea, que el tema de los pliegos lo dejamos para manana y ya "
-            "vemos —dijo Ines encogiendose de hombros."
+            "vemos —dijo encogiendose de hombros.",
         ),
-        intacto=(
-            "—A fe mia que no llega el plomo para la rama —dijo Ines—, y sin rama "
-            "no hay pliego que valga."
-        ),
-        canon=CANON,
     ),
 )
 
