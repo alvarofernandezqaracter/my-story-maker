@@ -43,7 +43,9 @@ tarea = "verificar"
 criba = "bloqueantes"
 concurrencia = "por_dimension_y_escena"
 unidad = "escena"
-proyeccion = ["contrato_de_verificacion", "texto_producido"]
+# Solo el contrato: lo demas lo declara la proyeccion minima de cada dimension,
+# porque lo que sobra en la ventana es lo que invita a opinar en vez de comprobar.
+proyeccion = ["contrato_de_verificacion"]
 
 [[paso]]
 numero = 5
@@ -60,7 +62,7 @@ tarea = "verificar"
 criba = "mayores"
 concurrencia = "por_dimension_y_escena"
 unidad = "escena"
-proyeccion = ["contrato_de_verificacion", "texto_producido"]
+proyeccion = ["contrato_de_verificacion"]
 
 [[paso]]
 numero = 7
@@ -76,7 +78,7 @@ tarea = "criba"
 criba = "pulido"
 concurrencia = "por_dimension_y_escena"
 unidad = "capitulo"
-proyeccion = ["contrato_de_verificacion", "texto_producido"]
+proyeccion = ["contrato_de_verificacion"]
 
 [[paso]]
 numero = 9
@@ -112,7 +114,7 @@ concurrencia = "solo"
 unidad = "obra"
 cuando = "cada N capitulos y al cierre de la obra"
 criba = "global"
-proyeccion = ["contrato_de_verificacion", "resumenes_de_capitulos", "arcos", "cola_de_compromisos"]
+proyeccion = ["contrato_de_verificacion"]
 
 # --- Las cribas: que dimension entra en que vuelta ------------------------
 #

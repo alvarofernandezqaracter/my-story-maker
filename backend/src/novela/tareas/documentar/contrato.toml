@@ -1,0 +1,24 @@
+# Contrato de la tarea `documentar`.
+#
+# Un rol, una tarea: declarar un rol es anadir una carpeta con todo lo suyo
+# dentro. Lo que este contrato declara es lo que el backend impone, no lo que
+# el prompt pide.
+
+tarea = "documentar"
+rol = "documentalista"
+alcance = "escena"
+cuando = "Antes de planificar y antes de redactar"
+
+# Sin ninguna herramienta salvo las que aqui se conceden.
+herramientas = ["WebSearch", "WebFetch"]
+
+# Que ve y que no ve (architecture.md 3).
+entrada = ["marco_de_la_escena", "afirmaciones_pendientes_de_respaldo", "documentacion"]
+no_ve = ["la trama futura"]
+
+# Que deja escrito. Lo que no este aqui, el backend no se lo deja escribir.
+escribe = ["Fuente", "Concepto", "Practica", "RegistroLinguistico", "Evento", "Decision"]
+
+# Que rechaza de lo que recibe: campos obligatorios del artefacto de entrada.
+[rechaza]
+marco_de_la_escena = ["marco"]

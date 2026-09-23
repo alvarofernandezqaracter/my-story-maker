@@ -1,0 +1,17 @@
+{
+  "tipo": "ResumenCapitulo",
+  "cuerpo": {
+    "capitulo": 3,
+    "que_paso": "Ines acaba la tirada y el oficial la delata.",
+    "que_cambio": "El taller queda senalado; Ines sabe que hay un delator.",
+    "que_quedo_pendiente": [
+      "quien paga al oficial"
+    ],
+    "compromisos_pagados": [
+      "cmp_0007"
+    ],
+    "compromisos_abiertos": [
+      "cmp_0012"
+    ]
+  }
+}

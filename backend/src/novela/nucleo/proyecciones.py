@@ -211,6 +211,35 @@ def _afirmaciones_pendientes_de_respaldo(p: Peticion) -> Filas:
     )
 
 
+def _plan_del_capitulo(p: Peticion) -> Filas:
+    return _cuerpos(p.almacen.listar("Plan", p.id_obra, capitulo=p.capitulo))
+
+
+def _funcion_estructural_de_las_escenas(p: Peticion) -> Filas:
+    """Los contratos de todas las escenas en orden.
+
+    Es uno de los dos materiales a los que se les permite crecer con la obra, y
+    lo lee un solo rol: el Arquitecto de arcos, que audita ausencias, y una
+    ausencia es exactamente lo que una muestra no devuelve.
+    """
+    return _cuerpos(p.almacen.listar("Escena", p.id_obra, orden="capitulo, orden"))
+
+
+def _log_de_estado(p: Peticion) -> Filas:
+    """El log entero, y solo para auditar.
+
+    La regla del tamano prohibe que esto entre en una ventana de la cadencia del
+    capitulo: aqui entra porque `auditar` va fuera del guion, en solitario y
+    cada N capitulos, y porque su predicado habla justamente del reparto de las
+    revelaciones a lo largo de toda la obra.
+    """
+    return _cuerpos(p.almacen.listar("EventoEstado", p.id_obra, orden="capitulo"))
+
+
+def _decisiones(p: Peticion) -> Filas:
+    return _cuerpos(p.almacen.listar("Decision", p.id_obra))
+
+
 def _vocabulario_de_eventos(p: Peticion) -> list[str]:
     return list(TIPO_DE_EVENTO_ESTADO)
 
@@ -264,6 +293,10 @@ MATERIALES: dict[str, Constructor] = {
     "lexico_vetado": _registro_linguistico,
     "afirmaciones_pendientes_de_respaldo": _afirmaciones_pendientes_de_respaldo,
     "vocabulario_de_eventos": _vocabulario_de_eventos,
+    "plan_del_capitulo": _plan_del_capitulo,
+    "funcion_estructural_de_las_escenas": _funcion_estructural_de_las_escenas,
+    "log_de_estado": _log_de_estado,
+    "decisiones": _decisiones,
     "contrato_de_verificacion": _contrato_de_verificacion,
     "documentacion": _recuperar("documental"),
     "ecos_de_la_obra": _recuperar("obra_prosa"),

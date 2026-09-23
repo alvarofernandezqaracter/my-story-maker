@@ -268,22 +268,39 @@ class Caminante:
 
         # Pasos 9 y 10: plegar y destilar. Cerrar es publicar los hechos y
         # olvidar el andamio.
-        for numero_de_paso in (9, 10):
-            resultados = self._mandar_en_tandas(
-                guion.expandir(guion.paso(numero_de_paso), id_obra=id_obra, capitulo=numero),
-                informe,
-            )
-            if numero_de_paso == 9:
-                for resultado in resultados:
-                    if resultado.estado_en_n is not None:
-                        self.almacen.materializar_estado(
-                            id_obra, numero, resultado.estado_en_n
-                        )
+        self._plegar_capitulo(id_obra, numero, informe)
+        self._mandar_en_tandas(
+            guion.expandir(guion.paso(10), id_obra=id_obra, capitulo=numero), informe
+        )
         if self.indice is not None:
             self.indice.indexar_estructura(id_obra, numero)
         informe.estado = ciclo.transitar(informe.estado, "cerrado")
         self.almacen.caducar_memoria_de_capitulo(id_obra, numero)
         return informe
+
+    # --- El pliegue --------------------------------------------------------
+
+    def _plegar_capitulo(
+        self, id_obra: str, numero: int, informe: Informe | None = None
+    ) -> None:
+        """Paso 9: el Contable emite los eventos y el estado en N.
+
+        El estado no se almacena, se deriva: lo que se guarda es una cache del
+        pliegue que el Contable acaba de hacer.
+        """
+        resultados = self._mandar_en_tandas(
+            guion.expandir(guion.paso(9), id_obra=id_obra, capitulo=numero), informe
+        )
+        for resultado in resultados:
+            if resultado.estado_en_n is not None:
+                self.almacen.materializar_estado(id_obra, numero, resultado.estado_en_n)
+
+    def replegar_desde(self, id_obra: str, capitulo: int, hasta: int) -> None:
+        """Regenerar el capitulo N descarta los estados de N en adelante y
+        repliega hacia delante, capitulo a capitulo."""
+        self.almacen.descartar_estados_desde(id_obra, capitulo)
+        for numero in range(capitulo, hasta + 1):
+            self._plegar_capitulo(id_obra, numero)
 
     # --- Cribas ------------------------------------------------------------
 

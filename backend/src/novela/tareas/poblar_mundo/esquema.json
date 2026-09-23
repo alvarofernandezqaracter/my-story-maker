@@ -1,0 +1,37 @@
+{
+  "tipo": "Personaje",
+  "cuerpo": {
+    "nombre": "Ines de Salcedo",
+    "tratamientos": [
+      "la impresora",
+      "senora Salcedo"
+    ],
+    "estatus_ontologico": "ficticio",
+    "licencia": "plausible",
+    "fechas": {
+      "nacimiento": "1551"
+    },
+    "extraccion_social": "menestral acomodada",
+    "oficio": "impresora",
+    "rasgos_fisicos": [
+      "manos manchadas de tinta"
+    ],
+    "voz": {
+      "lexico": [
+        "pliego",
+        "prensa",
+        "tipo"
+      ],
+      "muletillas": [
+        "a fe mia"
+      ],
+      "temas": [
+        "el oficio",
+        "la deuda"
+      ]
+    },
+    "motivacion_dominante": "conservar el taller de su padre",
+    "herida": "no pudo despedirse de el",
+    "arco_declarado": "del miedo al desafio"
+  }
+}

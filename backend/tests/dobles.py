@@ -170,6 +170,17 @@ class EjecutorFingido:
         )
 
     def _plegar(self, encargo: Encargo) -> Resultado:
+        """Pliega de verdad, aunque de mentira: estado en N-1 mas los eventos de N.
+
+        Que el pliegue sea incremental es lo que permite comprobar la propiedad
+        —replegar desde N da lo mismo que plegar el log entero— sin depender de
+        lo que conteste un modelo.
+        """
+        anterior = {}
+        if self._ventana is not None:
+            anterior = self._ventana.materiales.get("estado_en_n_menos_1") or {}
+        plegados = list(anterior.get("capitulos_plegados") or [])
+        plegados.append(encargo.capitulo)
         return Resultado(
             artefactos=[
                 Artefacto(
@@ -177,13 +188,16 @@ class EjecutorFingido:
                     {
                         "tipo_de_evento": "viaja_a",
                         "sujeto": "per_0001",
-                        "fecha_resultante": "1587-04-03",
-                        "lugar_resultante": "lug_0001",
+                        "fecha_resultante": f"1587-04-0{encargo.capitulo}",
+                        "lugar_resultante": f"lug_000{encargo.capitulo}",
                     },
                     capitulo=encargo.capitulo,
                 )
             ],
-            estado_en_n={"capitulo": encargo.capitulo, "ubicacion": "lug_0001"},
+            estado_en_n={
+                "capitulos_plegados": plegados,
+                "ubicacion": f"lug_000{encargo.capitulo}",
+            },
             salida="capitulo plegado",
         )
 

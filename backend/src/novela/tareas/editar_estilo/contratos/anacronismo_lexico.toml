@@ -1,0 +1,18 @@
+# Contrato de verificacion de `anacronismo_lexico`.
+#
+# Tres partes y ninguna mas: el predicado en una frase, la proyeccion minima
+# sobre la que se evalua y la forma exacta de la `Critica` si falla. Lo que
+# sobra en la proyeccion es lo que produce falsos positivos.
+
+dimension = "anacronismo_lexico"
+rol = "editor_de_estilo"
+metodo_de_verificacion = "inspeccion"
+alcance = "local"
+criba = "pulido"
+
+predicado = "Ninguna palabra del texto esta en la lista vetada corta del capitulo."
+proyeccion_minima = ["texto_producido", "lexico_vetado"]
+
+[critica]
+severidad = "menor"
+evidencia_aceptada = "La palabra y el fragmento donde aparece."

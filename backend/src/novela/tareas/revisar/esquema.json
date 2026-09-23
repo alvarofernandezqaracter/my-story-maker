@@ -1,0 +1,16 @@
+{
+  "tipo": "Revision",
+  "cuerpo": {
+    "unidad": "esc_0007",
+    "atendidas": [
+      "cri_0a91"
+    ],
+    "rechazadas": [
+      {
+        "critica": "cri_44c2",
+        "motivo": "el texto si lo dice, linea 12"
+      }
+    ],
+    "diferencia": "reescrito el parrafo 4"
+  }
+}

@@ -239,7 +239,15 @@ class Almacen:
         try:
             conexion.execute(sentencia, valores)
         except sqlite3.IntegrityError as error:
-            raise ArtefactoRechazado(f"{artefacto.tipo}: {error}") from error
+            # El mensaje lleva los valores que se intentaron escribir porque es
+            # lo unico que sirve de evidencia citable en la `Critica` que sale
+            # de aqui: el texto de SQLite dice que vocabulario fallo, no con que.
+            intentado = ", ".join(
+                f"{columna}={valores[columna]!r}"
+                for columna in ("tipo", "estado", "severidad", "dimension", "rol", "memoria")
+                if columna in valores and valores[columna] is not None
+            )
+            raise ArtefactoRechazado(f"{artefacto.tipo} [{intentado}]: {error}") from error
         return artefacto.id
 
     def _actualizar(

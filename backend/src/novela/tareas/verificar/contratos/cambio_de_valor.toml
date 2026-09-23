@@ -1,0 +1,18 @@
+# Contrato de verificacion de `cambio_de_valor`.
+#
+# Tres partes y ninguna mas: el predicado en una frase, la proyeccion minima
+# sobre la que se evalua y la forma exacta de la `Critica` si falla. Lo que
+# sobra en la proyeccion es lo que produce falsos positivos.
+
+dimension = "cambio_de_valor"
+rol = "verificador_de_continuidad"
+metodo_de_verificacion = "inspeccion"
+alcance = "escena"
+criba = "mayores"
+
+predicado = "El estado de entrada del foco y el de salida son distintos y ambos se leen en el texto."
+proyeccion_minima = ["contrato_de_escena", "texto_producido"]
+
+[critica]
+severidad = "mayor"
+evidencia_aceptada = "Los dos fragmentos, el de entrada y el de salida, o la falta de uno."
