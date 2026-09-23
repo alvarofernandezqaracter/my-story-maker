@@ -27,12 +27,12 @@ lo que se puede resolver razonablemente al programar no está aquí.
 ### 1.2 Alcance del sistema especificado
 
 Dentro: el almacén de artefactos con sus índices de recuperación por parecido,
-la pieza que camina el guion del capítulo, las once carpetas de tarea con su
+la pieza que camina el guion del capítulo, las doce carpetas de tarea con su
 contrato y su prompt, el presupuesto de contexto, la recogida de fuentes fuera
 del sistema, el destinatario real al que la obra va dedicada con los hechos que
-vienen de su vida, el punto de guardado por capítulo con la política de
-reintentos de cada paso, y la API HTTP que el editor usa para lanzar e inspeccionar
-una obra.
+vienen de su vida, la entrevista que completa el brief antes del alta, el
+punto de guardado por capítulo con la política de reintentos de cada paso, y
+la API HTTP que el editor usa para lanzar e inspeccionar una obra.
 
 Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
 lo enumerado en §11.
@@ -46,7 +46,7 @@ al último capítulo cerrado sin que nadie toque nada por dentro**.
 | --- | --- | --- |
 | `AGENTS.md` | Reparto del repositorio, pila fijada, invariantes | Frontera y pila |
 | `docs/definitions.md` | Entidades del dominio y vocabularios de forma y mundo | Nombres y valores cerrados |
-| `docs/architecture.md` | Capas, censo de once agentes, entidades de producción, memorias, guion, bucle de calidad, organización del código | Comportamiento del sistema |
+| `docs/architecture.md` | Capas, censo de doce agentes, entidades de producción, memorias, guion, bucle de calidad, organización del código | Comportamiento del sistema |
 | `docs/validators.md` | Método, agente, proyección y severidad de cada dimensión | Verificación |
 
 Si este documento contradice a alguno de los cuatro, gana el documento base y
@@ -76,7 +76,7 @@ agentes dentro de su presupuesto, y expone por HTTP lo que el editor necesita
 ver.
 
 **No hace una cuarta**: no decide nada del dominio. No pliega el log, no resume,
-no juzga texto y no reescribe prosa. Eso lo hacen los once roles del censo. Si
+no juzga texto y no reescribe prosa. Eso lo hacen los doce roles del censo. Si
 el código del servidor empieza a interpretar el contenido de un artefacto, está
 reapareciendo el harness a medida que el proyecto prohíbe.
 
@@ -84,9 +84,9 @@ reapareciendo el harness a medida que el proyecto prohíbe.
 
 | Actor | Qué aporta | Qué recibe |
 | --- | --- | --- |
-| Editor (persona) | Un brief y, como mucho, una orden de detener o reanudar | Manuscrito, críticas, trazas y progreso |
-| Destinatario (persona real) | Nada directamente: su vida entra por el brief que escribe el editor | La obra, dedicada a él |
-| Agente (uno de los once roles) | El artefacto que escribe | Su proyección mínima y su contrato |
+| Editor (persona) | Un brief —escrito de una vez o completado en la entrevista (§4.8)— y, como mucho, una orden de detener o reanudar | Manuscrito, críticas, trazas y progreso |
+| Destinatario (persona real) | Nada directamente: su vida entra por el brief que escribe el editor, o por lo que pega en la entrevista | La obra, dedicada a él |
+| Agente (uno de los doce roles) | El artefacto que escribe, o la propuesta de brief en el caso del Entrevistador | Su proyección mínima y su contrato |
 | `frontend/` | Órdenes del editor | Solo respuestas de la API; nunca ficheros |
 
 ### 2.3 Restricciones heredadas
@@ -103,7 +103,7 @@ detrás de la frontera.
 
 ### 2.4 Supuestos y dependencias
 
-- Las once tareas las ejecutan subagentes de Claude Code con modelo Haiku
+- Las doce tareas las ejecutan subagentes de Claude Code con modelo Haiku
   (D-08). El backend no habla con ninguna API de modelo: delega.
 - El contexto de entrada se estima antes de enviar y se mide exacto después,
   con lo que el subagente informa al terminar (D-10). La cuenta exacta queda en
@@ -118,7 +118,8 @@ detrás de la frontera.
   (RF-101). De ahí el término que RF-13 añade a la anchura de tanda: sin él el
   techo se respeta sobre el papel y se rompe en la máquina.
 - El brief lo escribe una persona y puede venir incompleto: eso es un caso
-  normal, no un error del sistema (RF-01).
+  normal, no un error del sistema. `POST /obras` lo rechaza nombrando el campo
+  (RF-01), y la entrevista lo completa (§4.8).
 
 ## §3 Objetivos medibles
 
@@ -186,7 +187,7 @@ flowchart LR
 | RF-13 | La anchura de una tanda se calcula: `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)`, redondeado a la baja. Si hay más tareas, se hacen tandas sucesivas y se espera a que cierre una antes de abrir la siguiente | `analisis` |
 | RF-14 | Antes de enviar, cuenta los tokens de la ventana. Si no cabe en el tope del rol, **parte la unidad** (capítulo → escena → párrafo) y nunca recorta la proyección | `prueba` |
 | RF-15 | Las únicas bifurcaciones son el enrutado por severidad y el tope de vueltas. Ningún agente enruta ni manda sobre otro | `inspeccion` |
-| RF-16 | El destinatario y sus recuerdos entran en la ventana del Constructor de mundo y del Planificador, y en ninguna otra, declarados como material propio y no colados dentro del cuerpo de la `Obra`. Lo que los demás roles necesitan de él ya está en las fichas del mundo que el Constructor escribió | `inspeccion` |
+| RF-16 | El destinatario y sus recuerdos entran en la ventana del Constructor de mundo y del Planificador, y en ninguna otra ventana de la obra, declarados como material propio y no colados dentro del cuerpo de la `Obra`. Lo que los demás roles necesitan de él ya está en las fichas del mundo que el Constructor escribió | `inspeccion` |
 
 ### 4.3 Almacén y forma de los artefactos
 
@@ -245,6 +246,80 @@ flowchart LR
 | RF-66 | El Planificador recibe contratos de escena y `Resumen de capítulo` parecidos a lo que va a planificar, nunca prosa | `inspeccion` |
 | RF-67 | Ni el Verificador de continuidad, ni el Contable de estado, ni el Arquitecto de arcos, ni el Redactor consultan por parecido. Una búsqueda por semejanza no encuentra lo que falta y su fallo es silencioso | `inspeccion` |
 | RF-68 | Cada recuperación queda en la `Traza`: consulta, colección, `k`, fragmentos devueltos y cuáles acabó usando el agente. Sin eso OBJ-08 no se puede medir | `analisis` |
+
+### 4.8 La entrevista que completa el brief
+
+**El problema.** El brief lo escribe una persona y viene incompleto como caso
+normal (§2.4), pero hasta aquí la única respuesta del sistema a un brief
+incompleto era rechazarlo nombrando el campo. Quien encarga una novela para
+alguien no sabe de antemano qué se le va a pedir, tiene a menudo lo que hace
+falta escrito en otra forma —una carta, una anécdota— y puede pedir cosas que
+no casan entre sí, como un tono que no corresponde a la edad del destinatario.
+Nadie en el sistema lo detectaba antes de gastar una obra entera.
+
+**La decisión.** Un rol nuevo, el **Entrevistador**, con la tarea
+`entrevistar`, completa el brief en pasadas sin estado. Cada pasada recibe lo
+que la persona lleva escrito y lo que ha pegado, y devuelve el brief completado
+hasta donde se puede, lo que sigue faltando y lo que se contradice. En cuanto el
+brief está completo y no queda ninguna contradicción sin asumir, la misma pasada
+da de alta la obra y la producción arranca.
+
+```mermaid
+flowchart LR
+  P([Borrador y textos pegados]) --> E[Pasada de entrevistar]
+  E --> V{Brief completo y sin<br/>contradicciones abiertas?}
+  V -- no --> R([Propuesta, lo que falta<br/>y lo que se contradice])
+  R -. la persona corrige .-> P
+  V -- si --> O[Alta de Obra<br/>y Recuerdo]
+  O --> M([Produccion, como en 4.1])
+```
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-70 | El Entrevistador es el rol doce del censo y `entrevistar` es su única tarea, con carpeta propia en `tareas/`. No tiene ninguna herramienta, **no escribe ninguna entidad del almacén** —devuelve una propuesta, no artefactos— y actúa fuera del guion, antes de que la obra exista. Su tope de ventana es de 8 000 tokens, se ejecuta como mucho una pasada a la vez en la instalación y lo que ocupa abierta, el tope más el coste fijo del subagente, cabe en el 20 % de margen del techo sin quitarle nada a la tanda de una obra en curso | `prueba` |
+| RF-71 | `POST /entrevistas` abre una entrevista y hace su primera pasada, y `POST /entrevistas/{id}/pasadas` hace la siguiente. Cada pasada recibe un borrador de brief con todos los campos opcionales, los textos pegados y las contradicciones que la persona da por asumidas, y **nada de las pasadas anteriores**: lo que quiera conservar lo vuelve a mandar. Si la ventana no cabe en el tope del rol, la pasada se rechaza diciendo cuánto sobra, y no se recorta ningún texto | `prueba` |
+| RF-72 | Los campos que faltan los detecta el borde, no el agente. Después de cada pasada, el brief resultante se valida contra el mismo modelo que `POST /obras`, y lo que falta se devuelve con su ruta completa —`destinatario.edad`—, igual que en RF-01 | `prueba` |
+| RF-73 | Lo que la persona escribió manda. Un campo escalar presente en el borrador no lo cambia ninguna pasada. En las listas, lo que la persona puso se conserva íntegro y en su orden, y la pasada solo puede añadir detrás. Un valor que aporta el agente y que no valida contra el modelo se descarta, y el campo sigue contando como que falta | `prueba` |
+| RF-74 | El texto pegado entra en la ventana **como dato delimitado, nunca como instrucción**: cada texto va dentro de su propia marca, dentro de los datos del encargo, igual que el cuerpo de una `Fuente`. De él el Entrevistador extrae hechos, y cada hecho declara a qué campo del brief va y una **cita literal** del texto. Un hecho cuya cita no aparece tal cual en ninguno de los textos pegados, o cuyo campo no es uno de los del brief, se descarta y el descarte se cuenta | `prueba` |
+| RF-75 | Un hecho que va a `destinatario.recuerdos` entra en el brief con su cita literal como valor, no con una paráfrasis. Así el `Recuerdo` que nace con el alta guarda un texto que la persona entregó (RD-16), y ningún rol del censo lo escribe (RF-07) | `prueba` |
+| RF-76 | El Entrevistador detecta contradicciones de un vocabulario cerrado, `tipo_de_contradiccion`: `edad_contra_tono`, cuando el tono pedido no corresponde a la edad del destinatario, y `texto_contra_campo`, cuando un texto pegado dice otra cosa que un campo que la persona escribió. Cada contradicción nombra los campos en conflicto y trae evidencia citable. Se descarta la que no trae evidencia, la que nombra un campo que no existe, la de `edad_contra_tono` cuyo brief no tiene edad y tono, y la de `texto_contra_campo` cuya evidencia no aparece literal en ningún texto pegado. **No resuelve ninguna**: la devuelve como pregunta | Detección: `inspeccion`. Filtro y descarte: `prueba` |
+| RF-77 | La persona puede dar por asumida una contradicción declarando su tipo en la pasada siguiente. Una contradicción asumida se sigue devolviendo, marcada como asumida, pero no bloquea el alta | `prueba` |
+| RF-78 | Si al terminar la pasada el brief valida y no queda ninguna contradicción sin asumir, **la propia pasada da de alta la obra** exactamente como `POST /obras`: los recuerdos pasan a `Recuerdo` y la producción arranca. La pasada devuelve el `id_obra`, y la entrevista queda cerrada: pedirle otra pasada es un error que nombra la obra ya lanzada. Si el brief no está completo, no se crea nada. La pasada que lanza es la única orden de OBJ-07: las anteriores ocurren antes de que la obra exista | `prueba` |
+| RF-79 | Cada entrevista es su propio espacio, identificado por `id_entrevista`, igual que una obra lo es por `id_obra` (RF-03). Cada pasada deja escrito lo que recibió, lo que devolvió, cuántos hechos y cuántas contradicciones se descartaron, y su `Traza`: tokens estimados y medidos, salida, coste y latencia. Nada de eso se borra ni se modifica. La obra que se lanza desde una entrevista anota en su cuerpo el `id_entrevista` del que sale | `prueba` |
+
+**Decisiones del bloque.**
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-20 | **Pasadas en frío, no una conversación con estado.** Desde fuera parece una conversación, pero dentro no hay historial: cada pasada recibe lo que la persona manda en ese momento | Toda tarea arranca en frío (`architecture.md` §3), y esa es la regla que hace el techo verificable antes de gastar. Una conversación guardada entraría entera en cada turno y crecería sin tope, que es lo que prohíbe la regla del tamaño. La pasada única y sin segunda vuelta se descarta porque deja sin cerrar precisamente lo que la entrevista tenía que resolver |
+| D-21 | **El Entrevistador es un rol nuevo, no una tarea del Planificador** | Es lo que dice «un rol, una tarea»: el trabajo de completar un brief no lo cubre ningún tipo de tarea, así que se declara un rol en lugar de ensanchar uno. El Planificador actúa por capítulo, sobre una obra que ya existe, y darle esta tarea metería texto pegado en crudo en la ventana que planifica la trama |
+| D-22 | **La obra se lanza sola en cuanto el brief está completo**, sin que la persona lo confirme | Es un paso menos entre el encargo y la obra, en la línea de OBJ-07. El precio es que lo que el agente extrae del texto pegado se convierte en `Recuerdo` sin que nadie lo revise. Se contiene con dos reglas mecánicas en lugar de con una confirmación: lo que la persona escribió manda (RF-73) y un recuerdo es siempre una cita literal de lo que ella entregó (RF-74, RF-75). El agente elige qué fragmento guardar, pero no puede redactar el recuerdo ni inventarlo |
+| D-23 | **Los campos que faltan los detecta el borde, y las contradicciones el agente** | Que falte un campo es una cuestión de forma: el borde ya la resuelve con el modelo del brief, y pedírsela a un agente convertiría una respuesta segura en una probable. Que un tono no case con una edad es un juicio de dominio, y el backend no juzga nada del dominio (§2.1). No rompe «ningún agente valida su propia salida»: el Entrevistador juzga lo que escribió la persona, no lo que escribe él |
+| D-24 | **La entrevista tiene un espacio propio, anterior a la obra**, y RD-02 lo admite | Cuando se entrevista todavía no hay `id_obra`, y toda tarea deja `Traza` (RNF-03). Se descarta reservar el `id_obra` en la primera pasada, porque cambiaría RI-01 y lo que cuenta OBJ-07. También se descarta no guardar nada, porque la entrevista quedaría sin medir |
+
+**Criterio de aceptación.** Con un ejecutor fingido, un borrador al que le
+faltan la edad y el tono, más una carta pegada que los contiene, se completa en
+una pasada y lanza la obra, y sus recuerdos son citas literales de la carta. Un
+borrador con edad 8 y un tono que no corresponde queda sin lanzar hasta que la
+contradicción se asume. Y un texto pegado con una orden dentro no cambia ningún
+campo que la persona escribió ni escribe nada en el almacén.
+
+**De dónde sale.** `architecture.md` §2 (censo y «un rol, una tarea») y §3
+(toda tarea arranca en frío); RF-01, RF-07 y RD-16; D-13 y D-14, que no se
+tocan.
+
+**Fuera de este bloque.** Más tipos de contradicción que los dos del
+vocabulario; que una pasada recuerde las anteriores; que la persona confirme el
+brief antes del alta (D-22); y cualquier comprobación de que lo que el
+Entrevistador extrajo acabe apareciendo en la obra.
+
+**Docs que se ponen al día en la fase 3.** `architecture.md`: el censo con el
+rol doce, su entrada y su salida, su proyección, su tope, la tabla de gobierno,
+el vocabulario de proceso `tipo_de_contradiccion` y la entrevista como espacio
+anterior a la obra. `validators.md`: el método de cada requisito de este bloque
+y la amenaza de la orden inyectada en el texto pegado. `AGENTS.md`: la
+descripción de `architecture.md` pasa a decir doce agentes. `definitions.md` y
+`domain-knowledge.md` no cambian: el `Recuerdo` sigue siendo lo que era.
 
 ### 4.10 Punto de guardado por capítulo y límite de reintentos
 
@@ -360,13 +435,12 @@ la orden.
 
 Traza de este bloque: `architecture.md` §3 (toda tarea arranca en frío y
 presupuesto), RF-11, RF-13 y D-08.
-
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
 | --- | --- | --- |
 | RD-01 | SQLite con `WAL`, `foreign_keys` activas y tablas `STRICT`. Un solo proceso escritor; las lecturas de la API no bloquean la producción | `prueba` |
-| RD-02 | El esquema espeja las tres capas —obra, mundo, producción— más la `Traza`, y toda fila cuelga de un `id_obra` | `inspeccion` |
+| RD-02 | El esquema espeja las tres capas —obra, mundo, producción— más la `Traza`, y toda fila cuelga de un `id_obra`, salvo las de la entrevista, que es anterior a la obra y cuelga de su `id_entrevista` (RF-79, D-24) | `inspeccion` |
 | RD-03 | Los artefactos viven en una tabla por tipo con el cuerpo declarativo en una columna y, al lado, solo las columnas por las que se consulta: obra, capítulo, escena, estado, severidad, dimensión, rol | `inspeccion` |
 | RD-04 | Todo campo de vocabulario controlado se declara como valor cerrado en el esquema. Un campo de esos en texto libre es un defecto: es lo que hace incomputable el predicado que lo vigila | `analisis` |
 | RD-05 | Los fragmentos de `Fuente` se indexan con la extensión vectorial, particionados por `id_obra`, para que el Documentalista recupere por parecido y luego filtre por fecha y lugar. El texto íntegro de la fuente se guarda antes de trocearlo (RF-61) | `prueba` |
@@ -379,7 +453,7 @@ presupuesto), RF-11, RF-13 y D-08.
 | RD-06 | Toda consulta que sirve una proyección está acotada por `id_obra` y por capítulo. Ninguna recorre la prosa acumulada: nada cuyo tamaño crezca con la obra entra en una ventana | `analisis` |
 | RD-07 | No se borra nada. Caducar es marcar; descartar es marcar. El almacén es el registro de por qué la obra es como es | `prueba` |
 | RD-08 | **Nada de lo que el sistema produce toca el sistema de ficheros.** Artefactos, borradores, críticas, log de eventos, estado materializado, resúmenes, decisiones y trazas viven en la base de datos, incluidos los cuerpos de texto y los embeddings. No hay carpeta de trabajo, ni volcados a disco para inspeccionar: lo que hay que ver se sirve por la API (§6) | `inspeccion` |
-| RD-09 | Los prompts de los once roles y el guion declarativo son entrada versionada con el repositorio, no almacenamiento: son lo único que el sistema lee de fuera de la base de datos, y nunca los escribe | `inspeccion` |
+| RD-09 | Los prompts de los doce roles y el guion declarativo son entrada versionada con el repositorio, no almacenamiento: son lo único que el sistema lee de fuera de la base de datos, y nunca los escribe | `inspeccion` |
 | RD-16 | `Recuerdo` tiene tabla propia en la capa Mundo, con el texto íntegro tal como lo entregó el editor. Entra en la ventana de un agente como dato delimitado, nunca como instrucción, igual que el cuerpo de una `Fuente` | `inspeccion` |
 | RD-17 | `licencia` admite un cuarto valor, `personal`, para lo que viene de la vida del destinatario. Es inmutable como `canon`, pero su respaldo no es una `Fuente` sino un `Recuerdo`, y por eso no cuenta en la cobertura documental (OBJ-06) ni en la fidelidad histórica | `analisis` |
 
@@ -457,6 +531,9 @@ ese contrato se publica en OpenAPI: es el único acuerdo entre `backend/` y
 | D-14 | **El papel del destinatario en la obra lo decide el Planificador y lo deja escrito en el `Plan`.** No es un campo del brief | Preguntárselo al editor es una pregunta más antes de tener una novela, y puede pedir un papel que no case con la premisa. Dejarlo implícito haría inverificable la personalización, porque el validador no sabría dónde mirar: escribirlo en el `Plan` da las dos cosas, libertad narrativa y un sitio fijo donde comprobarlo |
 | D-05 | v1 no usa herramientas externas de cálculo | La decisión sigue abierta. Mientras lo esté, coherencia temporal, fatiga léxica y léxico vetado van como `analisis` contra el dato ya escrito, y lo que las vigila es la reincidencia por dimensión |
 
+Las decisiones D-20 a D-24, las de la entrevista, están en §4.8, junto a los
+requisitos que justifican.
+
 ## §9 Trazabilidad
 
 | Bloque de requisitos | De dónde sale |
@@ -512,10 +589,9 @@ consulta por parecido. El corpus curado de fuentes de época, por D-06. Y
 cualquier herramienta externa de cálculo, por D-05.
 
 También queda fuera todo lo que rodea al destinatario sin ser él: la
-conversación con quien encarga la obra para rellenar el brief —aquí el
-destinatario llega escrito de una vez—, la comprobación de que cada elemento
-personalizado acaba apareciendo en algún capítulo, y el filtro de las palabras
-vetadas, que esta versión guarda pero todavía no aplica.
+comprobación de que cada elemento personalizado acaba apareciendo en algún
+capítulo, y el filtro de las palabras vetadas, que esta versión guarda pero
+todavía no aplica. De la entrevista queda fuera lo que enumera §4.8.
 
 ## §12 Decisiones abiertas
 

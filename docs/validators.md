@@ -236,6 +236,7 @@ manda.
 | El pliegue | Propiedad: plegar el estado en N-1 más los eventos de N da lo mismo que plegar el log entero. Regenerar el capítulo 12 y replegar hacia delante da lo mismo que plegar desde cero |
 | El índice de parecido | Propiedad: borrarlo y reconstruirlo desde los artefactos devuelve los mismos fragmentos. El índice es derivado; los artefactos no |
 | La persistencia | Cada migración sobre una copia de una obra de prueba; el bloqueo por escrituras concurrentes se ejercita con una tanda de verdad, no se supone |
+| La entrevista | Con un ejecutor fingido que contesta lo que contestaría el Entrevistador: un hecho sin cita literal se descarta, lo que la persona escribió no cambia, lo que falta sale con su ruta, una contradicción sin evidencia no bloquea y una asumida tampoco, la pasada que completa el brief lanza la obra, y la huella de cada pasada no se borra ni se modifica |
 | La frontera con la interfaz | El contrato OpenAPI versionado frente al que genera el código: si el borde cambia, la prueba lo vuelve a volcar y falla una vez, para que el movimiento pase por el diff. Comprueba además que toda operación declare la forma de lo que devuelve, porque un contrato con respuestas sin tipar no sirve para generar cliente. La mitad del cliente espera a que `frontend/` exista |
 | Que las pruebas afirmen algo | Pruebas de mutación sobre `nucleo/` y sobre los permisos por rol, en periodo y no en cada commit, porque son lentas |
 
@@ -280,6 +281,8 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 | Los vocabularios controlados | `analisis` | Un valor fuera de vocabulario se rechaza, y el rechazo se cuenta por capítulo |
 | Los topes de ventana por rol | `analisis` | La tarea que no cabe se parte en unidades menores; recortar la proyección a ojo fabrica falsos negativos |
 | Solo el Documentalista sale del sistema | `prueba` | Ningún otro rol tiene herramienta con la que salir; se comprueba enumerándolas |
+| El Entrevistador no escribe nada | `prueba` | Su contrato no declara ninguna escritura, la tabla de gobierno no le asigna ninguna, y lo que devuelva como artefacto se cuenta y no se guarda |
+| Una sola pasada de entrevista abierta a la vez | `prueba` | Se lanzan varias a la vez contra un ejecutor que cuenta las que tiene abiertas, y el pico es uno. Por eso su coste cabe en el margen del techo |
 
 ### Medir a los verificadores
 
@@ -295,6 +298,7 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 | Que los artefactos están bien formados | `analisis` | Recuento de rechazos por campo ausente, por capítulo | Un rol con demasiado alcance o con pocos ejemplos |
 | Que lo recuperado sirve | `analisis` | Proporción de fragmentos devueltos que el agente acaba usando | Consultas que llenan la ventana sin aportar nada |
 | Que el sistema aguanta lo difícil | `prueba` | Briefs adversarios: época mal documentada, personajes homónimos, saltos temporales largos | Dimensiones que solo fallan bajo presión |
+| Que el Entrevistador detecta las contradicciones | `prueba` | Casos sembrados, uno por tipo de `tipo_de_contradiccion`, y los mismos casos sin contradicción. La detección en sí es `inspeccion`: el agente lee el brief y los textos y cita la evidencia. Los casos están por escribir y, hasta que existan, la detección no está medida | Una entrevista que lanza obras con un tono que no corresponde a la edad, o que bloquea las que están bien |
 | Que cabe en el presupuesto | `analisis` | Pico de contexto de entrada concurrente frente al techo de 100 000 | Verificación que se come la generación |
 
 Tres señales de verificación mal diseñada, todas visibles en la `Traza`: el
@@ -328,6 +332,7 @@ comprobación que la vigila.
 | Amenaza | Por dónde entra | Qué la para y cómo se comprueba |
 | --- | --- | --- |
 | Instrucción inyectada en una fuente | El Documentalista trae texto de fuera y sus fragmentos acaban en la ventana de otros roles | Lo traído entra como dato delimitado, nunca como instrucción. Se siembra una fuente con una orden dentro y se mira en la `Traza` si el Redactor se desvía |
+| Instrucción inyectada en el texto pegado | Quien encarga la obra pega en la entrevista un texto con una orden dentro | Cada texto va en su propia marca y no puede cerrarla. Aunque el agente obedezca, lo paran tres reglas mecánicas: ningún campo que la persona escribió cambia, solo vale el hecho con cita literal, y el Entrevistador no escribe nada. Se comprueba con un agente fingido que obedece la orden, que es el peor caso |
 | Deriva de objetivo | Tras varias vueltas, el texto se optimiza para pasar la criba en vez de para contar la escena | Reincidencia por dimensión y la auditoría del Arquitecto de arcos, que mira la obra y no el borrador |
 | Contaminación del mundo | Un dato falso entra en el canon y envenena el contexto de todos los capítulos siguientes | El mundo solo cambia por `EventoEstado` del Contable y solo al cerrar capítulo. Se comprueba intentando escribir el mundo desde cualquier otro rol |
 | Fuga de material | Un rol manda fuera lo que el sistema tiene dentro | Ningún rol salvo el Documentalista tiene herramienta con la que salir |
@@ -393,6 +398,13 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Todo paso del guion declara su tope y lo que pasa al agotarse | Carga de un paso sin ellos | `prueba` |
 | La política de cada paso es la que fija la spec | Lectura de `guion.toml` contra la tabla de SPEC1 RF-97, además enumerada en una prueba | `inspeccion` |
 | Cada política de agotamiento hace lo que declara | Avería sembrada en una tarea de cada política | `prueba` |
+| Lo que falta en el brief lo dice el borde, con su ruta completa | Pasada con un borrador al que le faltan campos | `prueba` |
+| Ninguna pasada de entrevista cambia lo que la persona escribió | Pasada con los campos escritos y un texto que dice otra cosa | `prueba` |
+| De un texto pegado solo entra lo que trae cita literal, y un recuerdo es su cita | Hechos con cita inventada, y el `Recuerdo` de la obra lanzada cotejado con el texto pegado | `prueba` |
+| Una contradicción sin evidencia citable no bloquea el alta, y una asumida tampoco | Contradicciones rotas a propósito, y la misma asumida en la pasada siguiente | `prueba` |
+| El Entrevistador detecta las contradicciones de su vocabulario | Casos sembrados, uno por tipo, todavía por escribir. La detección en sí es `inspeccion`; lo que la mide, como con los verificadores, es la prueba sembrada | `prueba` |
+| Una orden en el texto pegado no cambia el brief ni escribe nada | Agente fingido que obedece la orden | `prueba` |
+| La pasada que completa el brief lanza la obra, y la entrevista ya no admite otra | Pasada completa y otra detrás | `prueba` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha y el lugar que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |

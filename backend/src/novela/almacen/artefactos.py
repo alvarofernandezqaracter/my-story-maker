@@ -347,23 +347,27 @@ class Almacen:
         obra: o nace entera o no nace. Se guardan como `Recuerdo`, que ningun
         rol del censo escribe (RF-07).
         """
-        artefacto = Artefacto(tipo="Obra", cuerpo=cuerpo)
         with self._turno_de_escritura, escritura(self._escritor) as conexion:
-            id_obra = self._insertar(conexion, artefacto)
-            for orden, texto in enumerate(recuerdos or [], start=1):
-                self._insertar(
-                    conexion,
-                    Artefacto(
-                        tipo="Recuerdo",
-                        id_obra=id_obra,
-                        cuerpo={"orden": orden, "texto": texto},
-                    ),
-                )
-            conexion.execute(
-                "INSERT INTO control_de_ejecucion (id_obra, detenida, actualizado_en) "
-                "VALUES (?, 0, ?)",
-                (id_obra, ahora()),
+            return self._dar_de_alta(conexion, cuerpo, recuerdos)
+
+    def _dar_de_alta(
+        self, conexion: sqlite3.Connection, cuerpo: dict[str, Any], recuerdos: list[str] | None
+    ) -> str:
+        id_obra = self._insertar(conexion, Artefacto(tipo="Obra", cuerpo=cuerpo))
+        for orden, texto in enumerate(recuerdos or [], start=1):
+            self._insertar(
+                conexion,
+                Artefacto(
+                    tipo="Recuerdo",
+                    id_obra=id_obra,
+                    cuerpo={"orden": orden, "texto": texto},
+                ),
             )
+        conexion.execute(
+            "INSERT INTO control_de_ejecucion (id_obra, detenida, actualizado_en) "
+            "VALUES (?, 0, ?)",
+            (id_obra, ahora()),
+        )
         return id_obra
 
     def listar_recuerdos(self, id_obra: str) -> list[Artefacto]:
@@ -377,6 +381,106 @@ class Almacen:
             "SELECT * FROM artefacto_obra WHERE caducado_en IS NULL ORDER BY creado_en DESC"
         )
         return [_fila_a_artefacto(f) for f in filas]
+
+    # --- Entrevista: el espacio anterior a la obra ------------------------
+
+    def abrir_entrevista(self) -> str:
+        """Abre el espacio de una entrevista. Todavia no hay obra (SPEC1 D-24)."""
+        id_entrevista = nuevo_identificador("ent")
+        with self._turno_de_escritura, escritura(self._escritor) as conexion:
+            conexion.execute(
+                "INSERT INTO entrevista (id, abierta_en) VALUES (?, ?)",
+                (id_entrevista, ahora()),
+            )
+        return id_entrevista
+
+    def leer_entrevista(self, id_entrevista: str) -> dict[str, Any] | None:
+        fila = self._lector.execute(
+            "SELECT id, abierta_en, id_obra, lanzada_en FROM entrevista WHERE id = ?",
+            (id_entrevista,),
+        ).fetchone()
+        return dict(fila) if fila else None
+
+    def registrar_pasada(
+        self,
+        id_entrevista: str,
+        *,
+        entrada: dict[str, Any],
+        salida: dict[str, Any],
+        descartes: dict[str, int],
+        traza: dict[str, Any],
+        alta: tuple[dict[str, Any], list[str]] | None = None,
+    ) -> tuple[int, str | None]:
+        """Deja la huella de una pasada y, si el brief quedo completo, lanza la obra.
+
+        Todo en la misma transaccion: la pasada, la `Obra`, sus `Recuerdo` y la
+        marca de la entrevista se escriben enteras o no se escribe nada. Una
+        entrevista que ya lanzo su obra no admite otra pasada (SPEC1 RF-78).
+        Devuelve el numero de la pasada y el `id_obra`, si la lanzo.
+        """
+        with self._turno_de_escritura, escritura(self._escritor) as conexion:
+            entrevista = conexion.execute(
+                "SELECT id_obra FROM entrevista WHERE id = ?", (id_entrevista,)
+            ).fetchone()
+            if entrevista is None:
+                raise KeyError(f"no hay ninguna entrevista {id_entrevista}")
+            if entrevista["id_obra"] is not None:
+                raise EscrituraProhibida(
+                    f"la entrevista {id_entrevista} ya lanzo la obra {entrevista['id_obra']}"
+                )
+            numero = 1 + int(
+                conexion.execute(
+                    "SELECT COUNT(*) AS cuantas FROM pasada_de_entrevista "
+                    "WHERE id_entrevista = ?",
+                    (id_entrevista,),
+                ).fetchone()["cuantas"]
+            )
+            id_obra = self._dar_de_alta(conexion, *alta) if alta is not None else None
+            conexion.execute(
+                "INSERT INTO pasada_de_entrevista (id, id_entrevista, numero, rol, tarea, "
+                "entrada, salida, hechos_descartados, contradicciones_descartadas, "
+                "artefactos_rechazados, tokens_de_entrada_estimados, "
+                "tokens_de_entrada_medidos, tokens_de_salida, coste, latencia_ms, "
+                "abierta_en, cerrada_en, id_obra) VALUES (?, ?, ?, 'entrevistador', "
+                "'entrevistar', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    nuevo_identificador("pas"),
+                    id_entrevista,
+                    numero,
+                    json.dumps(entrada, ensure_ascii=False),
+                    json.dumps(salida, ensure_ascii=False),
+                    descartes.get("hechos", 0),
+                    descartes.get("contradicciones", 0),
+                    descartes.get("artefactos", 0),
+                    traza.get("tokens_de_entrada_estimados"),
+                    traza.get("tokens_de_entrada_medidos"),
+                    traza.get("tokens_de_salida"),
+                    traza.get("coste"),
+                    traza.get("latencia_ms"),
+                    traza["abierta_en"],
+                    traza.get("cerrada_en") or ahora(),
+                    id_obra,
+                ),
+            )
+            if id_obra is not None:
+                conexion.execute(
+                    "UPDATE entrevista SET id_obra = ?, lanzada_en = ? WHERE id = ?",
+                    (id_obra, ahora(), id_entrevista),
+                )
+        return numero, id_obra
+
+    def listar_pasadas(self, id_entrevista: str) -> list[dict[str, Any]]:
+        filas = self._lector.execute(
+            "SELECT * FROM pasada_de_entrevista WHERE id_entrevista = ? ORDER BY numero",
+            (id_entrevista,),
+        )
+        pasadas = []
+        for fila in filas:
+            pasada = dict(fila)
+            pasada["entrada"] = json.loads(pasada["entrada"])
+            pasada["salida"] = json.loads(pasada["salida"])
+            pasadas.append(pasada)
+        return pasadas
 
     # --- Capitulo ----------------------------------------------------------
 

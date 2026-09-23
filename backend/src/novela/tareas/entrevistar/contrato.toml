@@ -1,0 +1,28 @@
+# Contrato de la tarea `entrevistar`.
+#
+# Un rol, una tarea: declarar un rol es anadir una carpeta con todo lo suyo
+# dentro. Lo que este contrato declara es lo que el backend impone, no lo que
+# el prompt pide.
+
+tarea = "entrevistar"
+rol = "entrevistador"
+alcance = "brief"
+cuando = "Antes del alta de la obra, una pasada cada vez que la persona manda su borrador"
+
+# Sin ninguna herramienta salvo las que aqui se conceden.
+herramientas = []
+
+# Que ve y que no ve. La ventana no sale del almacen: la trae la persona en cada
+# pasada, y de las pasadas anteriores no llega nada (SPEC1 D-20).
+entrada = ["borrador_de_brief", "textos_pegados", "contradicciones_asumidas"]
+no_ve = ["las pasadas anteriores", "ninguna obra", "el almacen"]
+
+# Que deja escrito. Nada: devuelve una propuesta de brief, no artefactos. Los
+# `Recuerdo` nacen del alta de la obra con la cita literal que la persona
+# entrego (SPEC1 RF-75), y el backend descarta cualquier artefacto que devuelva.
+escribe = []
+
+# Que rechaza de lo que recibe. Un texto pegado vacio no es material del que
+# extraer nada.
+[rechaza]
+textos_pegados = ["texto"]

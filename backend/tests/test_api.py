@@ -2,7 +2,7 @@
 
 Cierre por `prueba`, `analisis` y `demostracion`: un brief al que le falta un
 campo obligatorio se rechaza nombrando el campo y sin crear nada; se enumeran
-las operaciones de escritura que ofrece la API y son exactamente tres; y
+las operaciones de escritura que ofrece la API y son exactamente cinco; y
 detener y reanudar a mitad de capitulo no duplica ni pierde trabajo aceptado.
 Evidencia: el esquema HTTP publicado y la lista de sus operaciones de escritura.
 """
@@ -77,27 +77,32 @@ def test_los_mensajes_de_error_van_en_espanol(cliente: TestClient) -> None:
     assert "No hay ninguna obra" in respuesta.json()["detail"]
 
 
-# --- Las operaciones de escritura son tres ---------------------------------
+# --- Las operaciones de escritura son cinco --------------------------------
 
 
-def test_la_api_ofrece_exactamente_tres_operaciones_de_escritura(
+def test_la_api_ofrece_exactamente_cinco_operaciones_de_escritura(
     cliente: TestClient,
 ) -> None:
-    """Alta, detener y reanudar. Detener y reanudar son control, no
+    """Las dos de la entrevista, alta, detener y reanudar. La entrevista ocurre
+    antes de que la obra exista, y detener y reanudar son control, no
     mantenimiento: no hay limpieza ni archivado que el editor deba ejecutar."""
     escrituras = operaciones_de_escritura(cliente.app)  # type: ignore[arg-type]
 
     assert escrituras == [
+        "POST /entrevistas",
+        "POST /entrevistas/{id_entrevista}/pasadas",
         "POST /obras",
         "POST /obras/{id_obra}/detener",
         "POST /obras/{id_obra}/reanudar",
     ]
 
 
-def test_el_esquema_publicado_trae_las_diez_rutas(cliente: TestClient) -> None:
+def test_el_esquema_publicado_trae_las_catorce_rutas(cliente: TestClient) -> None:
     esquema = cliente.get("/openapi.json").json()
     rutas = sorted(esquema["paths"])
     assert rutas == [
+        "/entrevistas",
+        "/entrevistas/{id_entrevista}/pasadas",
         "/obras",
         "/obras/{id_obra}",
         "/obras/{id_obra}/capitulos/{numero}",

@@ -1,7 +1,7 @@
-"""Etapa 6: las once carpetas de tarea.
+"""Etapa 6: las doce carpetas de tarea.
 
 Cierre por `prueba` y `analisis`: se enumeran las carpetas contra el censo y son
-once, una por rol; lo que cada una declara escribir coincide con la tabla de
+doce, una por rol; lo que cada una declara escribir coincide con la tabla de
 gobierno; las veintiuna dimensiones tienen contrato y coinciden con el guion; un
 artefacto roto a proposito produce `Critica` bloqueante con objeto el artefacto
 y no llega al Revisor; y el pliegue incremental da lo mismo que plegar el log
@@ -40,9 +40,9 @@ BRIEF = {"titulo": "Prueba", "epoca": "Sevilla, 1587", "capitulos_objetivo": 1}
 # --- Un rol, una tarea, una carpeta ----------------------------------------
 
 
-def test_las_carpetas_de_tarea_son_once_una_por_rol() -> None:
+def test_las_carpetas_de_tarea_son_doce_una_por_rol() -> None:
     assert sorted(tareas_declaradas()) == sorted(TIPOS_DE_TAREA)
-    assert len(tareas_declaradas()) == len(ROLES) == 11
+    assert len(tareas_declaradas()) == len(ROLES) == 12
 
 
 @pytest.mark.parametrize("tarea", sorted(TIPOS_DE_TAREA))

@@ -1,4 +1,5 @@
-"""Las nueve operaciones del editor, en diez rutas.
+"""Las operaciones del editor: la entrevista que completa el brief, el alta de
+la obra y lo que hace falta para verla y controlarla.
 
 Cada una es un procedimiento de principio a fin. Los mensajes de error van en
 espanol. La interfaz web nunca lee ficheros ni la base de datos: todo lo que
@@ -8,36 +9,114 @@ muestra lo pide aqui.
 import threading
 from collections.abc import AsyncIterable, AsyncIterator, Iterator
 from contextlib import asynccontextmanager
-from typing import Annotated, Any
+from typing import Annotated, Any, get_origin
 
 from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.sse import EventSourceResponse, ServerSentEvent
+from pydantic import BaseModel, ValidationError
 
 from novela import __version__
-from novela.ajustes import RUTA_DE_LA_BASE, TECHO_DE_CONTEXTO_CONCURRENTE
+from novela.ajustes import (
+    PASADAS_DE_ENTREVISTA_A_LA_VEZ,
+    RUTA_DE_LA_BASE,
+    TECHO_DE_CONTEXTO_CONCURRENTE,
+    tope_de_ventana,
+)
 from novela.almacen import Almacen, Artefacto
-from novela.almacen.artefactos import abrir_almacen
+from novela.almacen.artefactos import EscrituraProhibida, abrir_almacen, ahora
 from novela.almacen.indice import Indice
 from novela.api.modelos import (
     Brief,
     CapituloInspeccionado,
     Confirmacion,
+    Contradiccion,
     CriticaServida,
+    Destinatario,
     EstadoPlegado,
     FichaDeObra,
+    HechoDescartado,
+    HechoExtraido,
     Manuscrito,
     ObraCreada,
     Orden,
+    PasadaDeEntrevista,
     Pasaje,
+    PeticionDeEntrevista,
     Progreso,
     TrazaServida,
     UnidadDelManuscrito,
 )
-from novela.ejecutor import EjecutorDeSubagentes
+from novela.ejecutor import EjecutorDeSubagentes, SubagenteFallo
+from novela.nucleo import entrevista
 from novela.nucleo.caminante import Caminante
+from novela.nucleo.gobierno import puede_escribir
 from novela.tareas import CatalogoDelRepositorio
+
+
+def _rutas_del_brief() -> tuple[frozenset[str], frozenset[str]]:
+    """Los campos a los que puede ir un hecho, sacados del modelo del brief.
+
+    El modelo es el unico sitio con tipos, asi que es el que dice que campos hay:
+    `nucleo/` recibe las rutas y no las repite. `politicas_globales` no es un
+    campo al que se llegue desde un texto pegado.
+    """
+    escalares: set[str] = set()
+    listas: set[str] = set()
+
+    def recorrer(modelo: type[BaseModel], prefijo: str) -> None:
+        for nombre, campo in modelo.model_fields.items():
+            ruta = prefijo + nombre
+            if nombre == "destinatario":
+                recorrer(Destinatario, ruta + ".")
+            elif get_origin(campo.annotation) is list:
+                listas.add(ruta)
+            elif get_origin(campo.annotation) is not dict:
+                escalares.add(ruta)
+
+    recorrer(Brief, "")
+    return frozenset(escalares), frozenset(listas)
+
+
+ESCALARES_DEL_BRIEF, LISTAS_DEL_BRIEF = _rutas_del_brief()
+
+
+def _alta(brief: Brief) -> tuple[dict[str, Any], list[str]]:
+    """El cuerpo de la `Obra` y sus recuerdos, que salen de el como `Recuerdo`.
+
+    La capa Obra referencia la capa Mundo, no la duplica.
+    """
+    cuerpo = brief.model_dump()
+    recuerdos: list[str] = []
+    if brief.destinatario is not None:
+        recuerdos = list(brief.destinatario.recuerdos)
+        cuerpo["destinatario"].pop("recuerdos", None)
+    return cuerpo, recuerdos
+
+
+def _validar(propuesta: entrevista.Propuesta) -> tuple[Brief | None, list[str], list[str]]:
+    """Valida el brief propuesto contra el mismo modelo que `POST /obras` (RF-72).
+
+    Lo que el agente aporto y el modelo no admite se quita, y el campo vuelve a
+    faltar (RF-73). Lo que escribio la persona no se toca: si no vale, se dice.
+    """
+    while True:
+        try:
+            return Brief.model_validate(propuesta.brief), [], []
+        except ValidationError as error:
+            fallos = [(".".join(str(p) for p in f["loc"]), f) for f in error.errors()]
+            del_agente = sorted({ruta for ruta, _ in fallos if ruta in propuesta.aportados})
+            if not del_agente:
+                faltan = [ruta for ruta, fallo in fallos if fallo["type"] == "missing"]
+                no_validos = [
+                    f"{ruta}: {fallo['msg']}"
+                    for ruta, fallo in fallos
+                    if fallo["type"] != "missing"
+                ]
+                return None, faltan, no_validos
+            for ruta in del_agente:
+                propuesta.retirar(ruta, "el brief no admite ese valor")
 
 
 class Produccion:
@@ -49,6 +128,9 @@ class Produccion:
         self.catalogo = CatalogoDelRepositorio()
         self.ejecutor = ejecutor or EjecutorDeSubagentes(catalogo=self.catalogo)
         self.hilos: dict[str, threading.Thread] = {}
+        # Una pasada de entrevista a la vez en la instalacion: es lo que hace que
+        # quepa en el margen del techo (SPEC1 RF-70).
+        self.turno_de_entrevista = threading.BoundedSemaphore(PASADAS_DE_ENTREVISTA_A_LA_VEZ)
 
     def caminante(self) -> Caminante:
         return Caminante(
@@ -159,16 +241,145 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
 
     @app.post("/obras", status_code=status.HTTP_202_ACCEPTED)
     def lanzar_obra(brief: Brief, casa: ProduccionDep) -> ObraCreada:
-        cuerpo = brief.model_dump()
-        recuerdos: list[str] = []
-        if brief.destinatario is not None:
-            # Los recuerdos salen del cuerpo de la `Obra` y pasan a ser
-            # `Recuerdo`: la capa Obra referencia la capa Mundo, no la duplica.
-            recuerdos = list(brief.destinatario.recuerdos)
-            cuerpo["destinatario"].pop("recuerdos", None)
-        id_obra = casa.almacen.crear_obra(cuerpo, recuerdos)
+        id_obra = casa.almacen.crear_obra(*_alta(brief))
         casa.arrancar(id_obra, brief.capitulos_objetivo)
         return ObraCreada(id_obra=id_obra, estado="en produccion")
+
+    # --- RF-70 a RF-79. La entrevista que completa el brief ----------------
+
+    def _pasada(
+        casa: Produccion, peticion: PeticionDeEntrevista, id_entrevista: str | None
+    ) -> PasadaDeEntrevista:
+        """Una pasada en frio, de principio a fin.
+
+        Se mide antes de abrir nada: si no cabe en el tope del rol, no se abre
+        la entrevista ni se recorta ningun texto (RF-71).
+        """
+        borrador = peticion.borrador.model_dump(exclude_none=True)
+        asumidas = list(peticion.contradicciones_asumidas)
+        ventana = entrevista.ventana(borrador, peticion.textos, asumidas)
+        tope = tope_de_ventana(entrevista.ROL)
+        if ventana.tokens > tope:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                f"La pasada no cabe en la ventana del Entrevistador: ocupa {ventana.tokens} "
+                f"tokens, el tope es {tope} y sobran {ventana.tokens - tope}. Manda menos "
+                "texto pegado en esta pasada.",
+            )
+        if id_entrevista is None:
+            id_entrevista = casa.almacen.abrir_entrevista()
+        else:
+            abierta = casa.almacen.leer_entrevista(id_entrevista)
+            if abierta is None:
+                raise HTTPException(
+                    status.HTTP_404_NOT_FOUND, f"No hay ninguna entrevista {id_entrevista}"
+                )
+            if abierta["id_obra"] is not None:
+                raise HTTPException(
+                    status.HTTP_409_CONFLICT,
+                    f"La entrevista {id_entrevista} ya lanzo la obra {abierta['id_obra']}",
+                )
+
+        abierta_en = ahora()
+        with casa.turno_de_entrevista:
+            try:
+                resultado = casa.ejecutor.ejecutar(entrevista.encargo(), ventana)
+            except SubagenteFallo as fallo:
+                raise HTTPException(
+                    status.HTTP_502_BAD_GATEWAY,
+                    f"La pasada de entrevista no se pudo completar: {fallo}",
+                ) from fallo
+
+        # El Entrevistador no escribe nada en el almacen (RF-70): lo que devuelva
+        # como artefacto no se guarda, se cuenta.
+        rechazados = [
+            a for a in resultado.artefactos if not puede_escribir(entrevista.ROL, a.tipo)
+        ]
+        propuesta = entrevista.aplicar_pasada(
+            borrador,
+            peticion.textos,
+            resultado.constancia,
+            escalares=ESCALARES_DEL_BRIEF,
+            listas=LISTAS_DEL_BRIEF,
+            asumidas=asumidas,
+        )
+        brief, faltan, no_validos = _validar(propuesta)
+        abiertas = [c for c in propuesta.contradicciones if not c["asumida"]]
+        alta = None
+        if brief is not None and not abiertas:
+            cuerpo, recuerdos = _alta(brief)
+            alta = (cuerpo | {"id_entrevista": id_entrevista}, recuerdos)
+
+        salida = {
+            "brief_propuesto": propuesta.brief,
+            "faltan": faltan,
+            "no_validos": no_validos,
+            "hechos": propuesta.hechos,
+            "hechos_descartados": propuesta.hechos_descartados,
+            "contradicciones": propuesta.contradicciones,
+            "contradicciones_descartadas": propuesta.contradicciones_descartadas,
+            "respuesta_del_agente": resultado.salida,
+        }
+        try:
+            numero, id_obra = casa.almacen.registrar_pasada(
+                id_entrevista,
+                entrada={
+                    "borrador": borrador,
+                    "textos": list(peticion.textos),
+                    "contradicciones_asumidas": asumidas,
+                },
+                salida=salida,
+                descartes={
+                    "hechos": len(propuesta.hechos_descartados),
+                    "contradicciones": len(propuesta.contradicciones_descartadas),
+                    "artefactos": len(rechazados),
+                },
+                traza={
+                    "tokens_de_entrada_estimados": ventana.tokens,
+                    "tokens_de_entrada_medidos": resultado.tokens_de_entrada_medidos,
+                    "tokens_de_salida": resultado.tokens_de_salida,
+                    "coste": resultado.coste,
+                    "latencia_ms": resultado.latencia_ms,
+                    "abierta_en": abierta_en,
+                    "cerrada_en": ahora(),
+                },
+                alta=alta,
+            )
+        except EscrituraProhibida as error:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+        if id_obra is not None and brief is not None:
+            casa.arrancar(id_obra, brief.capitulos_objetivo)
+
+        return PasadaDeEntrevista(
+            id_entrevista=id_entrevista,
+            numero=numero,
+            estado="lanzada" if id_obra else "pendiente",
+            id_obra=id_obra,
+            brief_propuesto=propuesta.brief,
+            faltan=faltan,
+            no_validos=no_validos,
+            hechos=[HechoExtraido(**hecho) for hecho in propuesta.hechos],
+            hechos_descartados=[HechoDescartado(**d) for d in propuesta.hechos_descartados],
+            contradicciones=[Contradiccion(**c) for c in propuesta.contradicciones],
+            contradicciones_descartadas=len(propuesta.contradicciones_descartadas),
+        )
+
+    @app.post("/entrevistas", status_code=status.HTTP_201_CREATED)
+    def abrir_entrevista(
+        peticion: PeticionDeEntrevista, casa: ProduccionDep
+    ) -> PasadaDeEntrevista:
+        """Abre una entrevista y hace su primera pasada. Si el brief queda
+        completo y sin contradicciones abiertas, la obra se lanza sola (RF-78)."""
+        return _pasada(casa, peticion, None)
+
+    @app.post("/entrevistas/{id_entrevista}/pasadas", status_code=status.HTTP_201_CREATED)
+    def pasar_entrevista(
+        id_entrevista: Annotated[str, Path(description="Identificador de la entrevista")],
+        peticion: PeticionDeEntrevista,
+        casa: ProduccionDep,
+    ) -> PasadaDeEntrevista:
+        """La pasada siguiente. No recibe nada de las anteriores (D-20)."""
+        return _pasada(casa, peticion, id_entrevista)
 
     # --- RI-02. Ficha y avance ---------------------------------------------
 
@@ -424,7 +635,8 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
 
 
 def operaciones_de_escritura(app: FastAPI) -> list[str]:
-    """Las rutas por las que el editor escribe algo. Tienen que ser tres."""
+    """Las rutas por las que el editor escribe algo: entrevistar, lanzar,
+    detener y reanudar. Ninguna es de mantenimiento."""
     escrituras: list[str] = []
     for ruta in app.routes:
         metodos: Iterator[str] = iter(getattr(ruta, "methods", []) or [])

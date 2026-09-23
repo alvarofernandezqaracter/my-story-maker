@@ -15,6 +15,10 @@ from novela.vocabularios import ROLES
 
 TODOS_LOS_ROLES: frozenset[str] = frozenset(ROLES)
 
+# Los que trabajan sobre una obra ya dada de alta. El Entrevistador actua antes
+# de que exista y no escribe nada en el almacen: devuelve una propuesta de brief.
+ROLES_DE_LA_OBRA: frozenset[str] = TODOS_LOS_ROLES - {"entrevistador"}
+
 
 class EscrituraNoAutorizada(Exception):
     """Un rol ha intentado escribir una entidad que no le corresponde."""
@@ -59,7 +63,7 @@ QUIEN_ESCRIBE: dict[str, frozenset[str]] = {
     "Revision": frozenset({"revisor"}),
     "EventoEstado": frozenset({"contable_de_estado"}),
     "ResumenCapitulo": frozenset({"archivero"}),
-    "Decision": TODOS_LOS_ROLES,
+    "Decision": ROLES_DE_LA_OBRA,
     "Obra": frozenset(),
     "Recuerdo": frozenset(),
     "Agente": frozenset(),
@@ -124,5 +128,8 @@ assert {
     for rol, herramientas in HERRAMIENTAS_POR_ROL.items()
     if herramientas & HERRAMIENTAS_QUE_SALEN_AL_EXTERIOR
 } == {"documentalista"}
+# El Entrevistador no escribe ninguna entidad: ni siquiera `Recuerdo`, que nace
+# del alta de la obra con la cita literal que la persona entrego.
+assert escrituras_de("entrevistador") == frozenset()
 # El Archivero no escribe hechos del mundo ni prosa.
 assert escrituras_de("archivero") <= {"ResumenCapitulo", "Decision"}

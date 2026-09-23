@@ -18,11 +18,15 @@ MIGRACIONES: tuple[Migracion, ...] = (
     (1, "esquema inicial de las tres capas y la traza", esquema.sentencias_iniciales),
     (2, "indice hibrido: fragmentos, palabra exacta y huellas", sentencias_del_indice),
     (3, "Recuerdo: lo que el destinatario aporta de su vida", esquema.sentencias_del_recuerdo),
+<<<<<<< HEAD
     (
         4,
         "punto de guardado: constancia de auditoria y marca de caducado en lo inmutable",
         esquema.sentencias_del_punto_de_guardado,
     ),
+=======
+    (4, "entrevista: el espacio anterior a la obra", esquema.sentencias_de_la_entrevista),
+>>>>>>> t2
 )
 
 

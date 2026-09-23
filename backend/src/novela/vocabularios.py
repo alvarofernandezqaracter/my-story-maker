@@ -21,6 +21,9 @@ ROLES: tuple[str, ...] = (
     "juez_de_rubrica",
     "revisor",
     "archivero",
+    # Actua antes de que la obra exista y no escribe nada en el almacen: completa
+    # el brief y devuelve una propuesta (SPEC1 4.8).
+    "entrevistador",
 )
 
 TIPOS_DE_TAREA: tuple[str, ...] = (
@@ -35,6 +38,7 @@ TIPOS_DE_TAREA: tuple[str, ...] = (
     "juzgar",
     "revisar",
     "destilar",
+    "entrevistar",
 )
 
 # Un rol, una tarea: la correspondencia es biyectiva por invariante.
@@ -50,6 +54,7 @@ TAREA_DE_ROL: dict[str, str] = {
     "juez_de_rubrica": "juzgar",
     "revisor": "revisar",
     "archivero": "destilar",
+    "entrevistador": "entrevistar",
 }
 
 ROL_DE_TAREA: dict[str, str] = {tarea: rol for rol, tarea in TAREA_DE_ROL.items()}
@@ -65,6 +70,10 @@ ESTADO_DE_PRODUCCION: tuple[str, ...] = (
     "aceptado",
     "descartado",
 )
+
+# Lo que el Entrevistador puede senalar en un brief (SPEC1 RF-76). No lo
+# resuelve: lo devuelve como pregunta, y la persona puede darlo por asumido.
+TIPO_DE_CONTRADICCION: tuple[str, ...] = ("edad_contra_tono", "texto_contra_campo")
 
 TIPO_DE_EVENTO_ESTADO: tuple[str, ...] = (
     "aparece",

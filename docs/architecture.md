@@ -62,7 +62,7 @@ Esta capa convierte el sistema multiagente en algo inspeccionable. Es la que per
 
 ### Censo de agentes
 
-Once roles. **Cada rol tiene exactamente un tipo de tarea y cada tipo de tarea tiene exactamente un rol**: si aparece trabajo que ningún tipo cubre, se declara un rol nuevo, no se ensancha uno existente. Todo lo que el sistema hace lo hace un agente; no hay lógica de negocio fuera de esta tabla.
+Doce roles. **Cada rol tiene exactamente un tipo de tarea y cada tipo de tarea tiene exactamente un rol**: si aparece trabajo que ningún tipo cubre, se declara un rol nuevo, no se ensancha uno existente. Todo lo que el sistema hace lo hace un agente; no hay lógica de negocio fuera de esta tabla.
 
 | Agente | Tipo de tarea | Alcance | Cuándo actúa |
 | --- | --- | --- | --- |
@@ -77,6 +77,7 @@ Once roles. **Cada rol tiene exactamente un tipo de tarea y cada tipo de tarea t
 | Juez de rúbrica | `juzgar` | Escena y capítulo | En la criba de pulido, solo en lo no formulable como predicado |
 | Revisor | `revisar` | Escena o capítulo | Con críticas `mayor` pendientes |
 | Archivero | `destilar` | Capítulo | Al cerrar capítulo, después del Contable |
+| Entrevistador | `entrevistar` | Brief | Antes de que la obra exista, una pasada cada vez que quien la encarga manda su borrador |
 
 Dos roles estaban antes implícitos y ahora son explícitos: el **Constructor de mundo**, que escribía la capa 2 sin tener tarea ni vista, y el **Revisor**, que modificaba capítulos y escenas sin estar declarado. Dos son nuevos: el **Contable de estado**, que absorbe el pliegue del log que antes hacía una función pura, y el **Juez de rúbrica**, que antes aparecía como "juez LLM" sin ser un rol.
 
@@ -88,6 +89,7 @@ Reglas de integridad del censo:
 - Ningún rol escribe `Recuerdo`. Llega con el encargo y es inmutable, que es lo que deja intacta la regla anterior: si el respaldo de una persona pudiera escribirse desde dentro, «dato sin `Fuente`» dejaría de ser sinónimo de alucinación.
 - El Revisor aplica críticas ajenas; no puede crear las suyas.
 - El Archivero no escribe hechos del mundo ni prosa: resume el capítulo cerrado y retira lo que caduca. No decide nada sobre el texto.
+- El Entrevistador no escribe ninguna entidad: devuelve una propuesta de brief. De un texto pegado solo vale lo que trae cita literal, y un recuerdo es esa misma cita, así que tampoco él escribe `Recuerdo`: el recuerdo es texto de la persona, no del agente.
 
 ### Entrada y salida de cada agente
 
@@ -106,12 +108,14 @@ Qué artefacto consume cada rol y qué artefacto deja escrito. La salida de un a
 | Juez de rúbrica | Texto producido y rúbrica de la única dimensión que puntúa | `Crítica` ruidosa, marcada aparte, que por sí sola no dispara regeneración |
 | Revisor | `Borrador` vigente, críticas a atender ya filtradas por severidad, contrato de la unidad | `Revisión` —críticas atendidas y rechazadas con motivo— y el `Borrador` siguiente |
 | Archivero | Texto aceptado del capítulo N, cola de `Compromiso`, ecos del registro acumulado de estilo | `Resumen de capítulo`, con qué compromisos quedan pagados y cuáles siguen abiertos. La memoria de capítulo la retira el almacén al cerrar, marcándola como caducada; lo que sigue abierto sobrevive |
+| Entrevistador | Borrador de brief que la persona lleva escrito, textos pegados —una carta, una anécdota— y contradicciones que ya da por asumidas | Una propuesta, no un artefacto: hechos extraídos, cada uno con su campo y una cita literal, y contradicciones con su evidencia. Cuando el brief queda completo y sin contradicciones abiertas, la pasada da de alta la `Obra` con sus `Recuerdo` |
 
 La `Traza` no es salida de ningún rol: se registra en toda tarea, la ejecute quien la ejecute, y por eso no aparece en la tabla.
 
 ```mermaid
 flowchart LR
-  MUN[Constructor de mundo] -- fichas de mundo --> PLA[Planificador]
+  ENT[Entrevistador] -- brief completo --> MUN[Constructor de mundo]
+  MUN -- fichas de mundo --> PLA[Planificador]
   DOC[Documentalista] -- fuentes y lexico --> RED[Redactor]
   PLA -- Plan con contratos --> RED
   RED -- Borrador --> VER[Verificador]
@@ -156,6 +160,8 @@ Sin esta estructura no se puede medir si el bucle de revisión converge o gira e
 
 **Traza.** Registro por tarea de contexto enviado, salida obtenida, coste y latencia. Necesario para el trabajo académico: es lo que permite medir el sistema, no solo la novela.
 
+**Entrevista.** El espacio anterior a la obra en el que se completa el brief. Se identifica por su `id_entrevista`, igual que una obra por su `id_obra`, y guarda, pasada por pasada, lo que entró, lo que salió, cuántos hechos y contradicciones se descartaron y la traza de la pasada. No se borra ni se modifica. Anota una sola vez la obra que lanzó, y esa obra anota de qué entrevista sale.
+
 ```mermaid
 flowchart TD
   PRO[Entidad de produccion] --> QUIEN[Quien actua]
@@ -198,6 +204,7 @@ Valores cerrados de la capa de producción. Los vocabularios de forma textual y 
 **Estado de crítica:** `abierta`, `atendida`, `rechazada`, `descartada`. Es el que hace filtrable el registro de defectos y el que permite contar lo que mide la convergencia del bucle: una crítica se descarta sin evidencia, se atiende o se rechaza con motivo en la `Revisión`, y la que no llega a ninguna de esas tres se queda abierta y cierra el capítulo marcado.
 
 **Al agotarse:** `detener_obra`, `critica_abierta`, `seguir`. Es lo que declara cada paso del guion para cuando su tarea agota los intentos (§4): detener la obra, dejar una `Crítica` «no comprobado» y seguir, o seguir sin más.
+**Tipo de contradicción:** `edad_contra_tono`, cuando el tono pedido no corresponde a la edad del destinatario, y `texto_contra_campo`, cuando un texto pegado en la entrevista dice otra cosa que un campo que la persona escribió. Lo detecta el Entrevistador y no lo resuelve: lo devuelve como pregunta, y la persona puede darlo por asumido.
 
 **Tipo de EventoEstado:** `aparece`, `muere`, `viaja_a`, `adquiere`, `pierde`, `aprende` (cambio epistémico), `revela_a`, `cambia_relacion`, `cambia_estado_civil_o_rango`, `transcurre_tiempo`.
 
@@ -207,6 +214,7 @@ flowchart TD
   PROC --> EST[estado de produccion: planificado / redactado /<br/>en revision / aceptado / descartado]
   PROC --> CRI[estado de critica: abierta / atendida /<br/>rechazada / descartada]
   PROC --> AGO[al agotarse: detener obra /<br/>critica abierta / seguir]
+  PROC --> CON[tipo de contradiccion: edad contra tono /<br/>texto contra campo]
 ```
 
 ```mermaid
@@ -238,6 +246,7 @@ La pregunta operativa no es qué sabe el sistema, sino **qué proyección de la 
 No hay historial de conversación en ninguna parte. Cada tarea abre una ventana construida desde cero a partir de los artefactos escritos y la cierra al escribir el suyo. Entre dos tareas no viaja nada más que un artefacto en el almacén: es la regla del paso de testigo de §2 vista desde el lado del contexto.
 
 Tampoco arranca con el contexto del sitio desde el que se la lanza. El repositorio lleva instrucciones, skills, comandos y un servidor de navegador para quien lo desarrolla, y nada de eso es de ningún rol: cada tarea corre en un directorio vacío fuera del repositorio que se borra al terminar, de modo que en su ventana no entra más que lo que el propio subagente trae de serie, su instrucción y su proyección.
+La entrevista sigue la misma regla. Desde fuera parece una conversación, pero cada pasada recibe solo lo que la persona manda en ese momento: lo que quiera conservar de la anterior lo vuelve a mandar. Una conversación guardada entraría entera en cada turno y crecería sin tope.
 
 Esto no es austeridad, es lo que hace el techo **verificable antes de gastar**: una ventana que se arma de cero se puede medir antes de mandarla. Un agente que acumulase memoria propia sería un agente cuyo coste nadie puede acotar.
 
@@ -376,6 +385,7 @@ Cada agente recibe una vista distinta, y algunas exclusiones son tan importantes
 | Editor de estilo | Texto producido, registro, léxico vetado, ecos de imágenes parecidas ya usadas | Canon, estado | Juzga superficie |
 | Juez de rúbrica | Texto producido, rúbrica de la dimensión juzgada | Canon, estado, críticas de otros | Su ruido no debe contagiar al resto |
 | Revisor | Borrador, críticas a atender, contrato de la unidad | Críticas de otras unidades, trama futura | Corrige lo señalado, no reescribe la obra |
+| Entrevistador | Borrador de brief, textos pegados, contradicciones asumidas | Pasadas anteriores, ninguna obra, nada del almacén | Completa un brief: la obra todavía no existe, y el texto pegado entra como dato delimitado, cada uno en su propia marca, igual que una `Fuente` |
 
 ```mermaid
 flowchart TD
@@ -406,10 +416,12 @@ manda, no la tarea entera.
 | Planificador · Revisor | 20 000 |
 | Constructor de mundo | 15 000 |
 | Contable de estado · Archivero · Redactor | 12 000 |
-| Documentalista · Verificador · Editor de estilo | 8 000 |
+| Documentalista · Verificador · Editor de estilo · Entrevistador | 8 000 |
 | Juez de rúbrica | 6 000 |
 
 El reparto es la asignación de diseño, no una medida: calibrarlo contra las `Traza` reales es trabajo de implementación, y la `Traza` existe en parte para eso.
+
+El Entrevistador no entra en ninguna tanda: se ejecuta como mucho una pasada a la vez en la instalación, y abierta ocupa sus 8 000 más el coste fijo del subagente, que caben en el 20 % de margen de la regla siguiente. Por eso una entrevista no le quita nada a la tanda de una obra en curso. Si la pasada no cabe en su tope, se rechaza diciendo cuánto sobra: no se recorta ningún texto pegado.
 
 **Segunda: la anchura de una tanda se calcula, no se elige.** Se reserva el 20 % del techo como margen para lo que no se puede prever y quedan 80 000 útiles. En una tanda caben `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)` agentes simultáneos.
 
@@ -446,7 +458,27 @@ Las únicas bifurcaciones del guion son el enrutado por severidad y el tope de v
 | 9 | `plegar` | Contable de estado | Solo |
 | 10 | `destilar` | Archivero | Solo |
 
-Dos tareas quedan fuera del guion del capítulo porque no tienen su cadencia: `poblar_mundo`, que ocurre al arrancar la obra y cuando hace falta ampliar el elenco, y `auditar`, que entra cada N capítulos y al cierre de la obra. Las dos van solas.
+Tres tareas quedan fuera del guion del capítulo porque no tienen su cadencia: `poblar_mundo`, que ocurre al arrancar la obra y cuando hace falta ampliar el elenco; `auditar`, que entra cada N capítulos y al cierre de la obra; y `entrevistar`, que ocurre antes de que la obra exista. Las tres van solas.
+
+### Antes del guion: la entrevista
+
+Un brief incompleto es un caso normal. Se puede mandar entero a `POST /obras`, que lo rechaza nombrando el campo que falta, o completarlo en una entrevista. En cada pasada la persona manda su borrador, los textos que quiera pegar y las contradicciones que ya da por asumidas. El Entrevistador extrae hechos con cita literal y señala contradicciones. Después, cinco reglas mecánicas deciden qué queda:
+
+- **Lo que falta lo dice el borde, no el agente.** El brief resultante se valida contra el mismo modelo que `POST /obras`, y lo que falta vuelve con su ruta completa, como `destinatario.edad`.
+- **Lo que la persona escribió manda.** Ninguna pasada cambia un campo presente. En las listas, lo de la persona se queda delante y la pasada solo añade detrás.
+- **Sin cita literal no hay hecho.** Se descarta el hecho cuya cita no aparece tal cual en un texto pegado, y un recuerdo se guarda con su cita, no con una paráfrasis.
+- **Sin evidencia no hay contradicción.** Si una contradicción trae evidencia, la persona la tiene que resolver o darla por asumida.
+- **Completo y sin contradicciones abiertas, se lanza solo.** La misma pasada da de alta la `Obra` y sus `Recuerdo`, en la misma transacción que su huella, y la producción arranca. A partir de ahí la entrevista está cerrada.
+
+```mermaid
+flowchart LR
+  P([Borrador y textos pegados]) --> E[entrevistar]
+  E --> V{Completo y sin<br/>contradicciones abiertas?}
+  V -- no --> R([Propuesta, lo que falta<br/>y lo que se contradice])
+  R -. la persona corrige .-> P
+  V -- si --> O[Alta de Obra<br/>y Recuerdo]
+  O --> M[poblar_mundo y guion]
+```
 
 ### Se redacta por escena y se cose por capítulo
 
@@ -544,14 +576,14 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 
 | Entidad | La crea | La modifica | Entra en contexto | Vigilada por |
 | --- | --- | --- | --- | --- |
-| `Obra` | Usuario | Usuario | Siempre, comprimida | — |
+| `Obra` | Usuario, con el brief o con la pasada de entrevista que lo completa | Usuario | Siempre, comprimida | — |
 | `Personaje` | Constructor de mundo | Solo por `EventoEstado` del Contable | Si está en el elenco de la escena | Continuidad, voz |
 | `Lugar` | Constructor de mundo | Constructor, por ampliación | Si es marco de la escena | Coherencia temporal |
 | `Evento` | Planificador o documentalista | Inmutable si es `canon` | Si precede causalmente a la escena | Anacronismo, causalidad |
 | `Objeto` | Constructor de mundo | Solo por `EventoEstado` del Contable | Si aparece o lo posee el elenco | Continuidad, anacronismo material |
 | `Concepto` y `Práctica` | Documentalista | Documentalista | Filtrado por fecha y lugar | Anacronismo conceptual y social |
 | `Fuente` | Documentalista | Inmutable | Junto al dato que respalda | Cobertura documental |
-| `Recuerdo` | Nadie: llega con el encargo | Inmutable | Solo al Constructor de mundo y al Planificador | Personalización |
+| `Recuerdo` | Nadie: llega con el encargo, escrito por la persona o como cita literal de lo que pegó en la entrevista | Inmutable | Solo al Constructor de mundo y al Planificador | Personalización |
 | `Capítulo` | Planificador | Revisor | Resumen siempre; texto solo el anterior | Ritmo, arcos |
 | `Escena` | Planificador | Revisor | Contrato completo al redactar | Contrato, POV, epistémica |
 | `Párrafo` | Redactor | Editor de estilo | Cola de continuidad local | Fatiga léxica, voz, léxico |
@@ -559,7 +591,7 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `Resumen de capítulo` | Archivero, al cerrar capítulo | Inmutable | En la vista del Arquitecto de arcos, nunca la prosa que resume | Fidelidad al capítulo resumido |
 | `Compromiso` | Planificador y redactor | Se cierra al pagarse | Siempre, cola abierta | Economía narrativa |
 | `Crítica` | Verificador, Editor de estilo, Arquitecto de arcos, Juez; y el backend, cuando rechaza un artefacto malformado o cuando una comprobación agota sus intentos | Se resuelve en revisión | Solo al agente que revisa | Convergencia del bucle |
-| `Decisión` | Cualquier agente | Inmutable | Canon comprimido | Coherencia de diseño |
+| `Decisión` | Cualquier agente de la obra; el Entrevistador no escribe nada | Inmutable | Canon comprimido | Coherencia de diseño |
 
 Dos reglas que la tabla implica y conviene explicitar: ninguna entidad del mundo se modifica por escritura directa del redactor, solo mediante eventos emitidos al cerrar un capítulo; y ningún agente valida su propia salida.
 
@@ -605,7 +637,8 @@ backend/
                        camina y vuelve al punto de guardado (§4), el
                        ensamblador de proyecciones (§3), el
                        enrutado por severidad y los topes de vueltas (§5), el
-                       presupuesto de contexto (§3) y los permisos por rol (§6)
+                       presupuesto de contexto (§3), los permisos por rol (§6)
+                       y la ventana y el filtro de la pasada de entrevista (§4)
     almacen/           unica puerta de lectura y escritura, incluido el indice
                        de recuperacion por parecido
     api/               un procedimiento por caso de uso del editor
@@ -630,7 +663,7 @@ Cuatro reglas sostienen el corte:
 - **`api/` es procedimental.** Cada endpoint es un procedimiento de principio a
   fin. No hay capa de servicios intermedia que reutilizar.
 
-El riesgo aceptado es la duplicación: once carpetas parecidas que pueden
+El riesgo aceptado es la duplicación: doce carpetas parecidas que pueden
 divergir en cómo escriben sus artefactos. Lo que lo contiene no es una capa
 común, sino que `almacen/` sea la única puerta de escritura y que la forma del
 artefacto la imponga el rechazo del agente siguiente.

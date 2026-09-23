@@ -1,10 +1,11 @@
 """El esquema del almacen: una tabla por tipo de artefacto.
 
 El esquema espeja las tres capas —Obra, Mundo y Produccion— mas la `Traza`, y
-toda fila cuelga de un `id_obra`. La capa Obra referencia la capa Mundo por
-`id` y nunca la duplica; la de Produccion referencia a las dos y ninguna la
-referencia a ella. Eso se impone aqui con claves foraneas, no con buena
-voluntad.
+toda fila cuelga de un `id_obra`, salvo las de la entrevista, que es anterior a
+la obra y cuelga de su `id_entrevista` (SPEC1 RD-02, D-24). La capa Obra
+referencia la capa Mundo por `id` y nunca la duplica; la de Produccion
+referencia a las dos y ninguna la referencia a ella. Eso se impone aqui con
+claves foraneas, no con buena voluntad.
 
 De cada artefacto se guarda el cuerpo integro tal como lo escribio el agente y,
 al lado, solo las columnas por las que hace falta consultar. Si aparece la
@@ -400,6 +401,7 @@ def sentencias_del_recuerdo() -> list[str]:
     return _sentencias_de(tablas_de_la_migracion(3))
 
 
+<<<<<<< HEAD
 def _columnas_salvo_la_marca(tabla: Tabla) -> list[str]:
     """Todas las columnas de la tabla menos `caducado_en`."""
     return [
@@ -469,6 +471,61 @@ def sentencias_del_punto_de_guardado() -> list[str]:
                 f"CREATE INDEX indice_{nombre}_por_capitulo ON {nombre} (id_obra, capitulo)"
             )
     return sentencias
+=======
+# --- La entrevista: el espacio anterior a la obra --------------------------
+#
+# No guarda artefactos: el Entrevistador no escribe ninguno (SPEC1 RF-70). Guarda
+# la huella de cada pasada —lo que entro, lo que salio, lo que se descarto y su
+# traza— colgando de un `id_entrevista`, igual que una obra cuelga de su
+# `id_obra` (RF-79). Nada se borra, una pasada no se modifica y la entrevista
+# anota una sola vez la obra que lanzo.
+
+_NO_SE_BORRA = "SELECT RAISE(ABORT, 'no se borra nada: caducar y descartar son marcas')"
+
+SENTENCIAS_DE_LA_ENTREVISTA: tuple[str, ...] = (
+    """CREATE TABLE entrevista (
+  id TEXT NOT NULL PRIMARY KEY,
+  abierta_en TEXT NOT NULL,
+  id_obra TEXT REFERENCES artefacto_obra(id),
+  lanzada_en TEXT
+) STRICT""",
+    "CREATE TRIGGER entrevista_no_se_borra BEFORE DELETE ON entrevista "
+    f"BEGIN {_NO_SE_BORRA}; END",
+    "CREATE TRIGGER entrevista_lanza_una_sola_obra BEFORE UPDATE ON entrevista "
+    "WHEN OLD.id_obra IS NOT NULL "
+    "BEGIN SELECT RAISE(ABORT, 'la entrevista ya lanzo su obra'); END",
+    """CREATE TABLE pasada_de_entrevista (
+  id TEXT NOT NULL PRIMARY KEY,
+  id_entrevista TEXT NOT NULL REFERENCES entrevista(id),
+  numero INT NOT NULL,
+  rol TEXT NOT NULL CHECK (rol = 'entrevistador'),
+  tarea TEXT NOT NULL CHECK (tarea = 'entrevistar'),
+  entrada TEXT NOT NULL,
+  salida TEXT NOT NULL,
+  hechos_descartados INT NOT NULL,
+  contradicciones_descartadas INT NOT NULL,
+  artefactos_rechazados INT NOT NULL,
+  tokens_de_entrada_estimados INT,
+  tokens_de_entrada_medidos INT,
+  tokens_de_salida INT,
+  coste REAL,
+  latencia_ms INT,
+  abierta_en TEXT NOT NULL,
+  cerrada_en TEXT NOT NULL,
+  id_obra TEXT REFERENCES artefacto_obra(id),
+  UNIQUE (id_entrevista, numero)
+) STRICT""",
+    "CREATE TRIGGER pasada_de_entrevista_no_se_borra BEFORE DELETE ON pasada_de_entrevista "
+    f"BEGIN {_NO_SE_BORRA}; END",
+    "CREATE TRIGGER pasada_de_entrevista_es_inmutable BEFORE UPDATE ON pasada_de_entrevista "
+    "BEGIN SELECT RAISE(ABORT, 'una pasada de entrevista es inmutable'); END",
+)
+
+
+def sentencias_de_la_entrevista() -> list[str]:
+    """La migracion 4: el espacio de la entrevista y nada mas."""
+    return list(SENTENCIAS_DE_LA_ENTREVISTA)
+>>>>>>> t2
 
 
 assert {t.tipo for t in TABLAS} == set(
