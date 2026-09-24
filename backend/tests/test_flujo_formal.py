@@ -6,6 +6,9 @@ TLC sobre el modelo entero cuando Java y `tla2tools.jar` estan en la maquina.
 Evidencia: el recuento de caminantes a la vez y la salida literal de TLC.
 """
 
+import os
+import shutil
+import subprocess
 import threading
 import time
 from pathlib import Path
@@ -94,3 +97,43 @@ def test_un_fallo_no_previsto_detiene_la_obra_y_dice_por_que(
         assert "NoCabeNiPartiendo" in motivo
     finally:
         almacen.cerrar()
+
+
+# --- RF-160 a RF-162 y RF-168: TLC sobre el modelo entero ---------------------
+
+MODELO = Path(__file__).resolve().parents[1] / "formal" / "tla"
+
+
+def _java() -> str | None:
+    casa = os.environ.get("JAVA_HOME")
+    if casa:
+        for nombre in ("java.exe", "java"):
+            candidato = Path(casa) / "bin" / nombre
+            if candidato.is_file():
+                return str(candidato)
+    return shutil.which("java")
+
+
+@pytest.mark.lento
+def test_tlc_recorre_el_modelo_sin_encontrar_error(tmp_path: Path) -> None:
+    """TLC recorre entero `Produccion.cfg`: tres invariantes de seguridad, sus
+    auxiliares y la vivacidad. Sin Java o sin `tla2tools.jar` se salta y dice
+    que falta; los ficheros de trabajo de TLC van a un directorio temporal."""
+    java = _java()
+    jar = os.environ.get("NOVELA_TLA2TOOLS")
+    if java is None:
+        pytest.skip("no hay Java: ni JAVA_HOME ni `java` en el PATH")
+    if not jar or not Path(jar).is_file():
+        pytest.skip("NOVELA_TLA2TOOLS no apunta a un tla2tools.jar")
+    salida = subprocess.run(
+        [
+            java, "-XX:+UseParallelGC", "-cp", jar, "tlc2.TLC",
+            "-workers", "auto", "-noGenerateSpecTE", "-metadir", str(tmp_path / "tlc"),
+            "-config", "Produccion.cfg", "Produccion.tla",
+        ],
+        cwd=MODELO, capture_output=True, text=True, timeout=1800, check=False,
+    )
+    texto = salida.stdout + salida.stderr
+    assert "Model checking completed. No error has been found." in texto, texto[-4000:]
+    assert salida.returncode == 0
+    assert not list(MODELO.glob("*_TTrace_*")), "TLC dejo ficheros en el repositorio"

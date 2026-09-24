@@ -44,11 +44,12 @@ found.`
 | `UnaSolaProduccion` | Seguridad (una de las tres) | Toda versión salvo la última está terminada, y como mucho un caminante trabaja | D-40, RF-166 |
 | `NiDuplica` | Seguridad, auxiliar | Lo vivo de un capítulo es de una sola producción | RF-92, RF-165 |
 | `NiPierde` | Seguridad de acción, auxiliar | Un capítulo cerrado sigue cerrado salvo que una versión nueva lo releve | RF-92 |
+| `NoEscribeEnTerminada` | Seguridad de acción, auxiliar | Ningún artefacto nuevo nace en una versión que ya terminó | RF-114 |
 | `TypeOK` | Tipos, auxiliar | Cada variable en su dominio; el intento nunca pasa del tope `R` | RF-95 |
 | `AcabaTerminadaODetenida` | Vivacidad | Toda versión en producción acaba terminada o la obra detenida | RF-162, RF-167 |
 
-Hipótesis de la vivacidad, escritas en `Fairness`: equidad débil de cada paso
-de cada caminante y del arranque del backend tras una caída; caídas finitas
+Hipótesis de la vivacidad, escritas en `Fairness`: equidad débil del paso del
+caminante que trabaja y del arranque del backend tras una caída; caídas finitas
 (`MaxCaidas`). El editor —detener, reanudar, rehacer, cambiar un hecho,
 publicar— y los fallos no deben nada.
 
@@ -59,33 +60,33 @@ Rutas relativas a `backend/src/novela/`.
 | Acción del modelo | Qué es | Código |
 | --- | --- | --- |
 | `Init` | Alta: la obra, su versión 1 y el primer caminante | `api/aplicacion.py:crear_aplicacion.lanzar_obra` → `almacen/artefactos.py:Almacen.crear_obra` (con `_dar_de_alta`) y `api/aplicacion.py:Produccion.arrancar` |
-| `CrearHilo(ant)` | Arrancar: leer el hilo anterior y registrar el nuevo, que hace `join` del anterior, bajo cerrojo | `api/aplicacion.py:Produccion.arrancar` (`_turno_de_arranque`) |
-| `Acabar(i, h)` | El hilo acaba y libera a quien le esperaba | Fin de `caminar` dentro de `Produccion.arrancar` (`Thread.join`) |
-| `Volver(i)` | Volver al punto de guardado | `nucleo/caminante.py:Caminante.volver_al_punto_de_guardado` → `almacen/artefactos.py:Almacen.cerrar_trazas_interrumpidas`, `ultimo_capitulo_cerrado`, `descartar_desde` (`_marcar_desde`) e `indice.py:Indice.retirar_desde`. **Pendiente de T14**: el modelo descarta lo de todo capítulo no cerrado (RF-165); el código, lo posterior al último cerrado, que es lo mismo mientras no haya regeneración del lector |
-| `Intento(i)` con `tarea = "poblar"` | `poblar_mundo` si no hay biblia | `nucleo/caminante.py:Caminante.caminar_obra` → `_fuera_del_guion("poblar_mundo")` |
-| `Elegir(i)` | Lo cerrado no se repite | `nucleo/caminante.py:Caminante.caminar_obra` (bucle) y `_ya_cerrado` |
-| `Intento(i)` | Un intento de la tarea en curso, y lo que manda su `al_agotarse` | `nucleo/caminante.py:Caminante._mandar` (bucle de intentos) y `_agotado`; tope y política de `nucleo/guion.toml` leídos por `nucleo/guion.py:_politica` |
-| `Intento(i)`, rama `detenida` | La orden de detener se nota antes de mandar | `nucleo/caminante.py:Caminante._parar_si_detenida` y `ProduccionDetenida` recogida en `caminar_obra` |
-| `Intento(i)`, `tarea = "planificar"` | Paso 1: nace el trabajo del capítulo | `nucleo/caminante.py:Caminante.caminar_capitulo` (paso 1) |
-| `Intento(i)`, `tarea = "cribar"` | Pasos 2 a 8 que no producen testigo nuevo: `documentar` (`seguir`) y las cribas (`critica_abierta`) | `nucleo/caminante.py:Caminante.caminar_capitulo` (pasos 2 a 8), `_criba`, `_critica_no_comprobado` |
-| `Intento(i)`, `tarea = "plegar"` | Pasos 9 y 10, aplazados hasta el cierre | `nucleo/caminante.py:Caminante.caminar_capitulo` (pasos 9 y 10, con `aplazados`) |
-| `Cerrar(i)` | El punto de guardado: una sola transacción | `almacen/artefactos.py:Almacen.cerrar_capitulo` |
-| `AudCheck(i)` | ¿Toca auditar? | `nucleo/caminante.py:Caminante._auditar_si_toca` |
-| `Intento(i)`, `tarea = "auditar"` | `auditar`, fuera del guion | `nucleo/caminante.py:Caminante._fuera_del_guion("auditar")` |
-| `GuardarAud(i)` | Críticas, constancia y marca de terminada juntas; la puerta queda fijada | `almacen/artefactos.py:Almacen.guardar_auditoria(de_cierre=True)` |
-| `Fin(i)` | El caminante acaba | Salida normal de `Caminante.caminar_obra` |
-| `FalloNoPrevisto(i)` | Una excepción que no es de ninguna tarea detiene la obra con su motivo | `nucleo/caminante.py:Caminante.caminar_obra` (`except Exception`) → `Almacen.detener` |
+| `Arrancar` | Arrancar: leer el hilo anterior y registrar el nuevo, que hace `join` del anterior, bajo cerrojo. Los hilos forman una cola: `cam` es el que trabaja y `esperan` cuenta los demás | `api/aplicacion.py:Produccion.arrancar` (`_turno_de_arranque`) |
+| `Acabar` | El hilo que trabaja acaba y el siguiente de la cola empieza | Fin de `caminar` dentro de `Produccion.arrancar` (`Thread.join`) |
+| `Volver` | Volver al punto de guardado. Lo descartado se olvida en vez de guardarse caducado, porque ninguna versión lo ve | `nucleo/caminante.py:Caminante.volver_al_punto_de_guardado` → `almacen/artefactos.py:Almacen.cerrar_trazas_interrumpidas`, `ultimo_capitulo_cerrado`, `descartar_desde` (`_marcar_desde`) e `indice.py:Indice.retirar_desde`. **Pendiente de T14**: el modelo descarta lo de todo capítulo no cerrado (RF-165); el código, lo posterior al último cerrado, que es lo mismo mientras no haya regeneración del lector |
+| `Intento` con `tarea = "poblar"` | `poblar_mundo` si no hay biblia | `nucleo/caminante.py:Caminante.caminar_obra` → `_fuera_del_guion("poblar_mundo")` |
+| `Elegir` | Lo cerrado no se repite | `nucleo/caminante.py:Caminante.caminar_obra` (bucle) y `_ya_cerrado` |
+| `Intento` | Un intento de la tarea en curso, y lo que manda su `al_agotarse` | `nucleo/caminante.py:Caminante._mandar` (bucle de intentos) y `_agotado`; tope y política de `nucleo/guion.toml` leídos por `nucleo/guion.py:_politica` |
+| `Intento`, rama `detenida` | La orden de detener se nota antes de mandar | `nucleo/caminante.py:Caminante._parar_si_detenida` y `ProduccionDetenida` recogida en `caminar_obra` |
+| `Intento`, `tarea = "planificar"` | Paso 1: nace el trabajo del capítulo | `nucleo/caminante.py:Caminante.caminar_capitulo` (paso 1) |
+| `Intento`, `tarea = "cribar"` | Pasos 2 a 8 que no producen testigo nuevo: `documentar` (`seguir`) y las cribas (`critica_abierta`) | `nucleo/caminante.py:Caminante.caminar_capitulo` (pasos 2 a 8), `_criba`, `_critica_no_comprobado` |
+| `Intento`, `tarea = "plegar"` | Pasos 9 y 10, aplazados hasta el cierre | `nucleo/caminante.py:Caminante.caminar_capitulo` (pasos 9 y 10, con `aplazados`) |
+| `Cerrar` | El punto de guardado: una sola transacción | `almacen/artefactos.py:Almacen.cerrar_capitulo` |
+| `AudCheck` | ¿Toca auditar? | `nucleo/caminante.py:Caminante._auditar_si_toca` |
+| `Intento`, `tarea = "auditar"` | `auditar`, fuera del guion | `nucleo/caminante.py:Caminante._fuera_del_guion("auditar")` |
+| `GuardarAud` | Críticas, constancia y marca de terminada juntas; la puerta queda fijada | `almacen/artefactos.py:Almacen.guardar_auditoria(de_cierre=True)` |
+| `Fin` | El caminante acaba | Salida normal de `Caminante.caminar_obra` |
+| `FalloNoPrevisto` | Una excepción que no es de ninguna tarea detiene la obra con su motivo | `nucleo/caminante.py:Caminante.caminar_obra` (`except Exception`) → `Almacen.detener` |
 | `Caida` | El proceso muere: todos los hilos con él | No es código: es la máquina |
 | `ArrancarBackend` | Relanzar lo no detenido ni terminado, antes de servir peticiones | `api/aplicacion.py:crear_aplicacion.ciclo` → `Produccion.relanzar_las_caidas` y `Produccion.terminada` |
 | `Detener` | Orden del editor | `api/aplicacion.py:crear_aplicacion.detener` → `Almacen.detener` |
 | `Reanudar` | Orden del editor | `api/aplicacion.py:crear_aplicacion.reanudar` → `Almacen.reanudar` y `Produccion.arrancar` |
-| `AbrirVersion(S, t)` | Versión nueva que reescribe `S`, relevando lo que colgaba de `S` | `almacen/artefactos.py:Almacen.abrir_version` (`_marcar_desde` con `relevo`) |
+| `AbrirVersion(S)` | Versión nueva que reescribe `S`, relevando lo que colgaba de `S` | `almacen/artefactos.py:Almacen.abrir_version` (`_marcar_desde` con `relevo`) |
 | `Rehacer(n)` | Rehacer desde N | `api/aplicacion.py:crear_aplicacion.rehacer` → `nucleo/versiones.py:rehacer_desde` → `Almacen.abrir_version`; después `Produccion.arrancar` |
 | `CambioLector(h)` | Regeneración por cambio del lector | **Pendiente de T14** (SPEC1 §4.18). Tiene que abrir la versión con `S` = los capítulos de las `Mencion` del hecho en la última versión (`Almacen.capitulos_de_uso`), relevar solo lo de `S`, dejar la constancia de auditoría por debajo del primer capítulo de `S` (por debajo del último si `S` está vacío) y arrancar. Qué hace con `S` vacío y el nombre de la ruta los decide T14: el modelo admite rechazar (no cambia nada) y abrir una versión sin capítulos cambiados |
 | `Publicar(v)` | Publicar pasando por la puerta | `api/aplicacion.py:crear_aplicacion.publicar` → `nucleo/versiones.py:publicar` → `nucleo/versiones.py:puerta` → `Almacen.publicar_version` |
-| `Visible(v)` | Lo que ve cada versión | `almacen/artefactos.py:_visible` |
+| `Visible(v)`, `Vivas` | Lo que ve cada versión; lo vivo es lo que lee la producción | `almacen/artefactos.py:_visible` |
 | `Usos(v, h)` | En qué capítulos se usa un hecho | `almacen/artefactos.py:Almacen.capitulos_de_uso` |
-| `Produciendo` | ¿Hay producción en marcha? | `hilo.is_alive()` en `api/aplicacion.py:crear_aplicacion.rehacer` |
+| `Produciendo` | ¿Hay producción en marcha? (el último hilo registrado vive) | `hilo.is_alive()` en `api/aplicacion.py:crear_aplicacion.rehacer` |
 | `Terminada` | Obra terminada: consta la auditoría de cierre | `api/aplicacion.py:Produccion.terminada` y `Almacen.auditada_hasta` |
 
 ## Lo que el modelo deja fuera (D-66)
@@ -105,6 +106,20 @@ Rutas relativas a `backend/src/novela/`.
   historia de T10 —también cuando Lean no está y la versión se publica marcada
   «sin comprobación formal», que para el flujo es «pasa»—.
 - **Varias obras.** El modelo es de una (§11).
+- **La identidad de cada producción.** Un artefacto `trabajo` lleva en `n`
+  cuántas producciones vivas de su capítulo había al escribirlo; `n = 2` es
+  justo el duplicado que `NiDuplica` prohíbe.
+
+## El tamaño del modelo
+
+`Produccion.cfg` es el modelo que TLC recorre entero y el que lanza la prueba:
+tres capítulos, dos versiones, `R = 2`, un hecho, una caída, un reanudar y un
+fallo no previsto. En la máquina de desarrollo, con cuatro núcleos, son
+1 444 626 estados generados, 395 733 distintos y un diámetro de 59, en menos de
+dos minutos.
+
+Con tres versiones el modelo pasa de varios millones de estados distintos y
+TLC tarda más de lo que una batería aguanta: no se da por comprobado.
 
 ## Contraejemplos
 
