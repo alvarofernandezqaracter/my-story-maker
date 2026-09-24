@@ -80,6 +80,12 @@ class FichaDeObra(BaseModel):
     criticas_abiertas: int
     version_en_curso: int = Field(description="La ultima version, la unica que se produce")
     version_publicada: int | None = Field(description="La de la ultima publicacion, si la hay")
+    motivo_de_la_detencion: str | None = Field(
+        default=None,
+        description=(
+            "Por que esta detenida: la tarea, lo que fallo y su traza. Vacio si no (RI-17)"
+        ),
+    )
 
 
 class UnidadDelManuscrito(BaseModel):
@@ -115,6 +121,22 @@ class CriticaServida(BaseModel):
     detectada_por: str | None
     evidencia: str | None
     accion_sugerida: str | None
+
+
+class DecisionDePolicy(BaseModel):
+    """Una coincidencia de lo vetado y lo que `policy` hizo con ella (RI-16)."""
+
+    id: int
+    id_traza: str
+    capitulo: int | None
+    escena: str | None
+    tarea: str | None
+    intento: int | None
+    decision: Literal["devuelto_al_agente", "intento_fallido"]
+    nivel: Literal["global", "palabra_del_comprador", "tema_del_comprador"]
+    termino: str = Field(description="El veto tal como esta en su lista")
+    encontrado: str = Field(description="Lo que casó, tal como esta escrito en la prosa")
+    registrada_en: str
 
 
 class TrazaServida(BaseModel):

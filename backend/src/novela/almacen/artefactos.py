@@ -208,6 +208,35 @@ def _nacimiento(ficha: "Artefacto | None") -> str | None:
     return None
 
 
+def _decisiones_de_policy(
+    ganchos: dict[str, Any] | None,
+) -> list[tuple[str, str, str, str]]:
+    """Las filas del registro que salen del veredicto de los hooks (RF-135).
+
+    Lo escribio el ejecutor en `ganchos`: lo que `policy` devolvio al agente en
+    la sesion y lo que dejo sin pasar al final. Aqui solo se copia a filas.
+    """
+    if not ganchos:
+        return []
+    filas: list[tuple[str, str, str, str]] = []
+    momentos = (("en_sesion", "devuelto_al_agente"), ("final", "intento_fallido"))
+    for momento, decision in momentos:
+        for dicho in ganchos.get(momento) or []:
+            if not isinstance(dicho, dict) or dicho.get("gancho") != "policy":
+                continue
+            for hallada in dicho.get("coincidencias") or []:
+                if isinstance(hallada, dict):
+                    filas.append(
+                        (
+                            decision,
+                            str(hallada.get("nivel")),
+                            str(hallada.get("termino")),
+                            str(hallada.get("encontrado")),
+                        )
+                    )
+    return filas
+
+
 def _version_en_curso(conexion: sqlite3.Connection, id_obra: str) -> int:
     """La ultima version de la obra, que es la unica que se produce (D-40)."""
     fila = conexion.execute(
@@ -1043,18 +1072,72 @@ class Almacen:
         # consulta por el todavia (SPEC1 RD-25).
         if ganchos is not None:
             cuerpo["ganchos"] = ganchos
-        self._actualizar(
-            "Traza",
-            id_traza,
-            {
-                "cuerpo": json.dumps(cuerpo, ensure_ascii=False),
-                "tokens_de_entrada_medidos": tokens_de_entrada_medidos,
-                "tokens_de_salida": tokens_de_salida,
-                "coste": coste,
-                "latencia_ms": latencia_ms,
-                "cerrada_en": ahora(),
-            },
+        cerrada_en = ahora()
+        # La traza y lo que `policy` encontro en ese intento se escriben juntos:
+        # el registro no puede quedar sin su traza ni al reves (RF-136).
+        with self._turno_de_escritura, escritura(self._escritor) as conexion:
+            conexion.execute(
+                "UPDATE artefacto_traza SET cuerpo = ?, tokens_de_entrada_medidos = ?, "
+                "tokens_de_salida = ?, coste = ?, latencia_ms = ?, cerrada_en = ? "
+                "WHERE id = ?",
+                (
+                    json.dumps(cuerpo, ensure_ascii=False),
+                    tokens_de_entrada_medidos,
+                    tokens_de_salida,
+                    coste,
+                    latencia_ms,
+                    cerrada_en,
+                    id_traza,
+                ),
+            )
+            for decision, nivel, termino, encontrado in _decisiones_de_policy(ganchos):
+                conexion.execute(
+                    "INSERT INTO decision_de_policy (id_obra, id_traza, decision, nivel, "
+                    "termino, encontrado, registrada_en) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (traza.id_obra, id_traza, decision, nivel, termino, encontrado, cerrada_en),
+                )
+
+    # --- Lo vetado (SPEC1 4.14) -------------------------------------------
+
+    def terminos_vetados_globales(self) -> list[str]:
+        """La lista global de la instalacion, en orden (RF-131)."""
+        filas = self._lector.execute(
+            "SELECT termino FROM termino_vetado_global ORDER BY termino"
         )
+        return [str(fila["termino"]) for fila in filas]
+
+    def listar_decisiones_de_policy(
+        self,
+        id_obra: str,
+        *,
+        capitulo: int | None = None,
+        nivel: str | None = None,
+        decision: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """El registro de policy de la obra, en el orden en que se escribio.
+
+        Capitulo, escena, tarea e intento no se copian al registro: se leen de
+        la `Traza` de la que cuelga cada fila (RD-27).
+        """
+        condiciones = ["d.id_obra = :id_obra"]
+        parametros: dict[str, Any] = {"id_obra": id_obra}
+        for columna, valor in (
+            ("t.capitulo", capitulo),
+            ("d.nivel", nivel),
+            ("d.decision", decision),
+        ):
+            if valor is not None:
+                clave = columna.split(".")[1]
+                condiciones.append(f"{columna} = :{clave}")
+                parametros[clave] = valor
+        filas = self._lector.execute(
+            "SELECT d.id, d.id_traza, d.decision, d.nivel, d.termino, d.encontrado, "
+            "d.registrada_en, t.capitulo, t.escena, t.tarea, t.intento "
+            "FROM decision_de_policy AS d JOIN artefacto_traza AS t ON t.id = d.id_traza "
+            f"WHERE {' AND '.join(condiciones)} ORDER BY d.id",
+            parametros,
+        )
+        return [dict(fila) for fila in filas]
 
     def trazas_abiertas(self, id_obra: str) -> list[Artefacto]:
         filas = self._lector.execute(
@@ -1108,6 +1191,15 @@ class Almacen:
                 "WHERE id_obra = ?",
                 (detenida, motivo, ahora(), id_obra),
             )
+
+    def motivo_de_la_detencion(self, id_obra: str) -> str | None:
+        """Por que esta detenida la obra; nada si no lo esta (RF-137)."""
+        fila = self._lector.execute(
+            "SELECT detenida, motivo FROM control_de_ejecucion WHERE id_obra = ?", (id_obra,)
+        ).fetchone()
+        if not fila or not fila["detenida"]:
+            return None
+        return str(fila["motivo"]) if fila["motivo"] is not None else None
 
     def esta_detenida(self, id_obra: str) -> bool:
         fila = self._lector.execute(

@@ -34,6 +34,9 @@ MIGRACIONES: tuple[Migracion, ...] = (
         "versiones de la obra: cada fila con su version y su relevo, y publicar",
         esquema.sentencias_de_las_versiones,
     ),
+    # No son tablas de artefactos: ni las recorre la 7 ni llevan version.
+    (8, "lo vetado: la lista global de serie y el registro de policy",
+     esquema.sentencias_de_lo_vetado),
 )
 
 

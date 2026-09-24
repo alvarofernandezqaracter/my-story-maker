@@ -110,6 +110,14 @@ AL_AGOTARSE: tuple[str, ...] = ("detener_obra", "critica_abierta", "seguir")
 # `validar_capitulo` mira la forma de lo entregado y `policy`, lo vetado.
 GANCHOS: tuple[str, ...] = ("validar_capitulo", "policy")
 
+# De que lista sale cada veto que mira `policy` (SPEC1 4.14, RF-130): la global
+# de la instalacion y, de los vetos del brief, los de una palabra y los de varias.
+NIVEL_DE_VETO: tuple[str, ...] = ("global", "palabra_del_comprador", "tema_del_comprador")
+
+# Que hizo `policy` con una coincidencia (RF-135): devolverla al agente en la
+# sesion para que corrija, o dar el intento por fallido en el veredicto final.
+DECISION_DE_POLICY: tuple[str, ...] = ("devuelto_al_agente", "intento_fallido")
+
 # Las tres memorias (architecture.md 3). Cada artefacto declara a cual pertenece
 # porque es lo que permite al Archivero retirar la de capitulo sin decidir nada.
 MEMORIA: tuple[str, ...] = ("tarea", "capitulo", "obra")

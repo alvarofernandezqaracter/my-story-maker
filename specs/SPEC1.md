@@ -32,7 +32,7 @@ contrato y su prompt, el presupuesto de contexto, la recogida de fuentes fuera
 del sistema, el destinatario real al que la obra va dedicada con los hechos que
 vienen de su vida, la entrevista que completa el brief antes del alta, el
 punto de guardado por capítulo con la política de reintentos de cada paso, los
-dos hooks que revisan lo que entregan los subagentes de prosa, y la API HTTP que el editor usa para lanzar e inspeccionar una obra.
+dos hooks que revisan lo que entregan los subagentes de prosa, las listas de lo vetado con su registro de auditoría, y la API HTTP que el editor usa para lanzar e inspeccionar una obra.
 
 Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
 lo enumerado en §11.
@@ -584,7 +584,7 @@ flowchart LR
 | RF-121 | Los hooks son hooks `Stop` de Claude Code de verdad y viajan en la orden del ejecutor, en `--settings` con JSON en línea. El aislamiento de §4.11 no se toca: el subagente sigue arrancando en su directorio vacío, sin `CLAUDE.md`, sin `.claude/` y sin MCP. Un encargo sin hooks lleva la misma orden que antes, sin `--settings` | `prueba` |
 | RF-122 | Cada hook es un programa del paquete, `python -m novela.ganchos <hook> <tarea>`. Lee la entrada que le da Claude Code —de ella, solo el último mensaje del agente y si ya ha bloqueado en ese turno—, no abre la base de datos, no escribe nada en disco y no llama a ningún modelo. El esquema y el contrato los lee de `tareas/<tarea>/`, que es entrada versionada (RD-09); la lista de vetos y la reserva de la vuelta le llegan en variables de entorno del proceso. Si bloquea, sale con código 2 y el motivo por su salida de error; si no, sale con 0 | `prueba` |
 | RF-123 | **`validar_capitulo` comprueba la forma, y nada del contenido.** La salida es un objeto JSON con la lista `artefactos`; cada artefacto trae `tipo` y `cuerpo`; cada tipo es uno de los que el contrato de la tarea deja escribir; el tipo principal del `esquema.json` de la tarea aparece al menos una vez y con todos los campos que su esquema declara; y todo `Borrador` trae `texto` no vacío. Las comprobaciones son una lista a la que se añaden otras sin tocar el enganche | `prueba` |
-| RF-124 | **`policy` aplica los vetos del brief.** Busca cada veto tal cual, como subcadena exacta y sin normalizar, en el `texto` de cada `Borrador` y cada `Parrafo` de la salida. Si alguno aparece, bloquea nombrando lo vetado que encontró. Sin destinatario, o con la lista vacía, no bloquea nunca | `prueba` |
+| RF-124 | **`policy` aplica lo vetado.** Busca las tres listas de §4.14, con su comparación normalizada, en el `texto` de cada `Borrador` y cada `Parrafo` de la salida. Si algo aparece, bloquea nombrando lo que encontró. Sin nada que coincida, no bloquea nunca | `prueba` |
 | RF-125 | **Una vuelta de corrección por intento.** Un hook bloquea solo la primera vez en el turno: si ya bloqueó uno, el siguiente `Stop` termina. Tampoco bloquea si la vuelta no cabe en la reserva del paso (RF-128). El motivo que devuelve no pasa de 1 000 caracteres | `prueba` |
 | RF-126 | **El veredicto que cuenta es el del ejecutor.** Al terminar el subagente, el ejecutor aplica las mismas comprobaciones, con las mismas funciones, a lo que entregó al final. Si alguna no pasa, el intento ha fallado y se aplican el `reintentos` y el `al_agotarse` de su paso (§4.10): los tres pasos con hooks declaran `detener_obra` | `prueba` |
 | RF-127 | La `Traza` de cada intento con hooks guarda en su cuerpo, en `ganchos`, lo que cada hook dijo durante la sesión —de qué hook, si bloqueó y con qué motivo, leído de los eventos que el CLI emite con `--include-hook-events`— y el veredicto final del ejecutor por hook. Se guarda también cuando el intento falla | `prueba` |
@@ -597,7 +597,7 @@ flowchart LR
 | D-46 | **Lo que el hook necesita le llega por la orden y el entorno, no por ficheros.** El nombre del hook y de la tarea van en su línea de orden; los vetos y la reserva, en variables de entorno del subagente; el esquema, del catálogo versionado | Escribir la lista de vetos en el directorio de la tarea contradiría D-35 —nace vacío y muere vacío— y RD-08. El hook no escribe en la base: informa por su salida y quien registra es el ejecutor, así que el almacén sigue con un solo escritor (RNF-05) |
 | D-47 | **Una vuelta en la sesión y, si no basta, un intento fallido.** No se inventa otra política: lo que pasa después lo deciden `reintentos` y `al_agotarse` | Un hook no guarda estado entre llamadas y la única memoria que Claude Code le da es si ya bloqueó en ese turno, así que «una vuelta» es lo único que puede contar sin escribir nada. Más vueltas harían crecer la entrada sin tope, y el propio CLI corta un hook a los diez bloqueos seguidos. El intento siguiente arranca en frío, así que el total queda acotado por los reintentos del paso |
 | D-48 | **`validar_capitulo` va en los tres pasos de prosa y solo mira la forma.** Nombres escritos como en la biblia, longitud del capítulo y la puerta de publicación son de la tarea de validadores programáticos, que añadirá sus comprobaciones a la misma lista | Es lo que se puede decidir sin gastar y sin interpretar el texto (§2.1). Engancharlo solo a la costura dejaría pasar una escena malformada hasta el final del capítulo; los tres pasos que escriben `Borrador` son los tres sitios donde se puede corregir en el acto |
-| D-49 | **`policy` nace aplicando ya los vetos del brief, comparados tal cual.** La lista global de términos ofensivos, la normalización y el registro de auditoría vienen después y amplían la fuente de la lista y la comparación, no el enganche | Nacer vacío dejaría el hook de adorno hasta que llegue la lista global, y los vetos ya están guardados. La comparación literal falla en las variantes —«perros» no casa con «perro»—, y un tema vetado solo casa si aparece escrito igual: es el precio declarado de no normalizar todavía. No es la dimensión de léxico vetado de la época, que sigue en el Editor de estilo: es una política del comprador, comprobada como se comprueba la forma de un artefacto (RF-23). Si una comparación de cadenas cuenta como herramienta de cálculo en el sentido de D-05 lo decide esa decisión abierta, que este cambio no cierra |
+| D-49 | **`policy` es un solo enganche para toda lista de lo vetado.** Qué listas mira y cómo compara lo fija §4.14; ampliarlas cambia de dónde sale la lista y la comparación, no el enganche | No es la dimensión de léxico vetado de la época, que sigue en el Editor de estilo: es una política del comprador y de la instalación, comprobada como se comprueba la forma de un artefacto (RF-23). Si una comparación de cadenas, también normalizada, cuenta como herramienta de cálculo en el sentido de D-05 lo decide esa decisión abierta, que no se cierra aquí |
 
 **Cuánto contexto añade.** Nada si el agente entrega bien a la primera: la
 lista de vetos no entra en ninguna ventana (RF-16 sigue en pie) y la
@@ -613,11 +613,10 @@ texto.
 aplican. RF-98 suma un caso de intento fallido: la salida final que no pasa un
 hook. Y RF-13 suma la reserva de la vuelta a la anchura de los pasos con hooks.
 
-**Qué queda fuera.** La lista global de términos ofensivos, la normalización
-—mayúsculas, acentos, plurales y variantes— y el registro de auditoría de cada
-coincidencia; los validadores de nombres exactos, de longitud y la puerta de
-publicación; detectar un tema vetado por su sentido y no por sus palabras; y
-hooks en los roles que no escriben prosa.
+**Qué queda fuera.** Los validadores de nombres exactos, de longitud y la
+puerta de publicación; detectar un tema vetado por su sentido y no por sus
+palabras; y hooks en los roles que no escriben prosa. Qué listas mira `policy`
+y cómo compara es de §4.14.
 
 **De dónde sale.** `architecture.md` §3 (toda tarea arranca en frío,
 presupuesto) y §4 (reintentos por paso); RF-06, RF-13, RF-16, RF-23, RF-95 a
@@ -627,15 +626,77 @@ RF-102; D-35 y RD-08.
 reserva de la vuelta en el presupuesto; §4, los hooks en el guion y lo que pasa
 cuando no se pasan; §7, `ganchos.py` en el árbol. `validators.md`: §6, las
 pruebas; §7, los hooks entre los guardarraíles y lo vetado entre las amenazas,
-con lo que la comparación literal no ve; y §8, los métodos de RF-120 a RF-129. `definitions.md` y
+con lo que la comparación no ve; y §8, los métodos de RF-120 a RF-129. `definitions.md` y
 `domain-knowledge.md` no cambian: los vetos ya eran parte del destinatario.
+
+### 4.14 Lo vetado: tres listas, comparación normalizada y registro de auditoría
+
+**El problema.** El hook `policy` de §4.13 solo miraba lo que el comprador vetó
+en el brief, y lo comparaba tal cual: «Búho», «búhos» o «alguaciles» pasaban
+junto a un veto «búho» o «alguacil», y un insulto que nadie hubiese vetado
+llegaba al manuscrito de una obra que se regala. Tampoco quedaba escrito, en
+ningún sitio que se pudiera consultar, qué encontró la política, a quién se lo
+devolvió y qué pasó después.
+
+**La decisión, en una frase.** `policy` busca en la prosa tres listas —una
+global de insultos y términos ofensivos que el sistema trae de serie, y las
+palabras y los temas que vetó el comprador—, compara palabra a palabra después
+de normalizar las dos partes, y cada coincidencia queda en un registro de
+auditoría de solo añadir que se sirve por la API. El enganche, la vuelta de
+corrección y lo que pasa al agotar los intentos no cambian (§4.10, §4.13).
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-130 | **Tres listas, dos niveles.** El nivel global es una lista de la instalación, igual para toda obra, que aplica también a una obra sin destinatario. El nivel de la obra son los `destinatario.vetos` del brief, que se reparten por su forma: un veto de una sola palabra es una **palabra vetada** y uno de varias es un **tema vetado**. Cada veto lleva su nivel, del vocabulario cerrado `nivel_de_veto`: `global`, `palabra_del_comprador`, `tema_del_comprador` | `prueba` |
+| RF-131 | **La lista global viene de serie.** Vive en SQLite, en tabla propia, y la siembra la migración 8 con una lista corta de insultos y términos ofensivos en español, escogida para no chocar con vocabulario de época. No se borra ni se modifica; ampliarla es añadir una migración. Ninguna ruta de la API la edita ni la sirve | `prueba` |
+| RF-132 | **Se compara normalizado y por palabras enteras.** El texto y cada veto se parten en palabras y cada palabra se reduce igual en los dos lados: minúsculas; sin acentos ni diéresis, salvo la `ñ`; una letra repetida tres veces o más cuenta como una; sin la marca de plural (`-s`, `-es`, `-ces` → `-z`); y sin la vocal de género `-o`/`-a`. Un veto casa cuando la secuencia de sus palabras reducidas aparece seguida en el texto. Una palabra no casa dentro de otra | `prueba` |
+| RF-133 | **Un tema vetado se busca como frase**, con la misma normalización. Si la prosa alude al tema con otras palabras, no casa: es un límite declarado, no un defecto (D-52) | `prueba` |
+| RF-134 | **Al agente le llega lo que escribió, no la lista.** El motivo del hook nombra cada coincidencia con las palabras tal como aparecen en su texto. La lista global, como la del comprador, no entra en ninguna ventana y viaja al hook en su variable de entorno, cada veto con su nivel (D-46) | `prueba` |
+| RF-135 | **Registro de auditoría.** Cada coincidencia de `policy` queda como una fila con la obra, la `Traza` del intento, la decisión, el nivel, el veto tal como está en su lista y lo encontrado tal como está escrito. La decisión es del vocabulario cerrado `decision_de_policy`: `devuelto_al_agente`, cuando el hook bloqueó en la sesión y el agente tuvo que corregir, e `intento_fallido`, cuando el veredicto final del ejecutor no pasa (RF-126). La coincidencia de la sesión se reconstruye aplicando la misma función al mensaje del agente que el hook bloqueó, leído del flujo del CLI. Una fila por veto y forma escrita distinta en cada veredicto | `prueba` |
+| RF-136 | **Lo escribe el almacén al cerrar la `Traza`**, en la misma transacción, con lo que el ejecutor dejó en `ganchos`. El hook sigue sin abrir la base (RF-122). El registro no se borra ni se modifica, y no se caduca ni se releva: como la `Traza`, es la constancia de lo que pasó | `prueba` |
+| RF-137 | **Agotados los intentos, la obra se detiene y lo dice.** Los tres pasos de prosa ya declaran `detener_obra` (RF-97). La ficha de la obra trae el motivo de la detención, que nombra la tarea, lo encontrado y la `Traza` del último intento, y queda vacío cuando la obra no está detenida | `prueba` |
+| RF-138 | `GET /obras/{id}/policy` sirve el registro de la obra en orden, cada fila con su capítulo, escena, tarea e intento sacados de su `Traza`, filtrable por capítulo, nivel y decisión. Es de solo lectura y entra en `backend/openapi.yaml` (RI-10) | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-50 | **Las dos listas del comprador salen del mismo campo del brief y no se copian a una tabla.** Palabra o tema lo decide cuántas palabras tiene el veto | El brief ya guarda los vetos dentro de la `Obra`, en SQLite, desde el alta (RF-06): copiarlos sería un segundo sitio que mantener al día. Partir el campo en dos movería el brief, la entrevista y la API por una diferencia que la comparación no necesita, porque las dos se buscan igual; solo cambia la etiqueta con que la coincidencia queda en el registro |
+| D-51 | **La lista global se siembra en la migración y no tiene ruta de edición.** Es corta y deja fuera palabras con un sentido histórico o inocente que la normalización confundiría —«bastardo», «moro», «zorra», «capullo», «polla»— | Así funciona sin que nadie haga nada (RNF-08), y cambiarla pasa por el ciclo, como cualquier otra entrada del sistema. Una lista larga en una novela de época bloquearía prosa legítima: cada falso positivo es una vuelta de corrección y, si el agente insiste, una obra detenida |
+| D-52 | **Normalizar con reglas fijas de palabra, no con un lematizador ni con un modelo.** Los temas, como frases | Es determinista, no añade dependencias y cabe en el hook, que no llama a ningún modelo (RF-122). Comparar palabras enteras evita el falso positivo de toda lista de subcadenas: un veto escondido dentro de una palabra inocente. El precio se declara: dos palabras que solo difieren en género o número se confunden —«caso» y «casa»—, y no se ven ni lo escrito con separadores, cifras o símbolos por medio ni el tema dicho con otras palabras. Juzgar un tema por su sentido es trabajo del juicio semántico, no de esta lista |
+| D-53 | **El registro tiene tabla propia, fuera de las de artefactos, y recoge los dos momentos** | Al contrario que el veredicto de RD-25, este sí se consulta: por obra, por nivel y por decisión. No es un artefacto porque no lo escribe ningún rol, y no se versiona porque, como la `Traza`, cuenta lo que pasó en cualquier versión. Recoger solo el veredicto final dejaría fuera justo lo que la política consiguió: el texto que el agente corrigió a tiempo |
+| D-54 | **Se ve por la API: una ruta de lectura para el registro y el motivo en la ficha.** Ninguna de escritura | Lo que hay que ver se sirve por la API y no hay volcados (RD-08). Sin el motivo en la ficha, una obra detenida por lo vetado no diría por qué a quien la encargó |
+
+**Cuánto contexto añade.** Nada a ninguna ventana: las listas viajan por el
+entorno del hook. Lo que el hook devuelve sigue acotado a 1 000 caracteres
+(RF-125) y cabe en la reserva de la vuelta.
+
+**Qué retira.** La comparación literal de RF-124 y D-49, que pasan a remitir a
+esta subsección, y de lo que §4.13 dejaba fuera, la lista global, la
+normalización y el registro de auditoría.
+
+**Qué queda fuera.** Detectar un tema por su sentido; lo escrito con
+separadores, cifras o símbolos para esquivar la lista; un lematizador; una ruta
+para editar o leer la lista global; y cualquier política sobre lo que no es la
+prosa de un `Borrador` o un `Párrafo`. Esta subsección no cierra la decisión
+abierta del léxico vetado de la época (`architecture.md` §8), que es otra lista
+y otra dimensión, ni D-05.
+
+**De dónde sale.** §4.10 (reintentos y `al_agotarse`) y §4.13 (el enganche);
+RF-06, RF-16, RF-122, RF-126 y RD-25; RD-02 y RD-08.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md`: §2,
+los vocabularios `nivel_de_veto` y `decision_de_policy`; §4, lo que mira el
+hook `policy` y el registro; §6, el registro en la tabla de gobierno.
+`validators.md`: §6, las pruebas; §7, el guardarraíl y la amenaza de lo vetado
+con lo que la normalización no ve; y §8, los métodos de RF-130 a RF-138.
+`definitions.md` y `domain-knowledge.md` no cambian: lo vetado ya era parte del
+destinatario y el registro es de producción.
 
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
 | --- | --- | --- |
 | RD-01 | SQLite con `WAL`, `foreign_keys` activas y tablas `STRICT`. Un solo proceso escritor; las lecturas de la API no bloquean la producción | `prueba` |
-| RD-02 | El esquema espeja las tres capas —obra, mundo, producción— más la `Traza`, y toda fila cuelga de un `id_obra`, salvo las de la entrevista, que es anterior a la obra y cuelga de su `id_entrevista` (RF-79, D-24) | `inspeccion` |
+| RD-02 | El esquema espeja las tres capas —obra, mundo, producción— más la `Traza`, y toda fila cuelga de un `id_obra`, salvo las de la entrevista, que es anterior a la obra y cuelga de su `id_entrevista` (RF-79, D-24), y la lista global de lo vetado, que es de la instalación (RD-26) | `inspeccion` |
 | RD-03 | Los artefactos viven en una tabla por tipo con el cuerpo declarativo en una columna y, al lado, solo las columnas por las que se consulta: obra, capítulo, escena, estado, severidad, dimensión, rol | `inspeccion` |
 | RD-04 | Todo campo de vocabulario controlado se declara como valor cerrado en el esquema. Un campo de esos en texto libre es un defecto: es lo que hace incomputable el predicado que lo vigila | `analisis` |
 | RD-05 | Los fragmentos de `Fuente` se indexan con la extensión vectorial, particionados por `id_obra`, para que el Documentalista recupere por parecido y luego filtre por fecha y lugar. El texto íntegro de la fuente se guarda antes de trocearlo (RF-61) | `prueba` |
@@ -656,6 +717,8 @@ con lo que la comparación literal no ve; y §8, los métodos de RF-120 a RF-129
 | RD-23 | La caché del estado materializado se indexa por obra, versión y capítulo, y lleva también la versión que la relevó (RF-115, D-44) | `prueba` |
 | RD-17 | `licencia` admite un cuarto valor, `personal`, para lo que viene de la vida del destinatario. Es inmutable como `canon`, pero su respaldo no es una `Fuente` sino un `Recuerdo`, y por eso no cuenta en la cobertura documental (OBJ-06) ni en la fidelidad histórica | `analisis` |
 | RD-25 | El veredicto de los hooks vive en el cuerpo de la `Traza`, en `ganchos`, y no en una tabla ni en una columna nueva: no hace falta migración. Nadie consulta por él todavía; quien lo necesite para filtrar lo sacará a columna entonces | `prueba` |
+| RD-26 | La lista global de lo vetado tiene tabla propia, fuera de las de artefactos: es de la instalación, así que no cuelga de ningún `id_obra` (RD-02), y no se versiona. La siembra la migración 8; no se borra ni se modifica (RF-131) | `prueba` |
+| RD-27 | El registro de auditoría de `policy` tiene tabla propia, de solo añadir, fuera de las de artefactos: cuelga de la obra y de la `Traza` del intento, lleva `nivel_de_veto` y `decision_de_policy` como valores cerrados, y no se borra, no se modifica, no se caduca ni se releva. Capítulo, escena, tarea e intento no se copian: se leen de su `Traza` (RF-135, RF-136, D-53) | `prueba` |
 
 Un único ejemplo, que fija el estilo del cuerpo de todo artefacto. Los demás no
 se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe.
@@ -696,6 +759,8 @@ se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe
 | RI-13 | `GET /obras/{id}/versiones` | Ver las versiones | RF-117 |
 | RI-14 | `?version=` en manuscrito, capítulo, críticas, estado, hechos y cronología | Leer una versión concreta | RF-117. Sin el parámetro, la versión de referencia |
 | RI-15 | `GET /obras/{id}/trazas` | Ver por qué un intento falló | Cada `Traza` servida trae además `ganchos`, lo que RF-127 guardó: vacío si su paso no lleva hooks |
+| RI-16 | `GET /obras/{id}/policy` | Ver qué encontró la política de lo vetado | RF-138. Filtrable por capítulo, nivel y decisión. Sin operación de escritura |
+| RI-17 | `GET /obras/{id}` | Saber por qué se detuvo una obra | La ficha trae además el motivo de la detención, vacío si no está detenida (RF-137) |
 
 Tres reglas de frontera. La interfaz web nunca lee ficheros ni la base de datos.
 El contrato HTTP se valida en el borde con modelos declarados —es el único sitio
@@ -754,6 +819,7 @@ requisitos que justifican.
 | RF-06 a RF-09, RD-16, RD-17 | `definitions.md` (capa Mundo y grado de licencia); D-12, D-13 y D-14 |
 | §4.12 Versiones | `architecture.md` §3 (estado como pliegue) y §4 (punto de guardado); RD-07; D-32 |
 | §4.13 Los dos hooks, RD-25, RI-15 | `architecture.md` §3 (en frío y presupuesto) y §4 (reintentos por paso); `validators.md` §7 (guardarraíles); RF-06, RF-95 a RF-102 |
+| §4.14 Lo vetado, RD-26, RD-27, RI-16, RI-17 | §4.10 y §4.13; `validators.md` §7 (guardarraíles y adversario); RF-06, RD-02 y RD-08 |
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
 
 ## §10 Verificación y criterios de aceptación
@@ -796,6 +862,13 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    intento fallido que, agotados los reintentos, detiene la obra con el
    veredicto en la `Traza`. Con el CLI de verdad, un sondeo mínimo confirma que
    en `--print` el hook se dispara, bloquea y el agente vuelve a entregar.
+10. **Lo vetado.** Sin gastar: el hook bloquea un término de la lista global
+   en una obra sin destinatario, una palabra y un tema que vetó el comprador,
+   y las variantes con otra mayúscula, sin acento y en plural; no bloquea un
+   veto escondido dentro de otra palabra ni un tema dicho con otras palabras.
+   Un Redactor fingido que insiste agota sus intentos y la ficha dice por qué
+   se detuvo la obra; cada coincidencia, la de la sesión y la del veredicto
+   final, está en el registro que sirve `GET /obras/{id}/policy`.
 
 ## §11 Fuera del alcance de v1
 
@@ -810,9 +883,8 @@ cualquier herramienta externa de cálculo, por D-05.
 
 También queda fuera todo lo que rodea al destinatario sin ser él: la
 comprobación de que cada elemento personalizado acaba apareciendo en algún
-capítulo, y del filtro de las palabras vetadas, todo lo que no es la
-comparación literal de §4.13: la lista global, la normalización y el registro
-de auditoría. De la entrevista queda fuera lo que enumera §4.8, y de las
+capítulo, y del filtro de lo vetado, lo que enumera §4.14: el tema dicho con
+otras palabras y lo escrito para esquivar la lista. De la entrevista queda fuera lo que enumera §4.8, y de las
 versiones, lo que enumera §4.12.
 
 ## §12 Decisiones abiertas

@@ -39,6 +39,7 @@ from novela.api.modelos import (
     Contradiccion,
     CriticaServida,
     Cronologia,
+    DecisionDePolicy,
     Destinatario,
     EstadoPlegado,
     FichaDeObra,
@@ -431,6 +432,7 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
             criticas_abiertas=len(abiertas),
             version_en_curso=casa.almacen.version_en_curso(id_obra),
             version_publicada=casa.almacen.version_publicada(id_obra),
+            motivo_de_la_detencion=casa.almacen.motivo_de_la_detencion(id_obra),
         )
 
     # --- RI-03. Leer -------------------------------------------------------
@@ -560,6 +562,29 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
             )
             for traza in casa.almacen.listar_trazas(
                 id_obra, capitulo=capitulo, rol=rol, tarea=tarea
+            )
+        ]
+
+    # --- RI-16. Lo que encontro la politica de lo vetado --------------------
+
+    @app.get("/obras/{id_obra}/policy")
+    def ver_policy(
+        id_obra: IdObra,
+        casa: ProduccionDep,
+        capitulo: Annotated[int | None, Query(ge=1)] = None,
+        nivel: Annotated[
+            Literal["global", "palabra_del_comprador", "tema_del_comprador"] | None, Query()
+        ] = None,
+        decision: Annotated[
+            Literal["devuelto_al_agente", "intento_fallido"] | None, Query()
+        ] = None,
+    ) -> list[DecisionDePolicy]:
+        """El registro de auditoria de `policy`, en orden (RF-138). Solo lectura."""
+        _obra_o_404(casa, id_obra)
+        return [
+            DecisionDePolicy(**fila)
+            for fila in casa.almacen.listar_decisiones_de_policy(
+                id_obra, capitulo=capitulo, nivel=nivel, decision=decision
             )
         ]
 

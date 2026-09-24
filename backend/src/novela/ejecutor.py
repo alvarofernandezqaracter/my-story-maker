@@ -136,7 +136,7 @@ class EjecutorDeSubagentes:
                 f"{encargo.tarea}: el subagente salio con {terminado.returncode}: "
                 f"{terminado.stderr[:400]}"
             )
-        return self._recoger(encargo, terminado.stdout, latencia_ms, ventana.vetos)
+        return self._recoger(encargo, terminado.stdout, latencia_ms, vetos_de(ventana))
 
     # --- Lo que se le manda -------------------------------------------------
 
@@ -181,7 +181,7 @@ class EjecutorDeSubagentes:
             return None
         return {
             **os.environ,
-            ganchos.VARIABLE_DE_VETOS: json.dumps(list(ventana.vetos)),
+            ganchos.VARIABLE_DE_VETOS: ganchos.vetos_para_el_entorno(vetos_de(ventana)),
             ganchos.VARIABLE_DE_RESERVA: str(encargo.reserva_de_la_vuelta),
         }
 
@@ -209,7 +209,7 @@ class EjecutorDeSubagentes:
         encargo: Encargo,
         salida: str,
         latencia_ms: int,
-        vetos: tuple[str, ...] = (),
+        vetos: tuple[ganchos.Veto | str, ...] = (),
     ) -> Resultado:
         envoltorio, eventos = _leer_flujo(encargo, salida)
         if envoltorio.get("is_error"):
@@ -245,6 +245,14 @@ class EjecutorDeSubagentes:
         )
 
 
+def vetos_de(ventana: Ventana) -> tuple[ganchos.Veto, ...]:
+    """Las tres listas de lo vetado, cada veto con su nivel (SPEC1 RF-130)."""
+    return (
+        *(ganchos.Veto(termino=t, nivel="global") for t in ventana.vetos_globales),
+        *(ganchos.veto_del_comprador(t) for t in ventana.vetos),
+    )
+
+
 def ajustes_de_los_ganchos(encargo: Encargo) -> str:
     """El JSON de `--settings` con un hook `Stop` por gancho del paso (RF-121).
 
@@ -271,6 +279,9 @@ def _leer_flujo(encargo: Encargo, salida: str) -> tuple[dict[str, Any], list[dic
     salida es un solo objeto, ese es el envoltorio.
     """
     envoltorio: dict[str, Any] | None = None
+    # Los mensajes del agente van tambien, en su orden: la coincidencia que un
+    # hook devolvio en la sesion se reconstruye con el mensaje que bloqueo
+    # (SPEC1 RF-135).
     eventos: list[dict[str, Any]] = []
     for linea in salida.splitlines():
         try:
@@ -281,7 +292,9 @@ def _leer_flujo(encargo: Encargo, salida: str) -> tuple[dict[str, Any], list[dic
             continue
         if objeto.get("type") == "result":
             envoltorio = objeto
-        elif objeto.get("type") == "system" and objeto.get("subtype") == "hook_response":
+        elif objeto.get("type") == "assistant" or (
+            objeto.get("type") == "system" and objeto.get("subtype") == "hook_response"
+        ):
             eventos.append(objeto)
     if envoltorio is None:
         try:
@@ -297,7 +310,7 @@ def _leer_flujo(encargo: Encargo, salida: str) -> tuple[dict[str, Any], list[dic
 def veredicto_de_los_ganchos(
     encargo: Encargo,
     texto: str,
-    vetos: tuple[str, ...],
+    vetos: tuple[ganchos.Veto | str, ...],
     eventos: list[dict[str, Any]],
 ) -> dict[str, Any] | None:
     """Lo que va a la `Traza` en `ganchos` (RF-127). `None` si no hay hooks.
@@ -309,23 +322,61 @@ def veredicto_de_los_ganchos(
     if not encargo.ganchos:
         return None
     en_sesion: list[dict[str, Any]] = []
+    ultimo_mensaje = ""
     for evento in eventos:
+        if evento.get("type") == "assistant":
+            ultimo_mensaje = _texto_del_mensaje(evento) or ultimo_mensaje
+            continue
         dicho = f"{evento.get('stderr') or ''}{evento.get('stdout') or ''}"
         if not dicho.startswith(ganchos.PREFIJO):
             continue  # un hook que no es de los nuestros
         gancho = dicho[len(ganchos.PREFIJO) :].split("]", 1)[0]
-        en_sesion.append(
-            {
-                "gancho": gancho,
-                "bloquea": evento.get("exit_code") == ganchos.SALIDA_BLOQUEA,
-                "dice": dicho[: ganchos.TOPE_DEL_MOTIVO_EN_CARACTERES],
-            }
-        )
+        bloquea = evento.get("exit_code") == ganchos.SALIDA_BLOQUEA
+        dijo: dict[str, Any] = {
+            "gancho": gancho,
+            "bloquea": bloquea,
+            "dice": dicho[: ganchos.TOPE_DEL_MOTIVO_EN_CARACTERES],
+        }
+        if gancho == "policy" and bloquea:
+            dijo["coincidencias"] = _coincidencias(ultimo_mensaje, vetos)
+        en_sesion.append(dijo)
     final = []
     for gancho in encargo.ganchos:
         motivos = ganchos.revisar(gancho, encargo.tarea, texto, vetos)
-        final.append({"gancho": gancho, "pasa": not motivos, "motivos": motivos})
+        veredicto: dict[str, Any] = {"gancho": gancho, "pasa": not motivos, "motivos": motivos}
+        if gancho == "policy":
+            veredicto["coincidencias"] = _coincidencias(texto, vetos)
+        final.append(veredicto)
     return {"en_sesion": en_sesion, "final": final}
+
+
+def _coincidencias(
+    texto: str, vetos: tuple[ganchos.Veto | str, ...]
+) -> list[dict[str, str]]:
+    """Lo que el registro de policy guarda de cada coincidencia (RF-135)."""
+    return [
+        {
+            "nivel": hallada.veto.nivel,
+            "termino": hallada.veto.termino,
+            "encontrado": hallada.encontrado,
+        }
+        for hallada in ganchos.coincidencias_en_la_entrega(texto, vetos)
+    ]
+
+
+def _texto_del_mensaje(evento: dict[str, Any]) -> str:
+    """El texto de un mensaje del agente en el flujo del CLI."""
+    mensaje = evento.get("message")
+    contenido = mensaje.get("content") if isinstance(mensaje, dict) else None
+    if not isinstance(contenido, list):
+        return ""
+    return "".join(
+        bloque["text"]
+        for bloque in contenido
+        if isinstance(bloque, dict)
+        and bloque.get("type") == "text"
+        and isinstance(bloque.get("text"), str)
+    )
 
 
 def _tokens_de_entrada(envoltorio: dict[str, Any]) -> int | None:
