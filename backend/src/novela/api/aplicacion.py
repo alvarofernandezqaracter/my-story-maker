@@ -151,6 +151,8 @@ class Produccion:
         # bloquea por eso (D-61).
         self.demostrador = demostrador or DemostradorLean()
         self.hilos: dict[str, threading.Thread] = {}
+        # Leer el hilo anterior de una obra y registrar el nuevo van juntos (RF-166).
+        self._turno_de_arranque = threading.Lock()
         # Una pasada de entrevista a la vez en la instalacion: es lo que hace que
         # quepa en el margen del techo (SPEC1 RF-70).
         self.turno_de_entrevista = threading.BoundedSemaphore(PASADAS_DE_ENTREVISTA_A_LA_VEZ)
@@ -171,18 +173,22 @@ class Produccion:
         hilo vivo —se detuvo y se reanudo mientras una tarea seguia abierta—, el
         nuevo espera a que ese termine antes de volver al punto de guardado: dos
         caminantes sobre la misma obra se descartarian el trabajo el uno al otro.
+        Por eso leer el anterior y registrar el nuevo es una sola operacion: las
+        rutas son sincronas y corren a la vez, y dos `reanudar` seguidos que
+        leyesen el mismo anterior dejarian dos caminantes sueltos (RF-166).
         """
-        anterior = self.hilos.get(id_obra)
         caminante = self.caminante()
+        with self._turno_de_arranque:
+            anterior = self.hilos.get(id_obra)
 
-        def caminar() -> None:
-            if anterior is not None:
-                anterior.join()
-            caminante.caminar_obra(id_obra, capitulos)
+            def caminar() -> None:
+                if anterior is not None:
+                    anterior.join()
+                caminante.caminar_obra(id_obra, capitulos)
 
-        hilo = threading.Thread(target=caminar, name=f"produccion-{id_obra}", daemon=True)
-        self.hilos[id_obra] = hilo
-        hilo.start()
+            hilo = threading.Thread(target=caminar, name=f"produccion-{id_obra}", daemon=True)
+            self.hilos[id_obra] = hilo
+            hilo.start()
 
     def terminada(self, obra: Artefacto) -> bool:
         """Una obra ha terminado cuando consta su auditoria de cierre (RF-93)."""

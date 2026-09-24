@@ -830,6 +830,70 @@ Lean dentro de la puerta y su crítica; §7, `demostrador.py` y `lean/` en el
 importación nuevo, lo que Lean no ve y el caso que solo Lean pilla.
 `definitions.md` y `domain-knowledge.md` no cambian: la cronología ya era una
 vista y el formato de fecha ya estaba fijado.
+
+### 4.17 Validador formal del sistema en TLA+
+
+**El problema.** El punto de guardado, los reintentos, las versiones y la
+puerta de publicación se prueban con casos preparados: una caída sembrada en
+cada tarea, una avería por política, una obra rehecha desde el 2. Cada prueba
+comprueba el camino que alguien pensó. Lo que ninguna comprueba es la
+combinación: una caída después de un rehacer, dos órdenes del editor que llegan
+a la vez, un fallo que no es de ninguna tarea. Y la regeneración por cambio del
+lector (§4.18, que implementa la lectura interactiva) va a reescribir capítulos
+que no tienen por qué ser seguidos, justo lo que el punto de guardado da por
+hecho que no pasa. Hace falta recorrer **todos** los órdenes posibles de un
+modelo pequeño del flujo, no los que alguien escribió.
+
+**La decisión, en una frase.** El flujo de producción de una obra se especifica
+como máquina de estados en TLA+, en `backend/formal/tla/`, con tres invariantes
+de seguridad y una propiedad de vivacidad que TLC comprueba recorriendo entero
+un modelo pequeño cuya configuración está en el repositorio; cada acción del
+modelo nombra la función del código que la implementa, y cada contraejemplo que
+TLC encuentre se guarda con su traza junto al cambio que provocó.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-160 | **El modelo.** `backend/formal/tla/Produccion.tla` especifica el flujo de una obra: el alta y `poblar_mundo`; por capítulo, planificar, escribir, cribar y cerrar como una sola transacción; la auditoría de cierre que termina la versión; los reintentos de cada paso con su `al_agotarse`; la caída del proceso y el relanzamiento al arrancar; detener y reanudar; rehacer desde N; la regeneración por cambio del lector; y publicar a través de la puerta. `Produccion.cfg`, junto a él, fija el modelo pequeño que TLC recorre entero: tres capítulos, dos versiones —la segunda, un rehacer desde N o un cambio del lector—, dos intentos por paso como en `guion.toml`, un hecho de la biblia, una caída del proceso, una orden de reanudar y un fallo no previsto del caminante | `prueba` |
+| RF-161 | **Tres invariantes de seguridad**, comprobados en todo estado alcanzable: **la puerta se respeta** —ninguna versión está en el registro de publicaciones sin haber terminado y pasado la puerta—; **la versión anterior se conserva** —lo que ve una versión terminada es lo mismo que veía al terminar (RF-114)—; y **una sola producción a la vez** —toda versión salvo la última está terminada (D-40) y como mucho un caminante trabaja la obra—. Junto a ellos, como comprobaciones auxiliares, el tipo de cada variable, que un capítulo no tenga vivo lo de dos producciones distintas y que un capítulo cerrado no deje de estarlo salvo que una versión nueva lo releve (RF-92) | `prueba` |
+| RF-162 | **Una propiedad de vivacidad**: toda versión que está en producción acaba terminada o la obra acaba detenida, con su motivo. Se comprueba bajo tres hipótesis declaradas en el propio modelo: el código del servidor avanza cuando puede (equidad débil de cada paso del caminante y del registro de un arranque), el proceso caído vuelve a arrancar (equidad débil) y las caídas son finitas (`MaxCaidas`). El editor y la máquina no deben nada: sus acciones no llevan equidad | `prueba` |
+| RF-163 | **El mapeo.** `backend/formal/tla/mapeo.md` da, para cada acción del modelo, el fichero y la función que la implementan, y lo que el modelo deja fuera. La correspondencia se sostiene por revisión, no se demuestra: cambiar una función del mapeo obliga a revisar su acción y volver a pasar TLC | `inspeccion` |
+| RF-164 | **La regeneración por cambio del lector se especifica aquí y la implementa §4.18.** El lector cambia el valor de un hecho de la biblia; nace la versión siguiente, con base en la última, que reescribe solo los capítulos que usan ese hecho según sus `Mencion` en la última versión —seguidos o no— y comparte el resto sin copiarlo; la anterior se conserva (RF-114). Se admite con las mismas condiciones que rehacer (D-40) y es un segundo tipo de versión nueva junto a rehacer desde N (D-42). La versión regenerada sigue el camino normal de producción con sus reintentos y su reanudación, termina con su auditoría y solo se publica si pasa la puerta. Lo que decide §4.18 lo toma el modelo de allí: si ningún capítulo usa el hecho no nace versión, y la ficha nueva del hecho nace en la versión nueva y releva la vieja | `prueba` |
+| RF-165 | **Volver al punto de guardado descarta lo de todo capítulo no cerrado.** Lo que se caduca al volver (RF-91) es lo vivo que cuelga de cualquier capítulo que no esté cerrado en la versión en curso, no solo de los posteriores al último cerrado, y lo mismo sale del índice. Mientras las versiones solo rehacen desde N hasta el final, los cerrados son siempre 1..último y las dos reglas coinciden: el código de hoy lo cumple. La regeneración por cambio del lector reescribe capítulos sueltos, y §4.18 lo implementa junto a ella como RF-176, que es el mismo requisito visto desde el código. Sale del contraejemplo 03 | `prueba` |
+| RF-166 | **Arrancar la producción de una obra es una sola operación.** Leer qué hilo tiene la obra y registrar el nuevo, que espera a que el anterior acabe, se hacen bajo un mismo cerrojo: dos órdenes que arrancan a la vez —dos `reanudar` seguidos, o un `reanudar` y un `rehacer`— no dejan nunca dos caminantes sobre la misma obra. Sale del contraejemplo 01 (`backend/formal/tla/contraejemplos/`) | `prueba` |
+| RF-167 | **Un fallo no previsto del caminante detiene la obra y dice por qué.** Una excepción que no es la detención —una ventana que no cabe ni partiendo, una proyección que no cuadra con su contrato— deja la obra detenida con el motivo, como `detener_obra` (RF-96), y el fallo se sigue viendo. Una obra nunca se queda sin hilo, sin detener y sin terminar. Una caída del proceso no es esto: se relanza al arrancar (RF-93). Sale del contraejemplo 02 | `prueba` |
+| RF-168 | **TLC se lanza desde la batería sin gastar.** Una prueba pasa TLC con la configuración del repositorio y exige su «No error has been found». Toma el `tla2tools.jar` de la variable de entorno `NOVELA_TLA2TOOLS` y Java de `JAVA_HOME` o del `PATH`; si falta cualquiera de los dos, se salta limpia diciendo qué falta. Los ficheros de trabajo de TLC van a un directorio temporal y nunca al repositorio (RD-08) | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-66 | **El modelo es del flujo, no del contenido.** Distingue capítulos, tareas, intentos, versiones, hilos y lo que ve cada versión; no distingue escenas, el bucle de calidad dentro del capítulo, las tandas ni el índice de parecido. Los pasos del guion se reducen a tres tareas por capítulo: las dos que producen testigo y detienen al agotarse, y una que hace de las que siguen sin testigo nuevo (`critica_abierta` y `seguir`). Lo descartado al volver al punto de guardado, que ninguna versión ve, se olvida en vez de guardarse, y los hilos que esperan a otro se cuentan en vez de nombrarse | Lo que se quiere demostrar vive en el orden de las cosas —qué se escribe antes de qué, quién puede arrancar qué—, no en el texto. El bucle de calidad ya tiene sus topes enumerados en pruebas (RF-33) y las tandas su cálculo (RF-13); meterlos multiplica los estados sin tocar ninguna de las cuatro propiedades. Un modelo que TLC no termina de recorrer no demuestra nada |
+| D-67 | **La puerta es un veredicto «pasa» o «no pasa» sin decir cuál, fijado cuando la versión termina** | Así cubre los cuatro validadores de hoy y el formal de la historia (§4.16) sin depender de ninguno: si con cualquier veredicto las propiedades se sostienen, se sostienen con el que den. Se fija al terminar porque una versión terminada no cambia y pasar la puerta dos veces da lo mismo (D-59) |
+| D-68 | **Tres de seguridad y una de vivacidad, elegidas por lo que rompería el encargo.** Publicar sin puerta, perder la versión anterior y producir dos cosas a la vez son los tres fallos que una prueba de casos no garantiza haber visto; que una obra se quede parada sin decir por qué es el fallo de vivacidad que OBJ-07 y RNF-08 no toleran | El contador de intentos por debajo del tope va en el tipo de la variable: es cierto por construcción y no merece una propiedad aparte. Que los `EventoEstado` solo existan para capítulos cerrados lo garantiza la transacción de cierre, que el modelo toma como una sola acción: comprobarlo sería comprobar la forma del modelo |
+| D-69 | **El modelo vive en `backend/formal/tla/` y TLC no es dependencia del paquete.** Java y `tla2tools.jar` se instalan fuera del repositorio, con la versión y la descarga escritas en `mapeo.md` | Es una especificación del backend y va con él. TLC necesita una máquina virtual de Java que el backend no usa para nada más; exigirla haría fallar la batería en toda máquina sin ella. La prueba que se salta limpia deja el camino abierto sin convertirlo en obligación de instalación |
+
+**Qué retira.** De `validators.md` §13, la frase según la cual la comprobación
+de modelos no se adopta sobre el código: se adopta sobre el flujo de producción,
+que no es enumerable en una prueba porque sus caminos se cruzan con caídas y
+órdenes del editor.
+
+**Qué queda fuera.** Demostrar que el código implementa el modelo: la
+correspondencia es por mapeo y revisión (RF-163). Modelos grandes: TLC recorre
+el de `Produccion.cfg` y nada garantiza lo que pase con tres versiones, veinte
+capítulos o diez caídas, aunque ninguna propiedad dependa del número. Varias obras a la vez
+(§11). El contenido de lo que se escribe, el bucle de calidad y el índice
+(D-66).
+
+**De dónde sale.** §4.10 (punto de guardado y reintentos), §4.12 (versiones),
+§4.15 (puerta), §4.18 (regeneración por cambio del lector); RF-92, RF-93,
+RF-114, RF-116; D-40, D-42, D-59; OBJ-07 y RNF-08.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md` §4, el
+modelo formal del flujo y lo que cambie en él. `validators.md`: §7, la
+verificación del flujo con un comprobador de modelos; §8, los métodos de RF-160
+en adelante; y §13, retirando la comprobación de modelos de lo que queda fuera.
+`AGENTS.md`, la carpeta `backend/formal/` en «Estructura del repositorio».
+`definitions.md` y `domain-knowledge.md` no cambian: el modelo es del flujo, no
+de la ontología.
+
 ### 4.18 El cambio del lector y el PDF
 
 **El problema.** Quien lee la novela encuentra un dato que quiere distinto —«el
@@ -865,7 +929,7 @@ flowchart LR
 | RF-173 | **El hecho cambiado se versiona.** En la misma transacción, la ficha vieja recibe la marca de relevo con V+1 y nace la ficha nueva, escrita por el backend y no por un rol: el mismo cuerpo con el nombre —la descripción en un `Evento`— cambiado, cada tratamiento igual al nombre viejo cambiado también, y `sustituye` con el `id` de la vieja. V sigue viendo la vieja y V+1 la nueva (RF-113). El cambio queda en un registro propio de solo añadir, fuera de las tablas de artefactos —obra, versión, hecho, ficha nueva, nombre anterior, nombre nuevo y cuándo—, que crea la migración 11 (D-72) | `prueba` |
 | RF-174 | **Lo que reciben los que reescriben** sale del almacén, por los materiales que ya declaran sus pasos: el Planificador ve la ficha nueva en el canon, el Redactor en las voces del elenco y el Archivero en el índice de la biblia. No hay material nuevo ni instrucción añadida en ninguna ventana | `prueba` |
 | RF-175 | **La versión regenerada se produce por el camino de siempre.** Caminar la obra salta los capítulos que siguen cerrados y reescribe los relevados en orden, cada uno desde el paso 1 con los reintentos y la política de su paso (§4.10); termina con su auditoría de cierre (RF-94, RF-110) y solo se publica por la puerta (RF-146). Mientras no se publique, la publicada anterior sigue siéndolo (D-43) | `prueba` |
-| RF-176 | **Volver al punto de guardado mira todos los capítulos sin cerrar.** Lo que RF-91 caduca es lo que cuelga de todo capítulo sin cierre vivo, no solo de los posteriores al último cerrado, y el índice que se completa es el de todos los cerrados. En una obra sin cambio del lector es lo mismo de antes; en una versión que reescribe capítulos sueltos, un corte a medias de uno de ellos no deja nada suyo vivo ni toca los cerrados de detrás | `prueba` |
+| RF-176 | **Volver al punto de guardado mira todos los capítulos sin cerrar.** Lo que RF-91 caduca es lo que cuelga de todo capítulo sin cierre vivo, no solo de los posteriores al último cerrado, y el índice que se completa es el de todos los cerrados. Es RF-165, que el modelo formal pidió por su contraejemplo 03. En una obra sin cambio del lector es lo mismo de antes; en una versión que reescribe capítulos sueltos, un corte a medias de uno de ellos no deja nada suyo vivo ni toca los cerrados de detrás | `prueba` |
 | RF-177 | **Lecturas.** `GET /obras/{id}/versiones` trae de cada versión su `cambio` —hecho, nombre anterior y nombre nuevo— o vacío si nació del alta o de rehacer. La cronología de una versión resuelve un presente que apunta a una ficha relevada por un cambio del lector a la ficha que la sustituye, por `sustituye`, sin interpretar nada más. La ficha de la obra trae el nombre del destinatario y la dedicatoria, vacíos si no hay destinatario, para la portada | `prueba` |
 | RF-178 | **El PDF.** `GET /obras/{id}/pdf`, con `version` como las demás lecturas (RF-117), devuelve `application/pdf` como descarga: portada con el título, el destinatario y la dedicatoria si los hay, índice de capítulos con su página y el texto aceptado de la versión por capítulo y escena. Se fabrica en memoria al pedirlo y **no se escribe en disco ni se guarda** (RD-08). Acentos, `ñ`, `¿`, `¡` y comillas angulares salen tal cual; lo que las fuentes de serie no tienen —la raya, las comillas curvas, los puntos suspensivos de un carácter— se sustituye por su equivalente más cercano (D-75). Una versión que no existe es un 404 | `prueba` |
 | RF-179 | **La versión anterior se conserva también aquí** (RF-114): después del cambio y de producir V+1, todo lo que se sirve de V —manuscrito, capítulos, críticas, estado, hechos con la ficha vieja y su nombre, y cronología— es idéntico a antes, y los capítulos que V+1 no reescribe son las mismas filas en las dos | `prueba` |
@@ -1061,6 +1125,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.15 Validadores y puerta, RD-30, RI-18, RI-19 | `validators.md` §3 (contrato de verificación) y §7 (guardarraíles); RF-08, RF-23, RF-84, RF-116, RF-123; D-43, D-46 |
 | §4.16 La cronología en Lean | `architecture.md` §7 (qué se pierde sin cálculo determinista) y §8; `validators.md` §3 y §4; RF-85, RF-86, RF-146, RF-147; D-28, D-59 |
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
+| §4.17 Validador formal del sistema | §4.10, §4.12, §4.15 y §4.18; RF-92, RF-93, RF-114, RF-116; D-40, D-42, D-59; OBJ-07 y RNF-08 |
 | §4.18 Cambio del lector y PDF | §4.9 (menciones), §4.10 (punto de guardado) y §4.12 (versiones); D-13, D-40, D-42; RD-08; `validators.md` §10 |
 
 ## §10 Verificación y criterios de aceptación
@@ -1122,7 +1187,13 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    validadores de §4.15 con un personaje en dos lugares el mismo día no se
    publica, y el fallo queda como crítica de su capítulo. Sin Lean, la misma
    obra se publica y la respuesta dice `sin_comprobacion`.
-13. **El cambio del lector.** Sin gastar: en una obra terminada de tres
+13. **El validador formal del sistema.** TLC recorre entero el modelo de
+   `backend/formal/tla/Produccion.cfg` y termina con «No error has been
+   found»: la puerta se respeta, la versión anterior se conserva, hay una sola
+   producción a la vez y toda versión en producción acaba terminada o detenida.
+   Cada contraejemplo que salió por el camino está guardado con su traza junto
+   al modelo y enlazado al cambio que provocó.
+14. **El cambio del lector.** Sin gastar: en una obra terminada de tres
    capítulos en la que un hecho solo se menciona en el 1 y el 3, cambiarle el
    nombre abre la versión 2 con los capítulos 1 y 3 como cambiados; la 2 comparte
    el capítulo 2 —las mismas filas— y reescribe los otros dos con la ficha nueva
@@ -1147,7 +1218,8 @@ También queda fuera, del filtro de lo vetado, lo que enumera §4.14: el tema
 dicho con otras palabras y lo escrito para esquivar la lista. De la entrevista
 queda fuera lo que enumera §4.8; de las versiones, lo que enumera §4.12; de
 la puerta de publicación, lo que enumera §4.15; de la cronología en Lean, lo
-que enumera §4.16; y del cambio del lector y el PDF, lo que enumera §4.18.
+que enumera §4.16; del validador formal del sistema, lo que enumera §4.17; y
+del cambio del lector y el PDF, lo que enumera §4.18.
 
 ## §12 Decisiones abiertas
 
