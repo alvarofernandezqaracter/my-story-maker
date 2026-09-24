@@ -708,10 +708,10 @@ artefacto la imponga el rechazo del agente siguiente.
 —encargar una obra, ver su avance, leer el manuscrito— con sus componentes y
 sus llamadas dentro, y `compartido/` para el cliente de API y lo transversal.
 Las funcionalidades no se importan entre sí y solo `compartido/api/` habla con
-el servidor; lo vigilan las reglas de ESLint y una prueba de estructura. Ese cliente no se escribe: se genera del contrato
-OpenAPI que el `backend/` publica en `backend/openapi.yaml`, de modo que
-mover la frontera rompe la compilación de la interfaz en vez de romperla en
-ejecución. No hay capas de dominio en el cliente: la interfaz lanza
+el servidor; lo vigilan las reglas de ESLint y una prueba de estructura. El
+cliente de API no se escribe: se genera del contrato OpenAPI que el `backend/`
+publica en `backend/openapi.yaml`, de modo que mover la frontera rompe la
+compilación de la interfaz en vez de romperla en ejecución. No hay capas de dominio en el cliente: la interfaz lanza
 ejecuciones y muestra artefactos.
 
 ```
