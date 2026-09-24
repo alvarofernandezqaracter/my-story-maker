@@ -213,7 +213,11 @@ Valores cerrados de la capa de producción. Los vocabularios de forma textual y 
 
 **Decisión de policy:** `devuelto_al_agente`, `intento_fallido`. Lo que hizo `policy` con una coincidencia: devolverla al agente durante la sesión para que corrija, o dar el intento por fallido en el veredicto final.
 
-**Validador de la puerta:** `esquema`, `nombres`, `longitud`, `elementos_personalizados`. Qué comprobación da cada fallo de la puerta de publicación (§4).
+**Validador de la puerta:** `esquema`, `nombres`, `longitud`, `elementos_personalizados`, `cronologia`. Qué comprobación da cada fallo de la puerta de publicación (§4).
+
+**Invariante de la cronología:** `orden_temporal`, `edad_coherente`, `un_solo_lugar`, `no_reaparece`. Qué demuestra Lean, suceso a suceso, sobre la cronología de una versión antes de publicarla (§4).
+
+**Comprobación formal:** `demostrada`, `fallida`, `sin_comprobacion`. Cómo quedó la cronología en Lean al pasar la puerta: la demostró, no pudo demostrarla, o Lean no está en la máquina y no se comprobó (§4).
 
 **Tipo de contradicción:** `edad_contra_tono`, cuando el tono pedido no corresponde a la edad del destinatario, y `texto_contra_campo`, cuando un texto pegado en la entrevista dice otra cosa que un campo que la persona escribió. Lo detecta el Entrevistador y no lo resuelve: lo devuelve como pregunta, y la persona puede darlo por asumido.
 
@@ -229,7 +233,9 @@ flowchart TD
   PROC --> GAN[gancho: validar capitulo /<br/>policy]
   PROC --> NIV[nivel de veto: global /<br/>palabra del comprador / tema del comprador]
   PROC --> DPO[decision de policy: devuelto al agente /<br/>intento fallido]
-  PROC --> PUE[validador de la puerta: esquema /<br/>nombres / longitud / elementos personalizados]
+  PROC --> PUE[validador de la puerta: esquema /<br/>nombres / longitud / elementos personalizados /<br/>cronologia]
+  PROC --> INV[invariante de la cronologia: orden temporal /<br/>edad coherente / un solo lugar / no reaparece]
+  PROC --> CFO[comprobacion formal: demostrada /<br/>fallida / sin comprobacion]
 ```
 
 ```mermaid
@@ -553,7 +559,7 @@ Lo único que se pierde es el trabajo del capítulo que estaba abierto. Salvar p
 
 Con la obra terminada, el editor puede ordenar **«rehaz desde el capítulo N»**. En una sola transacción nace la versión siguiente, que anota como cambiados los capítulos de N al último; lo que colgaba de ellos recibe la marca de relevo; sus fragmentos salen del índice; y la constancia de auditoría baja a N-1 para que la versión nueva se audite al cerrar. Después la producción arranca por el camino de siempre: vuelve al último capítulo cerrado, que es el N-1, y sigue desde N. Se rehace hasta el final y no un capítulo suelto porque lo que viene detrás se escribió sobre el mundo del capítulo rehecho. Rehacer no se admite mientras la obra produce ni sobre una versión sin terminar.
 
-**Publicar** una versión terminada es una orden aparte y pasa por un solo sitio del código, que es donde está la **puerta de publicación**: cuatro comprobaciones deterministas sobre lo que ve esa versión, sin agentes y sin gastar.
+**Publicar** una versión terminada es una orden aparte y pasa por un solo sitio del código, que es donde está la **puerta de publicación**: cinco comprobaciones deterministas sobre lo que ve esa versión, sin agentes y sin gastar.
 
 | Validador | Qué comprueba |
 | --- | --- |
@@ -561,8 +567,11 @@ Con la obra terminada, el editor puede ordenar **«rehaz desde el capítulo N»*
 | `nombres` | Que los nombres de la biblia —el del destinatario y los de personajes, lugares, objetos y facciones, con sus tratamientos— se escriban tal cual, y que el del destinatario aparezca en algún capítulo |
 | `longitud` | Que cada capítulo tenga entre 1 000 y 4 000 palabras de texto aceptado. El rango está en el guion y es el mismo para todas las obras |
 | `elementos_personalizados` | Que todo hecho de la biblia con licencia `personal`, lo que sale de la vida del destinatario, se use en algún capítulo según sus menciones |
+| `cronologia` | Que Lean demuestre los cuatro invariantes de la cronología de la versión, y que toda fecha escrita sea ISO parcial |
 
-Si alguno falla, la versión no se publica y la orden responde con la lista de fallos, cada uno con su validador y su capítulo. La puerta no regenera nada: rehacer sigue siendo una orden del editor. Su resultado no se guarda: se deriva cada vez que se pide, y se puede pedir antes de publicar. Sin pedir versión, la API sirve la versión de referencia: la publicada si la hay y, si no, la última; y el manuscrito dice cuál sirve y si está publicada. Rehacer y publicar son decisiones editoriales, no mantenimiento: nada obliga a darlas.
+**La cronología, en Lean.** La cronología de la versión —cada `EventoEstado` y cada `Evento` del mundo con su fecha, su lugar y sus presentes, y quién muere en cada uno— se vuelca a un módulo de Lean 4 que importa los invariantes del proyecto versionado en `backend/src/novela/lean/`. Las fechas pasan a intervalos de días, así que con una fecha parcial solo falla lo que falla para cualquier día del intervalo. Hay un teorema por invariante y por suceso, y Lean los demuestra con `decide` al ejecutar `lake build` en un directorio temporal que se borra al terminar. Cada teorema que no se demuestra es un fallo `cronologia` del capítulo de su suceso. Si Lean no está en la máquina, la cronología no se comprueba, la versión se publica igual y tanto la puerta como la respuesta de publicar dicen `sin_comprobacion`: que falte la herramienta no tumba una versión. Con Lean presente, lo que no se demuestra no se publica.
+
+Si alguno falla, la versión no se publica y la orden responde con la lista de fallos, cada uno con su validador y su capítulo. Los fallos de la cronología vuelven además como `Crítica` bloqueante de su capítulo, una por suceso e invariante, escrita por el backend; volver a pedir la publicación no las repite. La puerta no regenera nada: rehacer sigue siendo una orden del editor. Su resultado no se guarda: se deriva cada vez que se pide, y se puede pedir antes de publicar. Sin pedir versión, la API sirve la versión de referencia: la publicada si la hay y, si no, la última; y el manuscrito dice cuál sirve y si está publicada. Rehacer y publicar son decisiones editoriales, no mantenimiento: nada obliga a darlas.
 
 ### Cuántas veces se intenta cada paso
 
@@ -691,6 +700,11 @@ backend/
                        con la comparacion normalizada de lo vetado
     validadores.py     los validadores programaticos: funciones puras que usan
                        el hook de forma y la puerta de publicacion
+    demostrador.py     el volcado de la cronologia a Lean y la orden
+                       `lake build` que la demuestra en la puerta, en un
+                       directorio temporal
+    lean/              el proyecto de Lean con los invariantes de la
+                       cronologia: entrada versionada, que no se escribe
     tareas/            una carpeta por tipo de tarea del censo (§2), con su
                        contrato, su prompt, su esquema y, si le toca criba, sus
                        contratos de verificacion por dimension
@@ -778,7 +792,7 @@ Tres dimensiones dejan de ser fiables al pasar a agentes, y conviene decirlo en 
 
 | Dimensión | Por qué falla | Cómo se compensa dentro del sistema |
 | --- | --- | --- |
-| Coherencia temporal | Aritmética de calendario y distancias: sumar días, comparar duraciones, detectar un viaje imposible. Es exactamente lo que peor hace un modelo de lenguaje, y falla en silencio | El Contable emite en cada `EventoEstado` la fecha y el lugar resultantes ya calculados y explícitos. El Verificador compara dos valores escritos en lugar de calcularlos |
+| Coherencia temporal | Aritmética de calendario y distancias: sumar días, comparar duraciones, detectar un viaje imposible. Es exactamente lo que peor hace un modelo de lenguaje, y falla en silencio | El Contable emite en cada `EventoEstado` la fecha y el lugar resultantes ya calculados y explícitos. El Verificador compara dos valores escritos en lugar de calcularlos. Antes de publicar, Lean demuestra sobre esos mismos datos que la cronología no se contradice (§4): no calcula nada para los agentes, solo decide si la versión sale |
 | Fatiga léxica | Exige contar frecuencias de lemas sobre todo el corpus previo. Un agente no puede contar 300 páginas y estimarlo a ojo no es una medida | El Editor de estilo mantiene un registro acumulado de imágenes y muletillas ya usadas, actualizado al cerrar cada capítulo, y comprueba contra esa lista en vez de contra el texto |
 | Léxico vetado | Cotejo exhaustivo contra una lista larga. Un agente revisa bien veinte términos, no mil | Lista corta y priorizada por capítulo, derivada del `Registro lingüístico` de las escenas en juego, no la lista global |
 
