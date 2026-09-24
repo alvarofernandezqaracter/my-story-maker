@@ -110,6 +110,14 @@ AL_AGOTARSE: tuple[str, ...] = ("detener_obra", "critica_abierta", "seguir")
 # `validar_capitulo` mira la forma de lo entregado y `policy`, lo vetado.
 GANCHOS: tuple[str, ...] = ("validar_capitulo", "policy")
 
+# Que validador da cada fallo de la puerta de publicacion (SPEC1 4.15, RF-140).
+VALIDADOR_DE_LA_PUERTA: tuple[str, ...] = (
+    "esquema",
+    "nombres",
+    "longitud",
+    "elementos_personalizados",
+)
+
 # Las tres memorias (architecture.md 3). Cada artefacto declara a cual pertenece
 # porque es lo que permite al Archivero retirar la de capitulo sin decidir nada.
 MEMORIA: tuple[str, ...] = ("tarea", "capitulo", "obra")

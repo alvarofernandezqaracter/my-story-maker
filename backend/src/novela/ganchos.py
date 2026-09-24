@@ -13,9 +13,9 @@ y volver a entregar. Si pasa, sale con 0.
 
 **No abre la base de datos, no escribe nada en disco y no llama a ningun
 modelo.** El esquema y el contrato los lee de `tareas/`, que es entrada
-versionada; la lista de vetos y la reserva de la vuelta le llegan en variables
-de entorno. Quien registra el veredicto es el ejecutor: el almacen sigue con un
-solo escritor.
+versionada; la lista de vetos, los nombres de la biblia y la reserva de la
+vuelta le llegan en variables de entorno. Quien registra el veredicto es el
+ejecutor: el almacen sigue con un solo escritor.
 
 Las comprobaciones son funciones puras y el ejecutor las vuelve a aplicar, con
 estas mismas funciones, a lo que el agente entrego al final: ese es el
@@ -27,8 +27,10 @@ import json
 import os
 import sys
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Any
 
+from novela import validadores
 from novela.ajustes import CARACTERES_POR_TOKEN_ESTIMADOS
 from novela.tareas import contrato_de_tarea, esquema_de_tarea
 from novela.vocabularios import GANCHOS
@@ -36,6 +38,8 @@ from novela.vocabularios import GANCHOS
 # Lo que el ejecutor le pasa al hook por el entorno del subagente (D-46).
 VARIABLE_DE_VETOS = "NOVELA_GANCHO_VETOS"
 VARIABLE_DE_RESERVA = "NOVELA_GANCHO_RESERVA"
+# Los nombres de la biblia, para escribirlos tal cual (SPEC1 RF-145).
+VARIABLE_DE_NOMBRES = "NOVELA_GANCHO_NOMBRES"
 
 # Con esto empieza todo lo que dice un hook: es lo que permite al agente saber
 # que el mensaje es del sistema y al ejecutor saber de que hook es cada evento.
@@ -50,7 +54,20 @@ SALIDA_PASA = 0
 SALIDA_BLOQUEA = 2
 
 Entrega = dict[str, Any]
-Comprobacion = Callable[[Entrega, str], list[str]]
+
+
+@dataclass(frozen=True)
+class DatosDeLaObra:
+    """Lo que una comprobacion necesita saber de la obra, llegado por el entorno.
+
+    No es la ventana: al agente no le llega nada de esto salvo lo que una
+    comprobacion le diga de su propio texto.
+    """
+
+    nombres: tuple[str, ...] = ()
+
+
+Comprobacion = Callable[[Entrega, str, DatosDeLaObra], list[str]]
 
 
 class EntregaIlegible(ValueError):
@@ -95,13 +112,17 @@ def _textos_de_prosa(entrega: Entrega) -> list[str]:
 # --- validar_capitulo: la forma, nada del contenido (RF-123) -----------------
 
 
-def _trae_la_lista_de_artefactos(entrega: Entrega, tarea: str) -> list[str]:
+def _trae_la_lista_de_artefactos(
+    entrega: Entrega, tarea: str, datos: DatosDeLaObra
+) -> list[str]:
     if not isinstance(entrega.get("artefactos"), list):
         return ["falta la lista `artefactos`"]
     return []
 
 
-def _cada_artefacto_con_tipo_y_cuerpo(entrega: Entrega, tarea: str) -> list[str]:
+def _cada_artefacto_con_tipo_y_cuerpo(
+    entrega: Entrega, tarea: str, datos: DatosDeLaObra
+) -> list[str]:
     fallos: list[str] = []
     for posicion, artefacto in enumerate(_artefactos(entrega), start=1):
         if not isinstance(artefacto, dict):
@@ -114,7 +135,9 @@ def _cada_artefacto_con_tipo_y_cuerpo(entrega: Entrega, tarea: str) -> list[str]
     return fallos
 
 
-def _solo_tipos_que_el_rol_escribe(entrega: Entrega, tarea: str) -> list[str]:
+def _solo_tipos_que_el_rol_escribe(
+    entrega: Entrega, tarea: str, datos: DatosDeLaObra
+) -> list[str]:
     permitidos = set(contrato_de_tarea(tarea)["escribe"])
     ajenos = sorted(
         {
@@ -128,7 +151,9 @@ def _solo_tipos_que_el_rol_escribe(entrega: Entrega, tarea: str) -> list[str]:
     return [f"`{tipo}` no es un tipo que esta tarea escriba" for tipo in ajenos]
 
 
-def _entrega_el_tipo_de_su_esquema(entrega: Entrega, tarea: str) -> list[str]:
+def _entrega_el_tipo_de_su_esquema(
+    entrega: Entrega, tarea: str, datos: DatosDeLaObra
+) -> list[str]:
     esquema = json.loads(esquema_de_tarea(tarea))
     tipo = esquema["tipo"]
     campos = list(esquema.get("cuerpo", {}))
@@ -149,7 +174,7 @@ def _entrega_el_tipo_de_su_esquema(entrega: Entrega, tarea: str) -> list[str]:
     return fallos
 
 
-def _borradores_con_texto(entrega: Entrega, tarea: str) -> list[str]:
+def _borradores_con_texto(entrega: Entrega, tarea: str, datos: DatosDeLaObra) -> list[str]:
     vacios = sum(
         1
         for artefacto in _artefactos(entrega)
@@ -164,6 +189,19 @@ def _borradores_con_texto(entrega: Entrega, tarea: str) -> list[str]:
     return [f"{vacios} `Borrador` sin `texto`"] if vacios else []
 
 
+def _nombres_como_en_la_biblia(entrega: Entrega, tarea: str, datos: DatosDeLaObra) -> list[str]:
+    """Los nombres de la biblia se escriben tal cual (RF-142, RF-145)."""
+    encontrados: list[tuple[str, str]] = []
+    for texto in _textos_de_prosa(entrega):
+        for par in validadores.nombres_mal_escritos(texto, datos.nombres):
+            if par not in encontrados:
+                encontrados.append(par)
+    return [
+        f"«{escrito}» no es como lo escribe la biblia: es «{nombre}»"
+        for escrito, nombre in encontrados
+    ]
+
+
 # La lista a la que se suman comprobaciones sin tocar el enganche (D-48).
 COMPROBACIONES_DE_CAPITULO: list[Comprobacion] = [
     _trae_la_lista_de_artefactos,
@@ -171,6 +209,7 @@ COMPROBACIONES_DE_CAPITULO: list[Comprobacion] = [
     _solo_tipos_que_el_rol_escribe,
     _entrega_el_tipo_de_su_esquema,
     _borradores_con_texto,
+    _nombres_como_en_la_biblia,
 ]
 
 
@@ -197,7 +236,14 @@ def _sin_nada_vetado(entrega: Entrega, vetos: Sequence[str]) -> list[str]:
 # --- El veredicto -----------------------------------------------------------
 
 
-def revisar(gancho: str, tarea: str, texto: str, vetos: Sequence[str] = ()) -> list[str]:
+def revisar(
+    gancho: str,
+    tarea: str,
+    texto: str,
+    vetos: Sequence[str] = (),
+    *,
+    nombres: Sequence[str] = (),
+) -> list[str]:
     """Lo que no pasa de lo entregado, segun ese hook. Vacio si pasa.
 
     Es la funcion que usan a la vez el hook, dentro de la sesion, y el ejecutor,
@@ -214,8 +260,9 @@ def revisar(gancho: str, tarea: str, texto: str, vetos: Sequence[str] = ()) -> l
     if gancho == "policy":
         return _sin_nada_vetado(entrega, vetos)
     fallos: list[str] = []
+    datos = DatosDeLaObra(nombres=tuple(nombres))
     for comprobacion in COMPROBACIONES_DE_CAPITULO:
-        fallos.extend(comprobacion(entrega, tarea))
+        fallos.extend(comprobacion(entrega, tarea, datos))
     return fallos
 
 
@@ -260,6 +307,16 @@ def _vetos_del_entorno() -> list[str]:
     return [veto for veto in vetos if isinstance(veto, str)] if isinstance(vetos, list) else []
 
 
+def _nombres_del_entorno() -> list[str]:
+    try:
+        nombres = json.loads(os.environ.get(VARIABLE_DE_NOMBRES, "") or "[]")
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(nombres, list):
+        return []
+    return [nombre for nombre in nombres if isinstance(nombre, str)]
+
+
 def _reserva_del_entorno() -> int:
     try:
         return int(os.environ.get(VARIABLE_DE_RESERVA, "0"))
@@ -289,7 +346,7 @@ def principal(argumentos: Sequence[str], entrada: str) -> tuple[int, str, str]:
     texto = datos.get("last_assistant_message") or ""
     if not isinstance(texto, str):
         texto = ""
-    fallos = revisar(gancho, tarea, texto, _vetos_del_entorno())
+    fallos = revisar(gancho, tarea, texto, _vetos_del_entorno(), nombres=_nombres_del_entorno())
     if not fallos:
         return SALIDA_PASA, f"{PREFIJO}{gancho}] pasa", ""
     if not cabe_la_vuelta(texto, _reserva_del_entorno()):

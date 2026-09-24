@@ -54,6 +54,8 @@ from novela.api.modelos import (
     PeticionDeRehacer,
     Progreso,
     Publicacion,
+    PuertaDePublicacion,
+    RechazoDePublicacion,
     Suceso,
     TrazaServida,
     UnidadDelManuscrito,
@@ -677,23 +679,60 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
             estado="en produccion",
         )
 
-    @app.post("/obras/{id_obra}/versiones/{numero}/publicar")
+    @app.post(
+        "/obras/{id_obra}/versiones/{numero}/publicar",
+        response_model=Publicacion,
+        responses={
+            409: {
+                "model": RechazoDePublicacion,
+                "description": (
+                    "No se publica: la version no ha terminado, o no pasa la puerta y "
+                    "`puerta` dice que fallo y en que capitulo (RI-18)"
+                ),
+            }
+        },
+    )
     def publicar(
         id_obra: IdObra,
         numero: Annotated[int, Path(ge=1, description="Version que se publica")],
         casa: ProduccionDep,
-    ) -> Publicacion:
-        """Publicar es una orden: terminar no publica (RF-116)."""
+    ) -> Publicacion | JSONResponse:
+        """Publicar es una orden: terminar no publica (RF-116), y la version pasa
+        antes por la puerta (RF-146). Si no pasa, no se publica y se explica."""
         _obra_o_404(casa, id_obra)
         try:
-            publicada_en = versiones.publicar(casa.almacen, id_obra, numero)
+            publicada_en = versiones.publicar(casa.almacen, id_obra, numero, casa.catalogo)
         except KeyError as error:
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND, f"La obra {id_obra} no tiene version {numero}"
             ) from error
         except VersionNoAdmitida as error:
             raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+        except versiones.PuertaNoSuperada as rechazo:
+            return JSONResponse(
+                status_code=status.HTTP_409_CONFLICT,
+                content=RechazoDePublicacion(
+                    detail=str(rechazo),
+                    puerta=PuertaDePublicacion.model_validate(rechazo.resultado),
+                ).model_dump(),
+            )
         return Publicacion(id_obra=id_obra, version=numero, publicada_en=publicada_en)
+
+    @app.get("/obras/{id_obra}/versiones/{numero}/puerta")
+    def ver_puerta(
+        id_obra: IdObra,
+        numero: Annotated[int, Path(ge=1, description="Version que se comprueba")],
+        casa: ProduccionDep,
+    ) -> PuertaDePublicacion:
+        """La puerta pasada ahora sobre la version, sin publicar nada (RF-147)."""
+        _obra_o_404(casa, id_obra)
+        try:
+            resultado = versiones.puerta(casa.almacen, id_obra, numero, casa.catalogo)
+        except KeyError as error:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, f"La obra {id_obra} no tiene version {numero}"
+            ) from error
+        return PuertaDePublicacion.model_validate(resultado)
 
     # --- RI-08. Ver la ejecucion en vivo -----------------------------------
 

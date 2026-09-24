@@ -90,6 +90,9 @@ class Ventana:
     # el texto de la ventana**: viaja aparte, hasta el hook, y al agente solo le
     # llega lo que encontro en su propio texto.
     vetos: tuple[str, ...] = ()
+    # Los nombres de la biblia, para que `validar_capitulo` compruebe que se
+    # escriben tal cual (SPEC1 RF-145). Tampoco entran en el texto de la ventana.
+    nombres: tuple[str, ...] = ()
 
 
 Constructor = Callable[[Peticion], Material]
@@ -253,6 +256,43 @@ def vetos_del_encargo(almacen: Almacen, encargo: Encargo) -> tuple[str, ...]:
     return tuple(veto for veto in vetos if isinstance(veto, str) and veto)
 
 
+# Los hechos de la biblia que tienen nombre propio: el `Evento` se conoce por su
+# descripcion, y una descripcion no es un nombre que haya que escribir tal cual.
+TIPOS_CON_NOMBRE: tuple[str, ...] = ("Personaje", "Lugar", "Objeto", "Faccion")
+
+
+def nombres_de_la_biblia(
+    almacen: Almacen, id_obra: str, *, version: int | None = None
+) -> tuple[str, ...]:
+    """El nombre del destinatario y el `nombre` y los `tratamientos` de cada
+    ficha con nombre, tal como estan escritos (SPEC1 RF-142).
+
+    Copia campos sin interpretarlos: es proyeccion, no decision.
+    """
+    nombres: list[str] = []
+    obra = almacen.leer_obra(id_obra)
+    destinatario = obra.cuerpo.get("destinatario") if obra is not None else None
+    if isinstance(destinatario, dict) and isinstance(destinatario.get("nombre"), str):
+        nombres.append(destinatario["nombre"])
+    for tipo in TIPOS_CON_NOMBRE:
+        for ficha in almacen.listar(tipo, id_obra, version=version):
+            candidatos = [ficha.cuerpo.get("nombre")]
+            tratamientos = ficha.cuerpo.get("tratamientos")
+            if isinstance(tratamientos, list):
+                candidatos += tratamientos
+            for nombre in candidatos:
+                if isinstance(nombre, str) and nombre and nombre not in nombres:
+                    nombres.append(nombre)
+    return tuple(nombres)
+
+
+def nombres_del_encargo(almacen: Almacen, encargo: Encargo) -> tuple[str, ...]:
+    """Lo que el hook `validar_capitulo` necesita para mirar los nombres."""
+    if "validar_capitulo" not in encargo.ganchos:
+        return ()
+    return nombres_de_la_biblia(almacen, encargo.id_obra)
+
+
 def _recuerdos_del_destinatario(p: Peticion) -> Filas:
     """Lo que el editor aporto de su vida, como dato delimitado (RD-16)."""
     return _cuerpos(p.almacen.listar("Recuerdo", p.id_obra))
@@ -410,6 +450,7 @@ def ensamblar(
         tokens=estimar_tokens(texto),
         recuperaciones=peticion.recuperaciones,
         vetos=vetos_del_encargo(almacen, encargo),
+        nombres=nombres_del_encargo(almacen, encargo),
     )
 
 

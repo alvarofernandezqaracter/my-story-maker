@@ -34,6 +34,7 @@ source_modules =
     novela.vocabularios
     novela.ejecutor
     novela.ganchos
+    novela.validadores
 forbidden_modules =
     sqlite3
     sqlite_vec
@@ -58,6 +59,7 @@ source_modules =
     novela.vocabularios
     novela.ejecutor
     novela.ganchos
+    novela.validadores
 forbidden_modules =
     pydantic
     fastapi
@@ -72,3 +74,16 @@ forbidden_modules =
     novela.nucleo
     novela.api
     novela.ejecutor
+
+[importlinter:contract:validadores-puros]
+name = Los validadores son funciones puras: no leen el almacen ni las tareas
+type = forbidden
+source_modules =
+    novela.validadores
+forbidden_modules =
+    novela.almacen
+    novela.nucleo
+    novela.api
+    novela.ejecutor
+    novela.ganchos
+    novela.tareas

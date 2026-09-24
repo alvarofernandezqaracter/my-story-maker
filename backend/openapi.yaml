@@ -552,7 +552,10 @@ paths:
   /obras/{id_obra}/versiones/{numero}/publicar:
     post:
       summary: Publicar
-      description: 'Publicar es una orden: terminar no publica (RF-116).'
+      description: 'Publicar es una orden: terminar no publica (RF-116), y la version
+        pasa
+
+        antes por la puerta (RF-146). Si no pasa, no se publica y se explica.'
       operationId: publicar_obras__id_obra__versiones__numero__publicar_post
       parameters:
       - name: id_obra
@@ -579,6 +582,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Publicacion'
+        '409':
+          description: 'No se publica: la version no ha terminado, o no pasa la puerta
+            y `puerta` dice que fallo y en que capitulo (RI-18)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RechazoDePublicacion'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/versiones/{numero}/puerta:
+    get:
+      summary: Ver Puerta
+      description: La puerta pasada ahora sobre la version, sin publicar nada (RF-147).
+      operationId: ver_puerta_obras__id_obra__versiones__numero__puerta_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: numero
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          description: Version que se comprueba
+          title: Numero
+        description: Version que se comprueba
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PuertaDePublicacion'
         '422':
           description: Validation Error
           content:
@@ -1195,6 +1241,32 @@ components:
       - eventos
       title: EstadoPlegado
       description: El estado plegado hasta el capitulo indicado, y el log de eventos.
+    FalloDeLaPuerta:
+      properties:
+        validador:
+          type: string
+          enum:
+          - esquema
+          - nombres
+          - longitud
+          - elementos_personalizados
+          title: Validador
+        capitulo:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo
+          description: Vacio si el fallo no es de ningun capitulo
+        detalle:
+          type: string
+          title: Detalle
+      type: object
+      required:
+      - validador
+      - capitulo
+      - detalle
+      title: FalloDeLaPuerta
+      description: Lo que no pasa, de que validador y en que capitulo.
     FichaDeObra:
       properties:
         id_obra:
@@ -1586,6 +1658,50 @@ components:
       - version
       - publicada_en
       title: Publicacion
+    PuertaDePublicacion:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        version:
+          type: integer
+          title: Version
+        terminada:
+          type: boolean
+          title: Terminada
+          description: Sin terminar no se publica aunque pase
+        pasa:
+          type: boolean
+          title: Pasa
+        fallos:
+          items:
+            $ref: '#/components/schemas/FalloDeLaPuerta'
+          type: array
+          title: Fallos
+      type: object
+      required:
+      - id_obra
+      - version
+      - terminada
+      - pasa
+      - fallos
+      title: PuertaDePublicacion
+      description: El resultado de pasar la puerta sobre una version. Se deriva al
+        pedirlo.
+    RechazoDePublicacion:
+      properties:
+        detail:
+          type: string
+          title: Detail
+        puerta:
+          anyOf:
+          - $ref: '#/components/schemas/PuertaDePublicacion'
+          - type: 'null'
+      type: object
+      required:
+      - detail
+      title: RechazoDePublicacion
+      description: Por que no se publico. `puerta` viene si lo que fallo fue la puerta.
     Suceso:
       properties:
         origen:

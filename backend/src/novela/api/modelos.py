@@ -9,7 +9,7 @@ from typing import Annotated, Any, Literal, get_args
 
 from pydantic import BaseModel, Field
 
-from novela.vocabularios import TIPO_DE_CONTRADICCION
+from novela.vocabularios import TIPO_DE_CONTRADICCION, VALIDADOR_DE_LA_PUERTA
 
 
 class Destinatario(BaseModel):
@@ -254,6 +254,39 @@ class Publicacion(BaseModel):
     id_obra: str
     version: int
     publicada_en: str
+
+
+# --- La puerta de publicacion (SPEC1 4.15) -----------------------------------
+
+ValidadorDeLaPuerta = Literal["esquema", "nombres", "longitud", "elementos_personalizados"]
+assert get_args(ValidadorDeLaPuerta) == VALIDADOR_DE_LA_PUERTA, (
+    "El borde y el vocabulario de validadores de la puerta no dicen lo mismo"
+)
+
+
+class FalloDeLaPuerta(BaseModel):
+    """Lo que no pasa, de que validador y en que capitulo."""
+
+    validador: ValidadorDeLaPuerta
+    capitulo: int | None = Field(description="Vacio si el fallo no es de ningun capitulo")
+    detalle: str
+
+
+class PuertaDePublicacion(BaseModel):
+    """El resultado de pasar la puerta sobre una version. Se deriva al pedirlo."""
+
+    id_obra: str
+    version: int
+    terminada: bool = Field(description="Sin terminar no se publica aunque pase")
+    pasa: bool
+    fallos: list[FalloDeLaPuerta]
+
+
+class RechazoDePublicacion(BaseModel):
+    """Por que no se publico. `puerta` viene si lo que fallo fue la puerta."""
+
+    detail: str
+    puerta: PuertaDePublicacion | None = None
 
 
 # --- La entrevista que completa el brief (SPEC1 4.8) -------------------------

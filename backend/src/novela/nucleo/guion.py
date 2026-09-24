@@ -143,9 +143,27 @@ def _a_paso(bruto: dict[str, Any]) -> Paso:
     )
 
 
+def _palabras_por_capitulo(bruto: dict[str, Any]) -> tuple[int, int]:
+    """El rango de longitud del capitulo, o el guion no carga (RF-143)."""
+    capitulo = bruto.get("capitulo")
+    if not isinstance(capitulo, dict):
+        raise GuionInvalido("el guion no declara `[capitulo]` con su rango de palabras")
+    rango = (capitulo.get("palabras_minimas"), capitulo.get("palabras_maximas"))
+    for valor in rango:
+        if not isinstance(valor, int) or isinstance(valor, bool) or valor < 1:
+            raise GuionInvalido(f"`[capitulo]` declara {valor!r} palabras")
+    minimo, maximo = rango
+    assert isinstance(minimo, int) and isinstance(maximo, int)
+    if minimo > maximo:
+        raise GuionInvalido(f"`[capitulo]`: el minimo {minimo} pasa del maximo {maximo}")
+    return minimo, maximo
+
+
 _BRUTO = _leer()
 
 VERSION: int = _BRUTO["version"]
+
+PALABRAS_POR_CAPITULO: tuple[int, int] = _palabras_por_capitulo(_BRUTO)
 
 PASOS: tuple[Paso, ...] = tuple(_a_paso(p) for p in _BRUTO["paso"])
 
