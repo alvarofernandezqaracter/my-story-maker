@@ -156,6 +156,15 @@ class Caminante:
                 self._auditar_si_toca(id_obra, numero, capitulos)
         except ProduccionDetenida:
             return informes
+        except Exception as error:
+            # Un fallo que no es de ninguna tarea —una ventana que no cabe ni
+            # partiendo, una proyeccion incompleta— mataba el hilo y dejaba la
+            # obra ni detenida ni terminada, sin nadie que la moviese (RF-167).
+            # Se detiene con su motivo, como `detener_obra`, y se deja subir.
+            self.almacen.detener(
+                id_obra, f"fallo no previsto del caminante: {type(error).__name__}: {error}"
+            )
+            raise
         return informes
 
     def volver_al_punto_de_guardado(self, id_obra: str) -> int:

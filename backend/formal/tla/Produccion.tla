@@ -261,13 +261,14 @@ Fin(i) ==
                     foto, cambiados, tipo, publicada, publicadas, rechazadas, escrito,
                     gen, nh, ultimo, caidas, reanudaciones, fallos >>
 
-(* Una excepcion que no es ProduccionDetenida sale de caminar_obra: hoy el  *)
-(* hilo muere sin mas.                                                     *)
+(* Una excepcion que no es ProduccionDetenida sale de caminar_obra: la obra *)
+(* queda detenida con su motivo y el hilo acaba (RF-167, contraejemplo 02). *)
 FalloNoPrevisto(i) ==
     /\ Activo(i) /\ fallos < MaxFallos
     /\ fallos' = fallos + 1
+    /\ detenida' = TRUE
     /\ hilos' = Acabar(i, hilos)
-    /\ UNCHANGED << proceso, detenida, auditada, poblado, nv, terminada, veredicto,
+    /\ UNCHANGED << proceso, auditada, poblado, nv, terminada, veredicto,
                     foto, cambiados, tipo, publicada, publicadas, rechazadas, escrito,
                     gen, nh, ultimo, caidas, reanudaciones >>
 

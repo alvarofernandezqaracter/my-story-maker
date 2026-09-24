@@ -11,8 +11,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-from dobles import EjecutorFingido
+import pytest
+
+from dobles import CatalogoFingido, EjecutorFingido
+from novela.almacen.artefactos import abrir_almacen
 from novela.api.aplicacion import Produccion
+from novela.nucleo import presupuesto
+from novela.nucleo.caminante import Caminante
 
 
 class _HilosLentos(dict[str, threading.Thread]):
@@ -64,3 +69,28 @@ def test_dos_arranques_a_la_vez_no_dejan_dos_caminantes(tmp_path: Path) -> None:
         assert cuenta["pico"] == 1
     finally:
         casa.cerrar()
+
+
+def test_un_fallo_no_previsto_detiene_la_obra_y_dice_por_que(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Contraejemplo 02 (RF-167): una excepcion que no es la detencion mataba el
+    hilo y dejaba la obra ni detenida ni terminada, sin que nada la moviese."""
+    almacen = abrir_almacen(tmp_path / "fallo.sqlite3")
+    try:
+        id_obra = almacen.crear_obra(
+            {"titulo": "T", "epoca": "Sevilla, 1587", "premisa": "P", "capitulos_objetivo": 2}
+        )
+        caminante = Caminante(almacen, EjecutorFingido(), catalogo=CatalogoFingido())  # type: ignore[arg-type]
+
+        def no_cabe(id_obra: str, numero: int) -> Any:
+            raise presupuesto.NoCabeNiPartiendo("la ventana no cabe y no hay en que partirla")
+
+        monkeypatch.setattr(caminante, "caminar_capitulo", no_cabe)
+        with pytest.raises(presupuesto.NoCabeNiPartiendo):
+            caminante.caminar_obra(id_obra, 2)
+        assert almacen.esta_detenida(id_obra)
+        motivo = almacen.motivo_de_la_detencion(id_obra) or ""
+        assert "NoCabeNiPartiendo" in motivo
+    finally:
+        almacen.cerrar()
