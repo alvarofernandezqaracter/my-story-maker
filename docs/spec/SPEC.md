@@ -1237,6 +1237,8 @@ lleva su tag `spec-vX.Y.Z` sobre el último commit de su ciclo, y los de antes d
 | `c203909` | 2026-09-21 | feat(idioma): 1.29.0, §12 los dos umbrales de VD-14 salen de config.json |
 | `d006d24` | 2026-09-21 | docs(spec): §17 regenerada para 1.29.0 |
 | `ad0aa68` | 2026-09-21 | docs(spec): 1.30.0, §9 VD-13 se queda en el reparto y nada mas |
+| `4fecdcc` | 2026-09-21 | docs(spec): §17 regenerada para 1.30.0 |
+| `38c3116` | 2026-09-24 | feat(web): 1.31.0, §19 el taller pasa a tablero por estados, al estilo de jira |
 
 ```
 git -c i18n.logOutputEncoding=UTF-8 log --reverse \n    --pretty='| `%h` | %ad | %s |' --date=short spec-v1.0.0~1..HEAD -- docs/spec/
