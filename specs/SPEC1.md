@@ -753,6 +753,66 @@ comparación de nombres no ve; y §8, los métodos de RF-140 a RF-147, RD-30, RI
 y RI-19. `definitions.md` y `domain-knowledge.md` no cambian: el elemento
 personalizado es un hecho `personal`, que ya existía.
 
+### 4.17 Validador formal del sistema en TLA+
+
+**El problema.** El punto de guardado, los reintentos, las versiones y la
+puerta de publicación se prueban con casos preparados: una caída sembrada en
+cada tarea, una avería por política, una obra rehecha desde el 2. Cada prueba
+comprueba el camino que alguien pensó. Lo que ninguna comprueba es la
+combinación: una caída después de un rehacer, dos órdenes del editor que llegan
+a la vez, un fallo que no es de ninguna tarea. Y la regeneración por cambio del
+lector (§4.18, que implementa la lectura interactiva) va a reescribir capítulos
+que no tienen por qué ser seguidos, justo lo que el punto de guardado da por
+hecho que no pasa. Hace falta recorrer **todos** los órdenes posibles de un
+modelo pequeño del flujo, no los que alguien escribió.
+
+**La decisión, en una frase.** El flujo de producción de una obra se especifica
+como máquina de estados en TLA+, en `backend/formal/tla/`, con tres invariantes
+de seguridad y una propiedad de vivacidad que TLC comprueba recorriendo entero
+un modelo pequeño cuya configuración está en el repositorio; cada acción del
+modelo nombra la función del código que la implementa, y cada contraejemplo que
+TLC encuentre se guarda con su traza junto al cambio que provocó.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-160 | **El modelo.** `backend/formal/tla/Produccion.tla` especifica el flujo de una obra: el alta y `poblar_mundo`; por capítulo, planificar, escribir, cribar y cerrar como una sola transacción; la auditoría de cierre que termina la versión; los reintentos de cada paso con su `al_agotarse`; la caída del proceso y el relanzamiento al arrancar; detener y reanudar; rehacer desde N; la regeneración por cambio del lector; y publicar a través de la puerta. `Produccion.cfg`, junto a él, fija el modelo pequeño que TLC recorre: tres capítulos, hasta tres versiones, dos intentos por paso como en `guion.toml`, un hecho de la biblia, una caída, dos órdenes de reanudar y un fallo no previsto del caminante | `prueba` |
+| RF-161 | **Tres invariantes de seguridad**, comprobados en todo estado alcanzable: **la puerta se respeta** —ninguna versión está en el registro de publicaciones sin haber terminado y pasado la puerta—; **la versión anterior se conserva** —lo que ve una versión terminada es lo mismo que veía al terminar (RF-114)—; y **una sola producción a la vez** —toda versión salvo la última está terminada (D-40) y como mucho un caminante trabaja la obra—. Junto a ellos, como comprobaciones auxiliares, el tipo de cada variable, que un capítulo no tenga vivo lo de dos producciones distintas y que un capítulo cerrado no deje de estarlo salvo que una versión nueva lo releve (RF-92) | `prueba` |
+| RF-162 | **Una propiedad de vivacidad**: toda versión que está en producción acaba terminada o la obra acaba detenida, con su motivo. Se comprueba bajo tres hipótesis declaradas en el propio modelo: el código del servidor avanza cuando puede (equidad débil de cada paso del caminante y del registro de un arranque), el proceso caído vuelve a arrancar (equidad débil) y las caídas son finitas (`MaxCaidas`). El editor y la máquina no deben nada: sus acciones no llevan equidad | `prueba` |
+| RF-163 | **El mapeo.** `backend/formal/tla/mapeo.md` da, para cada acción del modelo, el fichero y la función que la implementan, y lo que el modelo deja fuera. La correspondencia se sostiene por revisión, no se demuestra: cambiar una función del mapeo obliga a revisar su acción y volver a pasar TLC | `inspeccion` |
+| RF-164 | **La regeneración por cambio del lector se especifica aquí y la implementa §4.18.** El lector cambia el valor de un hecho de la biblia; nace la versión siguiente, con base en la última, que reescribe solo los capítulos que usan ese hecho según sus `Mencion` en la última versión —seguidos o no— y comparte el resto sin copiarlo; la anterior se conserva (RF-114). Se admite con las mismas condiciones que rehacer (D-40) y es un segundo tipo de versión nueva junto a rehacer desde N (D-42). La versión regenerada sigue el camino normal de producción con sus reintentos y su reanudación, termina con su auditoría y solo se publica si pasa la puerta. Lo que §4.18 decida y el modelo deja abierto —qué pasa si ningún capítulo usa el hecho, la ruta— se modela de forma no determinista para no prejuzgarlo | `prueba` |
+| RF-168 | **TLC se lanza desde la batería sin gastar.** Una prueba pasa TLC con la configuración del repositorio y exige su «No error has been found». Toma el `tla2tools.jar` de la variable de entorno `NOVELA_TLA2TOOLS` y Java de `JAVA_HOME` o del `PATH`; si falta cualquiera de los dos, se salta limpia diciendo qué falta. Los ficheros de trabajo de TLC van a un directorio temporal y nunca al repositorio (RD-08) | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-66 | **El modelo es del flujo, no del contenido.** Distingue capítulos, tareas, intentos, versiones, hilos y lo que ve cada versión; no distingue escenas, el bucle de calidad dentro del capítulo, las tandas ni el índice de parecido. Cada paso del guion se reduce a una tarea por política de `al_agotarse` | Lo que se quiere demostrar vive en el orden de las cosas —qué se escribe antes de qué, quién puede arrancar qué—, no en el texto. El bucle de calidad ya tiene sus topes enumerados en pruebas (RF-33) y las tandas su cálculo (RF-13); meterlos multiplica los estados sin tocar ninguna de las cuatro propiedades. Un modelo que TLC no termina de recorrer no demuestra nada |
+| D-67 | **La puerta es un veredicto «pasa» o «no pasa» sin decir cuál, fijado cuando la versión termina** | Así cubre los cuatro validadores de hoy y el formal de la historia (§4.16) sin depender de ninguno: si con cualquier veredicto las propiedades se sostienen, se sostienen con el que den. Se fija al terminar porque una versión terminada no cambia y pasar la puerta dos veces da lo mismo (D-59) |
+| D-68 | **Tres de seguridad y una de vivacidad, elegidas por lo que rompería el encargo.** Publicar sin puerta, perder la versión anterior y producir dos cosas a la vez son los tres fallos que una prueba de casos no garantiza haber visto; que una obra se quede parada sin decir por qué es el fallo de vivacidad que OBJ-07 y RNF-08 no toleran | El contador de intentos por debajo del tope va en el tipo de la variable: es cierto por construcción y no merece una propiedad aparte. Que los `EventoEstado` solo existan para capítulos cerrados lo garantiza la transacción de cierre, que el modelo toma como una sola acción: comprobarlo sería comprobar la forma del modelo |
+| D-69 | **El modelo vive en `backend/formal/tla/` y TLC no es dependencia del paquete.** Java y `tla2tools.jar` se instalan fuera del repositorio, con la versión y la descarga escritas en `mapeo.md` | Es una especificación del backend y va con él. TLC necesita una máquina virtual de Java que el backend no usa para nada más; exigirla haría fallar la batería en toda máquina sin ella. La prueba que se salta limpia deja el camino abierto sin convertirlo en obligación de instalación |
+
+**Qué retira.** De `validators.md` §13, la frase según la cual la comprobación
+de modelos no se adopta sobre el código: se adopta sobre el flujo de producción,
+que no es enumerable en una prueba porque sus caminos se cruzan con caídas y
+órdenes del editor.
+
+**Qué queda fuera.** Demostrar que el código implementa el modelo: la
+correspondencia es por mapeo y revisión (RF-163). Modelos grandes: TLC recorre
+el de `Produccion.cfg` y nada garantiza lo que pase con veinte capítulos o diez
+caídas, aunque ninguna propiedad dependa del número. Varias obras a la vez
+(§11). El contenido de lo que se escribe, el bucle de calidad y el índice
+(D-66).
+
+**De dónde sale.** §4.10 (punto de guardado y reintentos), §4.12 (versiones),
+§4.15 (puerta), §4.18 (regeneración por cambio del lector); RF-92, RF-93,
+RF-114, RF-116; D-40, D-42, D-59; OBJ-07 y RNF-08.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md` §4, el
+modelo formal del flujo y lo que cambie en él. `validators.md`: §7, la
+verificación del flujo con un comprobador de modelos; §8, los métodos de RF-160
+en adelante; y §13, retirando la comprobación de modelos de lo que queda fuera.
+`AGENTS.md`, la carpeta `backend/formal/` en «Estructura del repositorio».
+`definitions.md` y `domain-knowledge.md` no cambian: el modelo es del flujo, no
+de la ontología.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -892,6 +952,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.14 Lo vetado, RD-26, RD-27, RI-16, RI-17 | §4.10 y §4.13; `validators.md` §7 (guardarraíles y adversario); RF-06, RD-02 y RD-08 |
 | §4.15 Validadores y puerta, RD-30, RI-18, RI-19 | `validators.md` §3 (contrato de verificación) y §7 (guardarraíles); RF-08, RF-23, RF-84, RF-116, RF-123; D-43, D-46 |
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
+| §4.17 Validador formal del sistema | §4.10, §4.12, §4.15 y §4.18; RF-92, RF-93, RF-114, RF-116; D-40, D-42, D-59; OBJ-07 y RNF-08 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -946,6 +1007,12 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    un capítulo corto, un nombre mal escrito, un hecho `personal` sin mención o un
    artefacto sin un campo de su esquema no se publica, y la respuesta dice cuál
    falló y en qué capítulo; y la misma obra sin el defecto se publica.
+12. **El validador formal del sistema.** TLC recorre entero el modelo de
+   `backend/formal/tla/Produccion.cfg` y termina con «No error has been
+   found»: la puerta se respeta, la versión anterior se conserva, hay una sola
+   producción a la vez y toda versión en producción acaba terminada o detenida.
+   Cada contraejemplo que salió por el camino está guardado con su traza junto
+   al modelo y enlazado al cambio que provocó.
 
 ## §11 Fuera del alcance de v1
 
