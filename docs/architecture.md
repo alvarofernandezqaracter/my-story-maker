@@ -705,9 +705,10 @@ común, sino que `almacen/` sea la única puerta de escritura y que la forma del
 artefacto la imponga el rechazo del agente siguiente.
 
 **Frontend: agrupación por funcionalidad.** Una carpeta por funcionalidad
-—lanzar una obra, leer el manuscrito, inspeccionar críticas, revisar trazas—
-con sus componentes y sus llamadas dentro, y `compartido/` para el cliente de
-API y lo transversal. Ese cliente no se escribe: se genera del contrato
+—encargar una obra, ver su avance, leer el manuscrito— con sus componentes y
+sus llamadas dentro, y `compartido/` para el cliente de API y lo transversal.
+Las funcionalidades no se importan entre sí y solo `compartido/api/` habla con
+el servidor; lo vigilan las reglas de ESLint y una prueba de estructura. Ese cliente no se escribe: se genera del contrato
 OpenAPI que el `backend/` publica en `backend/openapi.yaml`, de modo que
 mover la frontera rompe la compilación de la interfaz en vez de romperla en
 ejecución. No hay capas de dominio en el cliente: la interfaz lanza
@@ -716,17 +717,26 @@ ejecuciones y muestra artefactos.
 ```
 frontend/
   package.json
+  scripts/       genera el cliente desde el contrato; arranca backend y Vite
   src/
-    features/    lanzar, manuscrito, criticas, trazas
+    features/    encargo, avance, manuscrito
     compartido/  cliente de API generado del contrato, y componentes comunes
+  pruebas/       contra un servidor simulado: ninguna gasta
 ```
 
 **Sin estado global en el cliente.** Casi todo lo que la interfaz muestra es
 estado del servidor: artefactos que produce el backend. Se consulta y se cachea
 contra la API, y el estado propio de cada pantalla se queda en ella. Un almacén
-global sería una copia desactualizada de lo que ya tiene el backend. Cómo llega
-el avance de una ejecución en curso es detalle de implementación, no de
-organización.
+global sería una copia desactualizada de lo que ya tiene el backend. La única
+excepción es el borrador del encargo: la entrevista es sin estado, así que lo
+que la persona lleva escrito y pegado se guarda en el navegador hasta que la
+obra se lanza.
+
+**El avance llega por el flujo que empuja el servidor.** La pantalla se pinta
+primero con la foto de `GET /obras/{id}/progreso/ahora` y solo después se
+engancha a `GET /obras/{id}/progreso`; si el flujo se corta, el cliente se
+reengancha solo y lo dice. Todo eso vive en un solo fichero de
+`compartido/api/`, de modo que pasar a sondeo no toca ninguna pantalla.
 
 ### Qué se pierde sin cálculo determinista
 

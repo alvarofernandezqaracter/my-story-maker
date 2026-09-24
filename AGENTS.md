@@ -5,9 +5,9 @@ manuscrito verificado.
 
 ## Alcance de esta rama (importante)
 
-Esta rama es `v2`, un arranque desde cero. Contiene `docs/`, la spec del backend
-y su plan en `specs/`, el `backend/` implementado según ese plan y la carpeta
-`frontend/`, que sigue vacía.
+Esta rama es `v2`, un arranque desde cero. Contiene `docs/`, las specs y los
+planes en `specs/`, el `backend/` implementado según los suyos y el `frontend/`
+con su primera versión: encargar una obra, verla avanzar y leerla.
 
 - Considera como fuente de verdad únicamente lo que existe en esta rama. Ignora
   `main` y cualquier historial, convención o código anterior: no aplica aquí.
@@ -16,15 +16,15 @@ y su plan en `specs/`, el `backend/` implementado según ese plan y la carpeta
 
 ## Estructura del repositorio
 
-Monorepo con dos paquetes en la raíz. El `backend/` está implementado y el
-`frontend/` todavía no; la frontera entre ambos es la misma desde el principio.
+Monorepo con dos paquetes en la raíz, los dos implementados; la frontera entre
+ambos es la misma desde el principio.
 
 | Carpeta | Qué contendrá | Pila |
 | --- | --- | --- |
 | `backend/` | El servidor: guarda y sirve artefactos, camina el guion encargando tareas a los agentes y expone por HTTP lo que el editor necesita ver | Python + FastAPI |
-| `frontend/` | La interfaz web desde la que se lanza y se inspecciona una obra. Todavía vacía | Vite + React |
+| `frontend/` | La interfaz web: encargar una obra conversando con el Entrevistador, ver cómo avanza y leer el manuscrito. Se pone en pie con `npm run dev`, que arranca también el backend | Vite + React + TypeScript |
 | `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
-| `specs/` | La spec viva del backend —el contexto específico—: qué tiene que hacer y por qué | Markdown |
+| `specs/` | Las specs vivas —el contexto específico—: `SPEC1.md` para el backend y `SPEC2.md` para el frontend, con qué tiene que hacer cada uno y por qué | Markdown |
 | `.claude/` | El andamiaje de desarrollo con Claude Code: las skills, los comandos `/ciclo` y `/verificar`, el subagente `verificador` y, en `mcp.json`, el servidor de navegador que se carga a propósito con `--mcp-config`. Su guía de uso es `CLAUDE.md`, en la raíz | Markdown + JSON |
 
 Decisiones ya tomadas sobre el reparto:
