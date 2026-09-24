@@ -113,6 +113,16 @@ MODELO_DE_LOS_SUBAGENTES: str = "claude-haiku-4-5-20251001"
 # declara cada paso en `nucleo/guion.toml`, junto al paso que gobierna (D-34).
 ESPERA_MAXIMA_POR_TAREA_EN_SEGUNDOS: int = 900
 
+# --- El juez de la novela (SPEC1 4.21) ------------------------------------
+
+# Un evaluador externo, fuera del censo: no tiene tope en la tabla de los roles.
+# Otro modelo que el que escribe la novela, para que no juzgue lo suyo (D-84).
+MODELO_DEL_JUEZ_DE_LA_NOVELA: str = "claude-sonnet-5"
+# Solo se lanza sin produccion en marcha, y abierto cabe en lo repartible sin
+# tocar el margen de la entrevista (RF-197, RNF-12).
+TOPE_DE_VENTANA_DEL_JUEZ_DE_LA_NOVELA: int = 60_000
+INTENTOS_DEL_JUEZ_DE_LA_NOVELA: int = 2
+
 # --- Cadencia del guion ----------------------------------------------------
 
 # Cada cuantos capitulos entra `auditar`. Cero significa solo al cierre de la
@@ -154,3 +164,7 @@ assert (
 ) * PASADAS_DE_ENTREVISTA_A_LA_VEZ <= TECHO_DE_CONTEXTO_CONCURRENTE * MARGEN_DEL_TECHO, (
     "La entrevista no cabe en el margen del techo"
 )
+assert (
+    tokens_repartibles()
+    >= TOPE_DE_VENTANA_DEL_JUEZ_DE_LA_NOVELA + COSTE_FIJO_DEL_SUBAGENTE_EN_TOKENS
+), "El juez de la novela no cabe en lo repartible del techo"

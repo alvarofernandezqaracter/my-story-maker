@@ -1,0 +1,38 @@
+{
+  "proposito": "normal",
+  "para_que": "La referencia limpia: una obra corriente con destinatario, dos recuerdos y ningún veto que choque con la época. Es la fila contra la que se leen las otras cuatro: si aquí falla algo, el fallo es del sistema y no del brief.",
+  "se_espera": [
+    {"comprobacion": "puerta.esquema", "resultado": "pasa", "por_que": "Nada en el brief empuja a ningún rol fuera de su esquema"},
+    {"comprobacion": "puerta.nombres", "resultado": "pasa", "por_que": "Lucía y los personajes se escriben tal cual; el nombre no tiene variantes cercanas en la época"},
+    {"comprobacion": "puerta.longitud", "resultado": "pasa", "por_que": "Tres capítulos de una premisa sencilla caben en 1 000 a 4 000 palabras cada uno"},
+    {"comprobacion": "puerta.elementos_personalizados", "resultado": "pasa", "por_que": "Solo dos recuerdos: cada uno tiene tres capítulos donde aparecer"},
+    {"comprobacion": "puerta.cronologia", "resultado": "pasa", "por_que": "Nada obliga a dos sucesos el mismo día en sitios distintos ni a reapariciones"},
+    {"comprobacion": "gancho.validar_capitulo", "resultado": "pasa", "por_que": "Puede bloquear alguna vez en la sesión, pero el veredicto final debe pasar"},
+    {"comprobacion": "gancho.policy", "resultado": "pasa", "por_que": "El único veto, «ratas», no es necesario para contar la historia"},
+    {"comprobacion": "juez.personalizacion_integrada", "resultado": "se_puntua", "por_que": "Hay destinatario; se espera una nota media o alta"},
+    {"comprobacion": "juez.funciona_como_novela", "resultado": "se_puntua", "por_que": "Se espera una nota media: es la línea base"},
+    {"comprobacion": "juez.fidelidad_a_la_epoca", "resultado": "se_puntua", "por_que": "Salamanca en 1584 está bien documentada; se espera una nota media o alta"}
+  ],
+  "brief": {
+    "titulo": "Las cuentas del estudio de Salamanca",
+    "epoca": "Salamanca, 1584",
+    "premisa": "Una copista que trabaja para la universidad descubre que alguien está vendiendo apuntes de lecciones que todavía no se han dado",
+    "tesis_tematica": "Saber algo antes de tiempo no es lo mismo que entenderlo",
+    "capitulos_objetivo": 3,
+    "politicas_globales": {"pov": "tercera_limitada", "tiempo_verbal": "pasado"},
+    "arcos": [],
+    "elenco_declarado": [],
+    "destinatario": {
+      "nombre": "Lucía",
+      "edad": 40,
+      "tono": "cálido, con intriga",
+      "dedicatoria": "Para Lucía, que corrige todo lo que lee",
+      "rasgos": ["meticulosa", "curiosa", "se ríe de sí misma"],
+      "recuerdos": [
+        "de pequeña copiaba a mano los cuentos que le gustaban para tenerlos dos veces",
+        "siempre lleva un lápiz detrás de la oreja"
+      ],
+      "vetos": ["ratas"]
+    }
+  }
+}

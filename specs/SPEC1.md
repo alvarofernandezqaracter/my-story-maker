@@ -35,8 +35,10 @@ punto de guardado por capítulo con la política de reintentos de cada paso, los
 dos hooks que revisan lo que entregan los subagentes de prosa, las listas de
 lo vetado con su registro de auditoría, los validadores programáticos con la
 puerta que decide si una versión se publica, con la cronología demostrada en
-Lean, la observación de la producción en Langfuse cuando hay claves, y la API
-HTTP que el editor usa para lanzar e inspeccionar una obra.
+Lean, la observación de la producción en Langfuse cuando hay claves, el juez
+externo que puntúa una versión terminada con una rúbrica que vive fuera del
+repositorio, los briefs con que se prueba el sistema entero, y la API HTTP que
+el editor usa para lanzar e inspeccionar una obra.
 
 Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
 lo enumerado en §11.
@@ -145,6 +147,8 @@ algo: un sistema que no cabe en el techo no llega a producir número alguno.
 | OBJ-07 | Cero intervención | Órdenes humanas necesarias entre el brief y la obra cerrada | Recuento de llamadas de escritura a la API por obra | Pendiente | Exactamente 1 |
 | OBJ-08 | Recuperación útil | Proporción de fragmentos recuperados que el agente acaba citando o usando | Cociente sobre lo devuelto en cada consulta, de la `Traza` | Pendiente | ≥ 40 % |
 | OBJ-09 | Observación completa | Proporción de `Traza` de una obra con su generación en Langfuse | Cociente entre las generaciones de las trazas de la sesión y las `Traza` de `GET /obras/{id}/trazas`, con Langfuse encendido (§4.20) | Pendiente | 100 % |
+| OBJ-10 | Calidad juzgada de la novela | Nota media del juez de la novela por criterio (§4.21) | Media de los scores `juez_de_la_novela.<criterio>` de Langfuse sobre las versiones de los briefs de prueba, con la misma versión de la rúbrica | Pendiente de medir | ≥ 3,5 en cada criterio y ninguna nota 1 |
+| OBJ-11 | Ruido acotado del juez | Diferencia de nota entre dos juicios de la misma versión con la misma rúbrica | Máximo, por criterio, de la diferencia entre dos lanzamientos sobre la misma versión, de los scores de Langfuse | Pendiente de medir | ≤ 1 punto |
 
 **Qué no es objetivo, y por qué.** Bajar el coste por sí solo: se cumple
 trivialmente con un modelo peor y arruina OBJ-03 y OBJ-06 sin que la cifra de
@@ -152,8 +156,10 @@ coste se entere. Bajar el número de críticas: se cumple con verificadores
 ciegos, que es el fallo que `validators.md` §6 llama «el agente que no encuentra
 nada nunca». Subir el número de fragmentos que devuelve
 una consulta: mejora la sensación de cobertura, se come el tope de ventana del
-rol que consulta y empeora OBJ-01 sin que OBJ-06 se mueva. Y la nota de un juez
-de rúbrica, que es ruido declarado y no mejora medible.
+rol que consulta y empeora OBJ-01 sin que OBJ-06 se mueva. Y la nota suelta del
+Juez de rúbrica del censo, que es ruido declarado y no mejora medible. La del
+juez de la novela sí entra, en OBJ-10, pero solo junto a su ruido medido en
+OBJ-11: una mejora que no supera ese ruido no cuenta (D-87).
 
 ## §4 Requisitos funcionales
 
@@ -1090,6 +1096,80 @@ guardarraíles; §8, los métodos de RF-183 a RF-192, RD-31, RNF-10 y RNF-11.
 `AGENTS.md` y `CLAUDE.md`: el `.env` de la raíz en el reparto.
 `definitions.md` y `domain-knowledge.md` no cambian: la observación es de
 producción y no toca la ontología.
+### 4.21 El juez de la novela y los briefs de prueba
+
+**El problema.** Todo lo que el sistema comprueba de una obra mira una escena,
+un capítulo o un dato escrito: nadie juzga la novela terminada. El Juez de
+rúbrica puntúa solo la coherencia de voz, réplica a réplica, y ningún validador
+dice si lo que viene de la vida del destinatario está metido con naturalidad o
+pegado encima, si la novela funciona como novela —arco, personajes que siguen
+siendo quienes eran, ritmo— ni si sigue siendo de su época. Sin esa medida no
+hay con qué comparar el antes y el después de un ajuste, y la evaluación del
+sistema entero no tiene tampoco entradas fijas: no hay un juego de briefs con
+lo que se espera de cada uno.
+
+**La decisión, en una frase.** Un evaluador externo, el **juez de la novela**,
+puntúa una versión terminada con tres criterios, nota y justificación por
+criterio, y cuelga cada nota como score de la traza de esa versión en Langfuse;
+su rúbrica vive solo en Langfuse y nunca en el repositorio. Y cinco briefs de
+prueba escritos, cada uno con para qué está y qué se espera al correrlo.
+
+La regla de dónde vive la rúbrica es literal del dueño en el interrogatorio: el
+sistema evaluado no debe poder leer con qué vara se le mide; si pudiera, dejaría
+de medir calidad y pasaría a medir su capacidad de complacer al juez.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-193 | **Un evaluador externo, fuera del censo.** El juez de la novela no es uno de los doce roles: no tiene carpeta en `tareas/`, no escribe nada en el almacén, no está en el guion ni en la API y no participa en la producción. Se lanza por orden explícita de quien desarrolla, `novela.juez_de_la_novela.juzgar_version`, sobre una versión terminada; una versión sin terminar o que no existe se rechaza sin lanzar nada. Su nota no regenera, no revisa, no publica ni bloquea nada. El Juez de rúbrica de `tareas/juzgar` no cambia | `prueba` |
+| RF-194 | **La rúbrica sale solo de Langfuse.** Es el prompt `juez-de-la-novela`, que se pide con `obtener_prompt`. Si no llega —Langfuse apagado, el prompt no existe o viene vacío—, el juicio no se lanza y falla con un motivo que dice que falta la rúbrica y nombra el prompt, antes de leer la versión y sin abrir ningún subagente. No hay rúbrica por defecto ni se lee de ningún fichero | `prueba` |
+| RF-195 | **Tres criterios, un vocabulario cerrado**, `criterio_del_juez_de_la_novela`: `personalizacion_integrada` —lo que viene del destinatario está en la historia con naturalidad—, `funciona_como_novela` —arco, coherencia de personajes y ritmo— y `fidelidad_a_la_epoca`. Qué criterios se puntúan lo decide el backend, no el juez: si el brief no trae destinatario, `personalizacion_integrada` no se puntúa. La ventana dice cuáles se puntúan | `prueba` |
+| RF-196 | **Lo que recibe.** El encargo —título, época, premisa, tesis si la hay y el destinatario sin sus vetos—, los criterios que se puntúan, los hechos `personal` de la biblia con los capítulos en que se usan, todos los `Resumen de capítulo` de la versión y el texto aceptado de **capítulos enteros**, por este orden de prioridad: el primero, el último, los que mencionan un hecho `personal` y los demás en orden. Un capítulo entra entero o no entra, y entran mientras quepan en el tope; la ventana dice qué capítulos no se leyeron. Si sin ningún capítulo ya no cabe, no se lanza y dice cuánto sobra | `prueba` |
+| RF-197 | **Cómo se lanza.** Un subagente de Claude Code por el ejecutor de siempre (RF-100 a RF-102): directorio vacío fuera del repositorio, sin herramientas, sin MCP y sin hooks, con la rúbrica como instrucción de sistema y la ventana como dato delimitado. Modelo `claude-sonnet-5`. Tope de ventana de 60 000 tokens. Solo se lanza si ninguna obra de la instalación tiene una `Traza` abierta, es decir, sin producción en marcha: abierto ocupa 63 500 de los 80 000 repartibles y deja entero el margen de la entrevista | `prueba` |
+| RF-198 | **Lo que devuelve y cuándo vale.** En `constancia.criterios`, exactamente un elemento por criterio que se puntúa, con `nota` entera de 1 a 5, `justificacion` no vacía y `citas` no vacías, cada cita literal en la ventana que recibió. Si algo de eso falla, el intento entero falla con sus motivos; se intenta dos veces y, agotado, no se envía ninguna nota. Lo que devuelva como artefacto no se guarda y se cuenta | `prueba` |
+| RF-199 | **Las notas van a Langfuse.** Solo con un veredicto válido, un score por criterio con `enviar_score`, a la traza de esa obra y versión: nombre `juez_de_la_novela.<criterio>`, valor la nota y comentario con la justificación, las citas, el nombre y la versión del prompt de la rúbrica y los capítulos leídos y no leídos. Así cada nota dice con qué versión de la rúbrica salió. La función devuelve además el veredicto y lo que costó: tokens de entrada, de salida, coste y latencia | `prueba` |
+| RF-200 | **La observabilidad llega como parámetro**, con dos operaciones: `obtener_prompt(nombre)`, que devuelve el texto y la versión o nada, y `enviar_score(id_obra, version, nombre, valor, comentario)`. El módulo del juez no importa Langfuse, ni `tareas/`, ni la API, ni abre la base | `analisis` |
+| RF-201 | **Los briefs de prueba** viven en `backend/briefs-de-prueba/`, uno por fichero JSON con `proposito`, `para_que`, `se_espera` y `brief`. El propósito es del vocabulario cerrado `proposito_del_brief_de_prueba`: `normal`, `mucha_personalizacion`, `sin_destinatario`, `inyeccion` e `incoherencia_temporal`. Cada entrada de `se_espera` nombra una comprobación —`puerta.<validador_de_la_puerta>`, `gancho.<gancho>` o `juez.<criterio>`—, su resultado del vocabulario cerrado `resultado_esperado` —`pasa`, `falla`, `puede_fallar`, `se_puntua`, `no_se_puntua`— y por qué. Una prueba que no gasta los carga todos, valida cada `brief` contra el modelo de `POST /obras` y cada comprobación contra los vocabularios del código. Hay al menos uno de cada propósito: entre ellos, el adversario de inyección y el diseñado para provocar una incoherencia temporal que solo ve Lean | `prueba` |
+| RF-202 | **El texto de la rúbrica no está en el repositorio**: ni en el código, ni en `tareas/`, ni en los documentos, ni en el historial. En el repositorio está solo lo que dice este bloque: que el juez existe, sus tres criterios, la forma de su salida y dónde cuelga sus notas | `inspeccion` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-83 | **El juez de la novela es un evaluador externo, no un rol del censo, y no va en `tareas/`** | Un rol del censo tiene su prompt en `tareas/<tipo>/` (D-03), y ahí la rúbrica sería legible por quien la sufre, que es lo que el dueño descartó. Tampoco hace trabajo de la obra: no produce nada que otro rol lea, así que «un rol, una tarea» no se toca. El Juez de rúbrica sigue dentro porque su nota es ruido que viaja con el capítulo; el de la novela mide el sistema desde fuera |
+| D-84 | **Modelo `claude-sonnet-5`, no Haiku** | Ningún agente valida su propia salida: juzgar con el mismo modelo que escribió la novela invita a que prefiera lo que él mismo habría escrito. Leer hasta 60 000 tokens y juzgar un arco entero pide más que las tareas por escena del censo. Es una llamada por versión, no cientos por obra, así que el coste queda acotado. Opus se descarta por coste para algo que se repite en cada brief y cada vuelta de ajuste |
+| D-85 | **Resúmenes de todos los capítulos y texto de capítulos enteros por prioridad**, no la novela entera ni troceada | Una novela larga no cabe, y el techo cuenta la entrada (RNF-01). Trocearla daría tres notas por trozo que nadie sabe sumar en una nota de la obra. Los resúmenes dan el arco entero; el primero y el último, la apertura y el cierre; los que mencionan lo personal, justo donde se mide la personalización. Un capítulo cortado a medias fabrica el defecto de ritmo que se quiere medir, así que entra entero o no entra, y la ventana lo dice para que la nota no finja haber leído lo que no leyó |
+| D-86 | **Se lanza a mano sobre una versión terminada, fuera de la producción y sin ruta en la API** | Si su nota disparase algo, la producción aprendería a complacerle, que es lo mismo que leer la rúbrica por otro camino. Terminada, porque se juzga lo que se publicaría. Sin ruta en la API, porque el editor no lo necesita para leer su novela y el contrato de la frontera no se mueve. Sin producción en marcha, porque así sus 63 500 tokens caben sin partir ninguna tanda |
+| D-87 | **Su nota es la medida de calidad de la evaluación, y su ruido se mide aparte** | Hasta aquí la nota de un juez de rúbrica no era objetivo porque es ruido. Lo sigue siendo, pero sin ella la evaluación del sistema entero no tiene número: OBJ-10 toma la media por criterio sobre los briefs de prueba y OBJ-11 mide el ruido repitiendo el juicio. Una mejora por debajo del ruido medido no cuenta como mejora. No enruta nada: medir no es controlar |
+
+**Los briefs, en una línea cada uno.** `normal`, una obra corriente con
+destinatario, para tener la referencia de un caso limpio. `mucha-personalizacion`,
+muchos recuerdos y vetos que chocan con la época, para ver si lo personal cabe
+sin pegotes y si la política de lo vetado aguanta. `sin-destinatario`, época
+mal documentada y sin destinatario, para ver la fidelidad sin fuentes y que el
+criterio de personalización no se puntúa. `inyeccion`, el comprador mete
+órdenes dirigidas al sistema en los campos que escribe. `incoherencia-temporal`,
+una premisa con dos sucesos del mismo día exacto en dos ciudades con los mismos
+personajes, que los cuatro validadores de §4.15 no ven y Lean sí (RF-156).
+
+**Qué queda fuera.** Correr los briefs y el juez, la tabla de qué validador pasó
+en cada brief, el ajuste con los números de antes y después y la lectura humana
+de una novela completa con la misma rúbrica: son la segunda mitad de la tarea.
+Crear el prompt en Langfuse y conectar la observabilidad de verdad. Guardar el
+veredicto en SQLite (RD-34). Que la nota del juez vuelva a la producción de
+cualquier forma. Y tocar el Juez de rúbrica del censo.
+
+**De dónde sale.** RF-100 a RF-102, RF-146, RF-156 y RF-01; D-03, D-08 y D-61;
+RNF-01; `validators.md` §5 (lo que no admite predicado), §7 (el adversario y
+«el material con el que se juzga a un agente no vive donde el agente puede
+leerlo») y §9.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md`: §2, el
+juez de la novela como evaluador externo junto al censo y el vocabulario
+`criterio_del_juez_de_la_novela`; §3, su tope y cuándo cabe; §7, el módulo en el
+árbol. `validators.md`: §2 y §5, la nota que pasa a medirse con su ruido; §6, las
+pruebas; §7, el evaluador externo, el contrato de importación nuevo y los
+briefs de prueba; §8, los métodos de RF-193 a RF-202; §9, la fiabilidad del juez
+de la novela. `AGENTS.md`: `backend/briefs-de-prueba/` en «Estructura del
+repositorio». `definitions.md` y `domain-knowledge.md` no cambian: los criterios
+son de evaluación del sistema, no dimensiones de calidad del dominio.
 
 ## §5 Requisitos de datos
 
@@ -1119,6 +1199,8 @@ producción y no toca la ontología.
 | RD-25 | El veredicto de los hooks vive en el cuerpo de la `Traza`, en `ganchos`, y no en una tabla ni en una columna nueva: no hace falta migración. Nadie consulta por él todavía; quien lo necesite para filtrar lo sacará a columna entonces | `prueba` |
 | RD-26 | La lista global de lo vetado tiene tabla propia, fuera de las de artefactos: es de la instalación, así que no cuelga de ningún `id_obra` (RD-02), y no se versiona. La siembra la migración 8; no se borra ni se modifica (RF-131) | `prueba` |
 | RD-27 | El registro de auditoría de `policy` tiene tabla propia, de solo añadir, fuera de las de artefactos: cuelga de la obra y de la `Traza` del intento, lleva `nivel_de_veto` y `decision_de_policy` como valores cerrados, y no se borra, no se modifica, no se caduca ni se releva. Capítulo, escena, tarea e intento no se copian: se leen de su `Traza` (RF-135, RF-136, D-53) | `prueba` |
+| RD-34 | El juez de la novela no escribe nada en SQLite: ni tabla, ni artefacto, ni `Traza`, ni migración. Su huella son los scores de Langfuse y lo que la función devuelve a quien la lanza (RF-193, RF-199) | `prueba` |
+| RD-35 | Los briefs de prueba son entrada versionada del desarrollador, como el guion y los prompts de RD-09: el sistema los lee solo cuando alguien los lanza y nunca los escribe. No son producción, así que RD-08 no les aplica (RF-201) | `inspeccion` |
 | RD-30 | El resultado de la puerta de publicación no tiene tabla ni se guarda: se deriva al pedirlo de lo que ve la versión (RF-146, RF-147, D-59). No hace falta migración | `prueba` |
 | RD-31 | Nada de Langfuse se guarda: ni en SQLite ni en disco. La sesión, la traza de cada versión y el `id` de cada score de la puerta se derivan de la entrevista, la obra y la versión (D-78), y las sumas de coste se calculan de la `Traza` y de las pasadas de la entrevista al mandarlas. No hace falta migración | `inspeccion` |
 
@@ -1206,6 +1288,8 @@ ese contrato se publica en OpenAPI: es el único acuerdo entre `backend/` y
 | RNF-08 | Ninguna operación de mantenimiento recurrente recae en el editor. Un paso manual periódico es un defecto de diseño, no una instrucción de uso | `inspeccion` |
 | RNF-10 | La observación no cambia la producción: con Langfuse encendido, apagado o fallando, la misma obra da la misma secuencia de pasos y escribe lo mismo en SQLite, y lo único que espera a la red son los prompts, como mucho 5 segundos por prompt y proceso (RF-190) | `prueba` |
 | RNF-11 | Ni los evaluadores ni las claves de Langfuse están donde un rol pueda leerlos: ningún evaluador, rúbrica de juez ni prompt de juez entra en el repositorio, y ningún subagente de tarea hereda una variable `LANGFUSE_` (RF-191, D-82) | Repositorio: `inspeccion`. Entorno: `prueba` |
+| RNF-12 | El juez de la novela respeta el techo: su tope más el coste fijo del subagente caben en lo repartible, y solo se lanza sin producción en marcha (RF-197) | `analisis` |
+| RNF-13 | El sistema evaluado no puede leer con qué se le evalúa: la rúbrica del juez de la novela no está en el repositorio ni entra en la ventana de ningún rol del censo (RF-202, D-83) | `inspeccion` |
 | RNF-09 | El contrato volcado en `backend/openapi.yaml` es el que genera el código. Si el borde cambia y el contrato no se regenera, la comprobación lo vuelve a volcar y falla una vez, para que el movimiento de la frontera pase por el diff. No hay orden de mantenimiento que recordar (RNF-08) | `prueba` |
 
 ## §8 Decisiones de diseño de esta versión
@@ -1229,7 +1313,7 @@ ese contrato se publica en OpenAPI: es el único acuerdo entre `backend/` y
 | D-05 | v1 no usa herramientas externas de cálculo | La decisión sigue abierta. Mientras lo esté, coherencia temporal, fatiga léxica y léxico vetado van como `analisis` contra el dato ya escrito, y lo que las vigila es la reincidencia por dimensión |
 
 Las decisiones D-20 a D-24, las de la entrevista, están en §4.8, junto a los
-requisitos que justifican.
+requisitos que justifican; las D-83 a D-87, las del juez de la novela, en §4.21.
 
 D-60 pone al día en la fase 3 el atributo `Obra` de `definitions.md`, que marca
 la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
@@ -1258,6 +1342,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.18 Cambio del lector y PDF | §4.9 (menciones), §4.10 (punto de guardado) y §4.12 (versiones); D-13, D-40, D-42; RD-08; `validators.md` §10 |
 | §4.20 La producción en Langfuse, RD-31, RNF-10, RNF-11, OBJ-09 | RF-52, RF-79, RF-93, RF-110, RF-126, RF-146, RF-147; D-03, D-08, D-35; RD-08; RNF-03, RNF-08; `validators.md` §7 |
 | §4.19 Dónde va un artefacto y el testigo del Planificador | `architecture.md` §4 (ciclo de vida del capítulo); §4.17 (el modelo); RF-23, RF-35, RF-90, RF-92, RF-97, RF-98; D-30, D-34 |
+| §4.21 El juez de la novela y los briefs de prueba, RD-34, RD-35, RNF-12, RNF-13 | `validators.md` §5, §7 y §9; RF-01, RF-100 a RF-102, RF-156; D-03, D-08; RNF-01 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1340,6 +1425,16 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    sesión; pasar la puerta deja un score por validador. Sin claves no se manda
    nada, con un Langfuse que falla en cada llamada la obra termina igual, y
    ningún subagente recibe una variable `LANGFUSE_`.
+16. **El juez de la novela y los briefs.** Sin gastar: sin rúbrica, el juicio
+   falla diciendo que falta el prompt y no abre ningún subagente; con una
+   rúbrica de prueba, sobre una obra fingida terminada, la ventana lleva los
+   resúmenes y capítulos enteros por prioridad y dice cuáles no leyó, la orden
+   lleva la rúbrica en el sistema, Sonnet y ninguna herramienta, un veredicto
+   bueno cuelga un score por criterio y uno roto no cuelga ninguno; sin
+   destinatario, la personalización no se puntúa; con producción en marcha o
+   una versión sin terminar, no se lanza. Los briefs de prueba validan contra el
+   modelo de `POST /obras` y sus comprobaciones esperadas existen. Correrlos es
+   la segunda mitad de la tarea.
 
 ## §11 Fuera del alcance de v1
 
@@ -1357,10 +1452,11 @@ También queda fuera, del filtro de lo vetado, lo que enumera §4.14: el tema
 dicho con otras palabras y lo escrito para esquivar la lista. De la entrevista
 queda fuera lo que enumera §4.8; de las versiones, lo que enumera §4.12; de
 la puerta de publicación, lo que enumera §4.15; de la cronología en Lean, lo
-que enumera §4.16; del validador formal del sistema, lo que enumera §4.17; y
-del cambio del lector y el PDF, lo que enumera §4.18; y de la observación en
+que enumera §4.16; del validador formal del sistema, lo que enumera §4.17;
+del cambio del lector y el PDF, lo que enumera §4.18; de la observación en
 Langfuse, lo que enumera §4.20, empezando por los evaluadores, que no entran
-nunca en el repositorio.
+nunca en el repositorio; y del juez de la novela y los briefs de prueba, lo
+que enumera §4.21.
 
 ## §12 Decisiones abiertas
 
