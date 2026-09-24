@@ -1471,6 +1471,14 @@ components:
           - type: string
           - type: 'null'
           title: Cerrada En
+        ganchos:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Ganchos
+          description: Lo que dijeron los hooks del paso durante la sesion y su veredicto
+            final. Vacio si el paso no lleva hooks (RI-15)
       type: object
       required:
       - id

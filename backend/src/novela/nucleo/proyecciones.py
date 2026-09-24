@@ -86,6 +86,10 @@ class Ventana:
     texto: str
     tokens: int
     recuperaciones: list[dict[str, Any]] = dcfield(default_factory=list)
+    # Lo que el hook `policy` busca en lo entregado (SPEC1 RF-124). **No entra en
+    # el texto de la ventana**: viaja aparte, hasta el hook, y al agente solo le
+    # llega lo que encontro en su propio texto.
+    vetos: tuple[str, ...] = ()
 
 
 Constructor = Callable[[Peticion], Material]
@@ -231,6 +235,22 @@ def _destinatario(p: Peticion) -> dict[str, Any]:
         return {}
     destinatario = obra.cuerpo.get("destinatario")
     return destinatario if isinstance(destinatario, dict) else {}
+
+
+def vetos_del_encargo(almacen: Almacen, encargo: Encargo) -> tuple[str, ...]:
+    """Lo vetado que el hook `policy` busca, tal cual (SPEC1 RF-124).
+
+    Hoy son las palabras o temas que el comprador veto en el brief. Es el unico
+    sitio del que sale la lista: ampliarla es cambiar esta funcion, no el hook.
+    """
+    if "policy" not in encargo.ganchos:
+        return ()
+    obra = almacen.leer_obra(encargo.id_obra)
+    destinatario = obra.cuerpo.get("destinatario") if obra is not None else None
+    vetos = destinatario.get("vetos") if isinstance(destinatario, dict) else None
+    if not isinstance(vetos, list):
+        return ()
+    return tuple(veto for veto in vetos if isinstance(veto, str) and veto)
 
 
 def _recuerdos_del_destinatario(p: Peticion) -> Filas:
@@ -389,6 +409,7 @@ def ensamblar(
         texto=texto,
         tokens=estimar_tokens(texto),
         recuperaciones=peticion.recuperaciones,
+        vetos=vetos_del_encargo(almacen, encargo),
     )
 
 

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from novela.ajustes import tope_de_ventana
-from novela.vocabularios import AL_AGOTARSE, TAREA_DE_ROL
+from novela.vocabularios import AL_AGOTARSE, GANCHOS, TAREA_DE_ROL
 
 RUTA_DEL_GUION = Path(__file__).parent / "guion.toml"
 
@@ -40,6 +40,8 @@ class Paso:
     criba: str | None = None
     vuelve_al_paso: int | None = None
     cuando: str = ""
+    ganchos: tuple[str, ...] = ()
+    reserva_de_la_vuelta: int = 0
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,10 @@ class Encargo:
     dimension: str | None = None
     reintentos: int = 1
     al_agotarse: str = "detener_obra"
+    # Los hooks de su subagente y lo que cuesta de entrada su vuelta de
+    # correccion (SPEC1 4.13). Los copia el guion desde el paso.
+    ganchos: tuple[str, ...] = ()
+    reserva_de_la_vuelta: int = 0
 
     @property
     def tope_de_ventana(self) -> int:
@@ -98,8 +104,28 @@ def _politica(bruto: dict[str, Any]) -> tuple[int, str]:
     return reintentos, bruto["al_agotarse"]
 
 
+def _ganchos(bruto: dict[str, Any]) -> tuple[tuple[str, ...], int]:
+    """Los hooks del paso, de un vocabulario cerrado, y su reserva (RF-120).
+
+    Un paso con hooks y sin reserva dejaria sin contar la entrada que cuesta la
+    vuelta de correccion, que es lo que RF-128 prohibe.
+    """
+    nombre = bruto.get("numero") or bruto.get("tarea")
+    ganchos = tuple(bruto.get("ganchos", ()))
+    desconocidos = [gancho for gancho in ganchos if gancho not in GANCHOS]
+    if desconocidos:
+        raise GuionInvalido(f"el paso {nombre}: {desconocidos!r} no estan en `ganchos`")
+    reserva = bruto.get("reserva_de_la_vuelta", 0)
+    if not isinstance(reserva, int) or isinstance(reserva, bool) or reserva < 0:
+        raise GuionInvalido(f"el paso {nombre} declara una reserva de {reserva!r}")
+    if ganchos and reserva == 0:
+        raise GuionInvalido(f"el paso {nombre} lleva ganchos sin `reserva_de_la_vuelta`")
+    return ganchos, reserva
+
+
 def _a_paso(bruto: dict[str, Any]) -> Paso:
     reintentos, al_agotarse = _politica(bruto)
+    ganchos, reserva = _ganchos(bruto)
     return Paso(
         numero=bruto.get("numero", 0),
         tarea=bruto["tarea"],
@@ -112,6 +138,8 @@ def _a_paso(bruto: dict[str, Any]) -> Paso:
         criba=bruto.get("criba"),
         vuelve_al_paso=bruto.get("vuelve_al_paso"),
         cuando=bruto.get("cuando", ""),
+        ganchos=ganchos,
+        reserva_de_la_vuelta=reserva,
     )
 
 
@@ -163,6 +191,8 @@ def expandir(
                 proyeccion=paso_del_guion.proyeccion,
                 reintentos=paso_del_guion.reintentos,
                 al_agotarse=paso_del_guion.al_agotarse,
+                ganchos=paso_del_guion.ganchos,
+                reserva_de_la_vuelta=paso_del_guion.reserva_de_la_vuelta,
                 id_obra=id_obra,
                 capitulo=capitulo,
             )
@@ -181,6 +211,8 @@ def expandir(
                 proyeccion=paso_del_guion.proyeccion,
                 reintentos=paso_del_guion.reintentos,
                 al_agotarse=paso_del_guion.al_agotarse,
+                ganchos=paso_del_guion.ganchos,
+                reserva_de_la_vuelta=paso_del_guion.reserva_de_la_vuelta,
                 id_obra=id_obra,
                 capitulo=capitulo,
                 escena=escena,
@@ -200,6 +232,8 @@ def expandir(
                 proyeccion=paso_del_guion.proyeccion,
                 reintentos=paso_del_guion.reintentos,
                 al_agotarse=paso_del_guion.al_agotarse,
+                ganchos=paso_del_guion.ganchos,
+                reserva_de_la_vuelta=paso_del_guion.reserva_de_la_vuelta,
                 id_obra=id_obra,
                 capitulo=capitulo,
                 escena=escena,

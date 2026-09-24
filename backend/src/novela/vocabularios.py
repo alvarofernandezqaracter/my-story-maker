@@ -106,6 +106,10 @@ CICLO_DE_VIDA_DEL_CAPITULO: tuple[str, ...] = (
 # como la busqueda documental, no bloquea nunca (D-09).
 AL_AGOTARSE: tuple[str, ...] = ("detener_obra", "critica_abierta", "seguir")
 
+# Los hooks `Stop` que puede llevar el subagente de un paso (SPEC1 4.13, RF-120):
+# `validar_capitulo` mira la forma de lo entregado y `policy`, lo vetado.
+GANCHOS: tuple[str, ...] = ("validar_capitulo", "policy")
+
 # Las tres memorias (architecture.md 3). Cada artefacto declara a cual pertenece
 # porque es lo que permite al Archivero retirar la de capitulo sin decidir nada.
 MEMORIA: tuple[str, ...] = ("tarea", "capitulo", "obra")

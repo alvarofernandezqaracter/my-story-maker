@@ -54,11 +54,22 @@ def coste_de_abrir(tope_del_rol: int) -> int:
     return tope_del_rol + COSTE_FIJO_DEL_SUBAGENTE_EN_TOKENS
 
 
+def coste_de_abrir_encargo(encargo: Encargo) -> int:
+    """Lo que ocupa en el techo un encargo abierto, en el peor caso.
+
+    Si su paso lleva hooks, la vuelta de correccion vuelve a leer el encargo mas
+    la respuesta anterior y el motivo: no arranca en frio, y lo que anade es
+    entrada. Su reserva se cuenta aqui (SPEC1 RF-128).
+    """
+    reserva = encargo.reserva_de_la_vuelta if encargo.ganchos else 0
+    return coste_de_abrir(encargo.tope_de_ventana) + reserva
+
+
 def anchura_de_tanda(encargos: Sequence[Encargo]) -> int:
-    """`80 000 / lo que cuesta abrir el rol mas caro`, redondeado a la baja."""
+    """`80 000 / lo que cuesta abrir el encargo mas caro`, redondeado a la baja."""
     if not encargos:
         return 0
-    mas_caro = max(coste_de_abrir(encargo.tope_de_ventana) for encargo in encargos)
+    mas_caro = max(coste_de_abrir_encargo(encargo) for encargo in encargos)
     return max(1, tokens_repartibles() // mas_caro)
 
 

@@ -512,6 +512,7 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
                 latencia_ms=traza.propias.get("latencia_ms"),
                 abierta_en=traza.propias.get("abierta_en"),
                 cerrada_en=traza.propias.get("cerrada_en"),
+                ganchos=traza.cuerpo.get("ganchos"),
             )
             for traza in casa.almacen.listar_trazas(
                 id_obra, capitulo=capitulo, rol=rol, tarea=tarea
