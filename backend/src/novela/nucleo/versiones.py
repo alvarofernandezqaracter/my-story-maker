@@ -62,6 +62,26 @@ def rehacer_desde(
     return nueva
 
 
+def cambiar_hecho(
+    almacen: Almacen,
+    indice: IndiceDeLaObra | None,
+    id_obra: str,
+    hecho: str,
+    valor: str,
+) -> tuple[int, list[int]]:
+    """El cambio del lector: abre la version que reescribe solo los capitulos
+    que mencionan el hecho, con su nombre nuevo (SPEC1 RF-170 a RF-173).
+
+    Que capitulos son lo dicen las menciones de la ultima version, no el texto.
+    Lo relevado sale del indice, como al rehacer. Arrancar la produccion es cosa
+    de quien llama, por el camino de siempre (RF-175).
+    """
+    nueva, capitulos = almacen.abrir_version_por_cambio(id_obra, hecho, valor)
+    if indice is not None:
+        indice.retirar_capitulos(id_obra, capitulos)
+    return nueva, capitulos
+
+
 # --- La puerta de publicacion (SPEC1 4.15) ---------------------------------
 
 

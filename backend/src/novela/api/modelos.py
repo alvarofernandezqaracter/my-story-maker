@@ -95,6 +95,12 @@ class FichaDeObra(BaseModel):
             "Por que esta detenida: la tarea, lo que fallo y su traza. Vacio si no (RI-17)"
         ),
     )
+    destinatario: str | None = Field(
+        default=None, description="Nombre del destinatario, para la portada (RF-177)"
+    )
+    dedicatoria: str | None = Field(
+        default=None, description="La dedicatoria tal como viene en el brief (RF-177)"
+    )
 
 
 class UnidadDelManuscrito(BaseModel):
@@ -262,6 +268,22 @@ class PeticionDeRehacer(BaseModel):
     desde_capitulo: int = Field(ge=1, description="Primer capitulo que se reescribe")
 
 
+class PeticionDeCambio(BaseModel):
+    """El cambio del lector: un hecho de la biblia y su nombre nuevo (D-74)."""
+
+    hecho: str = Field(min_length=1, description="`id` del hecho, de la lista de hechos")
+    valor: str = Field(description="El nombre nuevo del hecho")
+
+
+class CambioDelLector(BaseModel):
+    """De que cambio del lector nace una version (RF-177)."""
+
+    hecho: str
+    tipo: str
+    anterior: str
+    nuevo: str
+
+
 class VersionDeLaObra(BaseModel):
     """Una version con su base y lo que cambio respecto de ella."""
 
@@ -272,6 +294,10 @@ class VersionDeLaObra(BaseModel):
     terminada_en: str | None
     terminada: bool
     publicada: bool = Field(description="Si es la de la ultima publicacion")
+    cambio: CambioDelLector | None = Field(
+        default=None,
+        description="Si nace de un cambio del lector, cual; vacio si del alta o de rehacer",
+    )
 
 
 class VersionAbierta(BaseModel):

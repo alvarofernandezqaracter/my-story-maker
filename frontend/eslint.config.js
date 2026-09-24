@@ -6,7 +6,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
-const FUNCIONALIDADES = ["encargo", "avance", "tareas", "manuscrito"];
+const FUNCIONALIDADES = ["encargo", "avance", "tareas", "manuscrito", "versiones"];
 
 // Nadie en src/ lee ficheros ni toca el backend por su cuenta (RNF-01).
 const SIN_DISCO = [

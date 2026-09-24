@@ -4,6 +4,7 @@ import { PantallaDelAvance } from "./features/avance/PantallaDelAvance";
 import { PantallaDelEncargo } from "./features/encargo/PantallaDelEncargo";
 import { PantallaDelManuscrito } from "./features/manuscrito/PantallaDelManuscrito";
 import { PantallaDeTareas } from "./features/tareas/PantallaDeTareas";
+import { PantallaDeVersiones } from "./features/versiones/PantallaDeVersiones";
 
 export function Rutas() {
   return (
@@ -12,6 +13,7 @@ export function Rutas() {
       <Route path="/obras/:idObra" element={<PantallaDelAvance />} />
       <Route path="/obras/:idObra/tareas" element={<PantallaDeTareas />} />
       <Route path="/obras/:idObra/manuscrito" element={<PantallaDelManuscrito />} />
+      <Route path="/obras/:idObra/versiones" element={<PantallaDeVersiones />} />
       <Route path="*" element={<NoExiste />} />
     </Routes>
   );

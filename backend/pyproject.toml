@@ -9,6 +9,8 @@ dependencies = [
     "pydantic>=2.9",
     "sqlite-vec>=0.1.6",
     "fastembed>=0.4",
+    # El PDF del manuscrito, fabricado en memoria (SPEC1 RF-178, D-75).
+    "fpdf2>=2.8",
 ]
 
 [project.optional-dependencies]

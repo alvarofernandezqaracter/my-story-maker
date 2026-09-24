@@ -5,11 +5,15 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import type {
   Confirmacion,
+  CriticaServida,
   FichaDeObra,
+  HechoDeLaBiblia,
   Manuscrito,
   PasadaDeEntrevista,
   Progreso,
+  PuertaDePublicacion,
   TrazaServida,
+  VersionDeLaObra,
 } from "../src/compartido/api/tipos";
 
 export const API = "http://localhost:5173/api";
@@ -26,8 +30,53 @@ export function ficha(cambios: Partial<FichaDeObra> = {}): FichaDeObra {
     criticas_abiertas: 3,
     version_en_curso: 1,
     version_publicada: null,
+    destinatario: "Lucía",
+    dedicatoria: "Para Lucía, que me enseñó a leer",
     ...cambios,
   };
+}
+
+export function hecho(cambios: Partial<HechoDeLaBiblia> = {}): HechoDeLaBiblia {
+  return { id: "per_1", tipo: "Personaje", nombre: "Inés de Salcedo", licencia: "plausible", capitulos: [1, 2], ...cambios };
+}
+
+export const hechos = (): HechoDeLaBiblia[] => [
+  hecho(),
+  hecho({ id: "per_2", nombre: "Nala", licencia: "personal", capitulos: [2] }),
+  hecho({ id: "lug_1", tipo: "Lugar", nombre: "Triana", licencia: "canon", capitulos: [] }),
+];
+
+export function version(cambios: Partial<VersionDeLaObra> = {}): VersionDeLaObra {
+  return {
+    numero: 1,
+    base: null,
+    capitulos_cambiados: [],
+    creada_en: "2026-09-24T10:00:00Z",
+    terminada_en: "2026-09-24T12:00:00Z",
+    terminada: true,
+    publicada: false,
+    cambio: null,
+    ...cambios,
+  };
+}
+
+export function critica(cambios: Partial<CriticaServida> = {}): CriticaServida {
+  return {
+    id: "cri_1",
+    capitulo: 2,
+    escena: "e1",
+    estado: "abierta",
+    severidad: "bloqueante",
+    dimension: "coherencia_temporal",
+    detectada_por: "verificador_de_continuidad",
+    evidencia: "«llegó antes de salir»",
+    accion_sugerida: "Retrasar la llegada",
+    ...cambios,
+  };
+}
+
+export function puerta(cambios: Partial<PuertaDePublicacion> = {}): PuertaDePublicacion {
+  return { id_obra: ID_OBRA, version: 1, terminada: true, pasa: true, fallos: [], ...cambios };
 }
 
 export function progreso(cambios: Partial<Progreso> = {}): Progreso {
@@ -106,6 +155,9 @@ export const servidor = setupServer(
   http.get(`${API}/obras/:id/progreso/ahora`, () => HttpResponse.json(progreso())),
   http.get(`${API}/obras/:id/manuscrito`, () => HttpResponse.json(manuscrito())),
   http.get(`${API}/obras/:id/trazas`, () => HttpResponse.json([traza()])),
+  http.get(`${API}/obras/:id/hechos`, () => HttpResponse.json(hechos())),
+  http.get(`${API}/obras/:id/versiones`, () => HttpResponse.json([version()])),
+  http.get(`${API}/obras/:id/criticas`, () => HttpResponse.json([critica()])),
 );
 
 /** Lo que devuelve el proxy de Vite cuando no alcanza el backend: 500 sin JSON. */

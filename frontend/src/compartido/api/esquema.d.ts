@@ -250,6 +250,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/obras/{id_obra}/cambios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cambiar Hecho
+         * @description El cambio del lector: el hecho toma su nombre nuevo en una version que
+         *     reescribe solo los capitulos que lo mencionan (RF-170, RF-171). La
+         *     anterior se conserva entera. No espera a que termine.
+         */
+        post: operations["cambiar_hecho_obras__id_obra__cambios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/obras/{id_obra}/versiones/{numero}/publicar": {
         parameters: {
             query?: never;
@@ -283,6 +305,27 @@ export interface paths {
          * @description La puerta pasada ahora sobre la version, sin publicar nada (RF-147).
          */
         get: operations["ver_puerta_obras__id_obra__versiones__numero__puerta_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/obras/{id_obra}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descargar Pdf
+         * @description Portada, indice y texto aceptado de la version, fabricado en memoria
+         *     (RF-178). Nada toca el disco (RD-08).
+         */
+        get: operations["descargar_pdf_obras__id_obra__pdf_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -489,6 +532,20 @@ export interface components {
             arcos?: string[];
             /** @description A quien va dedicada. Opcional: sin el, la obra es historica y nada mas */
             destinatario?: components["schemas"]["Destinatario"] | null;
+        };
+        /**
+         * CambioDelLector
+         * @description De que cambio del lector nace una version (RF-177).
+         */
+        CambioDelLector: {
+            /** Hecho */
+            hecho: string;
+            /** Tipo */
+            tipo: string;
+            /** Anterior */
+            anterior: string;
+            /** Nuevo */
+            nuevo: string;
         };
         /** CapituloInspeccionado */
         CapituloInspeccionado: {
@@ -732,6 +789,16 @@ export interface components {
              * @description Por que esta detenida: la tarea, lo que fallo y su traza. Vacio si no (RI-17)
              */
             motivo_de_la_detencion?: string | null;
+            /**
+             * Destinatario
+             * @description Nombre del destinatario, para la portada (RF-177)
+             */
+            destinatario?: string | null;
+            /**
+             * Dedicatoria
+             * @description La dedicatoria tal como viene en el brief (RF-177)
+             */
+            dedicatoria?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -866,6 +933,22 @@ export interface components {
             capitulo: number | null;
             /** Escena */
             escena: string | null;
+        };
+        /**
+         * PeticionDeCambio
+         * @description El cambio del lector: un hecho de la biblia y su nombre nuevo (D-74).
+         */
+        PeticionDeCambio: {
+            /**
+             * Hecho
+             * @description `id` del hecho, de la lista de hechos
+             */
+            hecho: string;
+            /**
+             * Valor
+             * @description El nombre nuevo del hecho
+             */
+            valor: string;
         };
         /**
          * PeticionDeEntrevista
@@ -1093,6 +1176,8 @@ export interface components {
              * @description Si es la de la ultima publicacion
              */
             publicada: boolean;
+            /** @description Si nace de un cambio del lector, cual; vacio si del alta o de rehacer */
+            cambio?: components["schemas"]["CambioDelLector"] | null;
         };
     };
     responses: never;
@@ -1595,6 +1680,42 @@ export interface operations {
             };
         };
     };
+    cambiar_hecho_obras__id_obra__cambios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la obra */
+                id_obra: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PeticionDeCambio"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionAbierta"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     publicar_obras__id_obra__versiones__numero__publicar_post: {
         parameters: {
             query?: never;
@@ -1659,6 +1780,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PuertaDePublicacion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    descargar_pdf_obras__id_obra__pdf_get: {
+        parameters: {
+            query?: {
+                /** @description Version que se lee. Sin ella, la publicada, y si no hay, la ultima */
+                version?: number | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identificador de la obra */
+                id_obra: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El PDF de la version, como descarga. No se guarda */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
             /** @description Validation Error */

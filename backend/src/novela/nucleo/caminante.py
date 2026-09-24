@@ -16,7 +16,7 @@ siguiente empieza en el paso 1. Cuantas veces se intenta cada tarea y que pasa
 al agotarse lo declara su paso en el guion; aqui solo se lee.
 """
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -86,6 +86,10 @@ class IndiceDeLaObra(Protocol):
     def indexar_estructura(self, id_obra: str, capitulo: int) -> int: ...
 
     def retirar_desde(self, id_obra: str, capitulo: int) -> int: ...
+
+    def retirar_capitulos(self, id_obra: str, capitulos: Iterable[int]) -> int: ...
+
+    def retirar_sin_cerrar(self, id_obra: str, cerrados: Iterable[int]) -> int: ...
 
 
 class Catalogo(Protocol):
@@ -162,20 +166,22 @@ class Caminante:
         """Deja la obra tal como quedo al cerrar su ultimo capitulo (RF-91).
 
         Las trazas que siguen abiertas son de tareas que corto una caida y se
-        cierran como interrumpidas. Todo lo del capitulo que estaba abierto se
-        caduca y sale del indice, y lo que el ultimo cerrado no llego a indexar
-        se indexa ahora. Devuelve el ultimo capitulo cerrado.
+        cierran como interrumpidas. Todo lo de cualquier capitulo sin cierre vivo
+        se caduca y sale del indice —en una version que reescribe capitulos
+        sueltos puede no ser solo el siguiente al ultimo cerrado (RF-176)—, y lo
+        que a los cerrados les falte en el indice se indexa ahora; indexar lo ya
+        indexado no hace nada. Devuelve el ultimo capitulo cerrado.
         """
         self.almacen.cerrar_trazas_interrumpidas(id_obra)
-        ultimo = self.almacen.ultimo_capitulo_cerrado(id_obra)
-        self.almacen.descartar_desde(id_obra, ultimo + 1)
+        self.almacen.descartar_sin_cerrar(id_obra)
+        cerrados = self.almacen.capitulos_cerrados(id_obra)
         if self.indice is not None:
-            self.indice.retirar_desde(id_obra, ultimo + 1)
-            if ultimo:
-                self.indice.indexar_fuentes(id_obra, ultimo)
-                self.indice.indexar_prosa_aceptada(id_obra, ultimo)
-                self.indice.indexar_estructura(id_obra, ultimo)
-        return ultimo
+            self.indice.retirar_sin_cerrar(id_obra, cerrados)
+            for cerrado in cerrados:
+                self.indice.indexar_fuentes(id_obra, cerrado)
+                self.indice.indexar_prosa_aceptada(id_obra, cerrado)
+                self.indice.indexar_estructura(id_obra, cerrado)
+        return max(cerrados, default=0)
 
     def _ya_cerrado(self, id_obra: str, numero: int) -> bool:
         """Lo cerrado no se repite: es el punto de guardado."""

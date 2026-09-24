@@ -104,16 +104,18 @@ def test_los_mensajes_de_error_van_en_espanol(cliente: TestClient) -> None:
 def test_toda_operacion_de_escritura_es_una_orden_del_editor(
     cliente: TestClient,
 ) -> None:
-    """Las dos de la entrevista, alta, detener, reanudar, rehacer y publicar. La
-    entrevista ocurre antes de que la obra exista, detener y reanudar son
-    control, y rehacer y publicar son decisiones editoriales: no hay limpieza ni
-    archivado que el editor deba ejecutar."""
+    """Las dos de la entrevista, alta, detener, reanudar, rehacer, cambiar un
+    hecho y publicar. La entrevista ocurre antes de que la obra exista, detener
+    y reanudar son control, y rehacer, cambiar un hecho y publicar son
+    decisiones editoriales: no hay limpieza ni archivado que el editor deba
+    ejecutar."""
     escrituras = operaciones_de_escritura(cliente.app)  # type: ignore[arg-type]
 
     assert escrituras == [
         "POST /entrevistas",
         "POST /entrevistas/{id_entrevista}/pasadas",
         "POST /obras",
+        "POST /obras/{id_obra}/cambios",
         "POST /obras/{id_obra}/detener",
         "POST /obras/{id_obra}/reanudar",
         "POST /obras/{id_obra}/versiones",
@@ -129,6 +131,7 @@ def test_el_esquema_publicado_trae_todas_las_rutas(cliente: TestClient) -> None:
         "/entrevistas/{id_entrevista}/pasadas",
         "/obras",
         "/obras/{id_obra}",
+        "/obras/{id_obra}/cambios",
         "/obras/{id_obra}/capitulos/{numero}",
         "/obras/{id_obra}/criticas",
         "/obras/{id_obra}/cronologia",
@@ -137,6 +140,7 @@ def test_el_esquema_publicado_trae_todas_las_rutas(cliente: TestClient) -> None:
         "/obras/{id_obra}/hechos",
         "/obras/{id_obra}/manuscrito",
         "/obras/{id_obra}/pasajes",
+        "/obras/{id_obra}/pdf",
         "/obras/{id_obra}/policy",
         "/obras/{id_obra}/progreso",
         "/obras/{id_obra}/progreso/ahora",

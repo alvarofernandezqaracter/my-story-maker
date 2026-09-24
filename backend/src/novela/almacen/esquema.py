@@ -733,3 +733,36 @@ def sentencias_de_lo_vetado() -> list[str]:
 assert {t.tipo for t in TABLAS} == set(
     TIPOS_DE_LA_CAPA_OBRA + TIPOS_DE_LA_CAPA_MUNDO + TIPOS_DE_LA_CAPA_PRODUCCION
 ), "El esquema y el censo de tipos de artefacto no dicen lo mismo"
+
+
+# --- El cambio del lector (SPEC1 4.18) -------------------------------------
+#
+# No es un artefacto: no lo escribe ningun rol. Es la constancia de que una
+# version nacio de que un lector cambio el nombre de un hecho, con los dos
+# nombres y la ficha que nacio en ella (RF-173). La ficha nueva si es un
+# artefacto, y vive en la tabla de su tipo con sus columnas de version. Una fila
+# por version, de solo anadir: ni se borra, ni se modifica, ni se releva.
+
+SENTENCIAS_DEL_CAMBIO_DEL_LECTOR: tuple[str, ...] = (
+    """CREATE TABLE cambio_del_lector (
+  id_obra TEXT NOT NULL,
+  version INT NOT NULL,
+  hecho TEXT NOT NULL,
+  tipo TEXT NOT NULL,
+  ficha_nueva TEXT NOT NULL,
+  anterior TEXT NOT NULL,
+  nuevo TEXT NOT NULL,
+  pedido_en TEXT NOT NULL,
+  PRIMARY KEY (id_obra, version),
+  FOREIGN KEY (id_obra, version) REFERENCES version_de_la_obra (id_obra, numero)
+) STRICT""",
+    "CREATE TRIGGER cambio_del_lector_no_se_borra BEFORE DELETE ON cambio_del_lector "
+    f"BEGIN {_NO_SE_BORRA}; END",
+    "CREATE TRIGGER cambio_del_lector_es_inmutable BEFORE UPDATE ON cambio_del_lector "
+    "BEGIN SELECT RAISE(ABORT, 'el registro de cambios del lector es de solo anadir'); END",
+)
+
+
+def sentencias_del_cambio_del_lector() -> list[str]:
+    """La migracion 11: el registro del cambio del lector y nada mas."""
+    return list(SENTENCIAS_DEL_CAMBIO_DEL_LECTOR)
