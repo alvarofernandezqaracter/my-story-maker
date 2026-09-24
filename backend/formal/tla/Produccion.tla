@@ -41,14 +41,15 @@ MaxHilos == 1 + MaxCaidas + MaxReanudar + (MaxV - 1)
 Hilos == 1..MaxHilos
 
 Min(S) == CHOOSE x \in S : \A y \in S : x <= y
-Max0(S) == IF S = {} THEN 0 ELSE CHOOSE x \in S : \A y \in S : x >= y
 
-(* Las tareas, reducidas a una por politica de al_agotarse (guion.toml).   *)
-Tareas == {"poblar", "planificar", "documentar", "cribar", "plegar", "auditar"}
+(* Las tareas del guion, reducidas por lo que hacen al agotarse          *)
+(* (guion.toml). "planificar" y "plegar" producen testigo: detener_obra.   *)
+(* "cribar" hace de las cribas y de documentar: critica_abierta y seguir  *)
+(* son iguales para el flujo, porque las dos siguen sin testigo nuevo.     *)
+Tareas == {"poblar", "planificar", "cribar", "plegar", "auditar"}
 POLITICA == [t \in Tareas |->
-                 CASE t = "documentar"          -> "seguir"
-                   [] t \in {"cribar", "auditar"} -> "critica_abierta"
-                   [] OTHER                       -> "detener_obra"]
+                 IF t \in {"cribar", "auditar"} THEN "critica_abierta"
+                 ELSE "detener_obra"]
 PCs == {"volver", "tarea", "elegir", "cerrar", "aud_check", "guardar_aud", "fin"}
 Estados == {"libre", "activo", "espera", "muerto"}
 
@@ -119,22 +120,27 @@ CrearHilo(ant) ==
                                               THEN "espera" ELSE "activo",
                                       !.espera = ant]]
 
-\* Un hilo que acaba libera a los que le esperaban (Thread.join).
+\* Un hilo que acaba libera a los que le esperaban (Thread.join). Lo que
+\* llevaba en sus variables locales se olvida.
+Muerto == [HiloNuevo EXCEPT !.est = "muerto"]
 Acabar(i, h) ==
     [j \in Hilos |->
-        IF j = i THEN [h[i] EXCEPT !.est = "muerto"]
+        IF j = i THEN Muerto
         ELSE IF h[j].est = "espera" /\ h[j].espera = i
              THEN [h[j] EXCEPT !.est = "activo"]
              ELSE h[j]]
 
 (***************************************************************************)
 (* El punto de guardado (nucleo/caminante.py:volver_al_punto_de_guardado). *)
-(* Hoy: descarta lo que cuelga de los capitulos posteriores al ultimo      *)
-(* cerrado (almacen.descartar_desde(ultimo + 1)).                          *)
+(* Descarta lo vivo que cuelga de todo capitulo que no esta cerrado en la  *)
+(* version en curso (RF-165, contraejemplo 03). El codigo de hoy descarta  *)
+(* lo posterior al ultimo cerrado (almacen.descartar_desde(ultimo + 1)):   *)
+(* es lo mismo mientras los cerrados sean 1..ultimo, que es todo lo que    *)
+(* rehacer desde N deja; la regeneracion del lector (pendiente de T14) lo  *)
+(* rompe y tiene que implementar esto.                                     *)
 (***************************************************************************)
-UltimoCerrado == Max0({k \in Caps : CerradoVivo(k)})
 Descartar(E) ==
-    {IF ~r.cad /\ r.cap > UltimoCerrado THEN [r EXCEPT !.cad = TRUE] ELSE r : r \in E}
+    {IF ~r.cad /\ ~CerradoVivo(r.cap) THEN [r EXCEPT !.cad = TRUE] ELSE r : r \in E}
 
 (***************************************************************************)
 (* El caminante: un hilo activo con el proceso en pie.                    *)
@@ -167,8 +173,7 @@ Elegir(i) ==
 \* A donde va el caminante cuando una tarea sale bien o se agota sin detener.
 Despues(h) ==
     CASE h.tarea = "poblar"     -> [h EXCEPT !.pc = "elegir", !.k = 1]
-      [] h.tarea = "planificar" -> [h EXCEPT !.tarea = "documentar", !.intento = 1]
-      [] h.tarea = "documentar" -> [h EXCEPT !.tarea = "cribar", !.intento = 1]
+      [] h.tarea = "planificar" -> [h EXCEPT !.tarea = "cribar", !.intento = 1]
       [] h.tarea = "cribar"     -> [h EXCEPT !.tarea = "plegar", !.intento = 1]
       [] h.tarea = "plegar"     -> [h EXCEPT !.pc = "cerrar"]
       [] h.tarea = "auditar"    -> [h EXCEPT !.pc = "guardar_aud"]
@@ -283,8 +288,7 @@ Caida ==
     /\ proceso = "arriba" /\ caidas < MaxCaidas
     /\ proceso' = "caido"
     /\ caidas' = caidas + 1
-    /\ hilos' = [i \in Hilos |-> IF Vivo(i) THEN [hilos[i] EXCEPT !.est = "muerto"]
-                                             ELSE hilos[i]]
+    /\ hilos' = [i \in Hilos |-> IF Vivo(i) THEN Muerto ELSE hilos[i]]
     /\ UNCHANGED << detenida, auditada, poblado, nv, terminada, veredicto, foto,
                     cambiados, tipo, publicada, publicadas, rechazadas, escrito, gen,
                     nh, ultimo, reanudaciones, fallos >>
