@@ -35,8 +35,8 @@ punto de guardado por capítulo con la política de reintentos de cada paso, los
 dos hooks que revisan lo que entregan los subagentes de prosa, las listas de
 lo vetado con su registro de auditoría, los validadores programáticos con la
 puerta que decide si una versión se publica, con la cronología demostrada en
-Lean, y la API HTTP que el editor usa
-para lanzar e inspeccionar una obra.
+Lean, la observación de la producción en Langfuse cuando hay claves, y la API
+HTTP que el editor usa para lanzar e inspeccionar una obra.
 
 Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
 lo enumerado en §11.
@@ -144,6 +144,7 @@ algo: un sistema que no cabe en el techo no llega a producir número alguno.
 | OBJ-06 | Cobertura documental | Afirmaciones históricas con `Fuente` asociada | Cociente sobre las afirmaciones del capítulo | Pendiente | ≥ 90 % |
 | OBJ-07 | Cero intervención | Órdenes humanas necesarias entre el brief y la obra cerrada | Recuento de llamadas de escritura a la API por obra | Pendiente | Exactamente 1 |
 | OBJ-08 | Recuperación útil | Proporción de fragmentos recuperados que el agente acaba citando o usando | Cociente sobre lo devuelto en cada consulta, de la `Traza` | Pendiente | ≥ 40 % |
+| OBJ-09 | Observación completa | Proporción de `Traza` de una obra con su generación en Langfuse | Cociente entre las generaciones de las trazas de la sesión y las `Traza` de `GET /obras/{id}/trazas`, con Langfuse encendido (§4.20) | Pendiente | 100 % |
 
 **Qué no es objetivo, y por qué.** Bajar el coste por sí solo: se cumple
 trivialmente con un modelo peor y arruina OBJ-03 y OBJ-06 sin que la cifra de
@@ -1024,6 +1025,72 @@ paso. `validators.md` §8, la matriz de cobertura, con RF-180 a RF-182.
 `definitions.md` y `domain-knowledge.md` no cambian: esta enmienda no toca la
 ontología.
 
+### 4.20 La producción, observada en Langfuse
+
+**El problema.** Todo lo que el sistema mide —tokens, coste, latencia, el
+veredicto de los hooks, el resultado de la puerta— se queda en la `Traza` de
+SQLite y solo se ve pidiéndolo ruta a ruta. No hay forma de ver una novela
+entera de un vistazo —la entrevista, la primera escritura y cada regeneración—,
+ni de saber qué versión del prompt de una tarea produjo un resultado. La
+evaluación que viene detrás (el juez y el ajuste de los prompts) necesita las
+dos cosas y tiene que sacar sus números de Langfuse, no de una hoja aparte: si
+la observación entra después, esa evaluación hay que repetirla entera.
+
+**La decisión, en una frase.** Si hay claves, el backend manda a Langfuse, con
+su SDK de Python, una sesión por novela con una traza por la entrevista y otra
+por cada versión, un span por capítulo, una generación por intento de tarea con
+un hijo por llamada a herramienta, el resultado de los validadores como scores
+y los prompts de las tareas versionados solos; sin claves no manda nada y la
+producción es la de siempre.
+
+Las tres reglas de fondo son del dueño en el interrogatorio: la sesión es la
+novela y cada versión es su propia traza con su propio coste; las claves van en
+un `.env` de la raíz que el backend lee solo; y los prompts se versionan sin
+ningún paso manual, con el repositorio como fuente del texto.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-183 | **Encendido por claves.** El backend lee `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` y `LANGFUSE_HOST` —por defecto `https://cloud.langfuse.com`— del entorno y, lo que falte ahí, del `.env` de la raíz del repositorio. Lo que ya está en el entorno manda, y el `.env` no se copia al entorno del proceso: se lee y se pasa al cliente. Sin las dos claves no se crea ningún cliente ni se abre ninguna conexión | `prueba` |
+| RF-184 | **Sesión y trazas.** La sesión de una obra es el `id_entrevista` del que sale (RF-79) y, si se dio de alta sin entrevista, su `id_obra`: nace con la entrevista y la obra la hereda. Dentro hay una traza por entrevista y una por versión de la obra (RF-110) —la primera escritura es la versión 1 y cada rehacer o cambio del lector, la siguiente—. El identificador de cada traza se deriva de la entrevista o de la obra y la versión con la semilla del SDK, así que un relanzamiento tras una caída (RF-93) sigue en la misma traza | `prueba` |
+| RF-185 | **Un nombre reconocible por pieza.** Dentro de la traza de una versión, un span `capitulo N` por capítulo que se produce, abierto al empezar el paso 1 y cerrado con su transacción de cierre (RF-90); dentro de él, una generación `<rol> · <tarea>` por intento, abierta al abrir su `Traza` y cerrada al cerrarla, con el capítulo, la escena, el intento, la dimensión y el `id` de la `Traza` en sus metadatos. `poblar_mundo` y `auditar` cuelgan de la traza, fuera de todo capítulo. Cada llamada a herramienta que el subagente hizo es una observación hija `herramienta · <nombre>`, con lo que pidió y lo que recibió, leídos del flujo `stream-json` del CLI. Un intento fallido sale con nivel de error y su motivo. Cada pasada de la entrevista es una generación `entrevistador · entrevistar` en la traza de su entrevista | `prueba` |
+| RF-186 | **Tokens, coste y latencia en los tres niveles.** Por llamada: la entrada medida y la salida del `usage` del CLI, el coste de su `total_cost_usd` y la latencia de la observación. Por capítulo: al cerrarlo, su span lleva en los metadatos la suma de las `Traza` de ese capítulo en esa versión. Por novela: al terminar la versión (RF-110), un evento `version terminada` lleva los totales de la versión y los de la novela entera —todas sus versiones más las pasadas de su entrevista—. Las sumas salen de SQLite, no de Langfuse | `prueba` |
+| RF-187 | **Todos los validadores, como scores.** Cada vez que se pasa la puerta de una versión —al verla (RF-147) o al publicar (RF-146)— la traza de esa versión recibe un score por validador de `validador_de_la_puerta`: 1 si no tiene fallos y 0 si los tiene, con el detalle de los fallos como comentario. `cronologia` solo se manda si hubo comprobación formal (RF-155). Cada hook del intento (RF-126) deja, en su generación, un score `gancho.<hook>` con el veredicto final del ejecutor. El score de la puerta tiene un `id` derivado de la obra, la versión y el validador: volver a pasarla lo sustituye, no lo repite | `prueba` |
+| RF-188 | **Los prompts se versionan solos.** Al arrancar, el backend recorre las carpetas de `tareas/` —las que hay, sin suponer cuántas— y registra el `prompt.md` de cada una con el nombre de su tarea: si el texto no es el de la última versión en Langfuse, crea una nueva con la etiqueta `production`. Cada generación queda enlazada a la versión del prompt de su tarea. El repositorio es la fuente del texto (D-03): nada vuelve de Langfuse a `tareas/` ni a la ventana de ningún rol | `prueba` |
+| RF-189 | **Lo que otras piezas usan.** `novela/observabilidad.py` expone `obtener_prompt(nombre)`, que devuelve el texto y la versión de un prompt de Langfuse o nada si está apagado o no existe, y `enviar_score(id_obra, version, nombre, valor, comentario)`, que cuelga un score de la traza de esa versión y no hace nada si está apagado | `prueba` |
+| RF-190 | **La observación nunca para la novela.** Todo lo que se manda va por la cola en segundo plano del SDK, y un fallo de Langfuse —caído, claves malas, respuesta rara— se anota en el registro del proceso y se traga: la producción, las respuestas de la API y lo que se escribe en SQLite son idénticos con Langfuse, sin él y con él roto. Lo único que espera a la red es consultar y crear la versión de un prompt, con un tope de 5 segundos y una sola vez por prompt y proceso, también cuando falla | `prueba` |
+| RF-191 | **El subagente no ve Langfuse.** El entorno del proceso de cada subagente de tarea, lleve hooks o no, sale del del backend sin ninguna variable que empiece por `LANGFUSE_`. Ningún rol puede consultar cómo se le juzga ni escribir en el proyecto de Langfuse | `prueba` |
+| RF-192 | **La batería no manda nada.** Las pruebas usan un Langfuse fingido que guarda lo que se le manda, y la batería apaga la observación aunque haya un `.env` con claves en la raíz. Una prueba contra Langfuse de verdad lleva la marca `gasta` | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-78 | **Sesión = novela, traza = versión, y los identificadores se derivan en vez de guardarse** | Es la regla del dueño: cada versión tiene su coste propio y la sesión suma el de la novela entera. Derivar el `id` de la traza con la semilla del SDK hace que la caída, el relanzamiento y la puerta que se pasa días después caigan en la misma traza sin escribir nada: no hace falta ni tabla ni columna (RD-31). La entrevista existe antes que la obra, así que la sesión se llama como ella y la obra la lee de su cuerpo, donde ya anota el `id_entrevista` |
+| D-79 | **Claves en el `.env` de la raíz, leídas y no exportadas; sin claves, apagado** | Que funcione sin que nadie exporte nada a mano es lo que pide RNF-08. No copiar el `.env` al entorno del proceso deja las claves fuera del camino por el que el ejecutor pasa el entorno a los subagentes; RF-191 las quita igualmente por si vienen del entorno de la máquina. Apagado por defecto porque una instalación sin cuenta tiene que escribir novelas igual |
+| D-80 | **Observaciones en vivo con el SDK v4 de Python, y la agregación de los tres niveles hecha con los datos de SQLite** | El SDK v4 manda por OpenTelemetry en segundo plano, que es lo que mantiene la producción sin esperar a la red, y no deja fijar la hora de inicio de una observación: por eso se abre al abrir la `Traza` y se cierra al cerrarla, y la latencia es la de verdad. Las sumas por capítulo y por novela se hacen donde están los números exactos y se mandan como metadatos, para no depender de cómo agregue la interfaz de Langfuse. El precio se declara: el flujo del CLI no fecha las llamadas a herramienta, así que su observación dice qué se pidió y qué volvió, no cuánto tardó; y lo que estuviera abierto cuando el proceso cae no llega a Langfuse |
+| D-81 | **El prompt versionado es el `prompt.md` de la tarea, y se sube solo si cambió** | El texto que se ajusta es ese, y es el que la evaluación tiene que atar a cada resultado. Registrarlo al arrancar y no a mano cumple RNF-08. La instrucción común del ejecutor y el esquema de la tarea no se versionan aparte: cambian con el código y los fecha el historial de git. Comparar por texto, y no por fecha, hace que reiniciar el backend no invente versiones |
+| D-82 | **Langfuse es un espejo de salida, no un sitio de donde lea la producción; y los evaluadores viven solo allí** | «Sin harness a medida» y RD-08 siguen en pie: el estado de la obra está en SQLite y nada de la producción depende de lo que diga Langfuse. `obtener_prompt` es para quien juzga desde fuera, no para los roles. Los evaluadores, las rúbricas del juez y sus prompts no entran en el repositorio, para que el sistema evaluado no pueda leer cómo se le juzga, y por eso tampoco el subagente hereda las claves (RF-191). `observabilidad.py` recibe lo ya leído y no abre el almacén, igual que el demostrador |
+
+**Cuánto contexto añade.** Nada a ninguna ventana: nada de esto entra en lo que
+se manda a un rol, y el techo no cambia.
+
+**Qué queda fuera.** Evaluadores, jueces y rúbricas dentro del repositorio
+(D-82). Fechar cada llamada a herramienta. Mandar a Langfuse lo que ya pasó antes
+de este cambio. Versionar la instrucción común y los esquemas (D-81). Leer de
+Langfuse nada que cambie la producción. Y guardar en SQLite ningún
+identificador de Langfuse (RD-31).
+
+**De dónde sale.** RF-52, RF-79, RF-93, RF-110, RF-126, RF-127, RF-146, RF-147,
+RF-155; D-03, D-08, D-35; RD-08; RNF-03 y RNF-08; `validators.md` §7 (la traza
+es la condición de todo lo demás).
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md`: §4, la
+observación de la producción en Langfuse; §7, `observabilidad.py` en el árbol.
+`validators.md`: §6, las pruebas y el contrato de importación nuevo; §7, la
+observación entre lo que sostiene la traza y el entorno del subagente entre los
+guardarraíles; §8, los métodos de RF-183 a RF-192, RD-31, RNF-10 y RNF-11.
+`AGENTS.md` y `CLAUDE.md`: el `.env` de la raíz en el reparto.
+`definitions.md` y `domain-knowledge.md` no cambian: la observación es de
+producción y no toca la ontología.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -1053,6 +1120,7 @@ ontología.
 | RD-26 | La lista global de lo vetado tiene tabla propia, fuera de las de artefactos: es de la instalación, así que no cuelga de ningún `id_obra` (RD-02), y no se versiona. La siembra la migración 8; no se borra ni se modifica (RF-131) | `prueba` |
 | RD-27 | El registro de auditoría de `policy` tiene tabla propia, de solo añadir, fuera de las de artefactos: cuelga de la obra y de la `Traza` del intento, lleva `nivel_de_veto` y `decision_de_policy` como valores cerrados, y no se borra, no se modifica, no se caduca ni se releva. Capítulo, escena, tarea e intento no se copian: se leen de su `Traza` (RF-135, RF-136, D-53) | `prueba` |
 | RD-30 | El resultado de la puerta de publicación no tiene tabla ni se guarda: se deriva al pedirlo de lo que ve la versión (RF-146, RF-147, D-59). No hace falta migración | `prueba` |
+| RD-31 | Nada de Langfuse se guarda: ni en SQLite ni en disco. La sesión, la traza de cada versión y el `id` de cada score de la puerta se derivan de la entrevista, la obra y la versión (D-78), y las sumas de coste se calculan de la `Traza` y de las pasadas de la entrevista al mandarlas. No hace falta migración | `inspeccion` |
 
 La cronología en Lean (§4.16) no añade tabla ni migración: el módulo de cada
 comprobación vive en un directorio temporal que se borra (RF-153, D-62), y sus
@@ -1136,6 +1204,8 @@ ese contrato se publica en OpenAPI: es el único acuerdo entre `backend/` y
 | RNF-06 | Un fallo del proveedor o un corte no deja artefactos a medias ni estados materializados inconsistentes: se escribe la unidad completa o nada | `prueba` |
 | RNF-07 | Español en documentación, commits, nombres de entidad y mensajes de error de la API | `inspeccion` |
 | RNF-08 | Ninguna operación de mantenimiento recurrente recae en el editor. Un paso manual periódico es un defecto de diseño, no una instrucción de uso | `inspeccion` |
+| RNF-10 | La observación no cambia la producción: con Langfuse encendido, apagado o fallando, la misma obra da la misma secuencia de pasos y escribe lo mismo en SQLite, y lo único que espera a la red son los prompts, como mucho 5 segundos por prompt y proceso (RF-190) | `prueba` |
+| RNF-11 | Ni los evaluadores ni las claves de Langfuse están donde un rol pueda leerlos: ningún evaluador, rúbrica de juez ni prompt de juez entra en el repositorio, y ningún subagente de tarea hereda una variable `LANGFUSE_` (RF-191, D-82) | Repositorio: `inspeccion`. Entorno: `prueba` |
 | RNF-09 | El contrato volcado en `backend/openapi.yaml` es el que genera el código. Si el borde cambia y el contrato no se regenera, la comprobación lo vuelve a volcar y falla una vez, para que el movimiento de la frontera pase por el diff. No hay orden de mantenimiento que recordar (RNF-08) | `prueba` |
 
 ## §8 Decisiones de diseño de esta versión
@@ -1186,6 +1256,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
 | §4.17 Validador formal del sistema | §4.10, §4.12, §4.15 y §4.18; RF-92, RF-93, RF-114, RF-116; D-40, D-42, D-59; OBJ-07 y RNF-08 |
 | §4.18 Cambio del lector y PDF | §4.9 (menciones), §4.10 (punto de guardado) y §4.12 (versiones); D-13, D-40, D-42; RD-08; `validators.md` §10 |
+| §4.20 La producción en Langfuse, RD-31, RNF-10, RNF-11, OBJ-09 | RF-52, RF-79, RF-93, RF-110, RF-126, RF-146, RF-147; D-03, D-08, D-35; RD-08; RNF-03, RNF-08; `validators.md` §7 |
 | §4.19 Dónde va un artefacto y el testigo del Planificador | `architecture.md` §4 (ciclo de vida del capítulo); §4.17 (el modelo); RF-23, RF-35, RF-90, RF-92, RF-97, RF-98; D-30, D-34 |
 
 ## §10 Verificación y criterios de aceptación
@@ -1261,6 +1332,14 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    menciones, una versión sin terminar y un nombre igual se rechazan sin crear
    nada. Un corte a medias del capítulo 3 de la 2 no deja nada suyo vivo al
    reanudar. El PDF de cada versión sale con acentos y `ñ` y sin tocar el disco.
+15. **La observación en Langfuse.** Sin gastar y con un Langfuse fingido: una
+   obra lanzada desde una entrevista deja una sesión con la traza de la
+   entrevista y la de la versión 1, un span por capítulo, una generación por
+   intento con sus tokens, su coste y su prompt versionado, y los totales del
+   capítulo y de la novela; rehacerla abre la traza de la versión 2 en la misma
+   sesión; pasar la puerta deja un score por validador. Sin claves no se manda
+   nada, con un Langfuse que falla en cada llamada la obra termina igual, y
+   ningún subagente recibe una variable `LANGFUSE_`.
 
 ## §11 Fuera del alcance de v1
 
@@ -1279,7 +1358,9 @@ dicho con otras palabras y lo escrito para esquivar la lista. De la entrevista
 queda fuera lo que enumera §4.8; de las versiones, lo que enumera §4.12; de
 la puerta de publicación, lo que enumera §4.15; de la cronología en Lean, lo
 que enumera §4.16; del validador formal del sistema, lo que enumera §4.17; y
-del cambio del lector y el PDF, lo que enumera §4.18.
+del cambio del lector y el PDF, lo que enumera §4.18; y de la observación en
+Langfuse, lo que enumera §4.20, empezando por los evaluadores, que no entran
+nunca en el repositorio.
 
 ## §12 Decisiones abiertas
 
