@@ -23,9 +23,16 @@ ambos es la misma desde el principio.
 | --- | --- | --- |
 | `backend/` | El servidor: guarda y sirve artefactos, camina el guion encargando tareas a los agentes y expone por HTTP lo que el editor necesita ver. En `backend/formal/tla/`, el flujo de producción como máquina de estados, con el modelo que recorre TLC y el mapeo de cada acción a su función; en `backend/src/novela/lean/`, el proyecto de Lean con los invariantes de la cronología que la puerta de publicación demuestra | Python + FastAPI; TLA+; Lean 4 |
 | `frontend/` | La interfaz web: encargar una obra conversando con el Entrevistador, ver cómo avanza, ver las tareas ya hechas, leer el manuscrito —con su portada, la ficha de personajes y lugares, las críticas de cada capítulo, el cambio de nombre de un hecho y la descarga en PDF— y ver las versiones para publicarlas, con un menú que salta entre las pantallas de cada obra. Se pone en pie con `npm run dev`, que arranca también el backend, y `npm run validar-visual` mira la lectura con un navegador | Vite + React + TypeScript |
-| `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
+| `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura. Y la de proceso, que cuenta cómo se ha construido: `proceso.md` la reúne y enlaza, `explainers/`, el registro de iteraciones y el red-team log | Markdown |
 | `specs/` | Las specs vivas —el contexto específico—: `SPEC1.md` para el backend y `SPEC2.md` para el frontend, con qué tiene que hacer cada uno y por qué | Markdown |
 | `.claude/` | El andamiaje de desarrollo con Claude Code: las skills, los comandos `/ciclo` y `/verificar`, el subagente `verificador` y, en `mcp.json`, el servidor de navegador que se carga a propósito con `--mcp-config`. Su guía de uso es `CLAUDE.md`, en la raíz | Markdown + JSON |
+| `ejemplos/` | El brief de ejemplo que el `README.md` lanza de principio a fin | JSON |
+| `presentacion/` | La presentación del proyecto: la estructura del deck y, en `anexos/`, lo que la respalda | Markdown |
+
+En la raíz, además de `AGENTS.md` y `CLAUDE.md`: `README.md`, la entrada para
+quien llega al proyecto —qué es, cómo se instala y se arranca—, y
+`.env.example`, la plantilla de las variables de entorno. El `.env` con las
+claves de verdad se copia de ella y no se sube.
 
 Decisiones ya tomadas sobre el reparto:
 
@@ -63,6 +70,12 @@ consistentes entre sí y deben seguir siéndolo.
 
 El reparto del repositorio —el *dónde*— no tiene documento propio: vive en la
 sección «Estructura del repositorio» de este mismo fichero.
+
+La documentación de proceso no describe el sistema sino cómo se ha construido,
+y no entra en la regla de consistencia de arriba: `docs/proceso.md` dice dónde
+está cada pieza —spec inicial, trade-offs, explainers, diagramas, registro de
+iteraciones y red-team log— y enlaza lo que ya vive en otro sitio en vez de
+copiarlo.
 
 ## Invariantes que no se rompen sin cambiar el documento
 
