@@ -2,7 +2,8 @@
 
 El techo son 100 000 tokens de entrada **simultaneos** y **cuenta solo lo que
 entra**: lo que los agentes devuelven se paga en coste y no ocupa techo, asi
-que en el reparto de una tanda no se reserva nada para las respuestas. El
+que en el reparto de una tanda no se reserva nada para las respuestas, salvo
+la que un hook hace releer al pedir una correccion, que ya es entrada. El
 agente que termina libera su parte, de modo que una cadena secuencial larga no
 agota el techo por larga que sea. Lo que lo agota es abrir demasiados frentes
 en paralelo.
