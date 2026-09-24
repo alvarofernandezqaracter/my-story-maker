@@ -45,6 +45,9 @@ SIEMBRAS: dict[str, dict[str, str]] = {
     "La observabilidad recibe lo ya leido: no toca el almacen ni las tareas": {
         "observabilidad.py": "from novela import almacen\n\n__all__ = ['almacen']\n",
     },
+    "El juez de la novela no lee tareas, ni la API, ni Langfuse": {
+        "juez_de_la_novela.py": "from novela import tareas\n\n__all__ = ['tareas']\n",
+    },
 }
 
 
