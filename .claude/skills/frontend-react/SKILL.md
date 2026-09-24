@@ -46,19 +46,21 @@ Una carpeta por funcionalidad, con sus componentes y sus llamadas dentro:
 ```
 frontend/src/
   features/
-    lanzar/       el brief del editor y el arranque de una obra
-    manuscrito/   leer lo redactado, por capítulo y escena
-    criticas/     críticas abiertas y resueltas, con su evidencia
-    trazas/       por qué el capítulo 12 quedó así
-  compartido/     cliente de API y componentes comunes
+    encargo/      la conversación con el Entrevistador que completa el brief
+                  y lanza la obra
+    avance/       la obra mientras se produce: capítulo en curso, tareas
+                  abiertas y tokens frente al techo; detener y reanudar
+    manuscrito/   leer lo aceptado, por capítulo y escena
+  compartido/     cliente de API generado del contrato y componentes comunes
 ```
 
 - **Nada de capas de dominio en el cliente.** No hay `services/`, `models/` ni
   `domain/`: eso es el backend.
 - **Las funcionalidades no se importan entre sí.** Lo común sube a
   `compartido/`; entre dos pantallas se duplica antes que acoplarse.
-- **Un solo cliente de API**, en `compartido/`, y todas las llamadas pasan por
-  él. Es lo que hace que la frontera se pueda revisar leyendo una carpeta.
+- **Un solo cliente de API**, en `compartido/api/`, y todas las llamadas pasan
+  por él. Es lo que hace que la frontera se pueda revisar leyendo una carpeta.
+  Lo vigilan las reglas de `eslint.config.js` y `pruebas/estructura.test.ts`.
 
 ## 3. El estado
 
@@ -75,9 +77,13 @@ artefactos que el backend ya tiene.
   capítulos dentro sería una copia desactualizada de lo que ya tiene el backend.
   Si alguna vez hiciera falta uno, sería para preferencias de la propia interfaz
   —tema, panel plegado—, nunca para el dominio.
-- **Cómo llega el avance de una ejecución en curso está sin decidir** (sondeo,
-  SSE, websocket). Es detalle de implementación: encapsúlalo en el cliente de
-  API para que cambiarlo no toque las pantallas.
+- **El avance llega por el flujo que empuja el servidor** (SSE), con una foto
+  inicial y reenganche propio, y todo eso vive en `compartido/api/avance.ts`.
+  Ninguna pantalla nombra `EventSource`: pasar a sondeo es reescribir ese
+  fichero y nada más.
+- **La única excepción al «no se guarda nada»** es el borrador del encargo, que
+  vive en el navegador hasta que la obra se lanza porque la entrevista es sin
+  estado. Todo acceso al almacenamiento pasa por `compartido/almacen-local.ts`.
 
 ## 4. React en este proyecto
 

@@ -2,7 +2,7 @@
 name: SPEC2
 titulo: Frontend v1 — Especificación de requisitos de software
 version: 1.0.0
-estado: propuesta
+estado: aprobada
 fecha: 2026-09-23
 ambito: frontend/
 base:

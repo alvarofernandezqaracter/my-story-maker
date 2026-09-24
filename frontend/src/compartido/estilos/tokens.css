@@ -1,0 +1,52 @@
+/* Colores corporativos: naranja de acento y azul pizarra de tinta; los neutros
+   tiran a azul, no a gris. Sin fuentes externas: es una aplicación local. */
+:root {
+  color-scheme: light;
+  --acento: #ff7932;
+  --acento-suave: #fff0e7;
+  --acento-tinta: #b34a0f;
+  --tinta: #233441;
+  --tinta-suave: #4b5d6b;
+  --tinta-tenue: #6f808d;
+  --fondo: #f6f8fa;
+  --superficie: #ffffff;
+  --superficie-2: #edf1f4;
+  --borde: #d5dde3;
+  --error: #b42318;
+  --error-suave: #fdecea;
+  --aviso-suave: #fff6dc;
+  --aviso-tinta: #7a5500;
+
+  --letra-interfaz: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --letra-lectura: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  --letra-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --radio: 10px;
+  --espacio-1: 0.25rem;
+  --espacio-2: 0.5rem;
+  --espacio-3: 0.75rem;
+  --espacio-4: 1rem;
+  --espacio-5: 1.5rem;
+  --espacio-6: 2rem;
+  --ancho-lectura: 38rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --acento: #ff8a4c;
+    --acento-suave: #3a2a22;
+    --acento-tinta: #ffb48a;
+    --tinta: #e3eaf0;
+    --tinta-suave: #b4c2cd;
+    --tinta-tenue: #8698a6;
+    --fondo: #141d24;
+    --superficie: #1b2730;
+    --superficie-2: #23323d;
+    --borde: #33444f;
+    --error: #ff8a80;
+    --error-suave: #3b1f1d;
+    --aviso-suave: #3a3120;
+    --aviso-tinta: #f2d18b;
+  }
+}

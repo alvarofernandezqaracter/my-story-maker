@@ -189,7 +189,7 @@ la que más protege.
 | Ninguna carpeta de `tareas/` importa a otra: se comunican por artefactos | Contrato de importación entre módulos |
 | `almacen/` es la única puerta de lectura y escritura de la persistencia | Contrato de importación, más una regla que prohíbe abrir la base de datos fuera de ahí |
 | `nucleo/` no importa ninguna tarea ni decide nada del dominio | Contrato de capas, y vigilar que `nucleo/` no engorde |
-| En `frontend/`, solo `compartido/` llama a la API, y las funcionalidades no se importan entre sí | Regla de fronteras del linter |
+| En `frontend/`, solo `compartido/api/` llama al servidor, las funcionalidades no se importan entre sí y nada lee disco ni importa del backend | Regla de fronteras de ESLint, más una prueba de estructura para lo que ESLint no ve: ninguna carpeta `services`, `models` ni `domain`, un solo fichero que importa `openapi-fetch` y el almacenamiento del navegador en un solo fichero |
 | El único sitio con tipos declarados es el borde HTTP | Comprobación de tipos sobre `api/` |
 | Los hooks no tocan el almacén ni el guion: informan por su salida y registra el ejecutor | Contrato de importación sobre `ganchos` |
 
@@ -240,7 +240,8 @@ manda.
 | La persistencia | Cada migración sobre una copia de una obra de prueba; el bloqueo por escrituras concurrentes se ejercita con una tanda de verdad, no se supone |
 | La entrevista | Con un ejecutor fingido que contesta lo que contestaría el Entrevistador: un hecho sin cita literal se descarta, lo que la persona escribió no cambia, lo que falta sale con su ruta, una contradicción sin evidencia no bloquea y una asumida tampoco, la pasada que completa el brief lanza la obra, y la huella de cada pasada no se borra ni se modifica |
 | Los dos hooks | El programa del hook se prueba dándole la entrada JSON que le daría Claude Code, también lanzado como proceso: bloquea con código 2 lo malformado y lo vetado, deja terminar lo bueno, bloquea una sola vez por turno, no bloquea si la vuelta no cabe en la reserva y su motivo está acotado. La orden del ejecutor lleva los dos hooks `Stop` en los pasos 3, 5 y 7 y ninguno en los demás, con los vetos en el entorno y no en la ventana; y un Redactor fingido que insiste en lo vetado agota sus intentos y detiene la obra con el veredicto en cada `Traza`. Que el CLI de verdad dispara el hook en `--print` y el agente corrige se confirma con un sondeo mínimo, fuera de la batería |
-| La frontera con la interfaz | El contrato OpenAPI versionado frente al que genera el código: si el borde cambia, la prueba lo vuelve a volcar y falla una vez, para que el movimiento pase por el diff. Comprueba además que toda operación declare la forma de lo que devuelve, porque un contrato con respuestas sin tipar no sirve para generar cliente. La mitad del cliente espera a que `frontend/` exista |
+| La frontera con la interfaz | El contrato OpenAPI versionado frente al que genera el código: si el borde cambia, la prueba lo vuelve a volcar y falla una vez, para que el movimiento pase por el diff. Comprueba además que toda operación declare la forma de lo que devuelve, porque un contrato con respuestas sin tipar no sirve para generar cliente. En el otro lado, `frontend/` genera su cliente desde ese mismo fichero y su prueba del contrato hace lo mismo: regenera, compara con lo commiteado y, si difiere, lo reescribe y falla una vez. Un campo renombrado rompe además la compilación de la pantalla que lo usa |
+| La interfaz | Cada requisito de SPEC2 con su prueba contra un servidor simulado y un flujo de progreso falso, sin gastar: lo que lleva cada pasada, lo que sobrevive a recargar, el salto al avance al lanzarse, el reenganche del flujo, las órdenes de detener y reanudar, la agrupación del manuscrito y cada formato de error |
 | Que las pruebas afirmen algo | Pruebas de mutación sobre `nucleo/` y sobre los permisos por rol, en periodo y no en cada commit, porque son lentas |
 
 ### El recorrido en seco
@@ -430,6 +431,20 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Lo que no pasa al final es un intento fallido, y su veredicto queda en la `Traza` y se sirve con ella | Redactor fingido que insiste en lo vetado hasta agotar los intentos | `prueba` |
 | La tanda de un paso con hooks cuenta su vuelta de corrección | Anchura calculada con y sin la reserva, y entrada medida de la última llamada | `prueba` |
 | El agente con hooks sabe que el motivo es del sistema | Lectura de la instrucción de sistema de un encargo con hooks, y sondeo real en el que corrige | `inspeccion` |
+| La interfaz no calcula dominio: pinta lo que falta, lo que choca y el avance tal como llegan (SPEC2 RF-03, RF-25) | Lectura de las pantallas: ningún `if` decide qué falta o qué choca, y las cifras del avance salen de la respuesta sin operar salvo el cociente de la barra | `inspeccion` |
+| Cada pasada de entrevista manda todo lo acumulado, y la primera abre la entrevista (SPEC2 RF-01, RF-02, RF-04) | Servidor simulado que registra el cuerpo y la ruta de cada pasada | `prueba` |
+| La pasada que lanza salta sola al avance y borra el borrador (SPEC2 RF-05) | Respuesta `lanzada` simulada | `prueba` |
+| Lo escrito y pegado sobrevive a recargar, y un almacenamiento que falla no rompe la pantalla (SPEC2 RF-06, OBJ-03) | Montar, escribir, desmontar y volver a montar; almacenamiento que lanza excepción; recarga en el navegador | `prueba` |
+| El texto pegado se ve como material de la persona (SPEC2 RF-07) | Lectura de la conversación: tarjeta propia con su etiqueta, separada de los mensajes y de la respuesta | `inspeccion` |
+| El avance se pinta con la foto antes del flujo, se reengancha solo y obedece detener y reanudar (SPEC2 RF-20 a RF-24) | Flujo de progreso falso que se abre, se corta y se termina a mano | `prueba` |
+| La lectura agrupa en orden, marca lo marcado y enseña la ficha como recuento (SPEC2 RF-40 a RF-42) | Manuscrito simulado de dos capítulos, uno marcado | `prueba` |
+| La lectura es cómoda para leer seguido (SPEC2 RF-43) | Captura en el navegador: ancho de lectura, índice, separador entre escenas, anterior y siguiente | `inspeccion` |
+| Ninguna pantalla se queda en blanco, y un fallo de red se distingue de un rechazo (SPEC2 RF-60 a RF-62, OBJ-04) | Los cuatro formatos de error, las tres pantallas con el servidor simulado caído y el recorrido en el navegador con el backend apagado | `prueba` |
+| Las palabras en pantalla están definidas y los vocabularios se pintan uno a uno (SPEC2 RD-03, RD-04) | Cadenas visibles de `src/` cotejadas con `definitions.md` y `architecture.md`; etiquetas de contradicción en un registro exhaustivo que el compilador obliga a completar | `analisis` |
+| La interfaz no guarda dominio y el avance está encapsulado (SPEC2 RD-01, RD-02, RNF-01 a RNF-04, RI-01) | Las reglas de fronteras y la prueba de estructura de §6 | `analisis` |
+| El cliente no se desfasa del contrato (SPEC2 RI-02, OBJ-05) | La prueba del contrato de §6 | `prueba` |
+| La interfaz se pone en pie con una sola orden (SPEC2 RNF-06) | `npm run dev` con el backend parado deja los dos en pie | `demostracion` |
+| La interfaz está en español (SPEC2 RNF-05) | Lectura de las pantallas y `lang="es"` | `inspeccion` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha, el lugar y los presentes que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |

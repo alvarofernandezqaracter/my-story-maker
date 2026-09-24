@@ -1,0 +1,187 @@
+.avance__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.avance__cabecera h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.avance__estado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.situacion {
+  font-weight: 600;
+  border-radius: 999px;
+  padding: var(--espacio-1) var(--espacio-3);
+  background: var(--superficie-2);
+}
+
+.situacion--en_marcha {
+  background: var(--acento-suave);
+  color: var(--acento-tinta);
+}
+
+.situacion--terminada {
+  background: var(--tinta);
+  color: var(--superficie);
+}
+
+.conexion {
+  color: var(--tinta-suave);
+  font-size: 0.9rem;
+}
+
+.conexion--directo::before {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: var(--espacio-1);
+  border-radius: 50%;
+  background: var(--acento);
+}
+
+.conexion--cortada {
+  color: var(--aviso-tinta);
+  background: var(--aviso-suave);
+  border-radius: var(--radio);
+  padding: var(--espacio-1) var(--espacio-3);
+}
+
+.avance__cifras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--espacio-3);
+  margin: var(--espacio-5) 0;
+}
+
+.cifra {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: var(--espacio-3) var(--espacio-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+}
+
+.cifra--ancha {
+  grid-column: span 2;
+}
+
+@media (max-width: 40rem) {
+  .cifra--ancha {
+    grid-column: auto;
+  }
+}
+
+.cifra__etiqueta {
+  font-size: 0.8rem;
+  color: var(--tinta-suave);
+}
+
+.cifra__valor {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.barra {
+  display: block;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+
+.barra__relleno {
+  display: block;
+  height: 100%;
+  background: var(--acento);
+}
+
+.avance__tareas h2 {
+  font-size: 1.05rem;
+}
+
+.avance__vacio {
+  color: var(--tinta-suave);
+}
+
+.tabla-envoltorio {
+  overflow-x: auto;
+}
+
+.tareas {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--superficie);
+}
+
+.tareas th,
+.tareas td {
+  text-align: left;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-bottom: 1px solid var(--borde);
+}
+
+.tareas th {
+  font-size: 0.8rem;
+  color: var(--tinta-suave);
+}
+
+.tareas .numero {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.avance__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: var(--espacio-5) 0;
+}
+
+.detener {
+  max-width: 30rem;
+}
+
+.detener label {
+  display: block;
+  margin-bottom: var(--espacio-1);
+}
+
+.detener__botones {
+  display: flex;
+  gap: var(--espacio-2);
+  margin-top: var(--espacio-3);
+}
+
+.avance__pie {
+  margin-top: var(--espacio-6);
+  border-top: 1px solid var(--borde);
+  padding-top: var(--espacio-3);
+  color: var(--tinta-suave);
+}
+
+.direccion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+}
+
+.direccion code {
+  background: var(--superficie-2);
+  padding: var(--espacio-1) var(--espacio-2);
+  border-radius: 6px;
+  word-break: break-all;
+}
