@@ -25,16 +25,34 @@ from novela.ajustes import (
     TOPE_DE_REGENERACIONES_POR_ESCENA,
     TOPE_DE_REVISIONES_POR_BORRADOR,
 )
-from novela.almacen import Almacen, Artefacto, ArtefactoRechazado
+from novela.almacen import Almacen, Artefacto, ArtefactoRechazado, esquema
 from novela.nucleo import calidad, ciclo, guion, presupuesto
 from novela.nucleo.gobierno import comprobar_escritura
 from novela.nucleo.guion import Encargo
 from novela.nucleo.proyecciones import Ventana, ensamblar
+from novela.vocabularios import CICLO_DE_VIDA_DEL_CAPITULO, ESTADO_DE_PRODUCCION
 
 
 class ProduccionDetenida(Exception):
     """El editor ha dado la orden de detener, o una tarea cuyo paso declara
     `detener_obra` agoto sus intentos."""
+
+
+class PlanSinEscenas(Exception):
+    """El Planificador no dejo escenas del capitulo: el intento falla (RF-182)."""
+
+
+# Las unidades que son un capitulo o caben en uno: en sus encargos, el capitulo
+# de lo que vuelve lo pone el encargo (RF-181). Lo de la obra entera, no.
+UNIDADES_DE_CAPITULO = frozenset({"capitulo", "escena", "parrafo"})
+
+# Los tipos cuyo `estado` es el ciclo de vida del proceso: ese lo lleva el
+# caminante, no el rol que los escribe (RF-181).
+ESTADO_DEL_PROCESO = frozenset(
+    tabla.tipo
+    for tabla in esquema.TABLAS
+    if tabla.vocabulario_de_estado in (ESTADO_DE_PRODUCCION, CICLO_DE_VIDA_DEL_CAPITULO)
+)
 
 
 # Lo que una tarea devolvio y todavia no se ha escrito: el encargo y sus
@@ -262,6 +280,7 @@ class Caminante:
         self._mandar_en_tandas(
             guion.expandir(guion.paso(1), id_obra=id_obra, capitulo=numero), informe
         )
+        self._abrir_capitulo(id_obra, numero)
         escenas = self._escenas(id_obra, numero)
         informe.estado = "planificado"
 
@@ -394,6 +413,28 @@ class Caminante:
         if self.indice is not None:
             self.indice.indexar_estructura(id_obra, numero)
         return informe
+
+    def _abrir_capitulo(self, id_obra: str, numero: int) -> None:
+        """Si el Planificador no escribio el `Capitulo`, lo escribe el backend:
+        sin el, el ciclo de vida y la marca `cerrado` no tienen donde ir
+        (RF-180)."""
+        abiertos = self.almacen.listar("Capitulo", id_obra, capitulo=numero)
+        for capitulo in abiertos:
+            if capitulo.estado is None:
+                self.almacen.marcar_capitulo(capitulo.id, "planificado")
+        if abiertos:
+            return
+        self.almacen.guardar(
+            [
+                Artefacto(
+                    tipo="Capitulo",
+                    cuerpo={"numero": numero},
+                    id_obra=id_obra,
+                    capitulo=numero,
+                    estado="planificado",
+                )
+            ]
+        )
 
     def _transitar(self, informe: Informe, id_obra: str, hasta: str) -> None:
         """Mueve el capitulo por su ciclo de vida y lo deja escrito.
@@ -634,21 +675,28 @@ class Caminante:
         self, encargo: Encargo, resultado: Resultado, id_traza: str, intento: int
     ) -> None:
         """Los permisos se imponen aqui y no en el prompt, y la procedencia la
-        pone el backend."""
+        pone el backend. Tambien a que capitulo va y en que punto de su ciclo
+        de vida esta: eso no lo decide el rol (RF-181)."""
+        del_capitulo = encargo.unidad in UNIDADES_DE_CAPITULO and encargo.capitulo is not None
         for artefacto in resultado.artefactos:
             comprobar_escritura(encargo.rol, artefacto.tipo)
             artefacto.id_obra = artefacto.id_obra or encargo.id_obra
             artefacto.procedencia_rol = encargo.rol
             artefacto.procedencia_tarea = id_traza
             artefacto.procedencia_intento = intento
-            if artefacto.capitulo is None:
+            if del_capitulo or artefacto.capitulo is None:
                 artefacto.capitulo = encargo.capitulo
+            if artefacto.tipo in ESTADO_DEL_PROCESO:
+                artefacto.estado = None
 
     def _guardar(
         self, encargo: Encargo, resultado: Resultado, id_traza: str, intento: int
     ) -> None:
         """Guarda lo producido, con los permisos impuestos aqui y no en el prompt."""
         self._preparar(encargo, resultado, id_traza, intento)
+        if encargo.tarea == "planificar":
+            self._guardar_el_plan(resultado.artefactos)
+            return
         if not resultado.artefactos:
             return
         try:
@@ -658,6 +706,16 @@ class Caminante:
             # rechazo es una `Critica` bloqueante cuyo objeto es el artefacto,
             # no el texto, y no llega al Revisor como si fuera prosa mala.
             self.almacen.guardar_critica(self._critica_de_malformado(encargo, rechazo))
+
+    def _guardar_el_plan(self, artefactos: list[Artefacto]) -> None:
+        """Sin escenas del capitulo no hay testigo para nadie: el intento falla
+        y no se escribe nada de el, tampoco la critica de RF-23 (RF-182)."""
+        if not any(artefacto.tipo == "Escena" for artefacto in artefactos):
+            raise PlanSinEscenas("el plan no trae ninguna Escena del capitulo")
+        try:
+            self.almacen.guardar(artefactos)
+        except ArtefactoRechazado as rechazo:
+            raise PlanSinEscenas(f"el almacen rechazo el plan: {rechazo}") from rechazo
 
     @staticmethod
     def _critica_de_malformado(encargo: Encargo, rechazo: ArtefactoRechazado) -> Artefacto:

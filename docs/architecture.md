@@ -534,6 +534,8 @@ stateDiagram-v2
   Descartado --> [*]
 ```
 
+El `Capitulo` que recorre este ciclo lo abre el backend en cuanto el Planificador termina, si el Planificador no escribió el suyo, porque de él dependen el ciclo y la marca `cerrado`: el punto de guardado no puede depender de que un modelo se acuerde de escribirlo. En qué punto del ciclo está un `Capitulo`, una `Escena`, un `Plan` o un `Borrador` lo lleva el caminante y no el rol que los escribe, y a qué capítulo pertenece lo que devuelve una tarea de capítulo, de escena o de párrafo lo pone su encargo. El `estado` de una `Crítica` o de un `Compromiso` sí es del rol, porque dice algo del texto, y en una tarea de la obra entera, como `auditar`, cada artefacto dice a qué capítulo apunta.
+
 El paso de `Aceptado` a `Cerrado` es el que actualiza el mundo: hasta que un capítulo no se cierra, sus eventos no existen para el resto del sistema. Eso es lo que permite regenerar un capítulo sin corromper los siguientes. Y es el mismo paso el que retira la memoria de capítulo: cerrar es a la vez publicar los hechos y olvidar el andamio.
 
 ### El capítulo cerrado es el punto de guardado
@@ -612,7 +614,7 @@ versión que se pida, con portada, índice y capítulos, y no lo guarda.
 
 Cada paso del guion, y cada tarea de fuera del guion, declara junto a su rol y su concurrencia dos cosas más: `reintentos`, que es cuántas veces se intenta su tarea, y `al_agotarse`, que es qué pasa si ninguno de los intentos sale bien. Un paso que no las declara no carga, porque lo que pasa al agotarse no se improvisa sobre la marcha.
 
-Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo, o cuando lo que el subagente entrega al final no pasa uno de los hooks de su paso. Un artefacto malformado no es un intento fallido: es la `Crítica` bloqueante de siempre. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él.
+Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo, o cuando lo que el subagente entrega al final no pasa uno de los hooks de su paso. Un artefacto malformado no es un intento fallido: es la `Crítica` bloqueante de siempre. La excepción es `planificar`: si lo que devuelve no trae ninguna `Escena` o el almacén lo rechaza, el intento falla y no se escribe nada de él, porque sin escenas los nueve pasos siguientes no tienen sobre qué trabajar y la obra avanzaría en vacío hasta la auditoría de cierre. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él.
 
 | Al agotarse | Pasos | Qué pasa |
 | --- | --- | --- |

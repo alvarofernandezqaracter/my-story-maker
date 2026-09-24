@@ -67,7 +67,7 @@ Rutas relativas a `backend/src/novela/`.
 | `Elegir` | Lo cerrado no se repite | `nucleo/caminante.py:Caminante.caminar_obra` (bucle) y `_ya_cerrado` |
 | `Intento` | Un intento de la tarea en curso, y lo que manda su `al_agotarse` | `nucleo/caminante.py:Caminante._mandar` (bucle de intentos) y `_agotado`; tope y política de `nucleo/guion.toml` leídos por `nucleo/guion.py:_politica` |
 | `Intento`, rama `detenida` | La orden de detener se nota antes de mandar | `nucleo/caminante.py:Caminante._parar_si_detenida` y `ProduccionDetenida` recogida en `caminar_obra` |
-| `Intento`, `tarea = "planificar"` | Paso 1: nace el trabajo del capítulo | `nucleo/caminante.py:Caminante.caminar_capitulo` (paso 1) |
+| `Intento`, `tarea = "planificar"` | Paso 1: nace el trabajo del capítulo. Un plan sin escenas o rechazado por el almacén es un intento que falla (SPEC1 RF-182); si sale bien, el backend abre el `Capitulo` que el Planificador no escribió (RF-180) | `nucleo/caminante.py:Caminante.caminar_capitulo` (paso 1), `_guardar_el_plan` y `_abrir_capitulo` |
 | `Intento`, `tarea = "cribar"` | Pasos 2 a 8 que no producen testigo nuevo: `documentar` (`seguir`) y las cribas (`critica_abierta`) | `nucleo/caminante.py:Caminante.caminar_capitulo` (pasos 2 a 8), `_criba`, `_critica_no_comprobado` |
 | `Intento`, `tarea = "plegar"` | Pasos 9 y 10, aplazados hasta el cierre | `nucleo/caminante.py:Caminante.caminar_capitulo` (pasos 9 y 10, con `aplazados`) |
 | `Cerrar` | El punto de guardado: una sola transacción | `almacen/artefactos.py:Almacen.cerrar_capitulo` |

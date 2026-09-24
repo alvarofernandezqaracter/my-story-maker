@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.6.0
+version: 1.7.0
 estado: aplicada
 fecha: 2026-09-24
 ambito: backend/
@@ -409,7 +409,7 @@ reintenta y qué pasa cuando se agota.
 | RF-95 | **El tope y la política están escritos en el guion.** Cada paso de `guion.toml` y cada tarea fuera del guion declaran `reintentos` (el número de intentos, uno o más) y `al_agotarse`. Si falta alguno de los dos, el guion no carga | `prueba` |
 | RF-96 | **`al_agotarse` es un vocabulario cerrado con tres valores.** `detener_obra`: la obra queda detenida con la tarea, el intento y el motivo, y sin ningún artefacto a medio escribir. `critica_abierta`: el backend escribe la `Crítica` de RF-99 y la producción sigue. `seguir`: la producción sigue y la constancia del intento queda en la `Traza`, igual que la búsqueda infructuosa de RF-69 | `prueba` |
 | RF-97 | **Qué política toca a cada paso.** `detener_obra` para lo que produce el testigo del paso siguiente: `planificar`, `redactar`, `revisar`, la costura del paso 7, `plegar`, `destilar` y `poblar_mundo`. `critica_abierta` para las comprobaciones: las cribas de los pasos 4, 6 y 8, y `auditar`. `seguir` para `documentar`, por D-09. El tope de partida es dos intentos en todos los pasos | `inspeccion` |
-| RF-98 | **Qué es un intento fallido y cómo se cuenta.** Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo, o cuando lo que el subagente entregó al final no pasa un hook de su paso (RF-126). Un artefacto malformado no es un intento fallido: sigue siendo la `Crítica` bloqueante de RF-23. Una tarea cortada por una caída tampoco cuenta, porque su `Traza` se cierra como interrumpida. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él. Toda `Traza` fallida registra su intento y su motivo | `prueba` |
+| RF-98 | **Qué es un intento fallido y cómo se cuenta.** Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo, o cuando lo que el subagente entregó al final no pasa un hook de su paso (RF-126). Un artefacto malformado no es un intento fallido: sigue siendo la `Crítica` bloqueante de RF-23, salvo en `planificar` (RF-182). Una tarea cortada por una caída tampoco cuenta, porque su `Traza` se cierra como interrumpida. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él. Toda `Traza` fallida registra su intento y su motivo | `prueba` |
 | RF-99 | **La crítica «no comprobado».** La escribe el backend, no un rol, igual que la de un artefacto malformado. Su objeto es la unidad del encargo y su dimensión la del encargo. Sale con severidad `bloqueante`, estado `abierta` y, como evidencia, la `Traza` del último intento y su motivo. No se enruta: no regenera ni manda a revisión. Se queda abierta y el capítulo se cierra marcado, que es como el Arquitecto de arcos la ve (RF-33) | `prueba` |
 
 **Decisiones de este cambio.**
@@ -965,6 +965,65 @@ capítulos sueltos; §6, la ficha nueva en la tabla de gobierno; §7, el PDF en
 `definitions.md` y `domain-knowledge.md` no cambian: la ficha sigue siendo la
 misma entidad y la versión es de producción.
 
+### 4.19 Lo que dice dónde va un artefacto y el testigo del Planificador
+
+**El problema.** En la primera obra de verdad, el capítulo 1 se escribió entero
+y el 2 se quedó sin una línea, y la obra acabó con cero capítulos cerrados. Hubo
+tres fallos, y ninguno lo veía el recorrido en seco porque el ejecutor fingido
+hace lo que el modelo no hace:
+
+1. **Nadie abre el `Capitulo`.** La marca `cerrado` de RF-90 y el ciclo de vida
+   de `architecture.md` §4 se escriben sobre la fila `Capitulo`, y esa fila solo
+   existía si el Planificador la devolvía por su cuenta. Su prompt no se la
+   pide, así que no la devolvió. El cierre no marcó nada, el último capítulo
+   cerrado seguía siendo 0, y reanudar habría descartado el capítulo 1 entero.
+2. **El backend se fiaba del agente en lo que no es suyo.** El `capitulo` y el
+   `estado` de lo que devuelve un rol se tomaban del JSON. En el capítulo 2, el
+   Planificador escribió `planificada` en el estado de sus escenas; ese valor
+   está fuera de vocabulario y el lote entero se rechazó (RF-23).
+3. **Planificar sin escenas no paraba nada.** Por RF-98, el rechazo no era un
+   intento fallido, así que no se reintentó. El guion siguió con un capítulo
+   sin escenas: documentar, redactar y verificar no tenían nada que hacer, la
+   costura cosió nada y la auditoría de cierre auditó un capítulo vacío.
+
+**La decisión, en una frase.** El `Capitulo` lo abre el backend, a qué capítulo
+pertenece un artefacto y en qué punto de su ciclo de vida está también lo pone
+el backend, y un `planificar` que no deja escenas del capítulo es un intento
+fallido.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-180 | **El `Capitulo` lo abre el backend.** Cuando el Planificador termina bien el capítulo N, si N no tiene un `Capitulo` vivo, el backend escribe uno con `capitulo` N y estado `planificado`. Desde ahí el caminante lo mueve por su ciclo de vida y el cierre lo marca `cerrado` (RF-90). El Planificador puede seguir escribiendo el suyo, y entonces el backend no escribe otro: RF-92 sigue pidiendo exactamente un `Capitulo` vivo por capítulo cerrado | `prueba` |
+| RF-181 | **Dónde va y en qué punto está lo pone el backend.** En un encargo cuya unidad es el capítulo, la escena o el párrafo, todo artefacto que devuelve el rol lleva el `capitulo` del encargo, diga lo que diga su JSON. El `estado` de un `Capitulo`, una `Escena`, un `Plan`, una `Tarea` o un `Borrador` recién devuelto no lo decide el rol: se ignora el que traiga, porque su ciclo de vida lo lleva el caminante. El `estado` de una `Critica` o de un `Compromiso` sigue siendo del rol, porque dice algo del texto y no del proceso. En un encargo de la obra entera, como `auditar`, el `capitulo` que trae el artefacto se respeta: una crítica global puede apuntar a cualquier capítulo | `prueba` |
+| RF-182 | **Planificar sin escenas es un intento fallido.** Si lo que devuelve el Planificador no trae ninguna `Escena`, o el almacén lo rechaza (RF-23), el intento falla con ese motivo y no se escribe nada de él, tampoco la `Crítica` de RF-23. Se reintenta como cualquier intento fallido y, agotado, detiene la obra (`detener_obra`, RF-97). Es la única excepción a que un artefacto malformado no sea un intento fallido (RF-98) | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-76 | **El backend abre el `Capitulo` después de planificar, y solo si el Planificador no lo abrió** | Pedírselo solo al prompt deja el punto de guardado en manos de que el modelo se acuerde, que es justo lo que falló. Abrirlo antes de planificar crearía dos si el Planificador también escribe el suyo. Quitarle el permiso al Planificador convertiría en intento fallido un `Capitulo` bien escrito (RF-35) |
+| D-77 | **El testigo del Planificador se comprueba al recibirlo, y su rechazo es un intento fallido** | Sin escenas, los nueve pasos que vienen detrás no tienen sobre qué trabajar y la obra avanza en vacío hasta la auditoría de cierre, que es peor que detenerse. Anotar la `Crítica` de RF-23 y reintentar a la vez dejaría abierta para siempre una crítica de un intento que ya se repitió. Las otras tareas que producen testigo siguen como estaban: sus hooks ya comprueban su forma (RF-123), y `plegar` y `destilar` se rechazan dentro del cierre (RF-90) |
+
+**Qué retira.** RF-98 deja de decir que un artefacto malformado nunca es un
+intento fallido: lo sigue diciendo para todas las tareas menos `planificar`.
+
+**Qué queda fuera.** Comprobar que cada escena del plan tiene sus campos antes
+de redactar: eso ya lo hace el esquema del almacén. Pedir un número mínimo de
+escenas por capítulo, porque ningún documento lo fija. Que el guion no audite
+una obra con capítulos sin cerrar: con RF-182, un capítulo sin escenas ya no
+llega hasta el cierre. Y cambiar el prompt del Planificador: la regla la impone
+el backend, no el prompt (RF-35).
+
+**De dónde sale.** RF-23, RF-35, RF-90, RF-92, RF-97 y RF-98; D-30 y D-34;
+`architecture.md` §4, el ciclo de vida del capítulo. El modelo de §4.17 no
+cambia: su `Intento` de `planificar` ya puede fallar, y esto solo añade un motivo
+por el que falla; TLC se vuelve a pasar igualmente, como pide RF-163.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md` §4: quién
+abre el `Capitulo`, y el caso de `planificar` en cuántas veces se intenta cada
+paso. `validators.md` §8, la matriz de cobertura, con RF-180 a RF-182.
+`backend/formal/tla/mapeo.md`: las funciones nuevas en la fila de `planificar`.
+`definitions.md` y `domain-knowledge.md` no cambian: esta enmienda no toca la
+ontología.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -1127,6 +1186,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
 | §4.17 Validador formal del sistema | §4.10, §4.12, §4.15 y §4.18; RF-92, RF-93, RF-114, RF-116; D-40, D-42, D-59; OBJ-07 y RNF-08 |
 | §4.18 Cambio del lector y PDF | §4.9 (menciones), §4.10 (punto de guardado) y §4.12 (versiones); D-13, D-40, D-42; RD-08; `validators.md` §10 |
+| §4.19 Dónde va un artefacto y el testigo del Planificador | `architecture.md` §4 (ciclo de vida del capítulo); §4.17 (el modelo); RF-23, RF-35, RF-90, RF-92, RF-97, RF-98; D-30, D-34 |
 
 ## §10 Verificación y criterios de aceptación
 
