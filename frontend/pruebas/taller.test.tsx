@@ -80,6 +80,10 @@ describe("el taller (SPEC2 §4.11)", () => {
     expect(tarjeta).toHaveTextContent("Para Lucía");
     expect(tarjeta).toHaveTextContent("2 / 6");
     expect(within(tarjeta).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "2");
+    expect(tarjeta).toHaveTextContent("1 marcados · 3 críticas abiertas");
+    expect(tarjeta).toHaveTextContent("v1");
+    expect(tarjeta).not.toHaveTextContent("publicada la");
+    expect(screen.getByRole("link", { name: "Valladolid, Publicada" })).toHaveTextContent("v1 · publicada la v1");
 
     const detenida = screen.getByRole("link", { name: "El códice de Toledo, Detenida" });
     expect(detenida).toHaveTextContent("redactar_escena agotó sus intentos");

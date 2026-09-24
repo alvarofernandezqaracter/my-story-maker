@@ -369,7 +369,14 @@ a:focus-visible {
     border-bottom: 1px solid var(--borde);
   }
 
+  /* En la tira solo cabe la situación: el título ya está en la página. */
   .lateral__obra {
+    flex: 0 0 auto;
+    padding: 0;
+  }
+
+  .lateral__titulo,
+  .lateral__id {
     display: none;
   }
 
