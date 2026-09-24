@@ -191,7 +191,9 @@ def test_los_vetos_viajan_por_el_entorno_y_no_por_disco_ni_por_la_ventana() -> N
     ventana = _ventana((VETO,))
     entorno = EjecutorDeSubagentes()._entorno(encargo, ventana)
     assert entorno is not None
-    assert json.loads(entorno[ganchos.VARIABLE_DE_VETOS]) == [VETO]
+    assert json.loads(entorno[ganchos.VARIABLE_DE_VETOS]) == [
+        {"termino": VETO, "nivel": "tema_del_comprador"}
+    ]
     assert entorno[ganchos.VARIABLE_DE_RESERVA] == str(encargo.reserva_de_la_vuelta)
     assert VETO not in EjecutorDeSubagentes()._encargo(ventana)
 
@@ -217,12 +219,12 @@ def test_policy_bloquea_lo_vetado_y_lo_nombra(monkeypatch: pytest.MonkeyPatch) -
     assert VETO in motivo
 
 
-def test_policy_compara_tal_cual(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sin normalizar todavia: otra mayuscula no casa (D-49)."""
+def test_policy_compara_normalizado(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Otra mayuscula casa igual (SPEC1 RF-132); el resto, en test_lo_vetado."""
     codigo, _, _ = _hook(
         "policy", _entrega("Hubo Muerte de animales."), vetos=[VETO], monkeypatch=monkeypatch
     )
-    assert codigo == ganchos.SALIDA_PASA
+    assert codigo == ganchos.SALIDA_BLOQUEA
 
 
 def test_policy_sin_vetos_no_bloquea_nunca(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -490,7 +492,8 @@ def test_un_redactor_que_insiste_en_lo_vetado_detiene_la_obra(
         assert not policy["pasa"]
     # Los vetos del brief llegaron al hook por el entorno y no a la ventana.
     entorno = ejecutor.entornos[0]
-    assert entorno is not None and VETO in json.loads(entorno[ganchos.VARIABLE_DE_VETOS])
+    assert entorno is not None
+    assert VETO in [v["termino"] for v in json.loads(entorno[ganchos.VARIABLE_DE_VETOS])]
     assert all(VETO not in ventana.texto for ventana in ejecutor.ventanas)
 
 

@@ -13,9 +13,10 @@ y volver a entregar. Si pasa, sale con 0.
 
 **No abre la base de datos, no escribe nada en disco y no llama a ningun
 modelo.** El esquema y el contrato los lee de `tareas/`, que es entrada
-versionada; la lista de vetos y la reserva de la vuelta le llegan en variables
-de entorno. Quien registra el veredicto es el ejecutor: el almacen sigue con un
-solo escritor.
+versionada; la lista de vetos —la global y la del comprador, cada veto con su
+nivel— y la reserva de la vuelta le llegan en variables de entorno. Quien
+registra el veredicto es el ejecutor y quien lo escribe, el almacen, que sigue
+con un solo escritor.
 
 Las comprobaciones son funciones puras y el ejecutor las vuelve a aplicar, con
 estas mismas funciones, a lo que el agente entrego al final: ese es el
@@ -25,13 +26,16 @@ su lista, sin tocar el enganche.
 
 import json
 import os
+import re
 import sys
+import unicodedata
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from novela.ajustes import CARACTERES_POR_TOKEN_ESTIMADOS
 from novela.tareas import contrato_de_tarea, esquema_de_tarea
-from novela.vocabularios import GANCHOS
+from novela.vocabularios import GANCHOS, NIVEL_DE_VETO
 
 # Lo que el ejecutor le pasa al hook por el entorno del subagente (D-46).
 VARIABLE_DE_VETOS = "NOVELA_GANCHO_VETOS"
@@ -174,30 +178,136 @@ COMPROBACIONES_DE_CAPITULO: list[Comprobacion] = [
 ]
 
 
-# --- policy: lo vetado, tal cual (RF-124) ------------------------------------
+# --- policy: lo vetado, normalizado (RF-124, SPEC1 4.14) -------------------
 
 
-def coincidencias(texto: str, vetos: Sequence[str]) -> list[str]:
-    """Lo vetado que aparece en el texto, como subcadena exacta.
+@dataclass(frozen=True)
+class Veto:
+    """Un termino vetado y la lista de la que sale (RF-130)."""
 
-    Sin normalizar: ni mayusculas, ni acentos, ni plurales (D-49).
+    termino: str
+    nivel: str
+
+
+@dataclass(frozen=True)
+class Coincidencia:
+    """Un veto que aparece en la prosa, y como aparece escrito alli."""
+
+    veto: Veto
+    encontrado: str
+
+
+# Una palabra: letras o cifras seguidas. Lo demas separa.
+_PALABRA = re.compile(r"[^\W_]+")
+# Tres o mas veces la misma letra seguida no existe en espanol: es enfasis.
+_LETRA_ALARGADA = re.compile(r"(.)\1{2,}")
+# Consonantes tras las que el plural es `-es`: «animal» → «animales».
+_PLURAL_EN_ES = "lnrdjyz"
+
+
+def _sin_acentos(palabra: str) -> str:
+    """Minusculas y sin tildes ni dieresis. La `ñ` es otra letra y se queda."""
+    letras: list[str] = []
+    for letra in unicodedata.normalize("NFC", palabra).casefold():
+        if letra == "ñ":
+            letras.append(letra)
+            continue
+        descompuesta = unicodedata.normalize("NFD", letra)
+        letras.append("".join(c for c in descompuesta if not unicodedata.combining(c)))
+    return "".join(letras)
+
+
+def reducir(palabra: str) -> str:
+    """La forma con la que se compara una palabra, igual en los dos lados (RF-132).
+
+    Reglas fijas y nada mas (D-52): minusculas y sin acentos, la letra alargada
+    como una, sin plural y sin la vocal de genero. Dos palabras que solo
+    difieren en eso casan; es lo que se busca y es tambien su precio.
     """
-    return [veto for veto in vetos if veto and veto in texto]
+    forma = _LETRA_ALARGADA.sub(r"\1", _sin_acentos(palabra))
+    if len(forma) > 3 and forma.endswith("s"):
+        forma = forma[:-1]
+    if len(forma) > 3 and forma.endswith("ce"):
+        forma = forma[:-2] + "z"  # «lapices» → «lapiz»
+    elif len(forma) > 3 and forma.endswith("e") and forma[-2] in _PLURAL_EN_ES:
+        forma = forma[:-1]  # «animales» → «animal»
+    if len(forma) > 3 and forma[-1] in "ao":
+        forma = forma[:-1]  # «tonta», «tonto» → «tont»
+    return forma
 
 
-def _sin_nada_vetado(entrega: Entrega, vetos: Sequence[str]) -> list[str]:
+def palabras(texto: str) -> list[str]:
+    return _PALABRA.findall(unicodedata.normalize("NFC", texto))
+
+
+def veto_del_comprador(termino: str) -> Veto:
+    """Un veto del brief es palabra o tema segun cuantas palabras tiene (D-50)."""
+    nivel = "palabra_del_comprador" if len(palabras(termino)) <= 1 else "tema_del_comprador"
+    return Veto(termino=termino, nivel=nivel)
+
+
+def _como_veto(veto: Veto | str) -> Veto:
+    return veto if isinstance(veto, Veto) else veto_del_comprador(veto)
+
+
+def coincidencias(texto: str, vetos: Sequence[Veto | str]) -> list[Coincidencia]:
+    """Lo vetado que aparece en el texto, por palabras enteras y normalizado.
+
+    Un veto casa cuando sus palabras reducidas aparecen seguidas en el texto,
+    y un tema es eso mismo con mas de una palabra (RF-133). Una sola vez cada
+    veto con cada forma escrita distinta.
+    """
+    texto = unicodedata.normalize("NFC", texto)
+    tramos = [(m.start(), m.end(), reducir(m.group())) for m in _PALABRA.finditer(texto)]
+    formas = [forma for _, _, forma in tramos]
+    halladas: list[Coincidencia] = []
+    for bruto in vetos:
+        veto = _como_veto(bruto)
+        buscadas = [reducir(palabra) for palabra in palabras(veto.termino)]
+        if not buscadas:
+            continue
+        largo = len(buscadas)
+        for inicio in range(len(formas) - largo + 1):
+            if formas[inicio : inicio + largo] == buscadas:
+                escrito = texto[tramos[inicio][0] : tramos[inicio + largo - 1][1]]
+                coincidencia = Coincidencia(veto=veto, encontrado=escrito)
+                if coincidencia not in halladas:
+                    halladas.append(coincidencia)
+    return halladas
+
+
+def coincidencias_en_la_entrega(
+    texto_entregado: str, vetos: Sequence[Veto | str]
+) -> list[Coincidencia]:
+    """Lo vetado en la prosa de lo que entrego el agente. Vacio si no se lee."""
+    try:
+        entrega = leer_entrega(texto_entregado)
+    except EntregaIlegible:
+        return []
+    halladas: list[Coincidencia] = []
+    for texto in _textos_de_prosa(entrega):
+        for coincidencia in coincidencias(texto, vetos):
+            if coincidencia not in halladas:
+                halladas.append(coincidencia)
+    return halladas
+
+
+def _sin_nada_vetado(entrega: Entrega, vetos: Sequence[Veto | str]) -> list[str]:
+    """El motivo nombra lo que el agente escribio, no la lista (RF-134)."""
     encontrados: list[str] = []
     for texto in _textos_de_prosa(entrega):
-        for veto in coincidencias(texto, vetos):
-            if veto not in encontrados:
-                encontrados.append(veto)
-    return [f"aparece lo vetado: «{veto}»" for veto in encontrados]
+        for coincidencia in coincidencias(texto, vetos):
+            if coincidencia.encontrado not in encontrados:
+                encontrados.append(coincidencia.encontrado)
+    return [f"aparece lo vetado: «{escrito}»" for escrito in encontrados]
 
 
 # --- El veredicto -----------------------------------------------------------
 
 
-def revisar(gancho: str, tarea: str, texto: str, vetos: Sequence[str] = ()) -> list[str]:
+def revisar(
+    gancho: str, tarea: str, texto: str, vetos: Sequence[Veto | str] = ()
+) -> list[str]:
     """Lo que no pasa de lo entregado, segun ese hook. Vacio si pasa.
 
     Es la funcion que usan a la vez el hook, dentro de la sesion, y el ejecutor,
@@ -249,7 +359,18 @@ def cabe_la_vuelta(texto_entregado: str, reserva: int) -> bool:
     return _tokens(len(texto_entregado)) + len(GANCHOS) * por_motivo <= reserva
 
 
-def _vetos_del_entorno() -> list[str]:
+def vetos_para_el_entorno(vetos: Sequence[Veto | str]) -> str:
+    """La lista tal como viaja al hook: cada veto con su nivel (RF-134).
+
+    En ASCII escapado: el entorno de un proceso en Windows no garantiza UTF-8.
+    """
+    return json.dumps(
+        [{"termino": v.termino, "nivel": v.nivel} for v in map(_como_veto, vetos)]
+    )
+
+
+def _vetos_del_entorno() -> list[Veto]:
+    """Lo contrario de `vetos_para_el_entorno`. Una cadena suelta es del comprador."""
     bruto = os.environ.get(VARIABLE_DE_VETOS, "")
     if not bruto:
         return []
@@ -257,7 +378,19 @@ def _vetos_del_entorno() -> list[str]:
         vetos = json.loads(bruto)
     except json.JSONDecodeError:
         return []
-    return [veto for veto in vetos if isinstance(veto, str)] if isinstance(vetos, list) else []
+    if not isinstance(vetos, list):
+        return []
+    leidos: list[Veto] = []
+    for veto in vetos:
+        if isinstance(veto, str):
+            leidos.append(veto_del_comprador(veto))
+        elif (
+            isinstance(veto, dict)
+            and isinstance(veto.get("termino"), str)
+            and veto.get("nivel") in NIVEL_DE_VETO
+        ):
+            leidos.append(Veto(termino=veto["termino"], nivel=veto["nivel"]))
+    return leidos
 
 
 def _reserva_del_entorno() -> int:

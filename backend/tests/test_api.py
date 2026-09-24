@@ -116,6 +116,7 @@ def test_el_esquema_publicado_trae_todas_las_rutas(cliente: TestClient) -> None:
         "/obras/{id_obra}/hechos",
         "/obras/{id_obra}/manuscrito",
         "/obras/{id_obra}/pasajes",
+        "/obras/{id_obra}/policy",
         "/obras/{id_obra}/progreso",
         "/obras/{id_obra}/progreso/ahora",
         "/obras/{id_obra}/reanudar",

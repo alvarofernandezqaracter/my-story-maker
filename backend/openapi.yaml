@@ -330,6 +330,68 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/policy:
+    get:
+      summary: Ver Policy
+      description: El registro de auditoria de `policy`, en orden (RF-138). Solo lectura.
+      operationId: ver_policy_obras__id_obra__policy_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: capitulo
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          title: Capitulo
+      - name: nivel
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - global
+            - palabra_del_comprador
+            - tema_del_comprador
+            type: string
+          - type: 'null'
+          title: Nivel
+      - name: decision
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - devuelto_al_agente
+            - intento_fallido
+            type: string
+          - type: 'null'
+          title: Decision
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DecisionDePolicy'
+                title: Response Ver Policy Obras  Id Obra  Policy Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /obras/{id_obra}/estado:
     get:
       summary: Ver Estado
@@ -1102,6 +1164,73 @@ components:
       - sucesos
       title: Cronologia
       description: 'Los sucesos de la obra en orden. Es una vista: se deriva al pedirla.'
+    DecisionDePolicy:
+      properties:
+        id:
+          type: integer
+          title: Id
+        id_traza:
+          type: string
+          title: Id Traza
+        capitulo:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo
+        escena:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Escena
+        tarea:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tarea
+        intento:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Intento
+        decision:
+          type: string
+          enum:
+          - devuelto_al_agente
+          - intento_fallido
+          title: Decision
+        nivel:
+          type: string
+          enum:
+          - global
+          - palabra_del_comprador
+          - tema_del_comprador
+          title: Nivel
+        termino:
+          type: string
+          title: Termino
+          description: El veto tal como esta en su lista
+        encontrado:
+          type: string
+          title: Encontrado
+          description: Lo que casó, tal como esta escrito en la prosa
+        registrada_en:
+          type: string
+          title: Registrada En
+      type: object
+      required:
+      - id
+      - id_traza
+      - capitulo
+      - escena
+      - tarea
+      - intento
+      - decision
+      - nivel
+      - termino
+      - encontrado
+      - registrada_en
+      title: DecisionDePolicy
+      description: Una coincidencia de lo vetado y lo que `policy` hizo con ella (RI-16).
     Destinatario:
       properties:
         nombre:
@@ -1230,6 +1359,13 @@ components:
           - type: 'null'
           title: Version Publicada
           description: La de la ultima publicacion, si la hay
+        motivo_de_la_detencion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Motivo De La Detencion
+          description: 'Por que esta detenida: la tarea, lo que fallo y su traza.
+            Vacio si no (RI-17)'
       type: object
       required:
       - id_obra

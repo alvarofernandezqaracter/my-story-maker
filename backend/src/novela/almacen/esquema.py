@@ -21,10 +21,12 @@ from dataclasses import dataclass
 
 from novela.vocabularios import (
     CICLO_DE_VIDA_DEL_CAPITULO,
+    DECISION_DE_POLICY,
     DIMENSIONES,
     ESTADO_DE_COMPROMISO,
     ESTADO_DE_PRODUCCION,
     MEMORIA,
+    NIVEL_DE_VETO,
     ROLES,
     SEVERIDAD,
     TIPOS_DE_LA_CAPA_MUNDO,
@@ -655,6 +657,77 @@ def sentencias_de_las_versiones() -> list[str]:
         if tabla.desde_migracion <= MIGRACION_DE_LAS_VERSIONES:
             sentencias += _versiones_en_la_tabla(tabla)
     return sentencias
+
+
+# --- Lo vetado: la lista global y el registro de policy (SPEC1 4.14) -------
+#
+# Ninguna de las dos es un artefacto: no las escribe ningun rol. La lista global
+# es de la instalacion y no cuelga de ninguna obra (RD-26); el registro es la
+# constancia de lo que hizo `policy` y, como la `Traza`, no se caduca ni se
+# releva (RD-27). Ninguna de las dos se borra ni se modifica.
+
+# La lista de serie (RF-131, D-51). Corta a proposito: fuera quedan palabras con
+# un sentido historico o inocente que la normalizacion confundiria. Ampliarla es
+# anadir una migracion, no reescribir esta.
+TERMINOS_VETADOS_DE_SERIE: tuple[str, ...] = (
+    "cabrón",
+    "cojones",
+    "coño",
+    "estúpido",
+    "follar",
+    "gilipollas",
+    "hijo de puta",
+    "hijoputa",
+    "imbécil",
+    "joder",
+    "malparido",
+    "marica",
+    "maricón",
+    "mierda",
+    "puta",
+    "subnormal",
+    "sudaca",
+)
+
+
+def _literal(texto: str) -> str:
+    return "'" + texto.replace("'", "''") + "'"
+
+
+def sentencias_de_lo_vetado() -> list[str]:
+    """La migracion 8: la lista global sembrada y el registro de policy."""
+    return [
+        """CREATE TABLE termino_vetado_global (
+  termino TEXT NOT NULL PRIMARY KEY,
+  incorporado_en TEXT NOT NULL
+) STRICT""",
+        "CREATE TRIGGER termino_vetado_global_no_se_borra BEFORE DELETE "
+        f"ON termino_vetado_global BEGIN {_NO_SE_BORRA}; END",
+        "CREATE TRIGGER termino_vetado_global_es_inmutable BEFORE UPDATE "
+        "ON termino_vetado_global "
+        "BEGIN SELECT RAISE(ABORT, 'la lista global es inmutable: se amplia con otra "
+        "migracion'); END",
+        *(
+            "INSERT INTO termino_vetado_global (termino, incorporado_en) "
+            f"VALUES ({_literal(termino)}, strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))"
+            for termino in TERMINOS_VETADOS_DE_SERIE
+        ),
+        f"""CREATE TABLE decision_de_policy (
+  id INTEGER PRIMARY KEY,
+  id_obra TEXT NOT NULL REFERENCES artefacto_obra(id),
+  id_traza TEXT NOT NULL REFERENCES artefacto_traza(id),
+  decision TEXT NOT NULL {_check('decision', DECISION_DE_POLICY, obligatoria=True)},
+  nivel TEXT NOT NULL {_check('nivel', NIVEL_DE_VETO, obligatoria=True)},
+  termino TEXT NOT NULL,
+  encontrado TEXT NOT NULL,
+  registrada_en TEXT NOT NULL
+) STRICT""",
+        "CREATE INDEX indice_decision_de_policy ON decision_de_policy (id_obra, id)",
+        "CREATE TRIGGER decision_de_policy_no_se_borra BEFORE DELETE ON decision_de_policy "
+        f"BEGIN {_NO_SE_BORRA}; END",
+        "CREATE TRIGGER decision_de_policy_es_inmutable BEFORE UPDATE ON decision_de_policy "
+        "BEGIN SELECT RAISE(ABORT, 'el registro de policy es de solo anadir'); END",
+    ]
 
 
 assert {t.tipo for t in TABLAS} == set(

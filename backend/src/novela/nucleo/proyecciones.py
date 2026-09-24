@@ -86,10 +86,12 @@ class Ventana:
     texto: str
     tokens: int
     recuperaciones: list[dict[str, Any]] = dcfield(default_factory=list)
-    # Lo que el hook `policy` busca en lo entregado (SPEC1 RF-124). **No entra en
-    # el texto de la ventana**: viaja aparte, hasta el hook, y al agente solo le
-    # llega lo que encontro en su propio texto.
+    # Lo que el hook `policy` busca en lo entregado (SPEC1 RF-124, 4.14): los
+    # vetos del comprador y la lista global. **No entran en el texto de la
+    # ventana**: viajan aparte, hasta el hook, y al agente solo le llega lo que
+    # encontro en su propio texto.
     vetos: tuple[str, ...] = ()
+    vetos_globales: tuple[str, ...] = ()
 
 
 Constructor = Callable[[Peticion], Material]
@@ -238,10 +240,10 @@ def _destinatario(p: Peticion) -> dict[str, Any]:
 
 
 def vetos_del_encargo(almacen: Almacen, encargo: Encargo) -> tuple[str, ...]:
-    """Lo vetado que el hook `policy` busca, tal cual (SPEC1 RF-124).
+    """Las palabras o temas que el comprador veto en el brief (SPEC1 RF-130).
 
-    Hoy son las palabras o temas que el comprador veto en el brief. Es el unico
-    sitio del que sale la lista: ampliarla es cambiar esta funcion, no el hook.
+    Se leen del cuerpo de la `Obra`, donde ya estan: no se copian (D-50). Si
+    cada uno es palabra o tema lo decide el hook por su forma.
     """
     if "policy" not in encargo.ganchos:
         return ()
@@ -251,6 +253,13 @@ def vetos_del_encargo(almacen: Almacen, encargo: Encargo) -> tuple[str, ...]:
     if not isinstance(vetos, list):
         return ()
     return tuple(veto for veto in vetos if isinstance(veto, str) and veto)
+
+
+def vetos_globales_del_encargo(almacen: Almacen, encargo: Encargo) -> tuple[str, ...]:
+    """La lista global de la instalacion, para todo encargo con `policy` (RF-131)."""
+    if "policy" not in encargo.ganchos:
+        return ()
+    return tuple(almacen.terminos_vetados_globales())
 
 
 def _recuerdos_del_destinatario(p: Peticion) -> Filas:
@@ -410,6 +419,7 @@ def ensamblar(
         tokens=estimar_tokens(texto),
         recuperaciones=peticion.recuperaciones,
         vetos=vetos_del_encargo(almacen, encargo),
+        vetos_globales=vetos_globales_del_encargo(almacen, encargo),
     )
 
 
