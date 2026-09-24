@@ -71,12 +71,11 @@ VARIABLES
     hilos,        \* los hilos de produccion (Produccion.hilos y los muertos)
     nh,           \* cuantos hilos se han creado
     ultimo,       \* el hilo registrado para la obra en Produccion.hilos
-    pets,         \* arranques que ya leyeron el hilo anterior y no se registraron
     caidas, reanudaciones, fallos
 
 vars == << proceso, detenida, auditada, poblado, nv, terminada, veredicto, foto,
            cambiados, tipo, publicada, publicadas, rechazadas, escrito, gen,
-           hilos, nh, ultimo, pets, caidas, reanudaciones, fallos >>
+           hilos, nh, ultimo, caidas, reanudaciones, fallos >>
 
 HiloNuevo == [est |-> "libre", espera |-> 0, pc |-> "volver", k |-> 1,
               tarea |-> "planificar", intento |-> 1, g |-> 0]
@@ -106,14 +105,11 @@ Produciendo == ultimo # 0 /\ Vivo(ultimo)
 Terminada == auditada >= C    \* Produccion.terminada (RF-93)
 
 (***************************************************************************)
-(* Arrancar la produccion (api/aplicacion.py:Produccion.arrancar).         *)
-(* En el codigo de hoy leer el hilo anterior y registrar el nuevo son dos  *)
-(* pasos sin cerrojo: la orden deja su lectura en pets y la registra       *)
-(* despues.                                                                *)
+(* Arrancar la produccion (api/aplicacion.py:Produccion.arrancar). Leer el *)
+(* hilo anterior y registrar el nuevo es una sola operacion bajo cerrojo   *)
+(* (RF-166, contraejemplo 01). El hilo nuevo, nh+1, espera (join) al       *)
+(* anterior si sigue vivo.                                                 *)
 (***************************************************************************)
-PedirArranque == pets' = Append(pets, ultimo)
-
-\* Crea el hilo nh+1, que espera (join) al anterior si sigue vivo.
 CrearHilo(ant) ==
     /\ nh < MaxHilos
     /\ nh' = nh + 1
@@ -155,7 +151,7 @@ Volver(i) ==
                ELSE [hilos[i] EXCEPT !.pc = "tarea", !.tarea = "poblar", !.intento = 1])
     /\ UNCHANGED << proceso, detenida, auditada, poblado, nv, terminada, veredicto,
                     foto, cambiados, tipo, publicada, publicadas, rechazadas, gen,
-                    nh, ultimo, pets, caidas, reanudaciones, fallos >>
+                    nh, ultimo, caidas, reanudaciones, fallos >>
 
 \* Capitulo ya cerrado: no se repite (caminante._ya_cerrado).
 Elegir(i) ==
@@ -166,7 +162,7 @@ Elegir(i) ==
                                      !.intento = 1])
     /\ UNCHANGED << proceso, detenida, auditada, poblado, nv, terminada, veredicto,
                     foto, cambiados, tipo, publicada, publicadas, rechazadas, escrito,
-                    gen, nh, ultimo, pets, caidas, reanudaciones, fallos >>
+                    gen, nh, ultimo, caidas, reanudaciones, fallos >>
 
 \* A donde va el caminante cuando una tarea sale bien o se agota sin detener.
 Despues(h) ==
@@ -210,7 +206,7 @@ Intento(i) ==
                        /\ UNCHANGED detenida
                /\ UNCHANGED << poblado, escrito, gen >>
     /\ UNCHANGED << proceso, auditada, nv, terminada, veredicto, foto, cambiados,
-                    tipo, publicada, publicadas, rechazadas, nh, ultimo, pets,
+                    tipo, publicada, publicadas, rechazadas, nh, ultimo,
                     caidas, reanudaciones, fallos >>
 
 (* El punto de guardado: cerrar el capitulo es una sola transaccion        *)
@@ -226,7 +222,7 @@ Cerrar(i) ==
     /\ SetH(i, [h EXCEPT !.pc = "aud_check"])
     /\ UNCHANGED << proceso, detenida, auditada, poblado, nv, terminada, veredicto,
                     foto, cambiados, tipo, publicada, publicadas, rechazadas, gen,
-                    nh, ultimo, pets, caidas, reanudaciones, fallos >>
+                    nh, ultimo, caidas, reanudaciones, fallos >>
 
 (* _auditar_si_toca: con cadencia 0 solo toca al cierre de la obra.         *)
 AudCheck(i) ==
@@ -238,7 +234,7 @@ AudCheck(i) ==
                ELSE [h EXCEPT !.pc = "elegir", !.k = h.k + 1])
     /\ UNCHANGED << proceso, detenida, auditada, poblado, nv, terminada, veredicto,
                     foto, cambiados, tipo, publicada, publicadas, rechazadas, escrito,
-                    gen, nh, ultimo, pets, caidas, reanudaciones, fallos >>
+                    gen, nh, ultimo, caidas, reanudaciones, fallos >>
 
 (* almacen.guardar_auditoria(de_cierre=True): las criticas, la constancia   *)
 (* y la marca de terminada de la version en curso, juntas (RF-94, RF-110). *)
@@ -255,7 +251,7 @@ GuardarAud(i) ==
        ELSE UNCHANGED << terminada, veredicto, foto >>
     /\ SetH(i, [h EXCEPT !.pc = "fin"])
     /\ UNCHANGED << proceso, detenida, poblado, nv, cambiados, tipo, publicada,
-                    publicadas, rechazadas, escrito, gen, nh, ultimo, pets, caidas,
+                    publicadas, rechazadas, escrito, gen, nh, ultimo, caidas,
                     reanudaciones, fallos >>
 
 Fin(i) ==
@@ -263,7 +259,7 @@ Fin(i) ==
     /\ hilos' = Acabar(i, hilos)
     /\ UNCHANGED << proceso, detenida, auditada, poblado, nv, terminada, veredicto,
                     foto, cambiados, tipo, publicada, publicadas, rechazadas, escrito,
-                    gen, nh, ultimo, pets, caidas, reanudaciones, fallos >>
+                    gen, nh, ultimo, caidas, reanudaciones, fallos >>
 
 (* Una excepcion que no es ProduccionDetenida sale de caminar_obra: hoy el  *)
 (* hilo muere sin mas.                                                     *)
@@ -273,21 +269,11 @@ FalloNoPrevisto(i) ==
     /\ hilos' = Acabar(i, hilos)
     /\ UNCHANGED << proceso, detenida, auditada, poblado, nv, terminada, veredicto,
                     foto, cambiados, tipo, publicada, publicadas, rechazadas, escrito,
-                    gen, nh, ultimo, pets, caidas, reanudaciones >>
+                    gen, nh, ultimo, caidas, reanudaciones >>
 
 PasoDelCaminante(i) ==
     Volver(i) \/ Elegir(i) \/ Intento(i) \/ Cerrar(i) \/ AudCheck(i)
     \/ GuardarAud(i) \/ Fin(i)
-
-(* Registrar un arranque pedido (segunda mitad de Produccion.arrancar).     *)
-Registrar ==
-    /\ proceso = "arriba" /\ pets # << >>
-    /\ \E j \in 1..Len(pets) :
-          /\ CrearHilo(pets[j])
-          /\ pets' = [n \in 1..(Len(pets) - 1) |-> IF n < j THEN pets[n] ELSE pets[n + 1]]
-    /\ UNCHANGED << proceso, detenida, auditada, poblado, nv, terminada, veredicto,
-                    foto, cambiados, tipo, publicada, publicadas, rechazadas, escrito,
-                    gen, caidas, reanudaciones, fallos >>
 
 (***************************************************************************)
 (* El entorno: la maquina y el editor.                                    *)
@@ -298,7 +284,6 @@ Caida ==
     /\ caidas' = caidas + 1
     /\ hilos' = [i \in Hilos |-> IF Vivo(i) THEN [hilos[i] EXCEPT !.est = "muerto"]
                                              ELSE hilos[i]]
-    /\ pets' = << >>
     /\ UNCHANGED << detenida, auditada, poblado, nv, terminada, veredicto, foto,
                     cambiados, tipo, publicada, publicadas, rechazadas, escrito, gen,
                     nh, ultimo, reanudaciones, fallos >>
@@ -313,23 +298,23 @@ ArrancarBackend ==
        ELSE UNCHANGED << hilos, nh, ultimo >>
     /\ UNCHANGED << detenida, auditada, poblado, nv, terminada, veredicto, foto,
                     cambiados, tipo, publicada, publicadas, rechazadas, escrito, gen,
-                    pets, caidas, reanudaciones, fallos >>
+                    caidas, reanudaciones, fallos >>
 
 Detener ==
     /\ proceso = "arriba" /\ ~detenida
     /\ detenida' = TRUE
     /\ UNCHANGED << proceso, auditada, poblado, nv, terminada, veredicto, foto,
                     cambiados, tipo, publicada, publicadas, rechazadas, escrito, gen,
-                    hilos, nh, ultimo, pets, caidas, reanudaciones, fallos >>
+                    hilos, nh, ultimo, caidas, reanudaciones, fallos >>
 
 Reanudar ==
     /\ proceso = "arriba" /\ reanudaciones < MaxReanudar
     /\ reanudaciones' = reanudaciones + 1
     /\ detenida' = FALSE
-    /\ IF ~Terminada THEN PedirArranque ELSE UNCHANGED pets
+    /\ IF ~Terminada THEN CrearHilo(ultimo) ELSE UNCHANGED << hilos, nh, ultimo >>
     /\ UNCHANGED << proceso, auditada, poblado, nv, terminada, veredicto, foto,
                     cambiados, tipo, publicada, publicadas, rechazadas, escrito, gen,
-                    hilos, nh, ultimo, caidas, fallos >>
+                    caidas, fallos >>
 
 (* Una version nueva que reescribe los capitulos S (versiones.rehacer_desde *)
 (* y almacen.abrir_version). Solo con la ultima terminada y sin produccion  *)
@@ -345,10 +330,9 @@ AbrirVersion(S, t) ==
                    THEN [r EXCEPT !.cad = TRUE, !.rel = nv + 1] ELSE r : r \in escrito}
     /\ auditada' = IF S = {} THEN C - 1 ELSE Min(S) - 1
     /\ detenida' = FALSE
-    /\ PedirArranque
+    /\ CrearHilo(ultimo)
     /\ UNCHANGED << proceso, poblado, terminada, veredicto, foto, publicada,
-                    publicadas, rechazadas, gen, hilos, nh, ultimo, caidas,
-                    reanudaciones, fallos >>
+                    publicadas, rechazadas, gen, caidas, reanudaciones, fallos >>
 
 (* Rehacer desde el capitulo N hasta el final (RF-111, D-42).               *)
 Rehacer(n) == AbrirVersion(n..C, "rehacer")
@@ -372,7 +356,7 @@ Publicar(v) ==
        ELSE /\ rechazadas' = rechazadas \cup {v}
             /\ UNCHANGED << publicada, publicadas >>
     /\ UNCHANGED << proceso, detenida, auditada, poblado, nv, terminada, veredicto,
-                    foto, cambiados, tipo, escrito, gen, hilos, nh, ultimo, pets,
+                    foto, cambiados, tipo, escrito, gen, hilos, nh, ultimo,
                     caidas, reanudaciones, fallos >>
 
 (***************************************************************************)
@@ -399,7 +383,6 @@ Init ==
                                          ELSE HiloNuevo]
     /\ nh = 1
     /\ ultimo = 1
-    /\ pets = << >>
     /\ caidas = 0 /\ reanudaciones = 0 /\ fallos = 0
 
 Entorno ==
@@ -411,16 +394,14 @@ Entorno ==
 
 Next ==
     \/ \E i \in Hilos : PasoDelCaminante(i)
-    \/ Registrar
     \/ Entorno
 
-(* Equidad: el codigo del servidor avanza si puede (debil), y el proceso    *)
+(* Equidad: el caminante avanza si puede (debil), y el proceso              *)
 (* caido vuelve a arrancar (debil). Ni el editor ni la maquina deben nada:  *)
 (* sus acciones no llevan equidad, y las caidas estan acotadas por         *)
 (* MaxCaidas, que es la hipotesis de que dejan de ocurrir.                 *)
 Fairness ==
     /\ \A i \in Hilos : WF_vars(PasoDelCaminante(i))
-    /\ WF_vars(Registrar)
     /\ WF_vars(ArrancarBackend)
 
 Spec == Init /\ [][Next]_vars /\ Fairness
