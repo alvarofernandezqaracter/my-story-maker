@@ -1,0 +1,18 @@
+# Contrato de verificacion de `fatiga_lexica`.
+#
+# Tres partes y ninguna mas: el predicado en una frase, la proyeccion minima
+# sobre la que se evalua y la forma exacta de la `Critica` si falla. Lo que
+# sobra en la proyeccion es lo que produce falsos positivos.
+
+dimension = "fatiga_lexica"
+rol = "editor_de_estilo"
+metodo_de_verificacion = "analisis"
+alcance = "local"
+criba = "pulido"
+
+predicado = "Ninguna imagen ni muletilla del texto nuevo repite una ya recuperada del registro acumulado."
+proyeccion_minima = ["texto_producido", "ecos_del_registro"]
+
+[critica]
+severidad = "menor"
+evidencia_aceptada = "La imagen repetida y el eco recuperado que ya la contenia."

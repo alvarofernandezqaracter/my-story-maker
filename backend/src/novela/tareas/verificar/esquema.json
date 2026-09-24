@@ -1,0 +1,14 @@
+{
+  "tipo": "Critica",
+  "cuerpo": {
+    "objeto": "esc_0007",
+    "dimension": "integridad_de_pov",
+    "severidad": "bloqueante",
+    "evidencia": "«supo que el conde ya habia firmado», con el conde ausente",
+    "accion_sugerida": "Narrar solo lo accesible al foco o declarar el conde presente",
+    "detectada_por": {
+      "rol": "verificador_de_continuidad",
+      "contrato": "integridad_de_pov"
+    }
+  }
+}

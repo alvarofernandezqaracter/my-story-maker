@@ -1,0 +1,18 @@
+# Contrato de verificacion de `integridad_de_pov`.
+#
+# Tres partes y ninguna mas: el predicado en una frase, la proyeccion minima
+# sobre la que se evalua y la forma exacta de la `Critica` si falla. Lo que
+# sobra en la proyeccion es lo que produce falsos positivos.
+
+dimension = "integridad_de_pov"
+rol = "verificador_de_continuidad"
+metodo_de_verificacion = "inspeccion"
+alcance = "escena"
+criba = "bloqueantes"
+
+predicado = "Nada de lo narrado queda fuera del acceso perceptivo y cognitivo del `pov` declarado."
+proyeccion_minima = ["contrato_de_escena", "texto_producido"]
+
+[critica]
+severidad = "bloqueante"
+evidencia_aceptada = "El fragmento literal que narra algo inaccesible al foco."

@@ -1,0 +1,24 @@
+# Contrato de la tarea `redactar`.
+#
+# Un rol, una tarea: declarar un rol es anadir una carpeta con todo lo suyo
+# dentro. Lo que este contrato declara es lo que el backend impone, no lo que
+# el prompt pide.
+
+tarea = "redactar"
+rol = "redactor"
+alcance = "escena"
+cuando = "Tras plan aceptado, una escena por encargo"
+
+# Sin ninguna herramienta salvo las que aqui se conceden.
+herramientas = []
+
+# Que ve y que no ve (architecture.md 3).
+entrada = ["contrato_de_escena", "voces_del_elenco", "continuidad_local", "documentacion"]
+no_ve = ["la trama futura", "las criticas de otras escenas", "la prosa anterior"]
+
+# Que deja escrito. Lo que no este aqui, el backend no se lo deja escribir.
+escribe = ["Borrador", "Parrafo", "Compromiso", "Decision"]
+
+# Que rechaza de lo que recibe: campos obligatorios del artefacto de entrada.
+[rechaza]
+contrato_de_escena = ["pov", "marco", "elenco_presente", "objetivo", "obstaculo", "cambio_de_valor"]

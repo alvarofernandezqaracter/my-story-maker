@@ -1,0 +1,31 @@
+{
+  "tipo": "Escena",
+  "orden": 1,
+  "cuerpo": {
+    "pov": "per_0a91",
+    "focalizacion": "tercera_limitada",
+    "marco": {
+      "lugar": "lug_1182",
+      "instante": "1587-04-02",
+      "duracion": "una tarde"
+    },
+    "elenco_presente": [
+      "per_0a91",
+      "per_44c2"
+    ],
+    "objetivo": "acabar la tirada antes de la ronda",
+    "obstaculo": "falta plomo y el oficial se ha ido",
+    "cambio_de_valor": {
+      "entra": "confiada",
+      "sale": "acorralada"
+    },
+    "informacion_revelada": {
+      "per_0a91": "el oficial la delato"
+    },
+    "funcion_estructural": "escalada",
+    "compromisos_abiertos": [
+      "cmp_0007"
+    ],
+    "compromisos_pagados": []
+  }
+}

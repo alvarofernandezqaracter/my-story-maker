@@ -1,331 +1,116 @@
 # CLAUDE.md — my-story-maker
 
-Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.31.0.
+Instrucciones para Claude Code en este repositorio. Las reglas del proyecto
+—qué es el sistema, sus invariantes, el reparto de carpetas y el ciclo de
+edición— viven en `AGENTS.md`, que se importa entero aquí debajo y manda sobre
+este fichero. Lo que sigue es solo lo que **Claude Code** necesita saber además:
+con qué herramientas de `.claude/` se recorre ese ciclo y qué trampas tiene
+trabajar aquí.
 
-**Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
-quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
-criterio histórico y el juicio literario son de los subagentes.
+@AGENTS.md
 
-Se arranca con `/orquestar-novela`, o pidiendo preparar, escribir, reanudar o
-cerrar una novela.
+## Este fichero es del desarrollo, no de la novela
 
-## Regla número uno: el spec manda
+Los doce roles del censo también son Claude Code, pero **no leen este fichero**:
+el ejecutor lanza cada subagente de tarea en un directorio vacío fuera del
+repositorio, sin `CLAUDE.md`, sin `.claude/` y sin servidores MCP (SPEC1 RF-100
+y RF-102). Así que:
 
-[`docs/spec/SPEC.md`](docs/spec/SPEC.md) es la fuente de verdad. Si el código y el
-spec cuentan cosas distintas, manda el spec y el código es el que está mal.
+- Nada de lo que escribas aquí cambia cómo redacta el Redactor o cómo critica el
+  Verificador. Lo que un rol sabe está en `backend/src/novela/tareas/<tipo>/`:
+  su `prompt.md`, su `contrato.toml` y su `esquema.json`.
+- Si alguna vez un subagente de tarea vuelve a medir unos 10 000 tokens de
+  entrada en vez de unos 1 500–3 200, lo más probable es que haya vuelto a
+  arrancar desde el repositorio y esté leyendo esto. Es un defecto, no una
+  medida.
 
-**El spec y el código nunca divergen.** Cuando un cambio introduce, cambia o
-elimina algo que el spec describe (una clave de `config.json`, un campo del
-canon, un validador `VD-xx`, un comando, un estado, una instrucción de la skill),
-el spec se actualiza en el mismo momento, no después. Eso implica además:
+## El ciclo, con las herramientas de `.claude/`
 
-- Subir la versión en la cabecera del spec (`version:` y `actualizado:`), y con
-  ella la de `pyproject.toml` y `novela/__init__.py`.
-- Añadir su entrada en §16 con **sección tocada y motivo**, formato Keep a Changelog.
-- Regenerar la tabla de §17 con el `git log` que la propia §17 documenta al final.
-- Los números de sección son estables y **no se reutilizan**; si una sección
-  desaparece, su número queda muerto (pasó con DA-01, DA-11 y §14).
+| Fase de `AGENTS.md` | Qué usar |
+| --- | --- |
+| Lanzar una tarea entera | `/ciclo <Tn>`: lee la tarea en `TAREAS-PENDIENTES.md` y recorre spec, código y docs sin parar |
+| 1 · Interrogatorio | La skill `grill-me`, una sola vez y con dos a cuatro preguntas con opciones |
+| 2 · Código | La skill de la pila que se toca, siempre antes de escribir: `fastapi`, `frontend-react`, `backend-sqlite`, `sqlite-vec` |
+| Cierre de la fase 2 | `/verificar`: ruff, mypy, contratos de importación y pruebas, con la evidencia |
+| Cierre de cada fase | El subagente `verificador`: coteja lo entregado contra `docs/validators.md`. Quien escribió no se valida a sí mismo |
+| Algo sin método de verificación | La skill `disenar-verificacion`, y se registra en `validators.md` |
 
-Hay otros dos specs, cada uno con su propia versión.
+### La skill reutilizable
 
-[`docs/spec/TRAZAS.md`](docs/spec/TRAZAS.md): `SPEC.md` describe cómo se escribe
-una novela; aquel describe qué se ha aprendido mirando cómo se escribió.
-**Aquel observa y no decide**: cuando un hallazgo se convierte en un cambio de
-diseño, se muda a `SPEC.md`.
+`grill-me` (`.claude/skills/grill-me/`) es la skill del repositorio que no
+depende de él: su cuerpo no nombra ningún fichero ni ninguna entidad del
+proyecto y sirve tal cual en cualquier otro; solo la cabecera dice quién la
+invoca aquí. Está commiteada porque `AGENTS.md` la hace
+obligatoria en la fase 1, y una fase obligatoria no puede depender de lo que
+cada uno tenga instalado en su máquina. Las otras cinco skills de
+`.claude/skills/` son específicas de esta pila o de este dominio.
 
-[`docs/spec/AFINADO.md`](docs/spec/AFINADO.md): cómo mejora solo el prompt de un
-agente. Un loop que mide con un número que calcula código, propone una versión
-mejor, la vuelve a medir contra casos que no ha visto y la promueve solo si la
-mejora supera al ruido de la propia medida. Toca un único fichero del
-repositorio, `agentes/<rol>.md`, y con un commit propio, para que deshacer una
-promoción mala sea un `git revert`.
+### Comandos y subagentes propios
 
-## Cómo se trabaja este repo
+| Pieza | Fichero | Qué hace | Qué no hace |
+| --- | --- | --- | --- |
+| `/ciclo` | `.claude/commands/ciclo.md` | Lanza una tarea de `TAREAS-PENDIENTES.md` con el ciclo entero | Saltarse una fase o una tarea de la que depende |
+| `/verificar` | `.claude/commands/verificar.md` | Corre las comprobaciones que no gastan y las resume | Correr `pytest -m gasta`, que lanza agentes de verdad, ni arreglar lo que falle |
+| `verificador` | `.claude/agents/verificador.md` | Comprueba cada entregable con el método que le asigna `validators.md` | Editar ficheros: solo lee y cita |
 
-- **Documentos de spec**: cortos, centrados en decisiones y en el porqué, no en el
-  cómo. Una sección por commit.
-- **Commits**: uno por sección o por unidad de cambio, mensaje en minúsculas y en
-  español, con el ámbito entre paréntesis y la sección tocada:
-  `docs(spec): §12 la credencial del modo real va en el entorno`.
-- **Push**: automático. Se commitea en local y se publica en el remoto sin pedir
-  confirmación cada vez. Quedan fuera y siguen exigiendo permiso expreso las
-  operaciones no reversibles: push --force, borrar ramas remotas y reescribir
-  historia ya publicada.
-- **Idioma y acentos**: todo en español. El código `.py` y los prompts de
-  `agentes/`, `skills/` y `.claude/` van **sin acentos** (ASCII); los documentos
-  Markdown (`SPEC.md`, `README.md`, este fichero) sí llevan acentos.
+## El navegador: `.claude/mcp.json`
 
-# Cómo está montado
+Declara un servidor MCP de Playwright, con versión fijada, que abre Chromium sin
+cabeza y con el perfil en memoria. **No se carga solo**: Claude Code solo lee
+por su cuenta el `.mcp.json` de la raíz, y ese no existe a propósito, para no
+gastar las definiciones de sus herramientas en cada conversación que no mira
+ninguna página (SPEC1 D-37). Se pide por su nombre en la sesión que tiene que
+mirar la lectura web:
 
-## Qué hay en `.claude/`
-
-| Fichero | Qué es |
-|---|---|
-| [.claude/skills/orquestar-novela/SKILL.md](.claude/skills/orquestar-novela/SKILL.md) | La máquina de estados escrita como instrucciones: los tres tramos, el loop de intentos y el bloqueo |
-| [references/canon-en-ficheros.md](.claude/skills/orquestar-novela/references/canon-en-ficheros.md) | Dónde vive cada cosa del canon y quién la escribe |
-| [references/paquete-de-contexto.md](.claude/skills/orquestar-novela/references/paquete-de-contexto.md) | Los nueve bloques, el cruce de etiquetas y el orden de recorte |
-| [references/comprobaciones.md](.claude/skills/orquestar-novela/references/comprobaciones.md) | Los catorce `VD-xx` y el gate, con sus números |
-| `.claude/agents/novela-*.md` | Los ocho subagentes |
-| `.claude/skills/afinar-validador/SKILL.md` | El loop de `AFINADO.md` escrito como instrucciones: medir, proponer, decidir y cerrar |
-| `.claude/settings.json` | El hook `PostToolUse` sobre `Agent`, que traza cada llamada (§22) |
-
-Los ocho subagentes son los seis roles de §5, **con el validador partido en
-tres**. Cada uno arranca leyendo su fichero de `agentes/` y sus skills de
-`skills/`: los prompts tienen una sola fuente de verdad y no se duplican en el
-fichero del subagente, que solo lleva nombre, descripción, herramientas y modelo.
-
-**El modelo de cada rol vive en el frontmatter de su subagente**, no en
-`config.json`. Las llamadas las hace Claude Code y solo lee el frontmatter, así
-que un modelo escrito también en `config.json` sería un número que no gobierna
-nada.
-
-## Las dos reglas que no se rompen
-
-1. **Ningún subagente escribe en el canon.** Devuelven JSON y escribe el
-   orquestador, con la propuesta ya comprobada delante. La única excepción es el
-   borrador del escritor, que no es canon hasta que pasa el gate y lo resume el
-   cronista.
-2. **Un capítulo a la vez.** El capítulo N+1 se escribe con el canon que dejó el
-   N. Es del problema, no del diseño.
-
-## Dónde sí hay paralelismo
-
-**Los tres validadores corren a la vez**, lanzados en un único mensaje. No es una
-opción de configuración: es la forma del sistema. Tres cabezas que no se ven dan
-tres notas que no se contagian, que es lo que el gate necesita para que un texto
-brillante pueda caer por continuidad.
-
-## El canon en ficheros
-
-```
-biblioteca/2026-09-18-sevilla-1587/
-  canon/estado.json  brief.json  dossier.json  personajes.json
-        escaleta.json  hilos.json  timeline.json  resumenes/cap-NN.json
-  contexto/cap-NN.md     el paquete con el que se escribió, para auditarlo
-  capitulos/cap-NN-intento-K.md
-  retoques.md
+```sh
+claude --mcp-config .claude/mcp.json
 ```
 
-No se versiona: es salida, no fuente. **No hay carpeta de trabajo**: cada novela
-nace en la suya, así que empezar una nunca pisa otra y no hay nada que archivar a
-mano. La novela en curso es aquella cuyo `estado.json` se tocó más tarde.
+La primera vez en una máquina hace falta el navegador que esa versión espera:
 
-## Lo que este diseño no tiene
-
-Y conviene no olvidarlo, porque es el precio:
-
-- **El gate no es código.** La fórmula está escrita y hay que imprimir la
-  operación entera, pero la suma la hace un modelo. La interfaz la rehace y avisa
-  si no cuadra (§19), pero avisar es todo lo que hace: DA-15.
-- **El paquete de contexto no es determinista.** Los filtros son mecánicos y el
-  conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de que
-  mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
-  instruido.
-- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 162
-  tests que hay cubren el Python de `novela/`, que mira el canon y arranca al
-  orquestador, pero no escribe novelas. Lo único que se comprueba del camino
-  delegado son los ficheros de `.claude/agents/`, y solo su forma: que el
-  frontmatter se pueda leer y que los ocho sean los que el hook traza. Un
-  subagente que no carga no se ve mirando el fichero, se ve contando.
-
-# El diseño
-
-Esto es lo que especifican §2–§13 y §15, y lo obedece la skill.
-
-## Los seis agentes (§5)
-
-| Rol | Entrada | Salida | Skills que carga |
-|---|---|---|---|
-| `investigador` | brief | `{ datos: [...] }` | `formato-dossier` |
-| `arquitecto` | brief + dossier | `{ personajes, capitulos }` | `formato-fichas` |
-| `escritor` | paquete de contexto | `{ texto, faltantes? }` | `formato-paquete-contexto`, `estilo-prosa` |
-| `validador` | capítulo + paquete + encargo | `{ revisiones: [3 bloques] }` | `rubricas-validador` |
-| `cronista` | capítulo aprobado + fichas | resumen, hilos, `cambios_personaje` (con `olvida`), `eventos` | `formato-fichas` |
-| `editor_global` | resúmenes + escaleta + personajes | `{ retoques: [...] }` | — |
-
-Una skill es texto que lee un modelo, **nunca fuente de verdad para el código**:
-los números y umbrales viven en `config.json`.
-
-## Los catorce validadores (§9)
-
-VD-01 forma, VD-02 obligatorios, VD-03 ids existentes, VD-04 dossier con fuente y
-estado (un `verificado` con fuente `modelo` es inválido), VD-05 evento de trama con
-capítulo e histórico sin él, VD-06 resumen solo si hay intento aprobado, VD-07 número
-de capítulos dentro de márgenes, **VD-08 la única de dos escalones** (aviso y bloqueo,
-de ahí sus dos márgenes), VD-09 personajes presentes ⊆ ficha, VD-10 tres dimensiones
-una vez cada una con nota entera 1-5, VD-11 nada bloqueante pendiente al confirmar,
-VD-12 cada línea de `olvida` casa literal con el `sabe` de la ficha, VD-13 el retoque
-no cambia los hechos del capítulo, **VD-14 el capítulo está en el idioma de la
-novela** (corre junto a VD-08, y existe porque el gate aprobó un capítulo entero
-en inglés con 4/4/4).
-
-Las tres dimensiones del validador son siempre `continuidad`, `anacronismos` y
-`logica_ritmo`, en ese orden.
-
-## El gate (§8)
-
-```
-aprueba = min(notas) >= nota_minima y media >= media_minima y ninguna incidencia grave
+```sh
+npx -y -p @playwright/mcp@0.0.82 playwright install chromium
 ```
 
-La incidencia grave veta por sí sola. Siempre tres notas; **nota global no existe**.
+El validador visual de la lectura (`npm run validar-visual`, en `frontend/`)
+usa el paquete `playwright` en la misma versión que este servidor, así que ese
+mismo Chromium le sirve. Subir la versión es cambiarla en los tres sitios:
+`mcp.json`, la orden de instalación de aquí arriba y el `playwright` de
+`frontend/package.json`.
 
-## Máquina de estados (§4)
+## Cómo se trabaja con el backend
 
-`borrador` → `investigado` → `estructurado` → `escribiendo` → `escrito` →
-`retocando` → `editado`, con `bloqueado` como salida lateral que exige mano humana.
-`escribiendo` se entra al **arrancar** el primer capítulo, no al aprobarlo, y
-`retocando` al **recibir** la lista del editor global, no al aplicar el primer retoque.
+Desde `backend/`, con Python 3.13:
 
-**Un solo punto fijo de intervención humana**: el capítulo bloqueado, con sus tres
-salidas manuales. Los retoques finales eran el segundo y dejaron de serlo: los aplica
-el sistema (§11). Un paso manual que el sistema puede dar es trabajo sin terminar.
-
-## Invariantes del diseño
-
-1. **Una sola escritura en el canon por capítulo**, la del cronista, después del
-   gate, y de una vez (VD-11): o entran resumen, cambios de ficha y eventos
-   juntos, o no entra nada.
-2. **El texto completo de capítulos anteriores no entra nunca** en el paquete,
-   salvo el enganche (`contexto.palabras_enganche` palabras literales del anterior
-   aprobado). Para eso están los resúmenes.
-3. **Orden de recorte del paquete**, si se pasa de `tope_contexto`: memoria larga,
-   cronología, reparto de fondo, época. Encargo, personajes y hilos vivos no se
-   recortan; si aun así no cabe, el capítulo se marca `bloqueado`.
-4. **VD-08 antes del validador**: si el capítulo redactado no cumple lo básico se
-   reintenta la generación sin gastar las tres llamadas al validador.
-5. **El reintento del último intento va de cero**, y el que descarta VD-08 también.
-   Los demás reciben su propio texto para arreglo quirúrgico.
-6. **Un bloqueante que falla dos veces seguidas para el proceso** y deja el estado
-   escrito. No hay reintento infinito ni backoff.
-7. **El estado vive en el canon, nunca en memoria del proceso.** Por eso reanudar
-   no necesita argumentos. Y **reanudar no desbloquea**.
-
-## Configuración (§12)
-
-Un único `config.json` en la raíz. **Si un número aparece escrito en el código o
-en un prompt sin pasar por este fichero, es un bug.** Las claves:
-`gate.{nota_minima,media_minima,max_intentos}`,
-`contexto.{tope_contexto,ventana_resumenes,palabras_enganche}`,
-`interfaz.puerto`, `lanzador.{comando,permisos}`, `trazas.{activas,entorno,texto}`,
-`margenes.{capitulos_min,capitulos_max,palabras_aviso,palabras_bloqueo,parrafos_min,idioma_palabras_min,idioma_factor}`,
-`afinado.{pasadas,factor_margen,margen_guardias,max_candidatos,fallos_seguidos,tope_gasto,entorno}`.
-Veintiséis. Reglas cruzadas: `palabras_bloqueo > palabras_aviso` y
-`capitulos_max >= capitulos_min`, y `afinado.entorno` distinto de
-`trazas.entorno`, para que el gasto de una vuelta de afinado no se sume al de un
-libro.
-
-Las credenciales van en un `.env` de la raíz que no se versiona. Un **perfil** es
-un `config*.json` de la raíz, nada más.
-
-# El Python que queda (§18–§20, §22)
-
-No escribe novelas: mira lo que escribió el orquestador.
-
-```bash
-python -m novela ui                          # interfaz web, solo lectura (§19)
-python -m novela trazar                      # manda a Langfuse el canon reconstruido (§20)
-python -m novela biblioteca                  # las novelas, y cuál está en curso (§21)
-python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
-                                             # sin Langfuse tira del diario local
-python -m novela idioma <ruta>               # VD-14: en que lengua esta un capitulo
-python -m novela afinar preparar             # abre una vuelta de afinado (AFINADO.md)
-python -m novela afinar puntuar              # cuenta lo que devolvieron los subagentes
-python -m unittest discover -s tests -t .    # 162 tests, sin red
+```sh
+python -m venv .venv
+.venv/Scripts/python -m pip install -e ".[dev]"   # en Linux o macOS: .venv/bin/python
 ```
 
-`hook-traza` existe pero no se llama a mano: lo llama el hook de
-`.claude/settings.json` una vez por cada llamada a un subagente.
+- `python -m pytest` no gasta: las pruebas que lanzan subagentes reales llevan
+  la marca `gasta` y quedan fuera por defecto. Lanzarlas es una decisión, no una
+  comprobación de rutina: se avisa antes.
+- `backend/openapi.yaml` no se edita a mano. Si la prueba del contrato falla una
+  vez y lo deja cambiado, el borde se ha movido: se mira el diff y se commitea
+  junto al cambio que lo movió (RNF-09).
+- Langfuse se enciende con las claves del `.env` de la raíz; sin ellas no se
+  manda nada. La batería lo apaga siempre (`tests/conftest.py`), así que
+  `python -m pytest` no manda nada aunque el `.env` tenga claves. Los
+  evaluadores viven solo en Langfuse: no se commitea ninguno.
+- Nada de lo que el sistema produce va a disco: todo vive en SQLite (RD-08). Una
+  carpeta de trabajo o un volcado para inspeccionar es un defecto, no una ayuda.
 
-## Mapa del código
+## Trampas conocidas
 
-| Fichero | Qué es | Spec |
-|---|---|---|
-| [novela/config.py](novela/config.py) | Carga y **valida entero** `config.json` | §12 |
-| [novela/canon_cc.py](novela/canon_cc.py) | Lector **de solo lectura** del canon en ficheros, y la auditoría del gate | §21 |
-| [novela/servidor.py](novela/servidor.py) | Interfaz web: sirve `web/` y una API que solo lee | §19 |
-| [novela/lanzador.py](novela/lanzador.py) | Arranca `claude -p` con el brief. **No escribe en el canon** | §19 |
-| [novela/trazas.py](novela/trazas.py) | Capa única de observabilidad; la única que sabe que Langfuse existe | §20 |
-| [novela/trazas_cc.py](novela/trazas_cc.py) | Reconstruye el árbol de §20 desde el canon | §20 |
-| [novela/trazas_hook.py](novela/trazas_hook.py) | El hook `PostToolUse`: traza cada llamada en vivo, con su gasto | §22 |
-| [novela/informe.py](novela/informe.py) | Lee las trazas de vuelta y agrega el gasto; sin Langfuse, del diario local | §22 |
-| [novela/biblioteca.py](novela/biblioteca.py) | Dónde vive cada novela y cuál es la de ahora. **No escribe canon** | §21 |
-| [novela/afinado.py](novela/afinado.py) | El loop que mide un prompt y decide si un candidato lo sustituye. **No llama a ningún subagente** | AFINADO.md |
-| [novela/idioma.py](novela/idioma.py) | VD-14: en qué idioma está un capítulo, contando funcionales | §9 |
-| [novela/entorno.py](novela/entorno.py) | Lector del `.env` | §12, §20 |
-| [novela/\_\_main\_\_.py](novela/__main__.py) | CLI. **No decide nada** | §18 |
-
-## Interfaz web (§19) y observabilidad (§20)
-
-`python -m novela ui` levanta un servidor local de la biblioteca estándar. Tiene
-**la forma de un gestor de proyectos, al estilo de Jira**: una barra con el
-**taller** —todas las novelas de `biblioteca/` en un tablero, una columna por
-estado de §4—, la **arquitectura** y la **nueva novela**; y dentro de cada novela
-un lateral con **resumen**, **capítulos** (otro tablero, por estado de ficha),
-**intentos y gate**, **canon**, **lectura** y **arquitectura**, el pipeline de
-§4, §7, §8 y §9 como grafo por capas en **SVG inline**. Cada vista tiene su
-enlace (`#/novela/<carpeta>/capitulos`), y los de antes siguen valiendo
-(`#arquitectura`, `#capitulo/3`). La API mira la novela en curso por defecto y
-cualquier otra con `?novela=<carpeta>`; `GET /api/novelas` da el tablero.
-**Las tarjetas no se arrastran**: mover una sería escribir su estado.
-**En el canon escribe el orquestador y nadie más**, así que cualquier método que
-no sea `GET` contra la API responde 409 y da el comando que sí escribe. Las dos
-excepciones no tocan el canon: `POST /api/trazas`, que manda a Langfuse lo que el
-canon ya dice, y `POST /api/lanzar`, que **arranca** una sesión de Claude Code con
-el brief de la vista de nueva novela y se aparta. Esa segunda deroga el «solo GET» en una
-ruta; la primera regla de §21 no se toca, porque quien escribe la novela sigue
-siendo esa sesión.
-
-**Ningún dato de la pantalla es propio de la interfaz**: o se lee del canon o se
-recalcula con las reglas del spec. Lo que el canon no guarda se pinta «sin datos
-todavía», **no se rellena**, y además se declara junto en un panel con el motivo.
-
-La paleta es la de Qaracter (`#FF7932` y `#233441`) y manda: la barra va en
-pizarra, que es donde el logotipo se lee entero, y el resto es claro y plano. Los
-colores de estado tienen significado fijo en todas partes. La ambientación
-histórica de [web/ambientacion.css](web/ambientacion.css) va **por debajo** y
-**solo donde está la novela**: el capítulo, que se lee sobre vitela, y los datos
-de época; el naranja hace de lacre sin cambiar de valor. Cada color de marca
-tiene dos variantes, relleno y tinta, porque el naranja del logotipo no pasa AA
-como texto sobre claro. La escena WebGL es el **legajo de la nueva novela** y de
-ninguna otra vista: three.js viaja por CDN —lo único del repo que necesita red—
-y degrada.
-
-**Una traza es una unidad de trabajo cerrada, no el libro.** Ningún fallo de
-observabilidad para una novela, y el hook menos que ninguno: devuelve 0 siempre,
-porque un hook que revienta ensucia la sesión del orquestador.
-
-**Los evaluadores de calidad de §20 no entran en este repositorio.** Viven solo en
-Langfuse, y no por descuido: el escritor tiene `Read` sobre el proyecto, así que
-una rúbrica guardada aquí la puede leer justo quien está siendo evaluado. No los
-versiones, no los copies a un fichero de trabajo dentro del repo y no escribas su
-texto en el spec. Lo que sí va al spec es la decisión: que existen, a qué
-observación apuntan y por qué están fuera.
-
-## Los objetivos medibles (§23)
-
-Siete, con línea base y meta. El orden importa: **OB-01**, el acuerdo entre el
-validador y el juez externo de §20, va primero porque todas las demás notas se
-las pone el propio sistema y sin él no miden calidad sino autoestima. **OB-02**
-(1,33 intentos por capítulo) y **OB-03** (25% de intentos incumplen un «Ignora»)
-son el mismo problema por los dos lados y bajan el coste sin tocar umbrales.
-**OB-04** (el gate cuadra) y **OB-05** (caché al 100%) son de guardia: están
-perfectos y lo que se pide es que no bajen.
-
-No son objetivos, y está escrito por qué: bajar el coste por sí solo, subir las
-notas del validador, y bajar `media_minima`.
-
-# Estado actual y cosas abiertas
-
-- El `.drawio` de [docs/diagrama/](docs/diagrama/) va por detrás del Mermaid: le
-  falta el cronista y se regenera a mano. El Mermaid de §4 es el bueno.
-- Decisiones abiertas vivas en §15: DA-02, DA-03, DA-04, DA-05, DA-06, DA-08,
-  DA-09, DA-10, DA-12, DA-13, DA-15. DA-07 y DA-14 se cerraron en 1.26.0 y sus
-  números quedan muertos, como DA-01 y DA-11.
-- La búsqueda web del investigador no existe: su subagente tiene `tools: Read`.
-  Para que entre hay que cambiarle las herramientas, no una clave de config.
-- **Queda un hueco del modelo de datos**: ningún `VD-xx` comprueba que el cronista
-  respete un «Ignora» de una ficha, así que un conocimiento que el gate acaba de
-  vetar puede entrar por la puerta de al lado (DA-13). El otro hueco, que `sabe`
-  solo acumulara, se cerró en 1.26.0 con `olvida` y VD-12.
+- **Las tres versiones suben juntas.** Cada enmienda a la spec sube la cabecera
+  de `specs/SPEC1.md` y, en el mismo movimiento, `backend/pyproject.toml` y
+  `backend/src/novela/__init__.py`, que van siempre al mismo número **entre
+  ellos dos**; la spec lleva su propia numeración y no coincide con la del
+  paquete (`AGENTS.md`, fase 1). Si el paquete y la spec no suben a la vez, hay
+  un cambio a medias y se dice antes de seguir.
+- **Los identificadores no se reutilizan.** Un `RF-`, `RD-` o `D-` retirado de
+  la spec deja su número vacío (SPEC1 §1.4).
+- **Las decisiones abiertas.** Las de `docs/architecture.md` §8 no se cierran
+  dentro de un cambio. Se dice cuáles toca el cambio y se espera.
+- **La consola.** En Windows, Git Bash es el intérprete de las órdenes de arriba;
+  en PowerShell `&&` no existe en la 5.1.

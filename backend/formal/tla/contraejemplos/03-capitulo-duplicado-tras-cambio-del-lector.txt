@@ -1,0 +1,2906 @@
+TLC2 Version 2026.09.23.154203 (rev: 4260e47)
+Running breadth-first search Model-Checking with fp 13 and seed 5845742090232229980 with 4 workers on 4 cores with 3641MB heap and 64MB offheap memory [pid: 6072] (Windows 11 10.0 amd64, Eclipse Adoptium 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file C:\Users\student\AppData\Local\Temp\claude\c--Users-student-Desktop-Harness-Engineering-my-story-maker\75a1da2e-dcae-41f5-820b-97bd519f1df2\scratchpad\wt\t11\backend\formal\tla\Produccion.tla
+Parsing file C:\Users\student\AppData\Local\Temp\tlc-4164223830542441097\Naturals.tla (jar:file:/C:/Users/student/tools/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file C:\Users\student\AppData\Local\Temp\tlc-4164223830542441097\FiniteSets.tla (jar:file:/C:/Users/student/tools/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file C:\Users\student\AppData\Local\Temp\tlc-4164223830542441097\Sequences.tla (jar:file:/C:/Users/student/tools/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file C:\Users\student\AppData\Local\Temp\tlc-4164223830542441097\TLC.tla (jar:file:/C:/Users/student/tools/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module Produccion
+Linting of module Produccion
+Starting... (2026-09-24 12:48:05)
+Implied-temporal checking--satisfiability problem has 1 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-24 12:48:06.
+Checking temporal properties for the current state space with 11893 total distinct states at (2026-09-24 12:48:09)
+Finished checking temporal properties in 00s at 2026-09-24 12:48:09
+Progress(27) at 2026-09-24 12:48:09: 25,991 states generated (25,991 s/min), 11,893 distinct states found (11,893 ds/min), 3,029 states left on queue.
+Error: Invariant NiDuplica is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ escrito = {}
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = FALSE
+/\ gen = 0
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 2: <Volver(1) line 151, col 5 to line 158, col 64 of module Produccion>
+/\ escrito = {}
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 1,
+     tarea |-> "poblar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = FALSE
+/\ gen = 0
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 3: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = {}
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "elegir",
+     k |-> 1,
+     tarea |-> "poblar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 0
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 4: <Elegir(1) line 162, col 5 to line 169, col 69 of module Produccion>
+/\ escrito = {}
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 0
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 5: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 1,
+     tarea |-> "cribar",
+     intento |-> 1,
+     g |-> 1 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 1
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 6: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 1,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 1 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 1
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 7: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "cerrar",
+     k |-> 1,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 1 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 1
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 8: <Cerrar(1) line 220, col 5 to line 228, col 64 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "aud_check",
+     k |-> 1,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 1 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 1
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 9: <AudCheck(1) line 233, col 5 to line 240, col 69 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "elegir",
+     k |-> 2,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 1 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 1
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 10: <Elegir(1) line 162, col 5 to line 169, col 69 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 2,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 1 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 1
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 11: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 2,
+     tarea |-> "cribar",
+     intento |-> 1,
+     g |-> 2 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 2
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 12: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 2,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 2 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 2
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 13: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "cerrar",
+     k |-> 2,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 2 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 2
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 14: <Cerrar(1) line 220, col 5 to line 228, col 64 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "aud_check",
+     k |-> 2,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 2 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 2
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 15: <AudCheck(1) line 233, col 5 to line 240, col 69 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "elegir",
+     k |-> 3,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 2 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 2
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 16: <Elegir(1) line 162, col 5 to line 169, col 69 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 3,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 2 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 2
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 17: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 3,
+     tarea |-> "cribar",
+     intento |-> 1,
+     g |-> 3 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 18: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 3,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 3 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 19: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "cerrar",
+     k |-> 3,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 3 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 20: <Cerrar(1) line 220, col 5 to line 228, col 64 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "aud_check",
+     k |-> 3,
+     tarea |-> "plegar",
+     intento |-> 1,
+     g |-> 3 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 21: <AudCheck(1) line 233, col 5 to line 240, col 69 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 3,
+     tarea |-> "auditar",
+     intento |-> 1,
+     g |-> 3 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 22: <Intento(1) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "guardar_aud",
+     k |-> 3,
+     tarea |-> "auditar",
+     intento |-> 1,
+     g |-> 3 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 23: <GuardarAud(1) line 248, col 5 to line 258, col 44 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "fin",
+     k |-> 3,
+     tarea |-> "auditar",
+     intento |-> 1,
+     g |-> 3 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 3
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 24: <Fin(1) line 261, col 5 to line 265, col 69 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 3
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 25: <AbrirVersion line 348, col 20 to line 348, col 54 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 0
+/\ nh = 2
+/\ nv = 2
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {1}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "lector", "ninguno">>
+/\ ultimo = 2
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "activo",
+     espera |-> 1,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 26: <Volver(2) line 151, col 5 to line 158, col 64 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 0
+/\ nh = 2
+/\ nv = 2
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {1}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "lector", "ninguno">>
+/\ ultimo = 2
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "activo",
+     espera |-> 1,
+     pc |-> "elegir",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 27: <Elegir(2) line 162, col 5 to line 169, col 69 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 0
+/\ nh = 2
+/\ nv = 2
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {1}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "lector", "ninguno">>
+/\ ultimo = 2
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "activo",
+     espera |-> 1,
+     pc |-> "tarea",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 3
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 28: <Intento(2) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 4,
+    nac |-> 2,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 0
+/\ nh = 2
+/\ nv = 2
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {1}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "lector", "ninguno">>
+/\ ultimo = 2
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "activo",
+     espera |-> 1,
+     pc |-> "tarea",
+     k |-> 1,
+     tarea |-> "cribar",
+     intento |-> 1,
+     g |-> 4 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 4
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 29: <Caida line 286, col 5 to line 292, col 56 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 4,
+    nac |-> 2,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 1
+/\ nh = 2
+/\ nv = 2
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {1}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "lector", "ninguno">>
+/\ ultimo = 2
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 4
+/\ fallos = 0
+/\ proceso = "caido"
+
+State 30: <ArrancarBackend line 297, col 5 to line 304, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 4,
+    nac |-> 2,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 1
+/\ nh = 3
+/\ nv = 2
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {1}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "lector", "ninguno">>
+/\ ultimo = 3
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 4
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 31: <Volver(3) line 151, col 5 to line 158, col 64 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 4,
+    nac |-> 2,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 1
+/\ nh = 3
+/\ nv = 2
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {1}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "lector", "ninguno">>
+/\ ultimo = 3
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "elegir",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 4
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 32: <Elegir(3) line 162, col 5 to line 169, col 69 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 4,
+    nac |-> 2,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 1
+/\ nh = 3
+/\ nv = 2
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {1}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "lector", "ninguno">>
+/\ ultimo = 3
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 4
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 33: <Intento(3) line 183, col 5 to line 213, col 52 of module Produccion>
+/\ escrito = { [ tipo |-> "cierre",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {h1} ],
+  [ tipo |-> "cierre",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "cierre",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 1,
+    nac |-> 1,
+    rel |-> 2,
+    cad |-> TRUE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 2,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 2,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 3,
+    nac |-> 1,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 3,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 4,
+    nac |-> 2,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ],
+  [ tipo |-> "trabajo",
+    gen |-> 5,
+    nac |-> 2,
+    rel |-> 0,
+    cad |-> FALSE,
+    cap |-> 1,
+    men |-> {} ] }
+/\ foto = << { [tipo |-> "cierre", gen |-> 1, cap |-> 1, men |-> {h1}],
+     [tipo |-> "cierre", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "cierre", gen |-> 3, cap |-> 3, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 1, cap |-> 1, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 2, cap |-> 2, men |-> {}],
+     [tipo |-> "trabajo", gen |-> 3, cap |-> 3, men |-> {}] },
+   {},
+   {} >>
+/\ caidas = 1
+/\ nh = 3
+/\ nv = 2
+/\ veredicto = <<"pasa", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {1}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "lector", "ninguno">>
+/\ ultimo = 3
+/\ detenida = FALSE
+/\ terminada = <<TRUE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "tarea",
+     k |-> 1,
+     tarea |-> "cribar",
+     intento |-> 1,
+     g |-> 5 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = TRUE
+/\ gen = 5
+/\ fallos = 0
+/\ proceso = "arriba"
+
+221428 states generated, 83378 distinct states found, 19994 states left on queue.
+The depth of the complete state graph search is 33.
+Finished in 12s at (2026-09-24 12:48:17)

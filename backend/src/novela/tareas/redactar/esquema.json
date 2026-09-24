@@ -1,0 +1,12 @@
+{
+  "tipo": "Borrador",
+  "cuerpo": {
+    "texto": "El texto completo de la escena.",
+    "unidad": "esc_0007",
+    "cumple": [
+      "objetivo",
+      "obstaculo",
+      "cambio_de_valor"
+    ]
+  }
+}
