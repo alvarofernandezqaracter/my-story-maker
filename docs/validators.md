@@ -208,6 +208,7 @@ la que más protege.
 | El demostrador formal recibe la cronología ya leída: no toca el almacén, ni el guion, ni las tareas | Contrato de importación sobre `demostrador` |
 | El juez de la novela no lee `tareas/` ni la API ni trae Langfuse: su rúbrica le llega por parámetro | Contrato de importación sobre `juez_de_la_novela` |
 | La observación en Langfuse recibe lo ya leído: no toca el almacén, ni el guion, ni las tareas, ni el ejecutor | Contrato de importación sobre `observabilidad` |
+| El lanzador de los briefs no corre nada sin permiso, y traduce a la misma clave lo que dicen la puerta, los ganchos y el juez | Pruebas con almacén y veredictos fingidos, más el cotejo de que toda comprobación que un brief declara la sabe observar el lanzador |
 
 ### Dónde no se comprueban tipos, y por qué
 

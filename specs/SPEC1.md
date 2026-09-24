@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.8.0
+version: 1.9.0
 estado: aplicada
 fecha: 2026-09-24
 ambito: backend/
@@ -1130,6 +1130,7 @@ de medir calidad y pasaría a medir su capacidad de complacer al juez.
 | RF-200 | **La observabilidad llega como parámetro**, con dos operaciones: `obtener_prompt(nombre)`, que devuelve el texto y la versión o nada, y `enviar_score(id_obra, version, nombre, valor, comentario)`. El módulo del juez no importa Langfuse, ni `tareas/`, ni la API, ni abre la base | `analisis` |
 | RF-201 | **Los briefs de prueba** viven en `backend/briefs-de-prueba/`, uno por fichero JSON con `proposito`, `para_que`, `se_espera` y `brief`. El propósito es del vocabulario cerrado `proposito_del_brief_de_prueba`: `normal`, `mucha_personalizacion`, `sin_destinatario`, `inyeccion` e `incoherencia_temporal`. Cada entrada de `se_espera` nombra una comprobación —`puerta.<validador_de_la_puerta>`, `gancho.<gancho>` o `juez.<criterio>`—, su resultado del vocabulario cerrado `resultado_esperado` —`pasa`, `falla`, `puede_fallar`, `se_puntua`, `no_se_puntua`— y por qué. Una prueba que no gasta los carga todos, valida cada `brief` contra el modelo de `POST /obras` y cada comprobación contra los vocabularios del código. Hay al menos uno de cada propósito: entre ellos, el adversario de inyección y el diseñado para provocar una incoherencia temporal que solo ve Lean | `prueba` |
 | RF-202 | **El texto de la rúbrica no está en el repositorio**: ni en el código, ni en `tareas/`, ni en los documentos, ni en el historial. En el repositorio está solo lo que dice este bloque: que el juez existe, sus tres criterios, la forma de su salida y dónde cuelga sus notas | `inspeccion` |
+| RF-203 | **El lanzador de los briefs los corre de uno en uno.** `novela.lanzador_de_briefs` lleva cada brief hasta el final —producir, pasar la puerta, publicar y juzgar— antes de empezar el siguiente, porque el juez no se lanza con producción en marcha (RF-197), y deja la tabla de qué comprobación se esperaba y cuál salió por brief. No corre nada sin `--si-gasto`: cada brief es una obra de verdad. Un brief que revienta sale en la tabla con su motivo en vez de dejar un hueco | `prueba` |
 
 | ID | Decisión | Por qué |
 | --- | --- | --- |
