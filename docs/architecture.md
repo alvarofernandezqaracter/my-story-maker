@@ -679,7 +679,6 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `Decisión` | Cualquier agente de la obra; el Entrevistador no escribe nada | Inmutable | Canon comprimido | Coherencia de diseño |
 | Registro de `policy` | El almacén, al cerrar la `Traza` de un intento con hooks | Nadie: solo se añade | Nunca: se sirve al editor por la API | Es él mismo la constancia de lo que la política encontró (`validators.md` §7) |
 | `Versión` | El backend, con el alta, con cada orden de rehacer del editor y con cada cambio del lector | Solo la marca de terminada, una vez; publicarla es añadir al registro de publicaciones, y solo si pasa la puerta | Nunca: decide qué filas ve cada lectura | Conservación de la versión anterior (`validators.md` §8) |
-
 | Registro de cambios del lector | El backend, con la versión que nace de un cambio | Nadie: solo se añade | Nunca: se sirve con cada versión por la API | Es la constancia de qué nombre cambió y en qué versión |
 
 Cualquier ficha de la biblia —no solo el `Personaje`— puede recibir una ficha

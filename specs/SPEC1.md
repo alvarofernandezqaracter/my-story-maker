@@ -786,7 +786,7 @@ flowchart LR
 | RF-171 | **Qué se reescribe.** Los capítulos en que se usa el hecho en la última versión V según sus `Mencion` (RF-84), que pueden no ser contiguos, y ninguno más. Si ningún capítulo lo usa, no se abre ninguna versión: 409 diciéndolo (D-73) | `prueba` |
 | RF-172 | **Nace V+1 en una sola transacción**, con base V y esos capítulos como `capitulos cambiados` (RF-110). Lo que cuelga de cada uno —con la misma regla de RF-112, capítulo a capítulo en lugar de «de N al final»— y su estado materializado reciben la marca de relevo con V+1; sus fragmentos salen del índice; y la constancia de auditoría baja al capítulo anterior al primero que se reescribe. Lo demás se comparte sin copiar | `prueba` |
 | RF-173 | **El hecho cambiado se versiona.** En la misma transacción, la ficha vieja recibe la marca de relevo con V+1 y nace la ficha nueva, escrita por el backend y no por un rol: el mismo cuerpo con el nombre —la descripción en un `Evento`— cambiado, cada tratamiento igual al nombre viejo cambiado también, y `sustituye` con el `id` de la vieja. V sigue viendo la vieja y V+1 la nueva (RF-113). El cambio queda en un registro propio de solo añadir, fuera de las tablas de artefactos —obra, versión, hecho, ficha nueva, nombre anterior, nombre nuevo y cuándo—, que crea la migración 11 (D-72) | `prueba` |
-| RF-174 | **Lo que reciben los que reescriben** sale del almacén, por los materiales que ya declaran sus pasos: el Planificador ve la ficha nueva en el canon, el Redactor en las voces del elenco y el Archivero en el índice de la biblia. No hay material nuevo ni instrucción añadida en ninguna ventana | `inspeccion` |
+| RF-174 | **Lo que reciben los que reescriben** sale del almacén, por los materiales que ya declaran sus pasos: el Planificador ve la ficha nueva en el canon, el Redactor en las voces del elenco y el Archivero en el índice de la biblia. No hay material nuevo ni instrucción añadida en ninguna ventana | `prueba` |
 | RF-175 | **La versión regenerada se produce por el camino de siempre.** Caminar la obra salta los capítulos que siguen cerrados y reescribe los relevados en orden, cada uno desde el paso 1 con los reintentos y la política de su paso (§4.10); termina con su auditoría de cierre (RF-94, RF-110) y solo se publica por la puerta (RF-146). Mientras no se publique, la publicada anterior sigue siéndolo (D-43) | `prueba` |
 | RF-176 | **Volver al punto de guardado mira todos los capítulos sin cerrar.** Lo que RF-91 caduca es lo que cuelga de todo capítulo sin cierre vivo, no solo de los posteriores al último cerrado, y el índice que se completa es el de todos los cerrados. En una obra sin cambio del lector es lo mismo de antes; en una versión que reescribe capítulos sueltos, un corte a medias de uno de ellos no deja nada suyo vivo ni toca los cerrados de detrás | `prueba` |
 | RF-177 | **Lecturas.** `GET /obras/{id}/versiones` trae de cada versión su `cambio` —hecho, nombre anterior y nombre nuevo— o vacío si nació del alta o de rehacer. La cronología de una versión resuelve un presente que apunta a una ficha relevada por un cambio del lector a la ficha que la sustituye, por `sustituye`, sin interpretar nada más. La ficha de la obra trae el nombre del destinatario y la dedicatoria, vacíos si no hay destinatario, para la portada | `prueba` |
@@ -853,8 +853,12 @@ misma entidad y la versión es de producción.
 | RD-26 | La lista global de lo vetado tiene tabla propia, fuera de las de artefactos: es de la instalación, así que no cuelga de ningún `id_obra` (RD-02), y no se versiona. La siembra la migración 8; no se borra ni se modifica (RF-131) | `prueba` |
 | RD-27 | El registro de auditoría de `policy` tiene tabla propia, de solo añadir, fuera de las de artefactos: cuelga de la obra y de la `Traza` del intento, lleva `nivel_de_veto` y `decision_de_policy` como valores cerrados, y no se borra, no se modifica, no se caduca ni se releva. Capítulo, escena, tarea e intento no se copian: se leen de su `Traza` (RF-135, RF-136, D-53) | `prueba` |
 | RD-30 | El resultado de la puerta de publicación no tiene tabla ni se guarda: se deriva al pedirlo de lo que ve la versión (RF-146, RF-147, D-59). No hace falta migración | `prueba` |
-| RF-173 | El registro del cambio del lector tiene tabla propia, de solo añadir, fuera de las de artefactos: una fila por versión nacida de un cambio, que cuelga de la obra y de esa versión, con el hecho, la ficha nueva y los dos nombres. No se borra, no se modifica, no se caduca ni se releva. La crea la migración 11; la ficha nueva es una fila más de la tabla de su tipo, con sus columnas de versión | `prueba` |
-| RF-178 | El PDF no tiene tabla ni fichero: se fabrica en memoria en cada petición (RD-08) | `inspeccion` |
+
+Los datos de §4.18 no llevan identificador propio en esta tabla: el registro
+del cambio del lector tiene tabla propia, de solo añadir, fuera de las de
+artefactos, que crea la migración 11 y no se borra, ni se modifica, ni se
+releva; la ficha nueva es una fila más de la tabla de su tipo, con sus columnas
+de versión (RF-173); y el PDF no tiene tabla ni fichero (RF-178).
 
 Un único ejemplo, que fija el estilo del cuerpo de todo artefacto. Los demás no
 se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe.
@@ -899,9 +903,13 @@ se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe
 | RI-17 | `GET /obras/{id}` | Saber por qué se detuvo una obra | La ficha trae además el motivo de la detención, vacío si no está detenida (RF-137) |
 | RI-18 | `POST /obras/{id}/versiones/{n}/publicar` | Saber por qué no se publicó | RF-146. Si la puerta falla, 409 con `detail` y `puerta`: el mismo resultado que RI-19. Una versión sin terminar sigue siendo 409 solo con `detail` |
 | RI-19 | `GET /obras/{id}/versiones/{n}/puerta` | Ver la puerta antes de publicar | RF-147. Si pasa, si la versión ha terminado y la lista de fallos, cada uno con su validador, su capítulo y su detalle |
-| RF-170 | `POST /obras/{id}/cambios` | Cambiar el nombre de un hecho | RF-170 y RF-171. Devuelve la versión nueva con sus capítulos cambiados y no espera a que termine. Es una decisión editorial, no mantenimiento |
-| RF-177 | `GET /obras/{id}/versiones` · `GET /obras/{id}` | Saber de dónde sale cada versión, y la portada | Cada versión trae su `cambio`; la ficha, el destinatario y la dedicatoria |
-| RF-178 | `GET /obras/{id}/pdf` | Descargar el manuscrito | `?version=` como RI-14. `application/pdf` como descarga; 404 si la versión no existe |
+
+El borde de §4.18 tampoco lleva identificador propio aquí:
+`POST /obras/{id}/cambios` cambia el nombre de un hecho y devuelve la versión
+nueva sin esperar a que termine (RF-170, RF-171); `GET /obras/{id}/versiones`
+trae el `cambio` de cada versión y `GET /obras/{id}` el destinatario y la
+dedicatoria (RF-177); y `GET /obras/{id}/pdf`, con `?version=` como RI-14,
+descarga el PDF (RF-178).
 
 Tres reglas de frontera. La interfaz web nunca lee ficheros ni la base de datos.
 El contrato HTTP se valida en el borde con modelos declarados —es el único sitio
