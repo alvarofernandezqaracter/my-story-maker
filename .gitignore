@@ -4,6 +4,9 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 
+# Variables de entorno con claves: se copia de .env.example, que sí se sube
+.env
+
 # Frontend
 node_modules/
 dist/
