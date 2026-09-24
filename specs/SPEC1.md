@@ -860,7 +860,10 @@ vista y el formato de fecha ya estaba fijado.
 | RD-26 | La lista global de lo vetado tiene tabla propia, fuera de las de artefactos: es de la instalación, así que no cuelga de ningún `id_obra` (RD-02), y no se versiona. La siembra la migración 8; no se borra ni se modifica (RF-131) | `prueba` |
 | RD-27 | El registro de auditoría de `policy` tiene tabla propia, de solo añadir, fuera de las de artefactos: cuelga de la obra y de la `Traza` del intento, lleva `nivel_de_veto` y `decision_de_policy` como valores cerrados, y no se borra, no se modifica, no se caduca ni se releva. Capítulo, escena, tarea e intento no se copian: se leen de su `Traza` (RF-135, RF-136, D-53) | `prueba` |
 | RD-30 | El resultado de la puerta de publicación no tiene tabla ni se guarda: se deriva al pedirlo de lo que ve la versión (RF-146, RF-147, D-59). No hace falta migración | `prueba` |
-| RF-153 | El módulo de Lean de cada comprobación no se guarda: vive en un directorio temporal que se borra al terminar (D-62). Las críticas de la cronología van a la tabla de `Critica` que ya existe (RF-154). No hace falta migración | `prueba` |
+
+La cronología en Lean (§4.16) no añade tabla ni migración: el módulo de cada
+comprobación vive en un directorio temporal que se borra (RF-153, D-62), y sus
+críticas van a la tabla de `Critica` que ya existe (RF-154).
 
 Un único ejemplo, que fija el estilo del cuerpo de todo artefacto. Los demás no
 se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe.
@@ -905,8 +908,11 @@ se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe
 | RI-17 | `GET /obras/{id}` | Saber por qué se detuvo una obra | La ficha trae además el motivo de la detención, vacío si no está detenida (RF-137) |
 | RI-18 | `POST /obras/{id}/versiones/{n}/publicar` | Saber por qué no se publicó | RF-146. Si la puerta falla, 409 con `detail` y `puerta`: el mismo resultado que RI-19. Una versión sin terminar sigue siendo 409 solo con `detail` |
 | RI-19 | `GET /obras/{id}/versiones/{n}/puerta` | Ver la puerta antes de publicar | RF-147. Si pasa, si la versión ha terminado y la lista de fallos, cada uno con su validador, su capítulo y su detalle |
-| RF-152 | `GET /obras/{id}/versiones/{n}/puerta` y el 409 de publicar | Saber cómo quedó la cronología en Lean | El resultado de la puerta trae `comprobacion_formal` —`demostrada`, `fallida` o `sin_comprobacion`— y el validador `cronologia` en sus fallos |
-| RF-155 | `POST /obras/{id}/versiones/{n}/publicar` | Ver que una versión salió sin comprobar | La respuesta de publicar trae `comprobacion_formal` |
+
+La cronología en Lean (§4.16) no añade rutas: el resultado de la puerta
+(RI-18, RI-19) trae `comprobacion_formal` y el validador `cronologia`
+(RF-152), y la respuesta de publicar (RI-12) trae también
+`comprobacion_formal` (RF-155).
 
 Tres reglas de frontera. La interfaz web nunca lee ficheros ni la base de datos.
 El contrato HTTP se valida en el borde con modelos declarados —es el único sitio
