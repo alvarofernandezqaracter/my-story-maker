@@ -2,7 +2,8 @@
 
 El techo son 100 000 tokens de entrada **simultaneos** y **cuenta solo lo que
 entra**: lo que los agentes devuelven se paga en coste y no ocupa techo, asi
-que en el reparto de una tanda no se reserva nada para las respuestas. El
+que en el reparto de una tanda no se reserva nada para las respuestas, salvo
+la que un hook hace releer al pedir una correccion, que ya es entrada. El
 agente que termina libera su parte, de modo que una cadena secuencial larga no
 agota el techo por larga que sea. Lo que lo agota es abrir demasiados frentes
 en paralelo.
@@ -54,11 +55,22 @@ def coste_de_abrir(tope_del_rol: int) -> int:
     return tope_del_rol + COSTE_FIJO_DEL_SUBAGENTE_EN_TOKENS
 
 
+def coste_de_abrir_encargo(encargo: Encargo) -> int:
+    """Lo que ocupa en el techo un encargo abierto, en el peor caso.
+
+    Si su paso lleva hooks, la vuelta de correccion vuelve a leer el encargo mas
+    la respuesta anterior y el motivo: no arranca en frio, y lo que anade es
+    entrada. Su reserva se cuenta aqui (SPEC1 RF-128).
+    """
+    reserva = encargo.reserva_de_la_vuelta if encargo.ganchos else 0
+    return coste_de_abrir(encargo.tope_de_ventana) + reserva
+
+
 def anchura_de_tanda(encargos: Sequence[Encargo]) -> int:
-    """`80 000 / lo que cuesta abrir el rol mas caro`, redondeado a la baja."""
+    """`80 000 / lo que cuesta abrir el encargo mas caro`, redondeado a la baja."""
     if not encargos:
         return 0
-    mas_caro = max(coste_de_abrir(encargo.tope_de_ventana) for encargo in encargos)
+    mas_caro = max(coste_de_abrir_encargo(encargo) for encargo in encargos)
     return max(1, tokens_repartibles() // mas_caro)
 
 

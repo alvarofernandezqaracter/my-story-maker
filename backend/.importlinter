@@ -33,6 +33,7 @@ source_modules =
     novela.ajustes
     novela.vocabularios
     novela.ejecutor
+    novela.ganchos
 forbidden_modules =
     sqlite3
     sqlite_vec
@@ -56,6 +57,18 @@ source_modules =
     novela.ajustes
     novela.vocabularios
     novela.ejecutor
+    novela.ganchos
 forbidden_modules =
     pydantic
     fastapi
+
+[importlinter:contract:ganchos-sin-almacen]
+name = Los hooks no tocan el almacen ni el guion: informan por su salida y registra el ejecutor
+type = forbidden
+source_modules =
+    novela.ganchos
+forbidden_modules =
+    novela.almacen
+    novela.nucleo
+    novela.api
+    novela.ejecutor

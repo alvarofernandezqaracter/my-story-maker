@@ -272,7 +272,7 @@ TABLA_POR_TIPO: dict[str, Tabla] = {tabla.tipo: tabla for tabla in TABLAS}
 # La migracion que da versiones a la obra (SPEC1 4.12), y las dos columnas que
 # anade a toda tabla de artefactos: en que version se escribio la fila y que
 # version la relevo. Lo que ve cada version se deduce de esas dos (RF-113).
-MIGRACION_DE_LAS_VERSIONES = 8
+MIGRACION_DE_LAS_VERSIONES = 7
 COLUMNAS_DE_LA_VERSION: tuple[str, ...] = (
     "version_de_obra INT NOT NULL DEFAULT 1",
     "relevado_por INT",
@@ -645,7 +645,7 @@ def _versiones_en_la_tabla(tabla: Tabla) -> list[str]:
 
 
 def sentencias_de_las_versiones() -> list[str]:
-    """La migracion 8: versiones, publicaciones y las dos marcas en toda tabla.
+    """La migracion 7: versiones, publicaciones y las dos marcas en toda tabla.
 
     Recorre todas las tablas de artefactos que ya existen, asi que va detras de
     cualquier migracion que cree una.

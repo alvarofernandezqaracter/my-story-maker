@@ -57,6 +57,8 @@ class Resultado:
     fragmentos_usados: list[str] = field(default_factory=list)
     recuperaciones: list[dict[str, Any]] = field(default_factory=list)
     estado_en_n: dict[str, Any] | None = None
+    # Lo que dijeron los hooks de su paso, si los lleva (SPEC1 RF-127).
+    ganchos: dict[str, Any] | None = None
 
 
 class Ejecutor(Protocol):
@@ -535,6 +537,8 @@ class Caminante:
                 self.almacen.cerrar_traza(
                     id_traza, salida=f"fallo: {error}", tokens_de_entrada_medidos=None,
                     tokens_de_salida=None, coste=None, latencia_ms=0,
+                    # Un intento que no pasa un hook tambien deja su veredicto.
+                    ganchos=getattr(error, "ganchos", None),
                 )
                 continue
             self.almacen.cerrar_traza(
@@ -548,6 +552,7 @@ class Caminante:
                     recuperacion | {"usados": resultado.fragmentos_usados}
                     for recuperacion in ventana.recuperaciones
                 ],
+                ganchos=resultado.ganchos,
             )
             return resultado
 

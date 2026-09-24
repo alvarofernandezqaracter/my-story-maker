@@ -5,7 +5,7 @@ openapi: 3.1.0
 info:
   title: Generador de novela historica por agentes
   summary: Lanza una obra desde un brief e inspecciona lo que los agentes producen
-  version: 0.3.0
+  version: 0.4.0
 paths:
   /obras:
     post:
@@ -1698,6 +1698,14 @@ components:
           - type: string
           - type: 'null'
           title: Cerrada En
+        ganchos:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Ganchos
+          description: Lo que dijeron los hooks del paso durante la sesion y su veredicto
+            final. Vacio si el paso no lleva hooks (RI-15)
       type: object
       required:
       - id

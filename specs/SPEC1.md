@@ -1,9 +1,9 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.2.0
+version: 1.3.0
 estado: aplicada
-fecha: 2026-09-23
+fecha: 2026-09-24
 ambito: backend/
 base:
   - AGENTS.md
@@ -31,8 +31,8 @@ la pieza que camina el guion del capítulo, las doce carpetas de tarea con su
 contrato y su prompt, el presupuesto de contexto, la recogida de fuentes fuera
 del sistema, el destinatario real al que la obra va dedicada con los hechos que
 vienen de su vida, la entrevista que completa el brief antes del alta, el
-punto de guardado por capítulo con la política de reintentos de cada paso, y
-la API HTTP que el editor usa para lanzar e inspeccionar una obra.
+punto de guardado por capítulo con la política de reintentos de cada paso, los
+dos hooks que revisan lo que entregan los subagentes de prosa, y la API HTTP que el editor usa para lanzar e inspeccionar una obra.
 
 Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
 lo enumerado en §11.
@@ -184,7 +184,7 @@ flowchart LR
 | RF-10 | El guion del capítulo —paso, rol, proyección, tope de ventana y concurrencia— es un artefacto declarativo, no código. La pieza que lo camina lee cuál es el paso siguiente y lo ejecuta | `inspeccion` |
 | RF-11 | Cada paso encarga una tarea a un rol con la proyección mínima de ese rol (`architecture.md` §3) y nada más. Lo que sobra en la proyección produce falsos positivos y es un defecto | `inspeccion` |
 | RF-12 | Ningún rol invoca a otro ni recibe objetos en memoria: el testigo se pasa siempre por artefacto escrito en el almacén | `analisis` |
-| RF-13 | La anchura de una tanda se calcula: `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)`, redondeado a la baja. Si hay más tareas, se hacen tandas sucesivas y se espera a que cierre una antes de abrir la siguiente | `analisis` |
+| RF-13 | La anchura de una tanda se calcula: `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)`, redondeado a la baja; en un paso con hooks, el tope lleva sumada la reserva de la vuelta (RF-128). Si hay más tareas, se hacen tandas sucesivas y se espera a que cierre una antes de abrir la siguiente | `analisis` |
 | RF-14 | Antes de enviar, cuenta los tokens de la ventana. Si no cabe en el tope del rol, **parte la unidad** (capítulo → escena → párrafo) y nunca recorta la proyección | `prueba` |
 | RF-15 | Las únicas bifurcaciones son el enrutado por severidad y el tope de vueltas. Ningún agente enruta ni manda sobre otro | `inspeccion` |
 | RF-16 | El destinatario y sus recuerdos entran en la ventana del Constructor de mundo y del Planificador, y en ninguna otra ventana de la obra, declarados como material propio y no colados dentro del cuerpo de la `Obra`. Lo que los demás roles necesitan de él ya está en las fichas del mundo que el Constructor escribió | `inspeccion` |
@@ -405,7 +405,7 @@ reintenta y qué pasa cuando se agota.
 | RF-95 | **El tope y la política están escritos en el guion.** Cada paso de `guion.toml` y cada tarea fuera del guion declaran `reintentos` (el número de intentos, uno o más) y `al_agotarse`. Si falta alguno de los dos, el guion no carga | `prueba` |
 | RF-96 | **`al_agotarse` es un vocabulario cerrado con tres valores.** `detener_obra`: la obra queda detenida con la tarea, el intento y el motivo, y sin ningún artefacto a medio escribir. `critica_abierta`: el backend escribe la `Crítica` de RF-99 y la producción sigue. `seguir`: la producción sigue y la constancia del intento queda en la `Traza`, igual que la búsqueda infructuosa de RF-69 | `prueba` |
 | RF-97 | **Qué política toca a cada paso.** `detener_obra` para lo que produce el testigo del paso siguiente: `planificar`, `redactar`, `revisar`, la costura del paso 7, `plegar`, `destilar` y `poblar_mundo`. `critica_abierta` para las comprobaciones: las cribas de los pasos 4, 6 y 8, y `auditar`. `seguir` para `documentar`, por D-09. El tope de partida es dos intentos en todos los pasos | `inspeccion` |
-| RF-98 | **Qué es un intento fallido y cómo se cuenta.** Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo. Un artefacto malformado no es un intento fallido: sigue siendo la `Crítica` bloqueante de RF-23. Una tarea cortada por una caída tampoco cuenta, porque su `Traza` se cierra como interrumpida. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él. Toda `Traza` fallida registra su intento y su motivo | `prueba` |
+| RF-98 | **Qué es un intento fallido y cómo se cuenta.** Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo, o cuando lo que el subagente entregó al final no pasa un hook de su paso (RF-126). Un artefacto malformado no es un intento fallido: sigue siendo la `Crítica` bloqueante de RF-23. Una tarea cortada por una caída tampoco cuenta, porque su `Traza` se cierra como interrumpida. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él. Toda `Traza` fallida registra su intento y su motivo | `prueba` |
 | RF-99 | **La crítica «no comprobado».** La escribe el backend, no un rol, igual que la de un artefacto malformado. Su objeto es la unidad del encargo y su dimensión la del encargo. Sale con severidad `bloqueante`, estado `abierta` y, como evidencia, la `Traza` del último intento y su motivo. No se enruta: no regenera ni manda a revisión. Se queda abierta y el capítulo se cierra marcado, que es como el Arquitecto de arcos la ve (RF-33) | `prueba` |
 
 **Decisiones de este cambio.**
@@ -551,6 +551,85 @@ métodos de RF-110 a RF-118. `definitions.md` y `domain-knowledge.md` no cambian
 la versión es de la capa de producción y no toca la ontología de la obra ni la
 del mundo.
 
+### 4.13 Los dos hooks
+
+**El problema.** Lo que un subagente de prosa entrega solo se miraba después
+de darlo por bueno: una salida sin el `Borrador` que el paso espera, o con un
+tipo que su rol no escribe, se descubría al guardar, y entonces ya no había
+nadie que la corrigiese. Y las palabras o temas que el comprador vetó en el
+brief (`destinatario.vetos`) se guardaban y nadie las miraba: un Redactor podía
+escribir justo lo que se le había pedido que no escribiera y la escena llegaba
+al manuscrito.
+
+**La decisión, en una frase.** Los subagentes que escriben la prosa llevan dos
+hooks `Stop` de Claude Code, pasados en la propia orden del ejecutor: uno
+comprueba que lo entregado está bien formado y otro que no contiene nada
+vetado. Si alguno no pasa, el subagente no puede terminar: recibe el motivo y
+tiene que corregir y volver a entregar. El veredicto queda en la `Traza`.
+
+```mermaid
+flowchart LR
+  E([Encargo de prosa]) --> S[Subagente escribe]
+  S --> H{Pasan los<br/>dos hooks?}
+  H -- si --> R[El ejecutor repite<br/>las comprobaciones]
+  H -- "no, primera vez<br/>y cabe en la reserva" --> V[Recibe el motivo<br/>y corrige] --> R
+  H -- "no, ya corrigio<br/>o no cabe" --> R
+  R -- pasa --> G([Se guarda, veredicto en la Traza])
+  R -- no pasa --> F([Intento fallido: reintentos<br/>y al_agotarse del paso])
+```
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-120 | Cada paso del guion declara en `guion.toml` qué hooks lleva su subagente, con un vocabulario cerrado de dos valores: `validar_capitulo` y `policy`. Los llevan los tres pasos que escriben prosa —3 `redactar`, 5 `revisar` y 7, la costura— y ningún otro; las cribas del paso 8, aunque las haga el mismo rol que cose, no. Un hook que no esté en el vocabulario no carga el guion | `prueba` |
+| RF-121 | Los hooks son hooks `Stop` de Claude Code de verdad y viajan en la orden del ejecutor, en `--settings` con JSON en línea. El aislamiento de §4.11 no se toca: el subagente sigue arrancando en su directorio vacío, sin `CLAUDE.md`, sin `.claude/` y sin MCP. Un encargo sin hooks lleva la misma orden que antes, sin `--settings` | `prueba` |
+| RF-122 | Cada hook es un programa del paquete, `python -m novela.ganchos <hook> <tarea>`. Lee la entrada que le da Claude Code —de ella, solo el último mensaje del agente y si ya ha bloqueado en ese turno—, no abre la base de datos, no escribe nada en disco y no llama a ningún modelo. El esquema y el contrato los lee de `tareas/<tarea>/`, que es entrada versionada (RD-09); la lista de vetos y la reserva de la vuelta le llegan en variables de entorno del proceso. Si bloquea, sale con código 2 y el motivo por su salida de error; si no, sale con 0 | `prueba` |
+| RF-123 | **`validar_capitulo` comprueba la forma, y nada del contenido.** La salida es un objeto JSON con la lista `artefactos`; cada artefacto trae `tipo` y `cuerpo`; cada tipo es uno de los que el contrato de la tarea deja escribir; el tipo principal del `esquema.json` de la tarea aparece al menos una vez y con todos los campos que su esquema declara; y todo `Borrador` trae `texto` no vacío. Las comprobaciones son una lista a la que se añaden otras sin tocar el enganche | `prueba` |
+| RF-124 | **`policy` aplica los vetos del brief.** Busca cada veto tal cual, como subcadena exacta y sin normalizar, en el `texto` de cada `Borrador` y cada `Parrafo` de la salida. Si alguno aparece, bloquea nombrando lo vetado que encontró. Sin destinatario, o con la lista vacía, no bloquea nunca | `prueba` |
+| RF-125 | **Una vuelta de corrección por intento.** Un hook bloquea solo la primera vez en el turno: si ya bloqueó uno, el siguiente `Stop` termina. Tampoco bloquea si la vuelta no cabe en la reserva del paso (RF-128). El motivo que devuelve no pasa de 1 000 caracteres | `prueba` |
+| RF-126 | **El veredicto que cuenta es el del ejecutor.** Al terminar el subagente, el ejecutor aplica las mismas comprobaciones, con las mismas funciones, a lo que entregó al final. Si alguna no pasa, el intento ha fallado y se aplican el `reintentos` y el `al_agotarse` de su paso (§4.10): los tres pasos con hooks declaran `detener_obra` | `prueba` |
+| RF-127 | La `Traza` de cada intento con hooks guarda en su cuerpo, en `ganchos`, lo que cada hook dijo durante la sesión —de qué hook, si bloqueó y con qué motivo, leído de los eventos que el CLI emite con `--include-hook-events`— y el veredicto final del ejecutor por hook. Se guarda también cuando el intento falla | `prueba` |
+| RF-128 | **Lo que la vuelta cuesta de entrada se reserva.** Corregir no arranca en frío: la segunda llamada al modelo vuelve a leer el encargo más la respuesta anterior y el motivo, y eso es entrada. Cada paso con hooks declara `reserva_de_la_vuelta` en tokens, y la anchura de tanda de RF-13 la suma al tope del rol. El hook solo bloquea si la respuesta anterior más el motivo caben en esa reserva; si no, el intento termina y falla, y el siguiente arranca en frío. La entrada medida de un intento es la de su última llamada al modelo, que es la mayor | `prueba` |
+| RF-129 | Solo el encargo con hooks lleva, en su instrucción de sistema, que un mensaje del revisor automático que llega tras su respuesta no es dato del encargo sino una orden del sistema: corrige lo que dice y vuelve a entregar el objeto JSON entero | `inspeccion` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-45 | **Hooks de Claude Code en el subagente, no comprobaciones del servidor ni hooks del desarrollo.** El evento es `Stop`, que es el que dispara el agente principal en `--print`; `SubagentStop` es de los subagentes que un agente lanza por su cuenta | Comprobar solo en el servidor llega tarde: el agente ya ha terminado y no puede corregir. Un hook de `.claude/` no llega nunca, porque el subagente arranca fuera del repositorio (RF-100). Pasarlo en la orden es lo único que lo engancha a la tarea que escribe la novela sin romper el aislamiento |
+| D-46 | **Lo que el hook necesita le llega por la orden y el entorno, no por ficheros.** El nombre del hook y de la tarea van en su línea de orden; los vetos y la reserva, en variables de entorno del subagente; el esquema, del catálogo versionado | Escribir la lista de vetos en el directorio de la tarea contradiría D-35 —nace vacío y muere vacío— y RD-08. El hook no escribe en la base: informa por su salida y quien registra es el ejecutor, así que el almacén sigue con un solo escritor (RNF-05) |
+| D-47 | **Una vuelta en la sesión y, si no basta, un intento fallido.** No se inventa otra política: lo que pasa después lo deciden `reintentos` y `al_agotarse` | Un hook no guarda estado entre llamadas y la única memoria que Claude Code le da es si ya bloqueó en ese turno, así que «una vuelta» es lo único que puede contar sin escribir nada. Más vueltas harían crecer la entrada sin tope, y el propio CLI corta un hook a los diez bloqueos seguidos. El intento siguiente arranca en frío, así que el total queda acotado por los reintentos del paso |
+| D-48 | **`validar_capitulo` va en los tres pasos de prosa y solo mira la forma.** Nombres escritos como en la biblia, longitud del capítulo y la puerta de publicación son de la tarea de validadores programáticos, que añadirá sus comprobaciones a la misma lista | Es lo que se puede decidir sin gastar y sin interpretar el texto (§2.1). Engancharlo solo a la costura dejaría pasar una escena malformada hasta el final del capítulo; los tres pasos que escriben `Borrador` son los tres sitios donde se puede corregir en el acto |
+| D-49 | **`policy` nace aplicando ya los vetos del brief, comparados tal cual.** La lista global de términos ofensivos, la normalización y el registro de auditoría vienen después y amplían la fuente de la lista y la comparación, no el enganche | Nacer vacío dejaría el hook de adorno hasta que llegue la lista global, y los vetos ya están guardados. La comparación literal falla en las variantes —«perros» no casa con «perro»—, y un tema vetado solo casa si aparece escrito igual: es el precio declarado de no normalizar todavía. No es la dimensión de léxico vetado de la época, que sigue en el Editor de estilo: es una política del comprador, comprobada como se comprueba la forma de un artefacto (RF-23). Si una comparación de cadenas cuenta como herramienta de cálculo en el sentido de D-05 lo decide esa decisión abierta, que este cambio no cierra |
+
+**Cuánto contexto añade.** Nada si el agente entrega bien a la primera: la
+lista de vetos no entra en ninguna ventana (RF-16 sigue en pie) y la
+instrucción de RF-129 son unas pocas líneas. Si bloquea, la segunda llamada lee
+además la respuesta anterior, el motivo y la línea de orden del hook con que el
+CLI lo encabeza, y eso cabe por construcción en la reserva del paso: 4 000
+tokens en `redactar` y `revisar`, que van en tanda por escena, y 8 000 en la
+costura, que va sola. Con la reserva, caben cuatro Redactores por tanda y dos
+Revisores. De lo vetado, al agente solo le llega lo que encontró en su propio
+texto.
+
+**Qué retira.** La frase de §11 según la cual los vetos se guardan y no se
+aplican. RF-98 suma un caso de intento fallido: la salida final que no pasa un
+hook. Y RF-13 suma la reserva de la vuelta a la anchura de los pasos con hooks.
+
+**Qué queda fuera.** La lista global de términos ofensivos, la normalización
+—mayúsculas, acentos, plurales y variantes— y el registro de auditoría de cada
+coincidencia; los validadores de nombres exactos, de longitud y la puerta de
+publicación; detectar un tema vetado por su sentido y no por sus palabras; y
+hooks en los roles que no escriben prosa.
+
+**De dónde sale.** `architecture.md` §3 (toda tarea arranca en frío,
+presupuesto) y §4 (reintentos por paso); RF-06, RF-13, RF-16, RF-23, RF-95 a
+RF-102; D-35 y RD-08.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md`: §3, la
+reserva de la vuelta en el presupuesto; §4, los hooks en el guion y lo que pasa
+cuando no se pasan; §7, `ganchos.py` en el árbol. `validators.md`: §6, las
+pruebas; §7, los hooks entre los guardarraíles y lo vetado entre las amenazas,
+con lo que la comparación literal no ve; y §8, los métodos de RF-120 a RF-129. `definitions.md` y
+`domain-knowledge.md` no cambian: los vetos ya eran parte del destinatario.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -576,6 +655,7 @@ del mundo.
 | RD-22 | Las publicaciones son un registro de solo añadir: ni se borran ni se modifican (RF-116) | `prueba` |
 | RD-23 | La caché del estado materializado se indexa por obra, versión y capítulo, y lleva también la versión que la relevó (RF-115, D-44) | `prueba` |
 | RD-17 | `licencia` admite un cuarto valor, `personal`, para lo que viene de la vida del destinatario. Es inmutable como `canon`, pero su respaldo no es una `Fuente` sino un `Recuerdo`, y por eso no cuenta en la cobertura documental (OBJ-06) ni en la fidelidad histórica | `analisis` |
+| RD-25 | El veredicto de los hooks vive en el cuerpo de la `Traza`, en `ganchos`, y no en una tabla ni en una columna nueva: no hace falta migración. Nadie consulta por él todavía; quien lo necesite para filtrar lo sacará a columna entonces | `prueba` |
 
 Un único ejemplo, que fija el estilo del cuerpo de todo artefacto. Los demás no
 se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe.
@@ -615,6 +695,7 @@ se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe
 | RI-13 | `GET /obras/{id}/versiones` | Ver las versiones | RF-117 |
 | RI-14 | `?version=` en manuscrito, capítulo, críticas, estado, hechos y cronología | Leer una versión concreta | RF-117. Sin el parámetro, la versión de referencia |
 | RI-10 | `GET /openapi.json` | Acordar la frontera | Documento OpenAPI 3.1 del borde entero, generado desde los modelos declarados. Se vuelca además a `backend/openapi.yaml`, que es el contrato versionado del que `frontend/` deriva su cliente (D-11, RNF-09) |
+| RI-15 | `GET /obras/{id}/trazas` | Ver por qué un intento falló | Cada `Traza` servida trae además `ganchos`, lo que RF-127 guardó: vacío si su paso no lleva hooks |
 
 Tres reglas de frontera. La interfaz web nunca lee ficheros ni la base de datos.
 El contrato HTTP se valida en el borde con modelos declarados —es el único sitio
@@ -672,6 +753,7 @@ requisitos que justifican.
 | §5 Datos | `definitions.md` (vocabularios); `AGENTS.md` (SQLite y extensión vectorial) |
 | RF-06 a RF-09, RD-16, RD-17 | `definitions.md` (capa Mundo y grado de licencia); D-12, D-13 y D-14 |
 | §4.12 Versiones | `architecture.md` §3 (estado como pliegue) y §4 (punto de guardado); RD-07; D-32 |
+| §4.13 Los dos hooks, RD-25, RI-15 | `architecture.md` §3 (en frío y presupuesto) y §4 (reintentos por paso); `validators.md` §7 (guardarraíles); RF-06, RF-95 a RF-102 |
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
 
 ## §10 Verificación y criterios de aceptación
@@ -706,6 +788,14 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    capítulo 1, reescribe el 2 y el 3 y los anota como cambiados. Ninguna está
    publicada hasta que se publica, publicar una versión sin terminar se rechaza
    y, publicada la 2, es la que se lee sin pedir versión.
+9. **Los dos hooks.** Sin gastar: el programa del hook, alimentado con la
+   entrada que le daría Claude Code, bloquea con código 2 una escena que trae
+   una palabra vetada del brief o que no trae su `Borrador`, y deja terminar la
+   buena; la orden del ejecutor lleva los dos hooks en los pasos 3, 5 y 7 y
+   ninguno en los demás; y una salida final con una palabra vetada es un
+   intento fallido que, agotados los reintentos, detiene la obra con el
+   veredicto en la `Traza`. Con el CLI de verdad, un sondeo mínimo confirma que
+   en `--print` el hook se dispara, bloquea y el agente vuelve a entregar.
 
 ## §11 Fuera del alcance de v1
 
@@ -720,8 +810,9 @@ cualquier herramienta externa de cálculo, por D-05.
 
 También queda fuera todo lo que rodea al destinatario sin ser él: la
 comprobación de que cada elemento personalizado acaba apareciendo en algún
-capítulo, y el filtro de las palabras vetadas, que esta versión guarda pero
-todavía no aplica. De la entrevista queda fuera lo que enumera §4.8, y de las
+capítulo, y del filtro de las palabras vetadas, todo lo que no es la
+comparación literal de §4.13: la lista global, la normalización y el registro
+de auditoría. De la entrevista queda fuera lo que enumera §4.8, y de las
 versiones, lo que enumera §4.12.
 
 ## §12 Decisiones abiertas

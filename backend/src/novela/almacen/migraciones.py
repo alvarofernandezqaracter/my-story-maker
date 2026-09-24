@@ -27,8 +27,8 @@ MIGRACIONES: tuple[Migracion, ...] = (
         "punto de guardado: constancia de auditoria y marca de caducado en lo inmutable",
         esquema.sentencias_del_punto_de_guardado,
     ),
-    # La 7 esta reservada a otra tarea de la misma tanda. Esta recorre tambien
-    # todas las tablas de artefactos, asi que va detras de ella.
+    # Recorre tambien todas las tablas de artefactos: una tabla nueva nace
+    # despues de esta y trae de serie sus dos columnas de version.
     (
         esquema.MIGRACION_DE_LAS_VERSIONES,
         "versiones de la obra: cada fila con su version y su relevo, y publicar",

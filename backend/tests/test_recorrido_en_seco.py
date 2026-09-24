@@ -136,12 +136,14 @@ def test_ninguna_tanda_pasa_de_la_anchura_calculada(
     for apunte in informe.recorrido:
         por_tanda.setdefault(apunte.tanda, []).append(apunte)
     for numero, apuntes in por_tanda.items():
-        roles = {apunte.rol for apunte in apuntes}
+        # Por rol y paso: el mismo rol cuesta mas abierto en un paso con hooks,
+        # que reserva su vuelta de correccion (SPEC1 RF-128).
+        pares = {(apunte.rol, apunte.paso) for apunte in apuntes}
         anchura = min(
             presupuesto.anchura_de_tanda(
-                [e for e in ejecutor.llamadas if e.rol == rol][:1]
+                [e for e in ejecutor.llamadas if (e.rol, e.paso) == par][:1]
             )
-            for rol in roles
+            for par in pares
         )
         assert len(apuntes) <= anchura, f"la tanda {numero} se pasa de ancha"
 

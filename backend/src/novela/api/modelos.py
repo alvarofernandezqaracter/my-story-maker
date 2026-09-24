@@ -131,6 +131,13 @@ class TrazaServida(BaseModel):
     latencia_ms: int | None
     abierta_en: str | None
     cerrada_en: str | None
+    ganchos: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Lo que dijeron los hooks del paso durante la sesion y su veredicto final. "
+            "Vacio si el paso no lleva hooks (RI-15)"
+        ),
+    )
 
 
 class EstadoPlegado(BaseModel):

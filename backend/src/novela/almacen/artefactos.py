@@ -1031,6 +1031,7 @@ class Almacen:
         coste: float | None,
         latencia_ms: int,
         recuperaciones: list[dict[str, Any]] | None = None,
+        ganchos: dict[str, Any] | None = None,
     ) -> None:
         traza = self.leer("Traza", id_traza)
         if traza is None:
@@ -1038,6 +1039,10 @@ class Almacen:
         cuerpo = dict(traza.cuerpo)
         cuerpo["salida"] = salida
         cuerpo["recuperaciones"] = recuperaciones or []
+        # El veredicto de los hooks va en el cuerpo, no en una columna: nadie
+        # consulta por el todavia (SPEC1 RD-25).
+        if ganchos is not None:
+            cuerpo["ganchos"] = ganchos
         self._actualizar(
             "Traza",
             id_traza,

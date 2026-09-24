@@ -191,6 +191,7 @@ la que más protege.
 | `nucleo/` no importa ninguna tarea ni decide nada del dominio | Contrato de capas, y vigilar que `nucleo/` no engorde |
 | En `frontend/`, solo `compartido/` llama a la API, y las funcionalidades no se importan entre sí | Regla de fronteras del linter |
 | El único sitio con tipos declarados es el borde HTTP | Comprobación de tipos sobre `api/` |
+| Los hooks no tocan el almacén ni el guion: informan por su salida y registra el ejecutor | Contrato de importación sobre `ganchos` |
 
 ### Dónde no se comprueban tipos, y por qué
 
@@ -238,6 +239,7 @@ manda.
 | El índice de parecido | Propiedad: borrarlo y reconstruirlo desde los artefactos devuelve los mismos fragmentos. El índice es derivado; los artefactos no |
 | La persistencia | Cada migración sobre una copia de una obra de prueba; el bloqueo por escrituras concurrentes se ejercita con una tanda de verdad, no se supone |
 | La entrevista | Con un ejecutor fingido que contesta lo que contestaría el Entrevistador: un hecho sin cita literal se descarta, lo que la persona escribió no cambia, lo que falta sale con su ruta, una contradicción sin evidencia no bloquea y una asumida tampoco, la pasada que completa el brief lanza la obra, y la huella de cada pasada no se borra ni se modifica |
+| Los dos hooks | El programa del hook se prueba dándole la entrada JSON que le daría Claude Code, también lanzado como proceso: bloquea con código 2 lo malformado y lo vetado, deja terminar lo bueno, bloquea una sola vez por turno, no bloquea si la vuelta no cabe en la reserva y su motivo está acotado. La orden del ejecutor lleva los dos hooks `Stop` en los pasos 3, 5 y 7 y ninguno en los demás, con los vetos en el entorno y no en la ventana; y un Redactor fingido que insiste en lo vetado agota sus intentos y detiene la obra con el veredicto en cada `Traza`. Que el CLI de verdad dispara el hook en `--print` y el agente corrige se confirma con un sondeo mínimo, fuera de la batería |
 | La frontera con la interfaz | El contrato OpenAPI versionado frente al que genera el código: si el borde cambia, la prueba lo vuelve a volcar y falla una vez, para que el movimiento pase por el diff. Comprueba además que toda operación declare la forma de lo que devuelve, porque un contrato con respuestas sin tipar no sirve para generar cliente. La mitad del cliente espera a que `frontend/` exista |
 | Que las pruebas afirmen algo | Pruebas de mutación sobre `nucleo/` y sobre los permisos por rol, en periodo y no en cada commit, porque son lentas |
 
@@ -284,6 +286,7 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 | Solo el Documentalista sale del sistema | `prueba` | Ningún otro rol tiene herramienta con la que salir; se comprueba enumerándolas |
 | El Entrevistador no escribe nada | `prueba` | Su contrato no declara ninguna escritura, la tabla de gobierno no le asigna ninguna, y lo que devuelva como artefacto se cuenta y no se guarda |
 | Una sola pasada de entrevista abierta a la vez | `prueba` | Se lanzan varias a la vez contra un ejecutor que cuenta las que tiene abiertas, y el pico es uno. Por eso su coste cabe en el margen del techo |
+| Lo que entrega un subagente de prosa está bien formado y no trae nada vetado | `prueba` | Dos hooks `Stop` en su orden, que no le dejan terminar sin corregir, y el ejecutor repite las mismas comprobaciones sobre lo entregado al final. Un hook, no el prompt: el agente puede no hacer caso de una petición, pero no puede terminar sin pasar |
 
 ### Medir a los verificadores
 
@@ -327,8 +330,8 @@ dimensión de la tabla anterior.
 
 ### El adversario
 
-No todo fallo es un descuido. Cuatro amenazas con nombre, cada una con la
-comprobación que la vigila.
+No todo fallo es un descuido. Estas son las amenazas con nombre, cada una con
+la comprobación que la vigila.
 
 | Amenaza | Por dónde entra | Qué la para y cómo se comprueba |
 | --- | --- | --- |
@@ -337,6 +340,7 @@ comprobación que la vigila.
 | Deriva de objetivo | Tras varias vueltas, el texto se optimiza para pasar la criba en vez de para contar la escena | Reincidencia por dimensión y la auditoría del Arquitecto de arcos, que mira la obra y no el borrador |
 | Contaminación del mundo | Un dato falso entra en el canon y envenena el contexto de todos los capítulos siguientes | El mundo solo cambia por `EventoEstado` del Contable y solo al cerrar capítulo. Se comprueba intentando escribir el mundo desde cualquier otro rol |
 | Fuga de material | Un rol manda fuera lo que el sistema tiene dentro | Ningún rol salvo el Documentalista tiene herramienta con la que salir |
+| Lo vetado se cuela en la prosa | El Redactor, el Revisor o el Editor de estilo escriben una palabra o un tema que el comprador vetó en el brief | El hook `policy` no deja terminar al subagente y, si insiste, el intento falla y la obra se detiene. Se comprueba con un Redactor fingido que insiste y con un sondeo real. **Lo que no ve:** la comparación es literal, así que una mayúscula, un acento, un plural o el mismo tema dicho con otras palabras pasan |
 
 Lo que se encuentra en una de estas comprobaciones se queda como caso sembrado
 para siempre: un ataque descubierto y no reincorporado al conjunto de casos es
@@ -419,6 +423,13 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Sin pedir versión se lee la publicada, o la última si no hay ninguna | Publicar la 1, rehacer, publicar la 2 y volver a publicar la 1, leyendo el manuscrito tras cada paso | `prueba` |
 | Publicar pasa por un solo sitio del código | Búsqueda de quién llama a la escritura de publicaciones del almacén: solo `nucleo/versiones.py` | `inspeccion` |
 | Descartar un capítulo a medias se lleva también lo que escribió sin capítulo | `Evento` escrito por una tarea del capítulo descartado | `prueba` |
+| Los pasos que escriben prosa llevan sus dos hooks y ningún otro paso los lleva | Lectura del guion y de la orden del ejecutor paso a paso; un hook fuera de vocabulario o sin reserva no carga | `prueba` |
+| Los hooks viajan en la orden sin romper el aislamiento ni escribir en disco | Orden interceptada y el hook lanzado como proceso sobre un directorio que sigue vacío | `prueba` |
+| El hook de forma para lo malformado y el de policy lo vetado, antes de terminar | El programa del hook con la entrada de Claude Code: un caso por comprobación | `prueba` |
+| Una vuelta de corrección por intento, y solo si cabe en su reserva | El hook con `stop_hook_active` y con una respuesta que no cabe | `prueba` |
+| Lo que no pasa al final es un intento fallido, y su veredicto queda en la `Traza` y se sirve con ella | Redactor fingido que insiste en lo vetado hasta agotar los intentos | `prueba` |
+| La tanda de un paso con hooks cuenta su vuelta de corrección | Anchura calculada con y sin la reserva, y entrada medida de la última llamada | `prueba` |
+| El agente con hooks sabe que el motivo es del sistema | Lectura de la instrucción de sistema de un encargo con hooks, y sondeo real en el que corrige | `inspeccion` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha, el lugar y los presentes que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |

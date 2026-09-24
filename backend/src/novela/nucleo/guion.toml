@@ -20,6 +20,12 @@ version = 1
 #   detener_obra     lo que produce el testigo del paso siguiente
 #   critica_abierta  las comprobaciones: queda una Critica «no comprobado»
 #   seguir           documentar: sin fuente la produccion sigue (D-09)
+#
+# Los pasos que escriben prosa declaran ademas `ganchos` —los hooks `Stop` que
+# lleva su subagente, con los valores de `vocabularios.GANCHOS`— y
+# `reserva_de_la_vuelta`: lo que puede costar de entrada la vuelta de correccion
+# cuando un hook bloquea, que se suma al tope del rol al calcular la tanda
+# (SPEC1 4.13). Un paso con ganchos y sin reserva no carga.
 
 [[paso]]
 numero = 1
@@ -45,6 +51,8 @@ proyeccion = ["marco_de_la_escena", "afirmaciones_pendientes_de_respaldo", "docu
 numero = 3
 reintentos = 2
 al_agotarse = "detener_obra"
+ganchos = ["validar_capitulo", "policy"]
+reserva_de_la_vuelta = 4000
 tarea = "redactar"
 rol = "redactor"
 concurrencia = "por_escena"
@@ -67,6 +75,8 @@ proyeccion = ["contrato_de_verificacion"]
 numero = 5
 reintentos = 2
 al_agotarse = "detener_obra"
+ganchos = ["validar_capitulo", "policy"]
+reserva_de_la_vuelta = 4000
 tarea = "revisar"
 rol = "revisor"
 concurrencia = "por_escena"
@@ -88,6 +98,8 @@ proyeccion = ["contrato_de_verificacion"]
 numero = 7
 reintentos = 2
 al_agotarse = "detener_obra"
+ganchos = ["validar_capitulo", "policy"]
+reserva_de_la_vuelta = 8000
 tarea = "editar_estilo"
 rol = "editor_de_estilo"
 concurrencia = "solo"
