@@ -133,11 +133,11 @@ Usos(v, h) == {r.cap : r \in {x \in Visible(v) : x.tipo = "cierre" /\ h \in x.me
 (***************************************************************************)
 (* El punto de guardado (nucleo/caminante.py:volver_al_punto_de_guardado). *)
 (* Descarta lo vivo que cuelga de todo capitulo que no esta cerrado en la  *)
-(* version en curso (RF-165, contraejemplo 03). El codigo de hoy descarta  *)
-(* lo posterior al ultimo cerrado (almacen.descartar_desde(ultimo + 1)):   *)
-(* es lo mismo mientras los cerrados sean 1..ultimo, que es todo lo que    *)
-(* rehacer desde N deja; la regeneracion del lector (pendiente de T14) lo  *)
-(* rompe y tiene que implementar esto.                                     *)
+(* version en curso (RF-165, contraejemplo 03). El codigo lo hace con     *)
+(* almacen.descartar_sin_cerrar (RF-176): descartar solo lo posterior al   *)
+(* ultimo cerrado bastaba mientras los cerrados eran 1..ultimo, que es     *)
+(* todo lo que rehacer desde N deja; la regeneracion del lector reescribe  *)
+(* capitulos sueltos y lo rompia.                                          *)
 (***************************************************************************)
 Descartar(E) == {r \in E : r.cad \/ r.cap = 0 \/ CerradoVivo(r.cap)}
 
@@ -325,11 +325,11 @@ AbrirVersion(S, H) ==
 (* Rehacer desde el capitulo N hasta el final (RF-111, D-42).               *)
 Rehacer(n) == AbrirVersion(n..C, {})
 
-(* Regeneracion por cambio del lector (RF-164; la implementa SPEC1 4.18,    *)
-(* que llega con T14): el lector cambia el valor de un hecho, su ficha se   *)
+(* Regeneracion por cambio del lector (RF-164; la implementa SPEC1 4.18):   *)
+(* el lector cambia el valor de un hecho, su ficha se                      *)
 (* sustituye en la version nueva y se reescriben los capitulos que lo usan  *)
 (* en la ultima version, contiguos o no. Si ninguno lo usa, se rechaza y no *)
-(* nace version (D-73 de T14): en el modelo, la accion no esta habilitada.  *)
+(* nace version (D-73): en el modelo, la accion no esta habilitada.         *)
 CambioLector(h) == AbrirVersion(Usos(nv, h), {h})
 
 (* Publicar (versiones.publicar, el unico sitio, RF-116 y RF-146). La       *)
