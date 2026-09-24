@@ -1,5 +1,5 @@
 // Único punto de salida HTTP de la interfaz (SPEC2 RI-01). Una función por
-// operación que usa v1 (RI-03 a RI-07), y ninguna más. Los tipos salen del
+// operación que usa v1 (RI-03 a RI-08), y ninguna más. Los tipos salen del
 // contrato generado: una ruta o un campo renombrado rompe al compilar.
 import createClient from "openapi-fetch";
 import type { paths } from "./esquema";
@@ -46,6 +46,9 @@ export const verObra = (id: string) => llamar(() => http.GET("/obras/{id_obra}",
 
 export const verProgresoAhora = (id: string) =>
   llamar(() => http.GET("/obras/{id_obra}/progreso/ahora", enObra(id)));
+
+export const verTrazas = (id: string) =>
+  llamar(() => http.GET("/obras/{id_obra}/trazas", enObra(id)));
 
 export const leerManuscrito = (id: string) =>
   llamar(() => http.GET("/obras/{id_obra}/manuscrito", enObra(id)));

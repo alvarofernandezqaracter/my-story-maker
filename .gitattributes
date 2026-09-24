@@ -1,0 +1,3 @@
+# Los ficheros generados se escriben con LF: asi, regenerarlos al arrancar no los
+# da por cambiados en Windows.
+frontend/src/compartido/api/esquema.d.ts text eol=lf

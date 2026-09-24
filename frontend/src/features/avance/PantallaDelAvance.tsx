@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import type { EstadoDelFlujo } from "../../compartido/api/avance";
 import { AvisoDeFallo } from "../../compartido/componentes/AvisoDeFallo";
 import { Cabecera } from "../../compartido/componentes/Cabecera";
+import { MenuDeObra } from "../../compartido/componentes/MenuDeObra";
 import { Espera } from "../../compartido/componentes/Espera";
 import { TareasAbiertas } from "./TareasAbiertas";
 import { useAvance, type Situacion } from "./usar-avance";
@@ -54,6 +55,7 @@ export function PantallaDelAvance() {
     return (
       <>
         <Cabecera pantalla="Avance" />
+        <MenuDeObra idObra={idObra} />
         <main className="pagina">
           {falloDeCarga === null ? (
             <Espera que="Cargando la obra" />
@@ -87,6 +89,7 @@ export function PantallaDelAvance() {
   return (
     <>
       <Cabecera pantalla="Avance" />
+        <MenuDeObra idObra={idObra} />
       <main className="pagina avance">
         <header className="avance__cabecera">
           <h1>{ficha.titulo}</h1>

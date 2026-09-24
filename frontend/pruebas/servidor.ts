@@ -9,6 +9,7 @@ import type {
   Manuscrito,
   PasadaDeEntrevista,
   Progreso,
+  TrazaServida,
 } from "../src/compartido/api/tipos";
 
 export const API = "http://localhost:5173/api";
@@ -74,6 +75,26 @@ export function pasada(cambios: Partial<PasadaDeEntrevista> = {}): PasadaDeEntre
   };
 }
 
+export function traza(cambios: Partial<TrazaServida> = {}): TrazaServida {
+  return {
+    id: "tra-1",
+    capitulo: 1,
+    escena: "e1",
+    rol: "redactor",
+    tarea: "redactar_escena",
+    intento: 1,
+    tokens_de_entrada_estimados: 3000,
+    tokens_de_entrada_medidos: 3100,
+    tokens_de_salida: 900,
+    coste: 0.01,
+    latencia_ms: 42000,
+    abierta_en: "2026-09-24T10:00:00Z",
+    cerrada_en: "2026-09-24T10:00:42Z",
+    ganchos: null,
+    ...cambios,
+  };
+}
+
 export const confirmacion = (detenida: boolean, motivo: string | null = null): Confirmacion => ({
   id_obra: ID_OBRA,
   detenida,
@@ -84,6 +105,7 @@ export const servidor = setupServer(
   http.get(`${API}/obras/:id`, () => HttpResponse.json(ficha())),
   http.get(`${API}/obras/:id/progreso/ahora`, () => HttpResponse.json(progreso())),
   http.get(`${API}/obras/:id/manuscrito`, () => HttpResponse.json(manuscrito())),
+  http.get(`${API}/obras/:id/trazas`, () => HttpResponse.json([traza()])),
 );
 
 /** Lo que devuelve el proxy de Vite cuando no alcanza el backend: 500 sin JSON. */

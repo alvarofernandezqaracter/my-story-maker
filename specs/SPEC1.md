@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.3.0
+version: 1.4.0
 estado: aplicada
 fecha: 2026-09-24
 ambito: backend/
@@ -167,7 +167,7 @@ flowchart LR
 
 | ID | Requisito | Verificación |
 | --- | --- | --- |
-| RF-01 | Acepta un brief y da de alta una `Obra` con título, época, ámbito, premisa, tesis temática, elenco declarado, políticas globales y, si lo trae, el destinatario (RF-06). Si falta un campo obligatorio, lo rechaza nombrando el campo con su ruta completa, sin crear nada | `prueba` |
+| RF-01 | Acepta un brief y da de alta una `Obra` con título, época, ámbito, premisa, número de capítulos, políticas globales y, si los trae, la tesis temática, el elenco declarado, los arcos y el destinatario (RF-06). Obligatorios son el título, la época, la premisa y el número de capítulos; si falta uno, lo rechaza nombrando el campo con su ruta completa, sin crear nada. Sin tesis temática la obra no lleva ninguna declarada y sin elenco declarado los personajes los decide el Constructor de mundo (D-50) | `prueba` |
 | RF-02 | El alta arranca la producción completa: `poblar_mundo` y después el guion de cada capítulo hasta cerrar la obra. **No hay ninguna otra orden que el editor deba dar** | `demostracion` |
 | RF-03 | Cada obra nace en su propio espacio de artefactos, identificado por `id_obra`. No existe un espacio de trabajo compartido que haya que archivar ni vaciar entre obras | `analisis` |
 | RF-04 | La producción se puede detener y reanudar por orden explícita. Reanudar vuelve al último capítulo cerrado y no repite trabajo ya cerrado (§4.10, RF-91) | `prueba` |
@@ -734,10 +734,15 @@ ese contrato se publica en OpenAPI: es el único acuerdo entre `backend/` y
 | D-12 | **El destinatario y los suyos aparecen en la obra con sus nombres reales, sin traducir a la época.** La transposición la absorbe el grado de licencia: lo que viene de su vida se marca `personal` y el detector de anacronismos lo deja en paz | Es lo único que garantiza que se reconozca sin que nadie le explique la clave, que es para lo que se encarga la obra. Traducir cada dato a un equivalente del siglo daba una novela más limpia de época y un regalo que hay que descifrar. La alternativa del marco contemporáneo dejaba lo personal en los bordes —dedicatoria y prólogo— sin entrar en la historia. El coste es una excepción declarada en cuatro dimensiones, que es preferible a una lista de palabras a mano dentro del validador |
 | D-13 | **Un recuerdo del destinatario es un `Recuerdo`, no una `Fuente` de tipo nuevo.** Nace con el alta de la obra y ningún rol del censo lo escribe | El invariante «solo el Documentalista escribe `Fuente`» es lo que hace que un dato histórico sin respaldo sea detectable como alucinación. Meter ahí las anécdotas del comprador obligaría a abrir esa puerta a un segundo escritor y el invariante dejaría de significar nada. Son además cosas distintas: una `Fuente` es evidencia de una época y un `Recuerdo` es evidencia de una persona, sin fiabilidad ni tipo documental que declarar. El precio es un segundo sitio donde mirar de dónde sale un dato |
 | D-14 | **El papel del destinatario en la obra lo decide el Planificador y lo deja escrito en el `Plan`.** No es un campo del brief | Preguntárselo al editor es una pregunta más antes de tener una novela, y puede pedir un papel que no case con la premisa. Dejarlo implícito haría inverificable la personalización, porque el validador no sabría dónde mirar: escribirlo en el `Plan` da las dos cosas, libertad narrativa y un sitio fijo donde comprobarlo |
+| D-50 | **La tesis temática y el elenco declarado son opcionales en el brief, igual que los arcos.** Si no vienen, nadie los rellena por el editor: el Planificador trabaja sin tesis declarada y el Constructor de mundo decide quién existe. La entrevista no los pide ni los recuerda: no salen en `faltan` | Obligarlos convierte en trámite una pregunta que el editor puede no saber contestar al encargar, y cada pasada de más cuesta. Ningún validador los comprueba —la regla de corte de `AGENTS.md` ya los dejaba en el límite— y los dos roles que los leen saben trabajar sin ellos. Se descarta que el Entrevistador los invente: solo puede proponer lo que cite literal de un texto pegado (RF-74) |
 | D-05 | v1 no usa herramientas externas de cálculo | La decisión sigue abierta. Mientras lo esté, coherencia temporal, fatiga léxica y léxico vetado van como `analisis` contra el dato ya escrito, y lo que las vigila es la reincidencia por dimensión |
 
 Las decisiones D-20 a D-24, las de la entrevista, están en §4.8, junto a los
 requisitos que justifican.
+
+D-50 pone al día en la fase 3 el atributo `Obra` de `definitions.md`, que marca
+la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
+`architecture.md` §2.
 
 ## §9 Trazabilidad
 

@@ -1,9 +1,9 @@
 ---
 name: SPEC2
 titulo: Frontend v1 — Especificación de requisitos de software
-version: 1.0.0
+version: 1.1.0
 estado: aprobada
-fecha: 2026-09-23
+fecha: 2026-09-24
 ambito: frontend/
 base:
   - AGENTS.md
@@ -33,11 +33,12 @@ publica.
 ### 1.2 Alcance del sistema especificado
 
 Dentro: la conversación que completa el encargo hasta lanzar la obra, la
-pantalla que enseña el avance mientras la obra se produce, la lectura del
-manuscrito aceptado, y el cliente HTTP generado desde el contrato.
+pantalla que enseña el avance mientras la obra se produce, la lista de las
+tareas ya hechas, la lectura del manuscrito aceptado, un menú que salta entre
+las tres pantallas de una obra, y el cliente HTTP generado desde el contrato.
 
-Fuera: las pantallas de críticas, trazas, estado del mundo y búsqueda de
-pasajes; todo lo enumerado en §11.
+Fuera: las pantallas de críticas, estado del mundo y búsqueda de pasajes; todo
+lo enumerado en §11.
 
 La medida de «terminado» de v1 es una sola: **una persona que no ha visto nunca
 el sistema llega de la pantalla en blanco a la novela leída sin que nadie le
@@ -153,6 +154,7 @@ flowchart LR
 | RF-06 | Lo que la persona lleva escrito y pegado **sobrevive a recargar la página y a cerrar el navegador**, hasta que la obra se lanza. Al lanzarse se descarta | `prueba` |
 | RF-07 | Un texto pegado se muestra siempre como lo que es —material de la persona—, identificable y separado de lo que dice el sistema. Nunca se mezcla con la conversación como si lo hubiera dicho alguien | `inspeccion` |
 | RF-08 | Si el servidor rechaza la pasada por tamaño, la interfaz dice cuánto sobra y no recorta nada por su cuenta | `prueba` |
+| RF-09 | La ficha distingue lo obligatorio de lo opcional según lo que el servidor exige (SPEC1 RF-01, D-50): la tesis, los personajes y los arcos se pueden dejar sin tocar, y dejarlos así no los manda. La interfaz no los pide ni los marca como pendientes | `prueba` |
 
 ### 4.2 El avance
 
@@ -164,6 +166,14 @@ flowchart LR
 | RF-23 | La obra se puede detener y reanudar desde aquí. Son las dos únicas órdenes de la interfaz además de lanzar, y son control, no mantenimiento | `prueba` |
 | RF-24 | Al cerrarse la obra, la pantalla lo dice y ofrece la lectura. No hace falta estar mirando para enterarse: al volver a entrar, el estado es el mismo | `demostracion` |
 | RF-25 | La interfaz no calcula nada del avance: los tokens, el techo y el capítulo en curso se muestran tal como vienen | `inspeccion` |
+| RF-26 | Las tareas ya hechas de la obra se ven en una pantalla propia, agrupadas por capítulo y en el orden en que las sirve el servidor: qué rol, qué tarea, capítulo y escena, cuánto tardó y si pasó los hooks de su paso. Solo lo esencial: tokens, coste e intentos no se enseñan (D-09). Se puede volver a pedir la lista sin salir de la pantalla | `prueba` |
+| RF-27 | «Pasó los hooks» se lee del veredicto `final` que la `Traza` ya trae (SPEC1 RI-15): pasa si todos los hooks dicen que pasa, no pasa si alguno no, y una tarea sin hooks no dice nada. La interfaz no revisa el texto por su cuenta | `inspeccion` |
+
+### 4.2 bis Moverse por una obra
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-30 | Las pantallas de una obra —Avance, Tareas y Lectura— llevan arriba el mismo menú, que salta de una a otra con un clic y marca en cuál se está. Cada pantalla conserva su propia dirección, así que también se pueden abrir en pestañas del navegador | `prueba` |
 
 ### 4.3 La lectura
 
@@ -202,6 +212,7 @@ flowchart LR
 | RI-05 | `GET /obras/{id_obra}/progreso/ahora` | La foto con la que se pinta antes de engancharse (RF-21) | `prueba` |
 | RI-06 | `GET /obras/{id_obra}` · `/obras/{id_obra}/manuscrito` | §4.3 | `demostracion` |
 | RI-07 | `POST /obras/{id_obra}/detener` · `/obras/{id_obra}/reanudar` | RF-23 | `prueba` |
+| RI-08 | `GET /obras/{id_obra}/trazas` | RF-26 y RF-27, sin filtros | `prueba` |
 
 Los demás endpoints del contrato existen y v1 no los llama. Que estén servidos
 no obliga a pintarlos.
@@ -221,12 +232,14 @@ no obliga a pintarlos.
 
 | ID | Decisión | Por qué |
 | --- | --- | --- |
-| D-01 | **v1 es encargar, ver avanzar y leer.** Críticas, trazas, estado del mundo y búsqueda de pasajes quedan fuera | Son las tres cosas sin las cuales la web no sirve para nada; las otras cuatro son instrumentos de depuración que hoy se miran mejor por el contrato. Hacerlo todo de una vez retrasa la única parte que usa quien encarga la novela |
+| D-01 | **v1 es encargar, ver avanzar, ver lo hecho y leer.** Críticas, estado del mundo y búsqueda de pasajes quedan fuera | Encargar, ver avanzar y leer son las tres cosas sin las cuales la web no sirve para nada. Lo hecho entra porque quien mira una obra de horas quiere saber qué ha pasado además de qué pasa ahora; las otras tres son instrumentos de depuración que hoy se miran mejor por el contrato |
 | D-02 | **El encargo se presenta como una conversación**, aunque por dentro sean pasadas sin estado | Quien encarga una novela no sabe de antemano qué se le va a pedir, que es justo el problema que SPEC1 §4.8 identificó. Un formulario obliga a saberlo antes de empezar. El precio es que la web carga con la memoria que el servidor no tiene, y se paga en D-03 |
 | D-03 | **El borrador del encargo vive en el navegador**, y se manda entero en cada pasada | Es la consecuencia directa de que la entrevista sea sin estado (SPEC1 D-20). Guardarlo en el servidor sería pedirle que recuerde, que es lo que hace el techo de contexto verificable antes de gastar. Guardarlo solo en memoria convierte una recarga accidental en la pérdida de la carta que la persona pegó |
 | D-04 | **El avance llega por el flujo que el servidor empuja**, con una foto inicial y reenganche automático | El servidor ya lo sirve y es lo que hace que una obra de horas no parezca colgada. El sondeo es más simple pero repite trabajo y se nota lento. La foto inicial y el reenganche son el precio, y son dos requisitos, no una arquitectura |
 | D-05 | **El cliente se genera desde el contrato y hay una comprobación que falla si se desfasa** | Es el mismo trato que el backend ya se da a sí mismo (SPEC1 RNF-09 y D-11). Sin la comprobación, regenerar es un paso manual que se olvida, y un paso manual periódico es un defecto de diseño. Con ella, mover la frontera pasa por el diff en los dos lados |
 | D-06 | **TypeScript**, no JavaScript | No es una preferencia de estilo: es lo que hace que D-05 sirva de algo. Con tipos generados, un campo que el servidor renombra rompe al construir; sin ellos, rompe en la pantalla de alguien |
+| D-08 | **Un menú dentro de la obra, no pantallas a la vez** | Saltar con un clic basta para seguir una obra, y cada pantalla sigue teniendo su dirección para quien quiera varias pestañas. Poner dos pantallas juntas en la misma vista obliga a rehacer las tres para que quepan. El menú no llega al encargo ni a otras obras: no hay listado de obras (§12) |
+| D-09 | **La lista de tareas enseña lo esencial** | Se lee de un vistazo quién hizo qué y si salió bien. Los tokens y el coste siguen en el contrato para quien mida el gasto, y añadirlos más adelante no cambia nada de lo de arriba |
 | D-07 | **Un capítulo marcado se avisa sin detalle** | Enseñar la marca sin poder abrirla es un callejón, pero ocultarla sería peor: la persona leería como definitivo un capítulo que el sistema sabe defectuoso. El detalle llega cuando llegue la pantalla de críticas |
 
 ## §9 Trazabilidad
@@ -234,7 +247,8 @@ no obliga a pintarlos.
 | Bloque | De dónde sale |
 | --- | --- |
 | §4.1 El encargo | SPEC1 §4.8 (RF-70 a RF-79; D-20 a D-24) |
-| §4.2 El avance | SPEC1 RF-53, RF-04, RI-08, RI-09 |
+| §4.2 El avance | SPEC1 RF-53, RF-04, RI-08, RI-09; las tareas hechas, SPEC1 RI-06 y RI-15 |
+| §4.2 bis Moverse por una obra | D-08 |
 | §4.3 La lectura | SPEC1 RF-50, RI-02, RI-03 |
 | §5 Datos | `AGENTS.md` (frontera única); SPEC1 RD-08 |
 | §6 Interfaz | SPEC1 D-11, RNF-09, RI-10 |
@@ -254,16 +268,20 @@ que fija este SRS es cuándo v1 está terminada:
    pantalla, y entonces lanza.
 4. Con el flujo cortado a mitad, la pantalla del avance lo dice, se reengancha
    sola y no pierde el estado (RF-22).
-5. Con el servidor caído del todo, ninguna de las tres pantallas queda en blanco
-   ni girando: las tres dicen qué pasa (OBJ-04).
+5. Con el servidor caído del todo, ninguna de las cuatro pantallas queda en
+   blanco ni girando: las cuatro dicen qué pasa (OBJ-04).
 6. El manuscrito de una obra a medio producir se lee, y un capítulo marcado sale
    marcado.
 7. Se cambia un campo del borde HTTP en el backend, se regenera el contrato y la
    comprobación del cliente falla (OBJ-05).
+8. Un encargo con título, época, premisa y número de capítulos, sin tesis, sin
+   personajes y sin arcos, se lanza sin que nadie los pida.
+9. Desde cualquiera de las tres pantallas de una obra se llega a las otras dos
+   con un clic, y la de tareas enseña cada tarea hecha con su veredicto.
 
 ## §11 Fuera del alcance de v1
 
-Las pantallas de críticas, trazas, estado plegado y cronología, y la búsqueda de
+Las pantallas de críticas, estado plegado y cronología, y la búsqueda de
 pasajes por parecido: el servidor las sirve y v1 no las pinta. Autenticación y
 varios usuarios, porque el backend tampoco los tiene. Ver varias obras a la vez
 o un listado de obras producidas: v1 trabaja sobre la obra que se acaba de
@@ -288,10 +306,8 @@ Ninguna bloquea la fase 2.
 
 ## §13 Docs que se ponen al día en la fase 3
 
-`AGENTS.md`: la fila de `frontend/` de «Estructura del repositorio» deja de
-decir que está vacía. `architecture.md` §7: el árbol de carpetas gana las tres
-funcionalidades de v1. La skill `.claude/skills/frontend-react/`: su §2 nombra
-hoy cuatro funcionalidades —`lanzar`, `manuscrito`, `criticas`, `trazas`— y v1
-construye otras tres —`encargo`, `avance`, `manuscrito`—; su §3 deja de decir
-que cómo llega el avance está sin decidir (D-04). `validators.md`: el método de
-cada requisito de este documento.
+`architecture.md` §7: el árbol de `features/` gana `tareas` y el párrafo del
+frontend dice que las pantallas de una obra comparten menú. La skill
+`.claude/skills/frontend-react/`: su §2 nombra la carpeta `tareas`.
+`validators.md`: el método de RF-09, RF-26, RF-27, RF-30 y RI-08 en la matriz de
+§8. `AGENTS.md`: la fila de `frontend/` nombra la pantalla de tareas.

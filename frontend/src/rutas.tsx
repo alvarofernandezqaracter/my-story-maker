@@ -3,12 +3,14 @@ import { Cabecera } from "./compartido/componentes/Cabecera";
 import { PantallaDelAvance } from "./features/avance/PantallaDelAvance";
 import { PantallaDelEncargo } from "./features/encargo/PantallaDelEncargo";
 import { PantallaDelManuscrito } from "./features/manuscrito/PantallaDelManuscrito";
+import { PantallaDeTareas } from "./features/tareas/PantallaDeTareas";
 
 export function Rutas() {
   return (
     <Routes>
       <Route path="/" element={<PantallaDelEncargo />} />
       <Route path="/obras/:idObra" element={<PantallaDelAvance />} />
+      <Route path="/obras/:idObra/tareas" element={<PantallaDeTareas />} />
       <Route path="/obras/:idObra/manuscrito" element={<PantallaDelManuscrito />} />
       <Route path="*" element={<NoExiste />} />
     </Routes>

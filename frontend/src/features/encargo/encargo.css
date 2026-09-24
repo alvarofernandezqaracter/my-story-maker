@@ -244,3 +244,14 @@ details[open] > .pegado__resumen {
   flex-basis: 100%;
   margin: 0 0 var(--espacio-2);
 }
+
+.campo__opcional {
+  color: var(--tinta-tenue);
+  font-size: 0.85rem;
+}
+
+.ficha__nota {
+  margin: var(--espacio-2) 0 0;
+  font-size: 0.85rem;
+  color: var(--tinta-suave);
+}

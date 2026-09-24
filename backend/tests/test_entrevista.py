@@ -567,3 +567,26 @@ def test_una_orden_en_el_texto_pegado_no_cambia_lo_que_la_persona_escribio(
     assert obra.cuerpo["destinatario"]["nombre"] == "Marta"
     assert "Inyectado" not in nombres
     assert len(cuerpo["hechos_descartados"]) == 2
+
+
+def test_sin_tesis_ni_elenco_la_entrevista_no_los_pide_y_la_obra_se_lanza(
+    cliente: TestClient,
+) -> None:
+    """D-50: la entrevista no pide ni recuerda lo opcional. Con lo obligatorio
+    completo, la pasada lanza aunque no haya tesis ni elenco."""
+    sin_opcionales = {
+        clave: valor
+        for clave, valor in BORRADOR.items()
+        if clave not in {"tesis_tematica", "elenco_declarado"}
+    }
+
+    cuerpo = cliente.post(
+        "/entrevistas", json={"borrador": sin_opcionales, "textos": [CARTA]}
+    ).json()
+
+    assert cuerpo["faltan"] == []
+    assert cuerpo["estado"] == "lanzada"
+    _esperar_obra(cliente, cuerpo["id_obra"])
+    obra = _casa(cliente).almacen.leer_obra(cuerpo["id_obra"])
+    assert obra.cuerpo["elenco_declarado"] == []
+    assert obra.cuerpo.get("tesis_tematica") is None
