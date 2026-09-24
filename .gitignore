@@ -19,3 +19,8 @@ Thumbs.db
 
 # Salida del servidor MCP de navegador (.claude/mcp.json)
 .playwright-mcp/
+
+# Ficheros de trabajo de TLC (backend/formal/tla): no son del repositorio
+states/
+*_TTrace_*.tla
+*_TTrace_*.bin
