@@ -86,10 +86,15 @@ class Ventana:
     texto: str
     tokens: int
     recuperaciones: list[dict[str, Any]] = dcfield(default_factory=list)
-    # Lo que el hook `policy` busca en lo entregado (SPEC1 RF-124). **No entra en
-    # el texto de la ventana**: viaja aparte, hasta el hook, y al agente solo le
-    # llega lo que encontro en su propio texto.
+    # Lo que el hook `policy` busca en lo entregado (SPEC1 RF-124, 4.14): los
+    # vetos del comprador y la lista global. **No entran en el texto de la
+    # ventana**: viajan aparte, hasta el hook, y al agente solo le llega lo que
+    # encontro en su propio texto.
     vetos: tuple[str, ...] = ()
+    vetos_globales: tuple[str, ...] = ()
+    # Los nombres de la biblia, para que `validar_capitulo` compruebe que se
+    # escriben tal cual (SPEC1 RF-145). Tampoco entran en el texto de la ventana.
+    nombres: tuple[str, ...] = ()
 
 
 Constructor = Callable[[Peticion], Material]
@@ -214,7 +219,7 @@ def _texto_aceptado_del_capitulo(p: Peticion) -> Filas:
 def _borradores_en_orden_de_escena(p: Peticion) -> list[Artefacto]:
     """Los borradores del capitulo en el orden de sus escenas, no en el de
     creacion: las escenas de una tanda se redactan a la vez y dos pueden nacer
-    en el mismo segundo (D-51). Entre versiones de una misma escena manda la
+    en el mismo segundo (D-88). Entre versiones de una misma escena manda la
     de creacion, que es la que ya traian."""
     orden = {
         escena.id: posicion
@@ -253,10 +258,10 @@ def _destinatario(p: Peticion) -> dict[str, Any]:
 
 
 def vetos_del_encargo(almacen: Almacen, encargo: Encargo) -> tuple[str, ...]:
-    """Lo vetado que el hook `policy` busca, tal cual (SPEC1 RF-124).
+    """Las palabras o temas que el comprador veto en el brief (SPEC1 RF-130).
 
-    Hoy son las palabras o temas que el comprador veto en el brief. Es el unico
-    sitio del que sale la lista: ampliarla es cambiar esta funcion, no el hook.
+    Se leen del cuerpo de la `Obra`, donde ya estan: no se copian (D-50). Si
+    cada uno es palabra o tema lo decide el hook por su forma.
     """
     if "policy" not in encargo.ganchos:
         return ()
@@ -266,6 +271,49 @@ def vetos_del_encargo(almacen: Almacen, encargo: Encargo) -> tuple[str, ...]:
     if not isinstance(vetos, list):
         return ()
     return tuple(veto for veto in vetos if isinstance(veto, str) and veto)
+
+
+def vetos_globales_del_encargo(almacen: Almacen, encargo: Encargo) -> tuple[str, ...]:
+    """La lista global de la instalacion, para todo encargo con `policy` (RF-131)."""
+    if "policy" not in encargo.ganchos:
+        return ()
+    return tuple(almacen.terminos_vetados_globales())
+
+# Los hechos de la biblia que tienen nombre propio: el `Evento` se conoce por su
+# descripcion, y una descripcion no es un nombre que haya que escribir tal cual.
+TIPOS_CON_NOMBRE: tuple[str, ...] = ("Personaje", "Lugar", "Objeto", "Faccion")
+
+
+def nombres_de_la_biblia(
+    almacen: Almacen, id_obra: str, *, version: int | None = None
+) -> tuple[str, ...]:
+    """El nombre del destinatario y el `nombre` y los `tratamientos` de cada
+    ficha con nombre, tal como estan escritos (SPEC1 RF-142).
+
+    Copia campos sin interpretarlos: es proyeccion, no decision.
+    """
+    nombres: list[str] = []
+    obra = almacen.leer_obra(id_obra)
+    destinatario = obra.cuerpo.get("destinatario") if obra is not None else None
+    if isinstance(destinatario, dict) and isinstance(destinatario.get("nombre"), str):
+        nombres.append(destinatario["nombre"])
+    for tipo in TIPOS_CON_NOMBRE:
+        for ficha in almacen.listar(tipo, id_obra, version=version):
+            candidatos = [ficha.cuerpo.get("nombre")]
+            tratamientos = ficha.cuerpo.get("tratamientos")
+            if isinstance(tratamientos, list):
+                candidatos += tratamientos
+            for nombre in candidatos:
+                if isinstance(nombre, str) and nombre and nombre not in nombres:
+                    nombres.append(nombre)
+    return tuple(nombres)
+
+
+def nombres_del_encargo(almacen: Almacen, encargo: Encargo) -> tuple[str, ...]:
+    """Lo que el hook `validar_capitulo` necesita para mirar los nombres."""
+    if "validar_capitulo" not in encargo.ganchos:
+        return ()
+    return nombres_de_la_biblia(almacen, encargo.id_obra)
 
 
 def _recuerdos_del_destinatario(p: Peticion) -> Filas:
@@ -425,6 +473,8 @@ def ensamblar(
         tokens=estimar_tokens(texto),
         recuperaciones=peticion.recuperaciones,
         vetos=vetos_del_encargo(almacen, encargo),
+        vetos_globales=vetos_globales_del_encargo(almacen, encargo),
+        nombres=nombres_del_encargo(almacen, encargo),
     )
 
 

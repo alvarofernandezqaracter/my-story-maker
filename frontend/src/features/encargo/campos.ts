@@ -9,7 +9,7 @@ export type Campo = {
   etiqueta: string;
   clase: ClaseDeCampo;
   ayuda?: string;
-  /** Se puede dejar sin tocar: el servidor no lo exige (SPEC1 RF-01, D-50). */
+  /** Se puede dejar sin tocar: el servidor no lo exige (SPEC1 RF-01, D-60). */
   opcional?: boolean;
 };
 

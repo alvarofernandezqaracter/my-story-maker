@@ -8,6 +8,7 @@ import type { TrazaServida } from "../src/compartido/api/tipos";
 import { PantallaDelAvance } from "../src/features/avance/PantallaDelAvance";
 import { PantallaDelManuscrito } from "../src/features/manuscrito/PantallaDelManuscrito";
 import { PantallaDeTareas } from "../src/features/tareas/PantallaDeTareas";
+import { PantallaDeVersiones } from "../src/features/versiones/PantallaDeVersiones";
 import { EventSourceFalso } from "./EventSourceFalso";
 import { API, ID_OBRA, servidor, sinServidor, traza } from "./servidor";
 
@@ -18,6 +19,7 @@ function montar(ruta = `/obras/${ID_OBRA}/tareas`) {
         <Route path="/obras/:idObra" element={<PantallaDelAvance />} />
         <Route path="/obras/:idObra/tareas" element={<PantallaDeTareas />} />
         <Route path="/obras/:idObra/manuscrito" element={<PantallaDelManuscrito />} />
+        <Route path="/obras/:idObra/versiones" element={<PantallaDeVersiones />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -123,7 +125,7 @@ describe("las tareas hechas (SPEC2 RF-26, RF-27)", () => {
 });
 
 describe("el menú de la obra (SPEC2 RF-30)", () => {
-  it("desde cualquier pantalla se llega a las otras dos con un clic, y marca dónde se está", async () => {
+  it("desde cualquier pantalla se llega a las demás con un clic, y marca dónde se está", async () => {
     const usuario = userEvent.setup();
     montar(`/obras/${ID_OBRA}`);
     await screen.findByText("La luz de Triana");
@@ -143,5 +145,9 @@ describe("el menú de la obra (SPEC2 RF-30)", () => {
       "href",
       `/obras/${ID_OBRA}/tareas`,
     );
+
+    await usuario.click(within(menu()).getByRole("link", { name: "Versiones" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Versiones" })).toBeInTheDocument();
+    expect(within(menu()).getByRole("link", { name: "Versiones" })).toHaveClass("activa");
   });
 });

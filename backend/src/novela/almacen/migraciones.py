@@ -34,6 +34,13 @@ MIGRACIONES: tuple[Migracion, ...] = (
         "versiones de la obra: cada fila con su version y su relevo, y publicar",
         esquema.sentencias_de_las_versiones,
     ),
+    # No son tablas de artefactos: ni las recorre la 7 ni llevan version.
+    (8, "lo vetado: la lista global de serie y el registro de policy",
+     esquema.sentencias_de_lo_vetado),
+    # No es tabla de artefactos: la ficha nueva que nace con el cambio vive en la
+    # tabla de su tipo, que ya trae sus columnas de version (SPEC1 4.18).
+    (11, "cambio del lector: de que hecho y nombre nace cada version",
+     esquema.sentencias_del_cambio_del_lector),
 )
 
 

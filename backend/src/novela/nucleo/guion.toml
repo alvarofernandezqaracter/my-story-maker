@@ -11,6 +11,16 @@
 
 version = 1
 
+# --- La longitud de un capitulo --------------------------------------------
+#
+# Cuantas palabras tiene que tener cada capitulo, igual para todas las obras.
+# Lo comprueba la puerta de publicacion sobre el texto aceptado (SPEC1 RF-143).
+# El maximo cabe en la ventana de la costura sin partir el capitulo (D-58).
+
+[capitulo]
+palabras_minimas = 1000
+palabras_maximas = 4000
+
 # --- Los diez pasos del capitulo (architecture.md 4) -----------------------
 #
 # Cada paso declara `reintentos` —cuantas veces se intenta su tarea, uno o mas— y

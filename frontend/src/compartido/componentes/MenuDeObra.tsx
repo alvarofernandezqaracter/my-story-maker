@@ -1,14 +1,15 @@
 import { NavLink } from "react-router";
 
-export type PantallaDeObra = "avance" | "tareas" | "lectura";
+export type PantallaDeObra = "avance" | "tareas" | "lectura" | "versiones";
 
 const PESTANAS: { pantalla: PantallaDeObra; etiqueta: string; sufijo: string }[] = [
   { pantalla: "avance", etiqueta: "Avance", sufijo: "" },
   { pantalla: "tareas", etiqueta: "Tareas", sufijo: "/tareas" },
   { pantalla: "lectura", etiqueta: "Lectura", sufijo: "/manuscrito" },
+  { pantalla: "versiones", etiqueta: "Versiones", sufijo: "/versiones" },
 ];
 
-// El mismo menú en las tres pantallas de una obra: salta con un clic y marca en
+// El mismo menú en las pantallas de una obra: salta con un clic y marca en
 // cuál se está (SPEC2 RF-30). Cada pestaña es una dirección, así que también se
 // puede abrir en otra pestaña del navegador.
 export function MenuDeObra({ idObra }: { idObra: string }) {

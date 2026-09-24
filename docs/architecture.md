@@ -91,6 +91,8 @@ Reglas de integridad del censo:
 - El Archivero no escribe hechos del mundo ni prosa: resume el capítulo cerrado, anota qué hechos de la biblia nombra y retira lo que caduca. No decide nada sobre el texto. Anotar una `Mención` no toca la ficha del hecho, así que el mundo sigue cambiando solo por `EventoEstado`.
 - El Entrevistador no escribe ninguna entidad: devuelve una propuesta de brief. De un texto pegado solo vale lo que trae cita literal, y un recuerdo es esa misma cita, así que tampoco él escribe `Recuerdo`: el recuerdo es texto de la persona, no del agente.
 
+**Fuera del censo: el juez de la novela.** Junto a los doce hay un evaluador externo que no es un rol: no tiene carpeta en `tareas/`, no escribe nada en el almacén, no está en el guion ni en la API y no toma parte en la producción. Quien desarrolla lo lanza a mano, con `novela.juez_de_la_novela.juzgar_version`, sobre una versión terminada, y puntúa la novela entera con tres criterios —`personalizacion_integrada`, `funciona_como_novela` y `fidelidad_a_la_epoca`—, nota de 1 a 5 y justificación con citas literales por criterio. Cada nota va como score a la traza de esa versión en Langfuse, con la versión de la rúbrica que la dio. La rúbrica vive solo en Langfuse, nunca en el repositorio: el sistema evaluado no puede leer con qué vara se le mide, y sin ella el juicio no se lanza. Corre con otro modelo que los roles, Sonnet, para no juzgar lo que su mismo modelo escribió, y su nota no regenera, no revisa ni bloquea nada. El Juez de rúbrica del censo sigue siendo otra cosa: puntúa la coherencia de voz dentro de la producción.
+
 ### Entrada y salida de cada agente
 
 Qué artefacto consume cada rol y qué artefacto deja escrito. La salida de un agente es la entrada del siguiente y **el testigo se pasa siempre por artefacto escrito, nunca por llamada directa**: ningún rol invoca a otro ni le pasa objetos en memoria, lee lo que el anterior dejó en el almacén. Esta tabla fija el testigo; la de §3 fija la ventana desde la que cada rol lo mira.
@@ -162,7 +164,7 @@ Sin esta estructura no se puede medir si el bucle de revisión converge o gira e
 
 **Entrevista.** El espacio anterior a la obra en el que se completa el brief. Se identifica por su `id_entrevista`, igual que una obra por su `id_obra`, y guarda, pasada por pasada, lo que entró, lo que salió, cuántos hechos y contradicciones se descartaron y la traza de la pasada. No se borra ni se modifica. Anota una sola vez la obra que lanzó, y esa obra anota de qué entrevista sale.
 
-**Versión.** Una redacción entera de la obra, con su propio mundo. Atributos: número, versión de la que sale, capítulos que cambiaron respecto de ella, cuándo nació y cuándo terminó. La obra nace con la versión 1; cada «rehaz desde el capítulo N» abre la siguiente, que comparte con la anterior los capítulos 1 a N-1 y reescribe de N al final. Las versiones van en fila: la nueva sale siempre de la última y solo cuando la última ha terminado, y una versión termina cuando consta su auditoría de cierre. No la escribe ningún rol, sino el backend al recibir la orden del editor, y nunca se borra. **Publicar** una versión terminada es otra orden: cada publicación se añade a un registro que no se borra, y la publicada es la de la última publicación. Terminar no publica.
+**Versión.** Una redacción entera de la obra, con su propio mundo. Atributos: número, versión de la que sale, capítulos que cambiaron respecto de ella, cuándo nació y cuándo terminó. La obra nace con la versión 1; cada «rehaz desde el capítulo N» abre la siguiente, que comparte con la anterior los capítulos 1 a N-1 y reescribe de N al final, y cada cambio del lector —un hecho de la biblia con un nombre nuevo— abre la siguiente reescribiendo solo los capítulos que mencionan ese hecho (§4). Las versiones van en fila: la nueva sale siempre de la última y solo cuando la última ha terminado, y una versión termina cuando consta su auditoría de cierre. No la escribe ningún rol, sino el backend al recibir la orden, y nunca se borra. **Publicar** una versión terminada es otra orden, que solo se cumple si la versión pasa la puerta de publicación (§4): cada publicación se añade a un registro que no se borra, y la publicada es la de la última publicación. Terminar no publica.
 
 ```mermaid
 flowchart TD
@@ -207,8 +209,25 @@ Valores cerrados de la capa de producción. Los vocabularios de forma textual y 
 
 **Al agotarse:** `detener_obra`, `critica_abierta`, `seguir`. Es lo que declara cada paso del guion para cuando su tarea agota los intentos (§4): detener la obra, dejar una `Crítica` «no comprobado» y seguir, o seguir sin más.
 
-**Gancho:** `validar_capitulo`, `policy`. Los hooks que lleva el subagente de un paso del guion (§4): el primero mira la forma de lo que entrega y el segundo, que no traiga nada de lo que el comprador vetó.
+**Gancho:** `validar_capitulo`, `policy`. Los hooks que lleva el subagente de un paso del guion (§4): el primero mira la forma de lo que entrega y que los nombres de la biblia vengan escritos tal cual, y el segundo, que no traiga nada vetado.
+
+**Nivel de veto:** `global`, `palabra_del_comprador`, `tema_del_comprador`. De qué lista sale cada cosa que busca `policy` (§4): la global de la instalación, o los vetos del brief, que son palabra o tema según tengan una palabra o varias.
+
+**Decisión de policy:** `devuelto_al_agente`, `intento_fallido`. Lo que hizo `policy` con una coincidencia: devolverla al agente durante la sesión para que corrija, o dar el intento por fallido en el veredicto final.
+
+**Validador de la puerta:** `esquema`, `nombres`, `longitud`, `elementos_personalizados`, `cronologia`. Qué comprobación da cada fallo de la puerta de publicación (§4).
+
+**Invariante de la cronología:** `orden_temporal`, `edad_coherente`, `un_solo_lugar`, `no_reaparece`. Qué demuestra Lean, suceso a suceso, sobre la cronología de una versión antes de publicarla (§4).
+
+**Comprobación formal:** `demostrada`, `fallida`, `sin_comprobacion`. Cómo quedó la cronología en Lean al pasar la puerta: la demostró, no pudo demostrarla, o Lean no está en la máquina y no se comprobó (§4).
+
 **Tipo de contradicción:** `edad_contra_tono`, cuando el tono pedido no corresponde a la edad del destinatario, y `texto_contra_campo`, cuando un texto pegado en la entrevista dice otra cosa que un campo que la persona escribió. Lo detecta el Entrevistador y no lo resuelve: lo devuelve como pregunta, y la persona puede darlo por asumido.
+
+**Criterio del juez de la novela:** `personalizacion_integrada`, `funciona_como_novela`, `fidelidad_a_la_epoca`. Lo que puntúa el evaluador externo sobre una versión terminada. Sin destinatario, el primero no se puntúa. No son dimensiones de calidad del dominio: miden el sistema desde fuera.
+
+**Resultado esperado:** `pasa`, `falla`, `puede_fallar`, `se_puntua`, `no_se_puntua`. Lo que un brief de prueba espera de cada comprobación al correrlo: los tres primeros para los validadores de la puerta y los hooks, los dos últimos para los criterios del juez de la novela.
+
+**Propósito del brief de prueba:** `normal`, `mucha_personalizacion`, `sin_destinatario`, `inyeccion`, `incoherencia_temporal`. Para qué está cada brief con que se prueba el sistema entero.
 
 **Tipo de EventoEstado:** `aparece`, `muere`, `viaja_a`, `adquiere`, `pierde`, `aprende` (cambio epistémico), `revela_a`, `cambia_relacion`, `cambia_estado_civil_o_rango`, `transcurre_tiempo`.
 
@@ -220,6 +239,14 @@ flowchart TD
   PROC --> AGO[al agotarse: detener obra /<br/>critica abierta / seguir]
   PROC --> CON[tipo de contradiccion: edad contra tono /<br/>texto contra campo]
   PROC --> GAN[gancho: validar capitulo /<br/>policy]
+  PROC --> NIV[nivel de veto: global /<br/>palabra del comprador / tema del comprador]
+  PROC --> DPO[decision de policy: devuelto al agente /<br/>intento fallido]
+  PROC --> PUE[validador de la puerta: esquema /<br/>nombres / longitud / elementos personalizados /<br/>cronologia]
+  PROC --> INV[invariante de la cronologia: orden temporal /<br/>edad coherente / un solo lugar / no reaparece]
+  PROC --> CFO[comprobacion formal: demostrada /<br/>fallida / sin comprobacion]
+  PROC --> JDN[criterio del juez de la novela: personalizacion integrada /<br/>funciona como novela / fidelidad a la epoca]
+  PROC --> RES[resultado esperado: pasa / falla / puede fallar /<br/>se puntua / no se puntua]
+  PROC --> PBP[proposito del brief de prueba: normal /<br/>mucha personalizacion / sin destinatario /<br/>inyeccion / incoherencia temporal]
 ```
 
 ```mermaid
@@ -359,7 +386,7 @@ Corolario práctico: el estado epistémico de cada personaje es una proyección 
 
 Por la misma razón hay otras dos cosas que tampoco se guardan. **La cronología** se compone al pedirla con los `EventoEstado` —fecha, lugar y presentes—, los `Evento` del mundo y la fecha de nacimiento de cada `Personaje`, en orden de fecha escrita y sin calcular nada. Y **en qué capítulos se usa cada hecho** se deriva de las `Mención` que el Archivero anota al cerrar. Las dos las sirve la API en rutas de lectura.
 
-**Cada versión tiene su propio mundo.** Toda fila del almacén lleva la versión en que se escribió y, si otra la sustituyó, la versión que la relevó. Rehacer desde N pone esa marca de relevo, junto con la de caducado, a todo lo que cuelga de un capítulo N o posterior: lo que lleva ese capítulo —eventos, menciones, resúmenes, borradores, críticas, fuentes— y lo que no lo lleva pero lo escribió una tarea de ese capítulo según su `Traza`, como un `Evento` que añadió el Planificador. El estado materializado se releva igual en vez de borrarse, porque quien lo pliega es el Contable y no se recalcula solo. Una versión ve lo escrito en ella o antes que ni ella ni una anterior hayan relevado, así que la versión vieja sigue siendo coherente consigo misma y la producción, que siempre es de la última, sigue leyendo solo lo vivo. Lo escrito antes del capítulo 1 —la biblia de partida, los `Recuerdo` y la `Obra`— es común a todas las versiones.
+**Cada versión tiene su propio mundo.** Toda fila del almacén lleva la versión en que se escribió y, si otra la sustituyó, la versión que la relevó. Rehacer desde N pone esa marca de relevo, junto con la de caducado, a todo lo que cuelga de un capítulo N o posterior: lo que lleva ese capítulo —eventos, menciones, resúmenes, borradores, críticas, fuentes— y lo que no lo lleva pero lo escribió una tarea de ese capítulo según su `Traza`, como un `Evento` que añadió el Planificador. El estado materializado se releva igual en vez de borrarse, porque quien lo pliega es el Contable y no se recalcula solo. Una versión ve lo escrito en ella o antes que ni ella ni una anterior hayan relevado, así que la versión vieja sigue siendo coherente consigo misma y la producción, que siempre es de la última, sigue leyendo solo lo vivo. Lo escrito antes del capítulo 1 —la biblia de partida, los `Recuerdo` y la `Obra`— es común a todas las versiones, salvo la ficha a la que un lector cambió el nombre: esa se releva con la versión que nace del cambio, y la nueva solo la ven esa versión y las siguientes.
 
 ```mermaid
 flowchart LR
@@ -431,6 +458,8 @@ manda, no la tarea entera.
 El reparto es la asignación de diseño, no una medida: calibrarlo contra las `Traza` reales es trabajo de implementación, y la `Traza` existe en parte para eso.
 
 El Entrevistador no entra en ninguna tanda: se ejecuta como mucho una pasada a la vez en la instalación, y abierta ocupa sus 8 000 más el coste fijo del subagente, que caben en el 20 % de margen de la regla siguiente. Por eso una entrevista no le quita nada a la tanda de una obra en curso. Si la pasada no cabe en su tope, se rechaza diciendo cuánto sobra: no se recorta ningún texto pegado.
+
+El juez de la novela (§2) tampoco entra en ninguna tanda, y no tiene fila en la tabla porque no es un rol. Su tope es de 60 000 tokens y solo se lanza cuando ninguna obra de la instalación tiene una tarea abierta: abierto ocupa sus 60 000 más el coste fijo, que caben en los 80 000 repartibles y dejan entero el margen de una pasada de entrevista. Una novela larga no cabe entera, así que recibe los `Resumen de capítulo` de todos los capítulos y el texto de capítulos enteros por prioridad —el primero, el último, los que usan un hecho `personal` y los demás en orden— mientras quepan; los que no caben se nombran en la ventana. Un capítulo entra entero o no entra: cortarlo fabricaría el defecto de ritmo que se quiere medir.
 
 **Segunda: la anchura de una tanda se calcula, no se elige.** Se reserva el 20 % del techo como margen para lo que no se puede prever y quedan 80 000 útiles. En una tanda caben `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)` agentes simultáneos.
 
@@ -518,6 +547,8 @@ stateDiagram-v2
   Descartado --> [*]
 ```
 
+El `Capitulo` que recorre este ciclo lo abre el backend en cuanto el Planificador termina, si el Planificador no escribió el suyo, porque de él dependen el ciclo y la marca `cerrado`: el punto de guardado no puede depender de que un modelo se acuerde de escribirlo. En qué punto del ciclo está un `Capitulo`, una `Escena`, un `Plan` o un `Borrador` lo lleva el caminante y no el rol que los escribe, y a qué capítulo pertenece lo que devuelve una tarea de capítulo, de escena o de párrafo lo pone su encargo. El `estado` de una `Crítica` o de un `Compromiso` sí es del rol, porque dice algo del texto, y en una tarea de la obra entera, como `auditar`, cada artefacto dice a qué capítulo apunta.
+
 El paso de `Aceptado` a `Cerrado` es el que actualiza el mundo: hasta que un capítulo no se cierra, sus eventos no existen para el resto del sistema. Eso es lo que permite regenerar un capítulo sin corromper los siguientes. Y es el mismo paso el que retira la memoria de capítulo: cerrar es a la vez publicar los hechos y olvidar el andamio.
 
 ### El capítulo cerrado es el punto de guardado
@@ -529,8 +560,8 @@ Una obra puede cortarse en cualquier momento: el editor la detiene, una tarea ag
 **Reanudar es volver al punto de guardado, y siempre por el mismo camino.** Arrancar una obra, reanudarla por orden del editor y relanzarla tras una caída empiezan igual:
 
 1. Las `Traza` que quedaron abiertas se cierran como interrumpidas. Una tarea cortada no ha fallado, así que no cuenta como intento.
-2. Todo lo que cuelga de capítulos posteriores al último cerrado se caduca, sin borrar. Eso incluye los borradores ya aceptados, las `Fuente` recogidas y lo que, sin llevar capítulo, escribió una tarea de esos capítulos, como un `Evento` que añadió el Planificador. A un inmutable se le admite la marca de caducado, pero solo esa, solo una vez y sin poder quitarla: marcar no es modificar. Sus fragmentos salen del índice y su estado materializado se descarta.
-3. Si al último capítulo cerrado le falta algo en el índice, se completa, porque el índice es derivado.
+2. Todo lo que cuelga de capítulos sin cierre vivo se caduca, sin borrar: los posteriores al último cerrado y, en una versión que reescribe capítulos sueltos, los que reescribe y no han cerrado. Eso incluye los borradores ya aceptados, las `Fuente` recogidas y lo que, sin llevar capítulo, escribió una tarea de esos capítulos, como un `Evento` que añadió el Planificador. A un inmutable se le admite la marca de caducado, pero solo esa, solo una vez y sin poder quitarla: marcar no es modificar. Sus fragmentos salen del índice y su estado materializado se descarta.
+3. Si a algún capítulo cerrado le falta algo en el índice, se completa, porque el índice es derivado.
 4. El capítulo siguiente empieza en el paso 1.
 
 Lo único que se pierde es el trabajo del capítulo que estaba abierto. Salvar parte de ese trabajo, por ejemplo las fuentes, dejaría una segunda forma de que algo de antes del corte entre en lo de después.
@@ -539,17 +570,64 @@ Lo único que se pierde es el trabajo del capítulo que estaba abierto. Salvar p
 
 **Tras una caída no hace falta ninguna orden.** Al arrancar, el backend relanza toda obra que no esté detenida ni terminada. Así, que la máquina se reinicie no añade ninguna intervención humana.
 
+**Un solo caminante por obra, y nunca una obra parada sin decir por qué.** Arrancar la producción —al dar de alta, al reanudar, al rehacer o al relanzar— lee qué hilo tiene la obra y registra el nuevo en una sola operación, bajo cerrojo: el nuevo espera a que el anterior acabe, y dos órdenes que llegan a la vez, como un doble clic en «reanudar», no dejan dos caminantes descartándose el trabajo. Y si al caminante le salta un fallo que no es de ninguna tarea —una ventana que no cabe ni partiendo, una proyección que no cuadra con su contrato—, la obra queda detenida con ese motivo, igual que cuando una tarea agota sus intentos. Una obra nunca se queda sin hilo, sin detener y sin terminar.
+
+**Lo que se descarta al volver es lo de todo capítulo no cerrado.** Hoy los capítulos cerrados de la versión en curso son siempre del 1 al último cerrado, porque rehacer reescribe de N al final, y descartar «lo posterior al último cerrado» es lo mismo. Una versión que reescriba capítulos sueltos —la regeneración por cambio del lector, que SPEC1 especifica y la lectura interactiva implementa— tiene que descartar lo de cada capítulo no cerrado, no solo lo del final.
+
 ### Rehacer desde un capítulo y publicar
 
 Con la obra terminada, el editor puede ordenar **«rehaz desde el capítulo N»**. En una sola transacción nace la versión siguiente, que anota como cambiados los capítulos de N al último; lo que colgaba de ellos recibe la marca de relevo; sus fragmentos salen del índice; y la constancia de auditoría baja a N-1 para que la versión nueva se audite al cerrar. Después la producción arranca por el camino de siempre: vuelve al último capítulo cerrado, que es el N-1, y sigue desde N. Se rehace hasta el final y no un capítulo suelto porque lo que viene detrás se escribió sobre el mundo del capítulo rehecho. Rehacer no se admite mientras la obra produce ni sobre una versión sin terminar.
 
-**Publicar** una versión terminada es una orden aparte y pasa por un solo sitio del código, que es donde entra cualquier comprobación previa a publicar. Sin pedir versión, la API sirve la versión de referencia: la publicada si la hay y, si no, la última; y el manuscrito dice cuál sirve y si está publicada. Rehacer y publicar son decisiones editoriales, no mantenimiento: nada obliga a darlas.
+**Publicar** una versión terminada es una orden aparte y pasa por un solo sitio del código, que es donde está la **puerta de publicación**: cinco comprobaciones deterministas sobre lo que ve esa versión, sin agentes y sin gastar.
+
+| Validador | Qué comprueba |
+| --- | --- |
+| `esquema` | Que toda salida de un rol que la versión conserva traiga todos los campos que el esquema de su tarea declara para su tipo |
+| `nombres` | Que los nombres de la biblia —el del destinatario y los de personajes, lugares, objetos y facciones, con sus tratamientos— se escriban tal cual, y que el del destinatario aparezca en algún capítulo |
+| `longitud` | Que cada capítulo tenga entre 1 000 y 4 000 palabras de texto aceptado. El rango está en el guion y es el mismo para todas las obras |
+| `elementos_personalizados` | Que todo hecho de la biblia con licencia `personal`, lo que sale de la vida del destinatario, se use en algún capítulo según sus menciones |
+| `cronologia` | Que Lean demuestre los cuatro invariantes de la cronología de la versión, y que toda fecha escrita sea ISO parcial |
+
+**La cronología, en Lean.** La cronología de la versión —cada `EventoEstado` y cada `Evento` del mundo con su fecha, su lugar y sus presentes, y quién muere en cada uno— se vuelca a un módulo de Lean 4 que importa los invariantes del proyecto versionado en `backend/src/novela/lean/`. Las fechas pasan a intervalos de días, así que con una fecha parcial solo falla lo que falla para cualquier día del intervalo. Hay un teorema por invariante y por suceso, y Lean los demuestra con `decide` al ejecutar `lake build` en un directorio temporal que se borra al terminar. Cada teorema que no se demuestra es un fallo `cronologia` del capítulo de su suceso. Si Lean no está en la máquina, la cronología no se comprueba, la versión se publica igual y tanto la puerta como la respuesta de publicar dicen `sin_comprobacion`: que falte la herramienta no tumba una versión. Con Lean presente, lo que no se demuestra no se publica.
+
+Si alguno falla, la versión no se publica y la orden responde con la lista de fallos, cada uno con su validador y su capítulo. Los fallos de la cronología vuelven además como `Crítica` bloqueante de su capítulo, una por suceso e invariante, escrita por el backend; volver a pedir la publicación no las repite. La puerta no regenera nada: rehacer sigue siendo una orden del editor. Su resultado no se guarda: se deriva cada vez que se pide, y se puede pedir antes de publicar. Sin pedir versión, la API sirve la versión de referencia: la publicada si la hay y, si no, la última; y el manuscrito dice cuál sirve y si está publicada. Rehacer y publicar son decisiones editoriales, no mantenimiento: nada obliga a darlas.
+
+### El cambio del lector
+
+El otro tipo de versión nueva no sale de un capítulo sino de un dato. Quien lee
+elige un hecho de la biblia —un personaje, un lugar, un objeto, una facción o un
+evento— y le da un nombre nuevo: «el perro se llama Nala». Con la última versión
+terminada y sin producción en marcha, en una sola transacción nace la versión
+siguiente, que anota como cambiados **solo los capítulos que mencionan el hecho**
+según sus menciones, contiguos o no; lo que cuelga de cada uno recibe la marca de
+relevo, sus fragmentos salen del índice y la constancia de auditoría baja al
+anterior al primero. En esa misma transacción la ficha vieja se releva y nace la
+nueva, con el nombre cambiado y una referencia a la vieja; la escribe el backend,
+no un rol, porque no es un cambio del mundo a lo largo de la historia sino una
+corrección de lo que el mundo era desde el principio, pedida por una persona como
+se pide el brief. La versión anterior sigue viendo el nombre viejo. El cambio
+queda en un registro de solo añadir. Si ningún capítulo menciona el hecho, no
+nace versión.
+
+La producción arranca por el camino de siempre: salta los capítulos que siguen
+cerrados, reescribe los relevados en orden y termina con su auditoría de cierre.
+Los que reescribe reciben el nombre nuevo por los materiales que ya leen —el
+canon, las voces del elenco, el índice de la biblia—, sin nada añadido a su
+ventana. No hace falta reescribir hasta el final, como al rehacer, porque el
+mundo se refiere a cada hecho por su `id` y no por su nombre: un capítulo que no
+lo menciona sigue siendo cierto. El precio es que el capítulo reescrito se vuelve
+a planificar y podría contar algo distinto de lo que los compartidos dan por
+hecho, cosa que ve la auditoría de cierre, y que la lista es tan completa como
+las menciones. Se publica, como cualquier otra, solo si pasa la puerta.
+
+La lectura se descarga además en PDF: el servidor lo fabrica al vuelo desde la
+versión que se pida, con portada, índice y capítulos, y no lo guarda.
 
 ### Cuántas veces se intenta cada paso
 
 Cada paso del guion, y cada tarea de fuera del guion, declara junto a su rol y su concurrencia dos cosas más: `reintentos`, que es cuántas veces se intenta su tarea, y `al_agotarse`, que es qué pasa si ninguno de los intentos sale bien. Un paso que no las declara no carga, porque lo que pasa al agotarse no se improvisa sobre la marcha.
 
-Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo, o cuando lo que el subagente entrega al final no pasa uno de los hooks de su paso. Un artefacto malformado no es un intento fallido: es la `Crítica` bloqueante de siempre. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él.
+Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo, o cuando lo que el subagente entrega al final no pasa uno de los hooks de su paso. Un artefacto malformado no es un intento fallido: es la `Crítica` bloqueante de siempre. La excepción es `planificar`: si lo que devuelve no trae ninguna `Escena` o el almacén lo rechaza, el intento falla y no se escribe nada de él, porque sin escenas los nueve pasos siguientes no tienen sobre qué trabajar y la obra avanzaría en vacío hasta la auditoría de cierre. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él.
 
 | Al agotarse | Pasos | Qué pasa |
 | --- | --- | --- |
@@ -565,16 +643,43 @@ Los tres pasos que escriben prosa —3 `redactar`, 5 `revisar` y 7, la costura�
 
 | Hook | Qué mira | Qué no mira |
 | --- | --- | --- |
-| `validar_capitulo` | Que la salida sea el objeto JSON con su lista de artefactos, que cada uno traiga tipo y cuerpo, que el rol solo escriba los tipos que su contrato le deja, que venga el artefacto principal del esquema de la tarea con todos sus campos, y que ningún `Borrador` venga sin texto | Nada del contenido: ni nombres, ni longitud, ni calidad. Es una lista de comprobaciones a la que se suman otras sin tocar el enganche |
-| `policy` | Que el texto de cada `Borrador` y cada `Párrafo` no contenga ninguna de las palabras o temas que el comprador vetó en el brief, comparados tal cual | Variantes: otra mayúscula, un acento o un plural no casan, y un tema vetado solo casa si aparece escrito igual |
+| `validar_capitulo` | Que la salida sea el objeto JSON con su lista de artefactos, que cada uno traiga tipo y cuerpo, que el rol solo escriba los tipos que su contrato le deja, que venga el artefacto principal del esquema de la tarea con todos sus campos, que ningún `Borrador` venga sin texto, y que en el texto de cada `Borrador` y cada `Párrafo` no haya un nombre de la biblia mal escrito: una palabra con mayúscula que solo difiere de un nombre en acentos, en una letra cambiada o en una letra de más o de menos en los nombres largos | Ni longitud, ni calidad. Una variante que también sale en minúscula en el texto, o una letra de más en un nombre corto, pasa: se prefiere no verla antes que detener la obra por una palabra corriente. Es una lista de comprobaciones a la que se suman otras sin tocar el enganche |
+| `policy` | Que el texto de cada `Borrador` y cada `Párrafo` no contenga nada de tres listas: la global de insultos y términos ofensivos, que el sistema trae de serie, y las palabras y los temas que el comprador vetó en el brief. Compara palabra a palabra después de normalizar las dos partes: da igual la mayúscula, el acento o la diéresis, el plural, la vocal de género o una letra alargada, y una palabra no casa dentro de otra | El sentido: un tema dicho con otras palabras no casa, porque se busca como frase. Tampoco lo escrito con separadores, cifras o símbolos por medio. Y dos palabras que solo difieren en género o número se confunden |
 
-Los hooks viajan en la orden del ejecutor, con `--settings`, y no rompen el aislamiento: el subagente sigue arrancando en su directorio vacío y sin nada del repositorio. Lo que el hook necesita saber —la lista de vetos y la reserva de la vuelta— va en el entorno del proceso, no en disco, y la lista de vetos no entra en ninguna ventana: al agente solo le llega lo que encontró en su propio texto. El hook no escribe en el almacén; dice su veredicto por su salida.
+Los hooks viajan en la orden del ejecutor, con `--settings`, y no rompen el aislamiento: el subagente sigue arrancando en su directorio vacío y sin nada del repositorio. Lo que el hook necesita saber —las listas de lo vetado, cada término con su nivel, los nombres de la biblia y la reserva de la vuelta— va en el entorno del proceso, no en disco, y ni las listas ni los nombres entran en ninguna ventana: al agente solo le llega lo que encontró en su propio texto, tal como lo escribió. El hook no escribe en el almacén; dice su veredicto por su salida.
+
+**De dónde salen las listas.** La global vive en su propia tabla y la siembra una migración: funciona sin que nadie haga nada y es corta a propósito, porque en una novela de época una palabra con sentido histórico o inocente bloquearía prosa legítima. Ampliarla es añadir otra migración; ninguna ruta de la API la edita. Las del comprador no se copian: se leen de los vetos del brief, guardados en la `Obra`.
+
+**El registro de `policy`.** Cada coincidencia queda escrita en un registro de solo añadir: la obra, la `Traza` del intento, qué se hizo con ella —devolverla al agente en la sesión o dar el intento por fallido—, de qué lista sale, el término de la lista y lo que casó tal como estaba escrito. Lo escribe el almacén al cerrar la `Traza`, en la misma transacción, con lo que el ejecutor dejó en su veredicto; la coincidencia de la sesión la reconstruye el ejecutor aplicando la misma comprobación al mensaje del agente que el hook bloqueó. No se caduca ni se releva, como la `Traza`, y se sirve por la API. Cuando los intentos se agotan y la obra se detiene, su ficha dice por qué.
 
 **Una vuelta por intento.** Un hook bloquea solo la primera vez: si ya bloqueó uno en ese turno, el siguiente deja terminar. Tampoco bloquea si la vuelta no cabe en la reserva del paso (§3). Al terminar, el ejecutor aplica las mismas comprobaciones a lo que el agente entregó al final, y ese es el veredicto que cuenta: si no pasa, el intento ha fallado y se aplican los reintentos del paso y su `al_agotarse`, que en los tres es `detener_obra`. Lo que cada hook dijo durante la sesión y el veredicto final quedan en la `Traza` del intento, también cuando falla, y se sirven con ella.
 
+### El flujo, especificado como máquina de estados
+
+Todo lo anterior —el caminante, el punto de guardado, los reintentos con su política, las caídas y el relanzamiento, detener y reanudar, las versiones y la puerta— está además escrito como una máquina de estados en TLA+, en `backend/formal/tla/`, junto con la regeneración por cambio del lector que SPEC1 especifica. Un comprobador de modelos, TLC, recorre **todos** los órdenes posibles de un modelo pequeño —tres capítulos, dos versiones, dos intentos por paso, una caída, un reanudar y un fallo no previsto— y comprueba en cada estado que ninguna versión se publica sin pasar la puerta, que una versión terminada sigue viendo lo mismo, que no hay dos producciones a la vez y que lo vivo de un capítulo es de una sola producción; y, en cada recorrido, que toda versión en producción acaba terminada o la obra detenida.
+
+El modelo no ve el texto: distingue capítulos, tareas, intentos, versiones y hilos, no escenas ni el bucle de calidad. Cada acción nombra la función del código que la implementa, y esa correspondencia se sostiene por revisión, no se demuestra. Lo que el modelo encontró por el camino —dos caminantes a la vez, una obra parada sin motivo, un capítulo duplicado tras un cambio del lector— se guarda con su traza junto al modelo y está recogido arriba.
+
+### La producción, vista desde Langfuse
+
+Si la instalación tiene claves de Langfuse, todo lo que la `Traza` ya mide se manda además a Langfuse, para ver una novela entera de un vistazo y saber qué versión de cada prompt produjo cada resultado. Sin claves no se manda nada y la producción es la misma. Las claves —`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` y, si no es la nube por defecto, `LANGFUSE_HOST`— salen del entorno o del `.env` de la raíz del repositorio, que el backend lee solo y no copia a su entorno.
+
+| En Langfuse | Qué es aquí |
+| --- | --- |
+| Sesión | La novela. Nace con la entrevista y la obra la hereda; una obra dada de alta sin entrevista es su propia sesión |
+| Traza | Una por la entrevista y una por cada versión de la obra: la primera escritura y cada rehacer o cambio del lector. Su identificador se deriva de la obra y la versión, así que tras una caída se sigue en la misma |
+| Span `capitulo N` | Cada capítulo que la versión produce, del paso 1 al cierre; al cerrar lleva la suma de tokens, coste y latencia de sus `Traza` |
+| Generación `<rol> · <tarea>` | Cada intento, abierto con su `Traza` y cerrado con ella: modelo, tokens de entrada y salida, coste, latencia y la versión del prompt de su tarea. Un intento fallido sale como error |
+| Observación `herramienta · <nombre>` | Cada llamada a herramienta del subagente, con lo que pidió y lo que recibió, leída del flujo del CLI; sin su propia duración, porque el flujo no la fecha |
+| Evento `version terminada` | Los totales de la versión y los de la novela entera, entrevista incluida, sumados de SQLite |
+| Scores | Uno por validador de la puerta cada vez que se pasa, y uno por hook en la generación de cada intento que los lleva |
+| Prompts | El `prompt.md` de cada carpeta de `tareas/`, registrado al arrancar con el nombre de su tarea: una versión nueva solo si el texto cambió |
+
+Langfuse es un espejo de salida: nada de la producción lee de allí, y un fallo suyo se anota y se traga, sin parar ni frenar la novela. Lo único que espera a la red es la versión de un prompt, una vez por prompt y proceso. `observabilidad.py` recibe lo ya leído y no abre el almacén; ningún subagente de tarea recibe una variable `LANGFUSE_` en su entorno, y los evaluadores que juzgan la obra viven solo en Langfuse, nunca en el repositorio, para que el sistema evaluado no pueda leer cómo se le juzga.
+
 ## 5. Bucle de control de calidad
 
-**Estrategia de validación.** Toda dimensión de calidad debe seguir expresándose como predicado sobre entidades de la ontología: "continuidad" no es un juicio, es `∀ escena: estado_implicado ⊆ estado_derivado`. Lo que cambia aquí es quién evalúa el predicado. No hay validadores deterministas: el predicado se entrega a un agente como **contrato de verificación**, es decir, un enunciado comprobable más los datos exactos que se necesitan para comprobarlo y nada más.
+**Estrategia de validación.** Toda dimensión de calidad debe seguir expresándose como predicado sobre entidades de la ontología: "continuidad" no es un juicio, es `∀ escena: estado_implicado ⊆ estado_derivado`. Lo que cambia aquí es quién evalúa el predicado. No hay validadores deterministas de la calidad —lo que se comprueba sin agentes, los hooks y la puerta de publicación (§4), mira la forma de lo entregado y el dato ya escrito, no la calidad del texto—: el predicado se entrega a un agente como **contrato de verificación**, es decir, un enunciado comprobable más los datos exactos que se necesitan para comprobarlo y nada más.
 
 Un contrato de verificación tiene tres partes: el predicado en una frase, la proyección mínima sobre la que se evalúa, y la forma exacta de la `Crítica` que debe emitir si falla. El agente no opina sobre el texto; responde si el predicado se cumple y, si no, señala la entidad concreta. Esa es la diferencia entre el Verificador y el Juez de rúbrica: el primero evalúa predicados, el segundo puntúa lo que no admite predicado.
 
@@ -607,7 +712,7 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | Entidad | La crea | La modifica | Entra en contexto | Vigilada por |
 | --- | --- | --- | --- | --- |
 | `Obra` | Usuario, con el brief o con la pasada de entrevista que lo completa | Usuario | Siempre, comprimida | — |
-| `Personaje` | Constructor de mundo | Solo por `EventoEstado` del Contable | Si está en el elenco de la escena | Continuidad, voz |
+| `Personaje` | Constructor de mundo; el backend, con una ficha nueva en la versión que nace de un cambio del lector | Solo por `EventoEstado` del Contable | Si está en el elenco de la escena | Continuidad, voz |
 | `Lugar` | Constructor de mundo | Constructor, por ampliación | Si es marco de la escena | Coherencia temporal |
 | `Evento` | Planificador o documentalista | Inmutable si es `canon` | Si precede causalmente a la escena | Anacronismo, causalidad |
 | `Objeto` | Constructor de mundo | Solo por `EventoEstado` del Contable | Si aparece o lo posee el elenco | Continuidad, anacronismo material |
@@ -623,7 +728,13 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `Compromiso` | Planificador y redactor | Se cierra al pagarse | Siempre, cola abierta | Economía narrativa |
 | `Crítica` | Verificador, Editor de estilo, Arquitecto de arcos, Juez; y el backend, cuando rechaza un artefacto malformado o cuando una comprobación agota sus intentos | Se resuelve en revisión | Solo al agente que revisa | Convergencia del bucle |
 | `Decisión` | Cualquier agente de la obra; el Entrevistador no escribe nada | Inmutable | Canon comprimido | Coherencia de diseño |
-| `Versión` | El backend, con el alta y con cada orden de rehacer del editor | Solo la marca de terminada, una vez; publicarla es añadir al registro de publicaciones | Nunca: decide qué filas ve cada lectura | Conservación de la versión anterior (`validators.md` §8) |
+| Registro de `policy` | El almacén, al cerrar la `Traza` de un intento con hooks | Nadie: solo se añade | Nunca: se sirve al editor por la API | Es él mismo la constancia de lo que la política encontró (`validators.md` §7) |
+| `Versión` | El backend, con el alta, con cada orden de rehacer del editor y con cada cambio del lector | Solo la marca de terminada, una vez; publicarla es añadir al registro de publicaciones, y solo si pasa la puerta | Nunca: decide qué filas ve cada lectura | Conservación de la versión anterior (`validators.md` §8) |
+| Registro de cambios del lector | El backend, con la versión que nace de un cambio | Nadie: solo se añade | Nunca: se sirve con cada versión por la API | Es la constancia de qué nombre cambió y en qué versión |
+
+Cualquier ficha de la biblia —no solo el `Personaje`— puede recibir una ficha
+nueva por un cambio del lector: la vieja se releva con la versión que nace, como
+cualquier fila, y la versión anterior la sigue viendo.
 
 Dos reglas que la tabla implica y conviene explicitar: ninguna entidad del mundo se modifica por escritura directa del redactor, solo mediante eventos emitidos al cerrar un capítulo; y ningún agente valida su propia salida.
 
@@ -663,7 +774,23 @@ backend/
                        directorio vacio fuera del repositorio y sin MCP, con
                        los hooks de su paso en la orden
     ganchos.py         los dos hooks Stop de los subagentes de prosa: el
-                       programa que revisa lo entregado, sin tocar el almacen
+                       programa que revisa lo entregado, sin tocar el almacen,
+                       con la comparacion normalizada de lo vetado
+    validadores.py     los validadores programaticos: funciones puras que usan
+                       el hook de forma y la puerta de publicacion
+    observabilidad.py  lo que se manda a Langfuse si hay claves: sesion por
+                       novela, traza por version, span por capitulo, generacion
+                       por intento, scores y prompts versionados. Recibe lo ya
+                       leido y no abre el almacen
+    demostrador.py     el volcado de la cronologia a Lean y la orden
+                       `lake build` que la demuestra en la puerta, en un
+                       directorio temporal
+    lean/              el proyecto de Lean con los invariantes de la
+                       cronologia: entrada versionada, que no se escribe
+    juez_de_la_novela.py  el evaluador externo que puntua una version
+                       terminada: arma su ventana, lo lanza por el ejecutor y
+                       cuelga sus notas en Langfuse. Su rubrica llega por
+                       parametro; no esta en el repositorio
     tareas/            una carpeta por tipo de tarea del censo (§2), con su
                        contrato, su prompt, su esquema y, si le toca criba, sus
                        contratos de verificacion por dimension
@@ -674,10 +801,18 @@ backend/
                        enrutado por severidad y los topes de vueltas (§5), el
                        presupuesto de contexto (§3), los permisos por rol (§6),
                        la ventana y el filtro de la pasada de entrevista (§4)
-                       y el orden de rehacer y el unico camino de publicar (§4)
+                       y el orden de rehacer y el unico camino de publicar,
+                       con su puerta (§4)
     almacen/           unica puerta de lectura y escritura, incluido el indice
                        de recuperacion por parecido
-    api/               un procedimiento por caso de uso del editor
+    api/               un procedimiento por caso de uso del editor, y el PDF
+                       del manuscrito, que se fabrica en memoria al pedirlo
+  formal/tla/          el flujo de produccion como maquina de estados en TLA+,
+                       con el modelo pequeno que recorre TLC, el mapeo de cada
+                       accion a su funcion y los contraejemplos guardados
+  briefs-de-prueba/    los briefs con que se prueba el sistema entero, cada uno
+                       con para que esta y que se espera de cada comprobacion:
+                       entrada del desarrollador, fuera de tareas/
   tests/               las pruebas y los casos sembrados, fuera de tareas/
 ```
 
@@ -706,7 +841,7 @@ artefacto la imponga el rechazo del agente siguiente.
 
 **Frontend: agrupación por funcionalidad.** Una carpeta por funcionalidad
 —encargar una obra, ver su avance, ver las tareas hechas, leer el
-manuscrito— con sus componentes y sus llamadas dentro, y `compartido/` para el cliente de API y lo transversal.
+manuscrito, ver las versiones— con sus componentes y sus llamadas dentro, y `compartido/` para el cliente de API y lo transversal.
 Las funcionalidades no se importan entre sí y solo `compartido/api/` habla con
 el servidor; lo vigilan las reglas de ESLint y una prueba de estructura. El
 cliente de API no se escribe: se genera del contrato OpenAPI que el `backend/`
@@ -717,9 +852,10 @@ ejecuciones y muestra artefactos.
 ```
 frontend/
   package.json
-  scripts/       genera el cliente desde el contrato; arranca backend y Vite
+  scripts/       genera el cliente desde el contrato; arranca backend y Vite;
+                 el validador visual de la lectura, con Playwright
   src/
-    features/    encargo, avance, tareas, manuscrito
+    features/    encargo, avance, tareas, manuscrito, versiones
     compartido/  cliente de API generado del contrato, y componentes comunes
   pruebas/       contra un servidor simulado: ninguna gasta
 ```
@@ -738,11 +874,27 @@ engancha a `GET /obras/{id}/progreso`; si el flujo se corta, el cliente se
 reengancha solo y lo dice. Todo eso vive en un solo fichero de
 `compartido/api/`, de modo que pasar a sondeo no toca ninguna pantalla.
 
-**Las tres pantallas de una obra comparten menú.** Avance, Tareas y Lectura
-llevan arriba el mismo menú, que salta de una a otra con un clic; cada una
-conserva su dirección. La de tareas lista lo que sirve `GET /obras/{id}/trazas`
+**Las pantallas de una obra comparten menú.** Avance, Tareas, Lectura y
+Versiones llevan arriba el mismo menú, que salta de una a otra con un clic; cada
+una conserva su dirección. La de tareas lista lo que sirve `GET /obras/{id}/trazas`
 agrupado por capítulo, con la duración y el veredicto final de los hooks tal
 como vienen en cada `Traza`.
+
+**La lectura es interactiva.** Abre con una portada —título, para quién y la
+dedicatoria—; trae la ficha de personajes y lugares de la versión que se lee,
+cada uno con un enlace a los capítulos en que aparece, y desde ella se pide el
+cambio de un nombre; el índice marca los capítulos que esa versión cambió; cada
+capítulo enseña sus críticas al pulsar; se puede elegir qué versión leer y
+descargarla en PDF. La pantalla de Versiones dice de dónde sale cada una,
+comprueba la puerta y publica; los fallos de la puerta se pintan tal como los
+nombra el servidor, sin enumerar los validadores en el cliente.
+
+**El validador visual mira la lectura con un navegador.** `npm run
+validar-visual` levanta un backend sembrado con el ejecutor fingido y la
+interfaz, abre la lectura en Chromium sin cabeza a dos anchos y coteja portada,
+índice y ficha con lo que sirve la API. Cada fallo sale como una línea JSON que
+dice si vuelve a `frontend` o a `backend`, y la orden falla. Usa el mismo
+Playwright que el servidor MCP de navegador del desarrollo.
 
 ### Qué se pierde sin cálculo determinista
 
@@ -750,7 +902,7 @@ Tres dimensiones dejan de ser fiables al pasar a agentes, y conviene decirlo en 
 
 | Dimensión | Por qué falla | Cómo se compensa dentro del sistema |
 | --- | --- | --- |
-| Coherencia temporal | Aritmética de calendario y distancias: sumar días, comparar duraciones, detectar un viaje imposible. Es exactamente lo que peor hace un modelo de lenguaje, y falla en silencio | El Contable emite en cada `EventoEstado` la fecha y el lugar resultantes ya calculados y explícitos. El Verificador compara dos valores escritos en lugar de calcularlos |
+| Coherencia temporal | Aritmética de calendario y distancias: sumar días, comparar duraciones, detectar un viaje imposible. Es exactamente lo que peor hace un modelo de lenguaje, y falla en silencio | El Contable emite en cada `EventoEstado` la fecha y el lugar resultantes ya calculados y explícitos. El Verificador compara dos valores escritos en lugar de calcularlos. Antes de publicar, Lean demuestra sobre esos mismos datos que la cronología no se contradice (§4): no calcula nada para los agentes, solo decide si la versión sale |
 | Fatiga léxica | Exige contar frecuencias de lemas sobre todo el corpus previo. Un agente no puede contar 300 páginas y estimarlo a ojo no es una medida | El Editor de estilo mantiene un registro acumulado de imágenes y muletillas ya usadas, actualizado al cerrar cada capítulo, y comprueba contra esa lista en vez de contra el texto |
 | Léxico vetado | Cotejo exhaustivo contra una lista larga. Un agente revisa bien veinte términos, no mil | Lista corta y priorizada por capítulo, derivada del `Registro lingüístico` de las escenas en juego, no la lista global |
 

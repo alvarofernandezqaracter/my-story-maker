@@ -17,7 +17,7 @@ al agotarse lo declara su paso en el guion; aqui solo se lee.
 """
 
 import threading
-from collections.abc import Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -26,11 +26,13 @@ from novela.ajustes import (
     TOPE_DE_REGENERACIONES_POR_ESCENA,
     TOPE_DE_REVISIONES_POR_BORRADOR,
 )
-from novela.almacen import Almacen, Artefacto, ArtefactoRechazado
+from novela.almacen import Almacen, Artefacto, ArtefactoRechazado, esquema
+from novela.almacen.artefactos import sumar_totales
 from novela.nucleo import calidad, ciclo, guion, presupuesto
 from novela.nucleo.gobierno import comprobar_escritura
 from novela.nucleo.guion import Encargo
 from novela.nucleo.proyecciones import Ventana, ensamblar
+from novela.vocabularios import CICLO_DE_VIDA_DEL_CAPITULO, ESTADO_DE_PRODUCCION
 
 
 class ProduccionDetenida(Exception):
@@ -40,8 +42,25 @@ class ProduccionDetenida(Exception):
 
 # Una tanda a la vez en toda la instalacion. El techo es de la instalacion y no
 # de la obra (SPEC1 §11): si hay dos obras caminando —relanzar las caidas al
-# arrancar lo hace—, sus tandas se turnan en vez de sumarse (D-51).
+# arrancar lo hace—, sus tandas se turnan en vez de sumarse (D-88).
 _UNA_TANDA_A_LA_VEZ = threading.Lock()
+
+
+class PlanSinEscenas(Exception):
+    """El Planificador no dejo escenas del capitulo: el intento falla (RF-182)."""
+
+
+# Las unidades que son un capitulo o caben en uno: en sus encargos, el capitulo
+# de lo que vuelve lo pone el encargo (RF-181). Lo de la obra entera, no.
+UNIDADES_DE_CAPITULO = frozenset({"capitulo", "escena", "parrafo"})
+
+# Los tipos cuyo `estado` es el ciclo de vida del proceso: ese lo lleva el
+# caminante, no el rol que los escribe (RF-181).
+ESTADO_DEL_PROCESO = frozenset(
+    tabla.tipo
+    for tabla in esquema.TABLAS
+    if tabla.vocabulario_de_estado in (ESTADO_DE_PRODUCCION, CICLO_DE_VIDA_DEL_CAPITULO)
+)
 
 
 # Lo que una tarea devolvio y todavia no se ha escrito: el encargo y sus
@@ -66,6 +85,10 @@ class Resultado:
     estado_en_n: dict[str, Any] | None = None
     # Lo que dijeron los hooks de su paso, si los lleva (SPEC1 RF-127).
     ganchos: dict[str, Any] | None = None
+    # Lo que hace falta para observarlo en Langfuse (SPEC1 4.20): con que modelo
+    # corrio y que herramientas llamo, leidas del flujo del CLI.
+    modelo: str | None = None
+    herramientas: list[dict[str, Any]] = field(default_factory=list)
 
 
 class Ejecutor(Protocol):
@@ -73,12 +96,39 @@ class Ejecutor(Protocol):
     lanza un subagente de Claude Code.
 
     Si admite varias tareas a la vez lo declara con `simultaneo = True`, y
-    entonces cada tanda corre entera a la vez (SPEC1 D-51). Sin declararlo, la
+    entonces cada tanda corre entera a la vez (SPEC1 D-88). Sin declararlo, la
     tanda se manda en serie: los ejecutores fingidos contestan segun el orden
     en que les llegan los encargos.
     """
 
     def ejecutar(self, encargo: Encargo, ventana: Ventana) -> Resultado: ...
+
+
+class Observador(Protocol):
+    """Quien mira la produccion desde fuera: Langfuse, si hay claves (SPEC1 4.20).
+
+    Recibe lo ya leido y no devuelve nada: la produccion no depende de lo que
+    haga, y un fallo suyo no para nada (RF-190). Lo que recibe cada aviso lo
+    fija quien lo implementa; aqui solo se nombran.
+    """
+
+    @property
+    def abrir_capitulo(self) -> Callable[..., Any]: ...
+
+    @property
+    def cerrar_capitulo(self) -> Callable[..., Any]: ...
+
+    @property
+    def abrir_tarea(self) -> Callable[..., Any]: ...
+
+    @property
+    def cerrar_tarea(self) -> Callable[..., Any]: ...
+
+    @property
+    def version_terminada(self) -> Callable[..., Any]: ...
+
+    @property
+    def soltar(self) -> Callable[..., Any]: ...
 
 
 class IndiceDeLaObra(Protocol):
@@ -99,6 +149,10 @@ class IndiceDeLaObra(Protocol):
     def indexar_estructura(self, id_obra: str, capitulo: int) -> int: ...
 
     def retirar_desde(self, id_obra: str, capitulo: int) -> int: ...
+
+    def retirar_capitulos(self, id_obra: str, capitulos: Iterable[int]) -> int: ...
+
+    def retirar_sin_cerrar(self, id_obra: str, cerrados: Iterable[int]) -> int: ...
 
 
 class Catalogo(Protocol):
@@ -141,15 +195,17 @@ class Caminante:
         *,
         catalogo: Catalogo | None = None,
         indice: IndiceDeLaObra | None = None,
+        observador: Observador | None = None,
     ) -> None:
         self.almacen = almacen
         self.ejecutor = ejecutor
         self.catalogo = catalogo
         self.indice = indice
+        self.observador = observador
         self._tanda = 0
         # Lo pone la primera tarea de una tanda que detiene la obra. Las demas
         # de su tanda ya no intentan otra vez ni vuelven a detenerla: si el
-        # editor reanuda mientras terminan, su orden no se deshace (D-51).
+        # editor reanuda mientras terminan, su orden no se deshace (D-88).
         self._detenida = threading.Event()
         self._turno_de_detener = threading.Lock()
 
@@ -174,26 +230,122 @@ class Caminante:
                 self._auditar_si_toca(id_obra, numero, capitulos)
         except ProduccionDetenida:
             return informes
+        except Exception as error:
+            # Un fallo que no es de ninguna tarea —una ventana que no cabe ni
+            # partiendo, una proyeccion incompleta— mataba el hilo y dejaba la
+            # obra ni detenida ni terminada, sin nadie que la moviese (RF-167).
+            # Se detiene con su motivo, como `detener_obra`, y se deja subir.
+            self.almacen.detener(
+                id_obra, f"fallo no previsto del caminante: {type(error).__name__}: {error}"
+            )
+            raise
+        finally:
+            # Lo que quede abierto se cierra como interrumpido: sin cerrar,
+            # Langfuse no lo recibe (RF-185).
+            self._observar("soltar", id_obra)
         return informes
+
+    # --- Lo que ve Langfuse (SPEC1 4.20) ----------------------------------
+
+    def _observar(self, metodo: str, *args: Any, **datos: Any) -> None:
+        """Avisa al observador. Nada de lo que haga, ni un fallo suyo, ni leer lo
+        que necesita, cambia la produccion (RF-190, RNF-10)."""
+        if self.observador is None:
+            return
+        try:
+            getattr(self.observador, metodo)(*args, **datos)
+        except Exception:  # noqa: BLE001
+            return
+
+    def _de_la_obra(self, id_obra: str) -> dict[str, Any]:
+        """La version en curso, la entrevista de la que sale y el titulo."""
+        obra = self.almacen.leer_obra(id_obra)
+        cuerpo = obra.cuerpo if obra is not None else {}
+        return {
+            "version": self.almacen.version_en_curso(id_obra),
+            "id_entrevista": cuerpo.get("id_entrevista"),
+            "titulo": cuerpo.get("titulo"),
+        }
+
+    def _observar_capitulo(self, id_obra: str, numero: int, *, abrir: bool) -> None:
+        if self.observador is None:
+            return
+        try:
+            obra = self._de_la_obra(id_obra)
+            version = obra.pop("version")
+            if abrir:
+                self._observar("abrir_capitulo", id_obra, version, numero, **obra)
+            else:
+                totales = self.almacen.sumar_trazas(id_obra, version=version, capitulo=numero)
+                self._observar("cerrar_capitulo", id_obra, version, numero, totales)
+        except Exception:  # noqa: BLE001
+            return
+
+    def _observar_fin_de_version(self, id_obra: str) -> None:
+        """Los totales de la version y los de la novela entera, entrevista
+        incluida (RF-186)."""
+        if self.observador is None:
+            return
+        try:
+            obra = self._de_la_obra(id_obra)
+            version = obra.pop("version")
+            de_la_version = self.almacen.sumar_trazas(id_obra, version=version)
+            partes = [self.almacen.sumar_trazas(id_obra)]
+            if obra["id_entrevista"]:
+                partes.append(self.almacen.sumar_pasadas(obra["id_entrevista"]))
+            self._observar(
+                "version_terminada",
+                id_obra,
+                version,
+                totales_de_la_version=de_la_version,
+                totales_de_la_novela=sumar_totales(*partes),
+                **obra,
+            )
+        except Exception:  # noqa: BLE001
+            return
+
+    def _observar_tarea(
+        self, encargo: Encargo, id_traza: str, intento: int, tokens: int
+    ) -> None:
+        if self.observador is None:
+            return
+        try:
+            self._observar(
+                "abrir_tarea",
+                id_traza,
+                id_obra=encargo.id_obra,
+                rol=encargo.rol,
+                tarea=encargo.tarea,
+                intento=intento,
+                capitulo=encargo.capitulo,
+                escena=encargo.escena,
+                dimension=encargo.dimension,
+                tokens_estimados=tokens,
+                **self._de_la_obra(encargo.id_obra),
+            )
+        except Exception:  # noqa: BLE001
+            return
 
     def volver_al_punto_de_guardado(self, id_obra: str) -> int:
         """Deja la obra tal como quedo al cerrar su ultimo capitulo (RF-91).
 
         Las trazas que siguen abiertas son de tareas que corto una caida y se
-        cierran como interrumpidas. Todo lo del capitulo que estaba abierto se
-        caduca y sale del indice, y lo que el ultimo cerrado no llego a indexar
-        se indexa ahora. Devuelve el ultimo capitulo cerrado.
+        cierran como interrumpidas. Todo lo de cualquier capitulo sin cierre vivo
+        se caduca y sale del indice —en una version que reescribe capitulos
+        sueltos puede no ser solo el siguiente al ultimo cerrado (RF-176)—, y lo
+        que a los cerrados les falte en el indice se indexa ahora; indexar lo ya
+        indexado no hace nada. Devuelve el ultimo capitulo cerrado.
         """
         self.almacen.cerrar_trazas_interrumpidas(id_obra)
-        ultimo = self.almacen.ultimo_capitulo_cerrado(id_obra)
-        self.almacen.descartar_desde(id_obra, ultimo + 1)
+        self.almacen.descartar_sin_cerrar(id_obra)
+        cerrados = self.almacen.capitulos_cerrados(id_obra)
         if self.indice is not None:
-            self.indice.retirar_desde(id_obra, ultimo + 1)
-            if ultimo:
-                self.indice.indexar_fuentes(id_obra, ultimo)
-                self.indice.indexar_prosa_aceptada(id_obra, ultimo)
-                self.indice.indexar_estructura(id_obra, ultimo)
-        return ultimo
+            self.indice.retirar_sin_cerrar(id_obra, cerrados)
+            for cerrado in cerrados:
+                self.indice.indexar_fuentes(id_obra, cerrado)
+                self.indice.indexar_prosa_aceptada(id_obra, cerrado)
+                self.indice.indexar_estructura(id_obra, cerrado)
+        return max(cerrados, default=0)
 
     def _ya_cerrado(self, id_obra: str, numero: int) -> bool:
         """Lo cerrado no se repite: es el punto de guardado."""
@@ -223,6 +375,8 @@ class Caminante:
             # publica, pero sin terminar no se publica.
             de_cierre=numero == capitulos,
         )
+        if numero == capitulos:
+            self._observar_fin_de_version(id_obra)
 
     def _fuera_del_guion(
         self,
@@ -260,11 +414,13 @@ class Caminante:
     def caminar_capitulo(self, id_obra: str, numero: int) -> Informe:
         informe = Informe(capitulo=numero)
         self._parar_si_detenida(id_obra)
+        self._observar_capitulo(id_obra, numero, abrir=True)
 
         # Paso 1: planificar. Solo, y de el salen las escenas del capitulo.
         self._mandar_en_tandas(
             guion.expandir(guion.paso(1), id_obra=id_obra, capitulo=numero), informe
         )
+        self._abrir_capitulo(id_obra, numero)
         escenas = self._escenas(id_obra, numero)
         informe.estado = "planificado"
 
@@ -392,11 +548,34 @@ class Caminante:
             lambda lote, rechazo: self._critica_de_malformado(aplazados[lote][0], rechazo),
         )
         informe.estado = cerrado
+        self._observar_capitulo(id_obra, numero, abrir=False)
         # El indice es derivado: si una caida lo deja a medias, volver al punto
         # de guardado lo completa.
         if self.indice is not None:
             self.indice.indexar_estructura(id_obra, numero)
         return informe
+
+    def _abrir_capitulo(self, id_obra: str, numero: int) -> None:
+        """Si el Planificador no escribio el `Capitulo`, lo escribe el backend:
+        sin el, el ciclo de vida y la marca `cerrado` no tienen donde ir
+        (RF-180)."""
+        abiertos = self.almacen.listar("Capitulo", id_obra, capitulo=numero)
+        for capitulo in abiertos:
+            if capitulo.estado is None:
+                self.almacen.marcar_capitulo(capitulo.id, "planificado")
+        if abiertos:
+            return
+        self.almacen.guardar(
+            [
+                Artefacto(
+                    tipo="Capitulo",
+                    cuerpo={"numero": numero},
+                    id_obra=id_obra,
+                    capitulo=numero,
+                    estado="planificado",
+                )
+            ]
+        )
 
     def _transitar(self, informe: Informe, id_obra: str, hasta: str) -> None:
         """Mueve el capitulo por su ciclo de vida y lo deja escrito.
@@ -507,7 +686,7 @@ class Caminante:
         self, tanda: Sequence[Encargo], aplazados: Aplazados | None
     ) -> list[Resultado]:
         """Las tareas de una tanda corren a la vez y la tanda cierra cuando
-        cierran todas (SPEC1 RF-13, D-51).
+        cierran todas (SPEC1 RF-13, D-88).
 
         Lo que devuelven se recoge en el orden del guion y no en el de llegada:
         es lo que deja el recorrido igual de una vez a otra (RNF-04). Si una
@@ -598,6 +777,9 @@ class Caminante:
                 # pueden comparar tarea por tarea.
                 tokens_estimados=presupuesto.coste_de_abrir(ventana.tokens),
             )
+            self._observar_tarea(
+                encargo, id_traza, intento, presupuesto.coste_de_abrir(ventana.tokens)
+            )
             try:
                 resultado = self.ejecutor.ejecutar(encargo, ventana)
                 if aplazados is None:
@@ -614,6 +796,12 @@ class Caminante:
                     # Un intento que no pasa un hook tambien deja su veredicto.
                     ganchos=getattr(error, "ganchos", None),
                 )
+                self._observar(
+                    "cerrar_tarea",
+                    id_traza,
+                    error=f"fallo: {error}",
+                    ganchos=getattr(error, "ganchos", None),
+                )
                 continue
             self.almacen.cerrar_traza(
                 id_traza,
@@ -626,6 +814,18 @@ class Caminante:
                     recuperacion | {"usados": resultado.fragmentos_usados}
                     for recuperacion in ventana.recuperaciones
                 ],
+                ganchos=resultado.ganchos,
+            )
+            self._observar(
+                "cerrar_tarea",
+                id_traza,
+                salida=resultado.salida,
+                tokens_de_entrada=resultado.tokens_de_entrada_medidos,
+                tokens_de_salida=resultado.tokens_de_salida,
+                coste=resultado.coste,
+                latencia_ms=resultado.latencia_ms,
+                modelo=resultado.modelo,
+                herramientas=resultado.herramientas,
                 ganchos=resultado.ganchos,
             )
             return resultado
@@ -697,21 +897,28 @@ class Caminante:
         self, encargo: Encargo, resultado: Resultado, id_traza: str, intento: int
     ) -> None:
         """Los permisos se imponen aqui y no en el prompt, y la procedencia la
-        pone el backend."""
+        pone el backend. Tambien a que capitulo va y en que punto de su ciclo
+        de vida esta: eso no lo decide el rol (RF-181)."""
+        del_capitulo = encargo.unidad in UNIDADES_DE_CAPITULO and encargo.capitulo is not None
         for artefacto in resultado.artefactos:
             comprobar_escritura(encargo.rol, artefacto.tipo)
             artefacto.id_obra = artefacto.id_obra or encargo.id_obra
             artefacto.procedencia_rol = encargo.rol
             artefacto.procedencia_tarea = id_traza
             artefacto.procedencia_intento = intento
-            if artefacto.capitulo is None:
+            if del_capitulo or artefacto.capitulo is None:
                 artefacto.capitulo = encargo.capitulo
+            if artefacto.tipo in ESTADO_DEL_PROCESO:
+                artefacto.estado = None
 
     def _guardar(
         self, encargo: Encargo, resultado: Resultado, id_traza: str, intento: int
     ) -> None:
         """Guarda lo producido, con los permisos impuestos aqui y no en el prompt."""
         self._preparar(encargo, resultado, id_traza, intento)
+        if encargo.tarea == "planificar":
+            self._guardar_el_plan(resultado.artefactos)
+            return
         if not resultado.artefactos:
             return
         try:
@@ -721,6 +928,16 @@ class Caminante:
             # rechazo es una `Critica` bloqueante cuyo objeto es el artefacto,
             # no el texto, y no llega al Revisor como si fuera prosa mala.
             self.almacen.guardar_critica(self._critica_de_malformado(encargo, rechazo))
+
+    def _guardar_el_plan(self, artefactos: list[Artefacto]) -> None:
+        """Sin escenas del capitulo no hay testigo para nadie: el intento falla
+        y no se escribe nada de el, tampoco la critica de RF-23 (RF-182)."""
+        if not any(artefacto.tipo == "Escena" for artefacto in artefactos):
+            raise PlanSinEscenas("el plan no trae ninguna Escena del capitulo")
+        try:
+            self.almacen.guardar(artefactos)
+        except ArtefactoRechazado as rechazo:
+            raise PlanSinEscenas(f"el almacen rechazo el plan: {rechazo}") from rechazo
 
     @staticmethod
     def _critica_de_malformado(encargo: Encargo, rechazo: ArtefactoRechazado) -> Artefacto:

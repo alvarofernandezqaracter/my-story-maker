@@ -1,0 +1,23 @@
+{
+  "titulo": "La llave del escribano",
+  "epoca": "Toledo, 1561",
+  "premisa": "La víspera de que la corte se marche a Madrid, la hija de un escribano descubre que la llave del archivo de su padre ha desaparecido y con ella la escritura de la casa familiar",
+  "tesis_tematica": "Lo que se guarda por escrito protege a quien sabe leerlo",
+  "elenco_declarado": ["Catalina, hija del escribano", "el escribano Gaspar de Medina"],
+  "capitulos_objetivo": 1,
+  "politicas_globales": {
+    "pov": "tercera_limitada",
+    "tiempo_verbal": "pasado",
+    "nivel_de_arcaismo": "moderado"
+  },
+  "arcos": ["Catalina pasa de obedecer a su padre a defender la casa por su cuenta"],
+  "destinatario": {
+    "nombre": "Marta",
+    "edad": 12,
+    "tono": "aventura con misterio, sin miedo de verdad",
+    "dedicatoria": "Para Marta, que siempre encuentra lo que los demás pierden",
+    "rasgos": ["curiosa", "le gustan los mapas"],
+    "recuerdos": ["Encontró las llaves del coche de su abuelo dentro de la nevera"],
+    "vetos": ["sangre"]
+  }
+}

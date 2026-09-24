@@ -1,6 +1,6 @@
 # Verificación: con qué se comprueba cada cosa
 
-2026-09-23
+2026-09-24
 
 ## Qué contiene este documento
 
@@ -168,6 +168,18 @@ se marca aparte como ruidosa y **no dispara regeneración por sí sola**. Si
 reincide en el mismo personaje a lo largo de varios capítulos, eso sí es señal,
 y la señal es la reincidencia, no la puntuación de un capítulo suelto.
 
+**La novela entera tampoco admite predicado**, y la juzga alguien de fuera. El
+juez de la novela es un evaluador externo, no un rol del censo
+(`architecture.md` §2): sobre una versión terminada puntúa de 1 a 5 tres
+criterios —`personalizacion_integrada`, `funciona_como_novela`,
+`fidelidad_a_la_epoca`—, cada uno con su justificación y citas literales de lo
+que leyó. Sigue siendo `inverificable` en el sentido de §2: su nota no enruta
+nada. Lo que cambia es que se usa como medida del sistema entero —la media por
+criterio sobre los briefs de prueba— y que su ruido se mide aparte, repitiendo
+el juicio sobre la misma versión: una mejora que no supera ese ruido no cuenta
+como mejora. Su rúbrica vive solo en Langfuse, por la regla de §7: el material
+con el que se juzga a un agente no vive donde el agente puede leerlo.
+
 ## 6. Verificación del código
 
 El código no escribe la novela: guarda artefactos, ensambla proyecciones,
@@ -192,6 +204,10 @@ la que más protege.
 | En `frontend/`, solo `compartido/api/` llama al servidor, las funcionalidades no se importan entre sí y nada lee disco ni importa del backend | Regla de fronteras de ESLint, más una prueba de estructura para lo que ESLint no ve: ninguna carpeta `services`, `models` ni `domain`, un solo fichero que importa `openapi-fetch` y el almacenamiento del navegador en un solo fichero |
 | El único sitio con tipos declarados es el borde HTTP | Comprobación de tipos sobre `api/` |
 | Los hooks no tocan el almacén ni el guion: informan por su salida y registra el ejecutor | Contrato de importación sobre `ganchos` |
+| Los validadores programáticos son funciones puras: no leen el almacén, ni las tareas, ni el guion | Contrato de importación sobre `validadores` |
+| El demostrador formal recibe la cronología ya leída: no toca el almacén, ni el guion, ni las tareas | Contrato de importación sobre `demostrador` |
+| El juez de la novela no lee `tareas/` ni la API ni trae Langfuse: su rúbrica le llega por parámetro | Contrato de importación sobre `juez_de_la_novela` |
+| La observación en Langfuse recibe lo ya leído: no toca el almacén, ni el guion, ni las tareas, ni el ejecutor | Contrato de importación sobre `observabilidad` |
 
 ### Dónde no se comprueban tipos, y por qué
 
@@ -233,15 +249,26 @@ manda.
 | El guion, el enrutado por severidad, el tope de vueltas y la anchura de tanda | Se recorren enteros: el guion son diez pasos declarados, así que se enumera en lugar de razonar sobre él |
 | El almacén | Escritura y lectura de cada tipo de artefacto, inmutabilidad de los que no cambian —que admiten la marca de caducado una vez y nada más—, rechazo por valor fuera de vocabulario, caducidad de la memoria de capítulo |
 | El punto de guardado | Caídas sembradas: un ejecutor que tumba el proceso a mitad de cada tarea del capítulo y de la auditoría, y otro proceso que reanuda. Lo cerrado antes del corte sigue igual y la obra reanudada deja lo mismo que una sin cortes: un `Capitulo`, un juego de `EventoEstado`, un estado en N y un `Resumen de capítulo` por capítulo, el mismo manuscrito y ninguna traza abierta. Una caída entre `plegar` y el cierre no deja ningún evento. Lo del capítulo descartado sale del índice. Al arrancar se relanza la obra caída y ni la detenida ni la terminada |
-| La política de reintentos | Averías sembradas en una tarea de cada política: la que produce testigo detiene la obra con tarea, intento y motivo y sin nada a medio escribir; la comprobación deja su `Crítica` «no comprobado» abierta y la obra cierra; `documentar` sigue sin crítica. Un paso del guion sin tope o sin política no carga, y la tarea cortada por una caída no cuenta como intento |
+| La política de reintentos | Averías sembradas en una tarea de cada política: la que produce testigo detiene la obra con tarea, intento y motivo y sin nada a medio escribir; la comprobación deja su `Crítica` «no comprobado» abierta y la obra cierra; `documentar` sigue sin crítica. Un paso del guion sin tope o sin política no carga, y la tarea cortada por una caída no cuenta como intento. Un Planificador fingido que hace lo que hizo el modelo de verdad: sin `Capitulo`, el backend lo abre y el capítulo se cierra; con escenas en estado `planificada` y el número de otro capítulo, las escenas van a su capítulo sin crítica; un plan sin escenas se reintenta y, agotado, detiene la obra; y uno rechazado por el almacén es un intento fallido y no una crítica |
 | El pliegue | Propiedad: plegar el estado en N-1 más los eventos de N da lo mismo que plegar el log entero. Regenerar el capítulo 12 y replegar hacia delante da lo mismo que plegar desde cero |
 | Las versiones | Una obra de tres capítulos con un ejecutor que firma lo que escribe con la versión en curso, rehecha desde el 2: todo lo que la API sirve de la versión 1 —manuscrito, capítulos, críticas, estado, hechos y cronología— se compara antes y después y es idéntico; la 2 comparte las escenas del capítulo 1 y trae su propio estado y sus eventos. Un `Evento` sin capítulo escrito en un capítulo rehecho se releva, y en uno descartado se caduca. Las escrituras prohibidas contra las marcas de versión y de relevo, contra las versiones y contra las publicaciones las rechazan sus disparadores. Publicar o rehacer una versión sin terminar se rechaza, y la migración da a las obras que ya existían su versión 1 |
 | El índice de parecido | Propiedad: borrarlo y reconstruirlo desde los artefactos devuelve los mismos fragmentos. El índice es derivado; los artefactos no |
 | La persistencia | Cada migración sobre una copia de una obra de prueba; el bloqueo por escrituras concurrentes se ejercita con una tanda de verdad, no se supone |
 | La entrevista | Con un ejecutor fingido que contesta lo que contestaría el Entrevistador: un hecho sin cita literal se descarta, lo que la persona escribió no cambia, lo que falta sale con su ruta, una contradicción sin evidencia no bloquea y una asumida tampoco, la pasada que completa el brief lanza la obra, y la huella de cada pasada no se borra ni se modifica |
 | Los dos hooks | El programa del hook se prueba dándole la entrada JSON que le daría Claude Code, también lanzado como proceso: bloquea con código 2 lo malformado y lo vetado, deja terminar lo bueno, bloquea una sola vez por turno, no bloquea si la vuelta no cabe en la reserva y su motivo está acotado. La orden del ejecutor lleva los dos hooks `Stop` en los pasos 3, 5 y 7 y ninguno en los demás, con los vetos en el entorno y no en la ventana; y un Redactor fingido que insiste en lo vetado agota sus intentos y detiene la obra con el veredicto en cada `Traza`. Que el CLI de verdad dispara el hook en `--print` y el agente corrige se confirma con un sondeo mínimo, fuera de la batería |
+| Lo vetado | Un caso por lista —un término global en una obra sin destinatario, una palabra y un tema del comprador—, las variantes que tienen que casar —mayúscula, acento, diéresis, plural, género, letra alargada— y las que no —una palabra dentro de otra, la `ñ` frente a la `n`, el tema dicho con otras palabras—. La lista global viene sembrada y no se borra ni se cambia. Un Redactor fingido con el CLI interceptado deja en el registro la vuelta de la sesión y el fallo final de cada intento, detiene la obra y la ficha dice por qué; uno que corrige a tiempo deja solo la vuelta. Ninguna prueba cuenta cuántos términos trae la lista: se leen del almacén |
+| La puerta de publicación | Cada validador con un caso que pasa y otro que falla: un capítulo fuera del rango de palabras, un «Inés» donde la biblia dice «Ines» frente a un «Pero» que no se toma por «Pedro», un cuerpo al que le falta un campo de su esquema y un hecho `personal` sin mención. Un rango del guion roto no carga. El hook de forma bloquea el nombre mal escrito con los nombres llegados por el entorno y el ejecutor repite la comprobación. Una obra entera con un ejecutor fingido y un defecto sembrado por validador no se publica, la respuesta dice cuál falló y en qué capítulo, el registro de publicaciones sigue vacío y la puerta servida aparte dice lo mismo; sin el defecto, se publica |
+| La cronología en Lean | El volcado y la lectura de la salida de Lean, sin Lean: fechas ISO parciales a intervalos, un teorema por invariante y suceso en su línea, lo que no es fecha se dice y un error que no cae en ningún teorema no se pierde. Con Lean, y saltadas limpias si no está: una cronología coherente se demuestra; una rota a propósito solo en un invariante, por cada uno de los cuatro, falla solo en ese; el directorio temporal no queda en disco. Una obra entera limpia para los otros cuatro validadores con un personaje en dos lugares el mismo día no se publica, deja críticas de su capítulo y no las repite al volver a pedirlo; sin Lean, la misma obra se publica marcada `sin_comprobacion` |
+| El cambio del lector | Una obra de tres capítulos con un ejecutor fingido que firma la prosa con la versión y solo anota las menciones en el 1 y el 3: cambiar el nombre de un hecho abre la versión 2 con esos dos capítulos, planifica solo esos dos con la ficha nueva en el canon, comparte las filas del 2 y deja todo lo que sirve la versión 1 idéntico, ficha vieja incluida. La ficha nueva no lleva rol, la vieja queda relevada y la cronología de un capítulo compartido sigue a la sustituta. Un hecho inexistente, un nombre igual o vacío, un hecho sin menciones y una versión sin terminar se rechazan sin crear nada, y el registro de cambios no admite borrado ni cambio. Una caída a medias de un capítulo suelto no deja nada suyo vivo al volver al punto de guardado, no toca los cerrados de detrás y la versión termina igual |
+| El PDF | La descarga de una obra fingida con destinatario: tipo, descarga, portada, índice y acentos en los flujos del PDF, ningún fichero nuevo en disco y 404 para una versión que no existe; la sustitución de lo que Latin-1 no tiene, carácter a carácter |
+| El juez de la novela | Con una observabilidad fingida que sirve una rúbrica de prueba y un juez fingido, sobre una obra fingida terminada: sin rúbrica no se abre ningún subagente y el motivo nombra el prompt; la rúbrica llega como instrucción de sistema, con Sonnet, sin herramientas ni MCP ni hooks; un veredicto bueno cuelga un score por criterio con la versión de la rúbrica y los capítulos leídos, y no escribe nada en el almacén; uno con una cita que no está en lo que leyó, una nota fuera de rango o un criterio de menos o de más no cuelga ninguno, y el segundo intento vale si el primero no; la ventana mete capítulos enteros por prioridad, dice cuáles no leyó y no se lanza si no cabe ni sin capítulos; sin destinatario la personalización no se pide; con una traza abierta en la instalación o una versión sin terminar no se lanza. Ninguna lanza el juez de verdad |
+| Los briefs de prueba | Cada fichero de `backend/briefs-de-prueba/` valida contra el modelo de `POST /obras` y dice qué espera de cada validador de la puerta, de cada hook y de cada criterio del juez —leídos de los vocabularios, sin clavar cuántos son—; lo que espera del juez es lo que el juez pediría; hay uno de cada propósito; el de incoherencia temporal solo espera fallo de `cronologia`, y el de inyección pide un término de la lista global y trata de cerrar la marca de los datos. Ninguno se lanza |
 | La frontera con la interfaz | El contrato OpenAPI versionado frente al que genera el código: si el borde cambia, la prueba lo vuelve a volcar y falla una vez, para que el movimiento pase por el diff. Comprueba además que toda operación declare la forma de lo que devuelve, porque un contrato con respuestas sin tipar no sirve para generar cliente. En el otro lado, `frontend/` genera su cliente desde ese mismo fichero y su prueba del contrato hace lo mismo: regenera, compara con lo commiteado y, si difiere, lo reescribe y falla una vez. Un campo renombrado rompe además la compilación de la pantalla que lo usa |
 | La interfaz | Cada requisito de SPEC2 con su prueba contra un servidor simulado y un flujo de progreso falso, sin gastar: lo que lleva cada pasada, lo que sobrevive a recargar, el salto al avance al lanzarse, el reenganche del flujo, las órdenes de detener y reanudar, la agrupación del manuscrito y cada formato de error |
+| La lectura interactiva | La portada con y sin destinatario, los capítulos cambiados en el índice, la ficha agrupada con sus enlaces y la biblia pedida de la versión leída, la versión elegida en la dirección y en el enlace del PDF, las críticas pedidas al pulsar, el cambio de nombre con su respuesta y su rechazo, y la pantalla de versiones con la puerta genérica —también con un validador que la interfaz no conoce— y el 409 al publicar; todo contra el servidor simulado |
+| El validador visual | `npm run validar-visual`: un backend sembrado con el ejecutor fingido, Vite y Chromium sin cabeza a dos anchos cotejan portada, índice, ficha y ancho de página con lo que sirve la API. Sin fallos sale con 0 y una línea de resumen; con la portada escondida a propósito (`VALIDAR_ROMPER=portada`) sale con 1 y una línea JSON por fallo que dice `vuelve_a: frontend`. No corre en cada commit porque necesita Python y un navegador: se corre al cerrar la fase 2 de un cambio que toque la lectura |
+| El flujo de producción entero | TLC recorre todos los órdenes del modelo de `backend/formal/tla/` con la configuración del repositorio y tiene que terminar sin error; la prueba lo lanza si hay Java y `tla2tools.jar` y se salta diciendo qué falta si no. Cada contraejemplo que salió tiene además su caso en el código: dos arranques a la vez con la ventana entre leer y registrar ensanchada a propósito dejan un solo caminante, y un fallo no previsto del caminante deja la obra detenida con su motivo |
+| La observación en Langfuse | Con un Langfuse fingido que guarda lo que recibe y una obra entera lanzada desde una entrevista con el ejecutor fingido: la sesión es la de la entrevista, hay una traza por la entrevista y otra por versión, un span por capítulo con la suma de sus `Traza`, una generación por `Traza` con sus tokens, coste, latencia, modelo y prompt, una observación hija por llamada a herramienta, el evento con los totales de la versión y la novela, un score por validador al pasar la puerta —con el mismo `id` al repetirla— y uno por hook. Los prompts de todas las carpetas de `tareas/`, leídas y no contadas a mano, suben una vez y solo vuelven a subir si cambia el texto. Las claves salen del entorno y del `.env` sin exportarse; sin ellas no hay cliente. Con un Langfuse que revienta en cada llamada, la obra escribe las mismas trazas y el mismo manuscrito que sin él. Ningún subagente, con hooks o sin ellos, recibe una variable `LANGFUSE_`. El SDK de verdad, exportando a memoria, recibe la sesión, el `id` de traza de la semilla y el padre de cada observación. La batería va siempre con la observación apagada, aunque haya `.env` |
 | Que las pruebas afirmen algo | Pruebas de mutación sobre `nucleo/` y sobre los permisos por rol, en periodo y no en cada commit, porque son lentas |
 
 ### El recorrido en seco
@@ -272,6 +299,13 @@ que tiene que poder contestar son cuatro:
 - Qué fragmentos devolvió cada consulta por parecido y cuáles acabó usando el
   agente.
 
+Si hay claves, lo mismo se ve además en Langfuse, agrupado por novela, versión y
+capítulo, con la versión del prompt que produjo cada generación y los
+validadores como scores (`architecture.md` §4). Es un espejo: lo que decide
+sigue saliendo de la `Traza` en SQLite, y que Langfuse falte o falle no cambia
+ni una línea de lo que se escribe. Los evaluadores que juzgan la obra en
+Langfuse no están en el repositorio ni en este documento, a propósito.
+
 ### Los guardarraíles no son un filtro añadido: son el diseño
 
 Lo que impide que un rol haga lo que no le toca no es una instrucción en su
@@ -287,7 +321,120 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 | Solo el Documentalista sale del sistema | `prueba` | Ningún otro rol tiene herramienta con la que salir; se comprueba enumerándolas |
 | El Entrevistador no escribe nada | `prueba` | Su contrato no declara ninguna escritura, la tabla de gobierno no le asigna ninguna, y lo que devuelva como artefacto se cuenta y no se guarda |
 | Una sola pasada de entrevista abierta a la vez | `prueba` | Se lanzan varias a la vez contra un ejecutor que cuenta las que tiene abiertas, y el pico es uno. Por eso su coste cabe en el margen del techo |
-| Lo que entrega un subagente de prosa está bien formado y no trae nada vetado | `prueba` | Dos hooks `Stop` en su orden, que no le dejan terminar sin corregir, y el ejecutor repite las mismas comprobaciones sobre lo entregado al final. Un hook, no el prompt: el agente puede no hacer caso de una petición, pero no puede terminar sin pasar |
+| Lo que entrega un subagente de prosa está bien formado, escribe los nombres de la biblia tal cual y no trae nada vetado | `prueba` | Dos hooks `Stop` en su orden, que no le dejan terminar sin corregir, y el ejecutor repite las mismas comprobaciones sobre lo entregado al final. Un hook, no el prompt: el agente puede no hacer caso de una petición, pero no puede terminar sin pasar |
+| Ningún rol ve Langfuse | `prueba` | El entorno de cada subagente de tarea sale del del backend sin ninguna variable `LANGFUSE_`, lleve hooks o no; los evaluadores no están en el repositorio (inspección) |
+| Cada coincidencia de lo vetado queda escrita | `prueba` | El registro de `policy` lo escribe el almacén en la misma transacción que cierra la `Traza`, y ni se borra ni se modifica. Se comprueba con el recorrido de un Redactor fingido y con borrados y cambios sembrados contra sus disparadores |
+
+### La puerta de publicación
+
+Antes de publicar una versión pasan cinco validadores deterministas sobre lo
+que esa versión ve. No los hace ningún agente. Los cuatro primeros son
+funciones puras que comparan datos ya escritos, así que sobre la obra son `analisis`, y su propio código se
+cierra por `prueba`. Si uno falla la versión no se publica, y cada fallo sale
+con su validador, su capítulo y un detalle que se puede citar.
+
+| Validador | Predicado | Dato de partida | Lo que no ve |
+| --- | --- | --- | --- |
+| `esquema` | Toda salida de un rol que la versión conserva trae los campos que el esquema de su tarea declara para su tipo | El cuerpo guardado y el `esquema.json` de la tarea | Que el valor de cada campo sea bueno: solo que está |
+| `nombres` | Ninguna palabra con mayúscula del texto aceptado es un nombre de la biblia mal escrito, y el del destinatario aparece tal cual | El texto aceptado y los nombres y tratamientos de las fichas | Una variante que también sale en minúscula en el texto, una letra de más o de menos en un nombre de menos de siete, o un nombre cambiado por otro que no se le parece |
+| `longitud` | Cada capítulo tiene entre el mínimo y el máximo de palabras del guion | El texto aceptado del capítulo | Si la longitud le sienta bien al capítulo |
+| `elementos_personalizados` | Todo hecho `personal` tiene al menos una mención en un capítulo | Las menciones que anota el Archivero | Una mención que el Archivero no anotó: es el hueco de las menciones de §10, y aquí sale como un elemento que falta |
+
+El de nombres corre además dentro del hook `validar_capitulo`, porque quien
+escribe lo puede corregir en el acto. Los otros tres solo en la puerta.
+
+El quinto, `cronologia`, no es una función de Python: es una demostración de
+Lean 4. Sobre la obra es `analisis` —un predicado decidible sobre el dato ya
+escrito, que decide el núcleo de Lean—, y su volcado y su lectura se cierran
+por `prueba`.
+
+| Invariante | Predicado | Dato de partida | Lo que no ve |
+| --- | --- | --- | --- |
+| `orden_temporal` | Ningún suceso de un capítulo anterior ocurre después de uno de un capítulo posterior | Fecha resultante de cada `EventoEstado` y momento de cada `Evento`, con su capítulo | El orden dentro de un mismo capítulo, que no está registrado |
+| `edad_coherente` | Todo presente había nacido y no pasa de 120 años | Presentes de cada suceso y su `fechas.nacimiento` | Un presente sin fecha de nacimiento |
+| `un_solo_lugar` | Dos sucesos del mismo día exacto en lugares distintos no comparten presentes | Fecha, lugar y presentes de cada suceso | Dos sucesos fechados solo por mes o año, o sin lugar |
+| `no_reaparece` | Quien muere en un suceso no está presente en ninguno posterior, por capítulo o por fecha | Sujeto de cada `EventoEstado` `muere` y presentes de los demás | Una muerte que el Contable no emitió como `muere` |
+
+Lean solo mira lo que la cronología registra: un suceso que la prosa narra y
+el Contable no emitió, o un presente que no se anotó, no se pueden
+contradecir. Una fecha que no es ISO parcial no se vuelca y es un fallo. Si
+Lean no está en la máquina, la cronología no se comprueba y el resultado lo
+dice (`comprobacion_formal: sin_comprobacion`) sin hacer fallar la puerta; si
+está, lo que no demuestra —un teorema falso, un módulo que no compila, Lean
+que no termina— no se publica, y cada fallo con suceso queda como `Crítica`
+bloqueante de su capítulo.
+
+**El caso que solo Lean pilla, fabricado a propósito.** Ningún caso real lo
+había dado todavía, así que se siembra en la prueba de la puerta: la obra de
+Sevilla de 1587 con el ejecutor fingido, con Ines de Salcedo nacida en 1551,
+limpia para esquema, nombres, longitud y elementos personalizados, y un
+Contable que en el capítulo 2 emite dos `EventoEstado` del 2 de abril de 1587
+en dos lugares distintos con los mismos presentes. Los otros cuatro no tienen
+con qué verlo, y el Verificador de continuidad juzga la escena antes de que
+esos eventos existan. Lean no demuestra `un_solo_lugar` para ninguno de los
+dos, la versión no se publica y los fallos quedan como críticas de
+`continuidad_de_estado` del capítulo 2. Se reproduce con
+`python -m pytest tests/test_demostrador.py`.
+
+### El flujo, recorrido entero por un comprobador de modelos
+
+Las pruebas del punto de guardado, los reintentos y las versiones recorren los
+caminos que alguien preparó. Lo que no recorren es la combinación: una caída
+después de un rehacer, dos órdenes del editor a la vez, un fallo que no es de
+ninguna tarea. Para eso el flujo está escrito como máquina de estados en TLA+ y
+TLC recorre **todos** los estados alcanzables de un modelo pequeño. Es `prueba`:
+el modelo es el caso preparado y TLC da el resultado, «No error has been
+found» o un contraejemplo con su traza.
+
+| Propiedad | Clase | Qué afirma |
+| --- | --- | --- |
+| `PuertaRespetada` | Seguridad | Ninguna versión está publicada sin haber terminado y pasado la puerta |
+| `AnteriorIntacta` | Seguridad | Lo que ve una versión terminada es lo mismo que veía al terminar |
+| `UnaSolaProduccion` | Seguridad | Toda versión salvo la última está terminada, y trabaja un solo caminante |
+| `NiDuplica`, `NiPierde`, `NoEscribeEnTerminada`, `TypeOK` | Seguridad, auxiliares | Lo vivo de un capítulo es de una sola producción; un capítulo cerrado sigue cerrado salvo relevo; nada nuevo nace en una versión terminada; el intento no pasa del tope |
+| `AcabaTerminadaODetenida` | Vivacidad | Toda versión en producción acaba terminada o la obra detenida con su motivo |
+
+La vivacidad vale bajo hipótesis declaradas en el modelo: el caminante avanza
+cuando puede, el backend caído vuelve a arrancar y las caídas son finitas. El
+editor y la máquina no deben nada.
+
+**Lo que no demuestra.** Que el código implementa el modelo: cada acción nombra
+su función en `backend/formal/tla/mapeo.md` y la correspondencia es por
+revisión. Que las propiedades valgan en un modelo más grande que el de la
+configuración: tres capítulos y dos versiones. El contenido de lo que se
+escribe, el bucle de calidad, las tandas y el índice, que el modelo no
+distingue. Cambiar una función del mapeo obliga a revisar su acción y volver a
+pasar TLC.
+
+**La puerta, sin decir cuál.** El modelo la reduce a «pasa» o «no pasa»,
+fijado cuando la versión termina: así cubre los cuatro validadores de hoy y el
+formal de la historia sin depender de ninguno.
+
+### El juez de la novela, desde fuera
+
+Los validadores de la puerta miran lo que se puede comprobar sin juzgar; el
+Juez de rúbrica, una réplica contra otra. Nadie del censo juzga la novela
+terminada, y no se añade un rol para eso: quien juzga el sistema no puede ser
+parte de él ni leer desde dentro con qué se le juzga.
+
+| Qué | Cómo |
+| --- | --- |
+| Cuándo se lanza | A mano, sobre una versión terminada y sin producción en marcha en la instalación. No desde el guion ni desde la API, y su nota no regenera, no revisa ni bloquea nada |
+| Qué recibe | El encargo sin vetos, los criterios que se puntúan, los hechos `personal` con sus capítulos, todos los `Resumen de capítulo` y capítulos enteros por prioridad mientras quepan en 60 000 tokens, con los que no se leyeron nombrados |
+| Con qué | Un subagente de Claude Code por el ejecutor de siempre, en un directorio vacío, sin herramientas, sin MCP y sin hooks, con Sonnet —otro modelo que el que escribió— y la rúbrica de Langfuse como instrucción de sistema |
+| Cuándo vale lo que dice | Una nota entera de 1 a 5, una justificación y citas literales por cada criterio que se puntúa, ni uno más ni uno menos. Si algo falla, no vale nada del veredicto: se reintenta una vez y, si sigue, no se cuelga ninguna nota |
+| Dónde queda | Un score por criterio en la traza de esa versión en Langfuse, con la versión de la rúbrica y los capítulos leídos en el comentario. En SQLite, nada |
+| Lo que no ve | Los capítulos que no le cupieron, de los que solo lee el resumen; y cualquier cosa que su rúbrica no le pida mirar |
+
+**Los briefs de prueba** son la entrada fija de la evaluación del sistema
+entero. Viven en `backend/briefs-de-prueba/`, uno por fichero, cada uno con su
+propósito —`normal`, `mucha_personalizacion`, `sin_destinatario`, `inyeccion`,
+`incoherencia_temporal`—, para qué está y qué se espera de cada validador de la
+puerta, de cada hook y de cada criterio del juez. Esa es la columna «esperado»
+de la tabla de qué pasó en cada brief; la columna «observado» sale de correrlos,
+que gasta y no es de la batería. El de incoherencia temporal pone a dos
+personajes el mismo día exacto en dos ciudades: es la versión de verdad del
+caso sembrado que solo Lean ve.
 
 ### Medir a los verificadores
 
@@ -302,7 +449,7 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 | Que las críticas son utilizables | `analisis` | Proporción descartada por falta de `evidencia` | Agentes que opinan en vez de comprobar |
 | Que los artefactos están bien formados | `analisis` | Recuento de rechazos por campo ausente, por capítulo | Un rol con demasiado alcance o con pocos ejemplos |
 | Que lo recuperado sirve | `analisis` | Proporción de fragmentos devueltos que el agente acaba usando | Consultas que llenan la ventana sin aportar nada |
-| Que el sistema aguanta lo difícil | `prueba` | Briefs adversarios: época mal documentada, personajes homónimos, saltos temporales largos | Dimensiones que solo fallan bajo presión |
+| Que el sistema aguanta lo difícil | `prueba` | Los briefs de prueba de `backend/briefs-de-prueba/` —época mal documentada, mucha personalización, inyección, incoherencia temporal—, cada uno con lo que se espera de cada comprobación | Dimensiones que solo fallan bajo presión |
 | Que el Entrevistador detecta las contradicciones | `prueba` | Casos sembrados, uno por tipo de `tipo_de_contradiccion`, y los mismos casos sin contradicción. La detección en sí es `inspeccion`: el agente lee el brief y los textos y cita la evidencia. Los casos están por escribir y, hasta que existan, la detección no está medida | Una entrevista que lanza obras con un tono que no corresponde a la edad, o que bloquea las que están bien |
 | Que cabe en el presupuesto | `analisis` | Pico de contexto de entrada concurrente frente al techo de 100 000 | Verificación que se come la generación |
 
@@ -341,7 +488,9 @@ la comprobación que la vigila.
 | Deriva de objetivo | Tras varias vueltas, el texto se optimiza para pasar la criba en vez de para contar la escena | Reincidencia por dimensión y la auditoría del Arquitecto de arcos, que mira la obra y no el borrador |
 | Contaminación del mundo | Un dato falso entra en el canon y envenena el contexto de todos los capítulos siguientes | El mundo solo cambia por `EventoEstado` del Contable y solo al cerrar capítulo. Se comprueba intentando escribir el mundo desde cualquier otro rol |
 | Fuga de material | Un rol manda fuera lo que el sistema tiene dentro | Ningún rol salvo el Documentalista tiene herramienta con la que salir |
-| Lo vetado se cuela en la prosa | El Redactor, el Revisor o el Editor de estilo escriben una palabra o un tema que el comprador vetó en el brief | El hook `policy` no deja terminar al subagente y, si insiste, el intento falla y la obra se detiene. Se comprueba con un Redactor fingido que insiste y con un sondeo real. **Lo que no ve:** la comparación es literal, así que una mayúscula, un acento, un plural o el mismo tema dicho con otras palabras pasan |
+| Lo vetado se cuela en la prosa | El Redactor, el Revisor o el Editor de estilo escriben un insulto de la lista global, o una palabra o un tema que el comprador vetó en el brief, también con otra mayúscula, sin acento o en plural | El hook `policy` compara normalizado y por palabras enteras, no deja terminar al subagente y, si insiste, el intento falla y la obra se detiene; cada coincidencia queda en el registro. Se comprueba con las variantes sembradas y con un Redactor fingido que insiste. **Lo que no ve:** el mismo tema dicho con otras palabras, y lo escrito con separadores, cifras o símbolos por medio —«m i e r d a», «m1erda»— |
+| El sistema aprende la vara con que se le mide | La rúbrica del juez de la novela queda al alcance de algo que el sistema lee —el repositorio, una ventana, un prompt de `tareas/`— y la producción empieza a escribir para complacer al juez | La rúbrica vive solo en Langfuse y llega al juez por parámetro; el módulo del juez no puede importar `tareas/` ni la API, y sin rúbrica no se juzga. Se comprueba con el contrato de importación y buscando el texto de la rúbrica en el historial del repositorio |
+| Un nombre de la biblia mal escrito | Quien escribe pone «Inés» donde la biblia dice «Ines», o cambia una letra de un apellido | El hook de forma no le deja terminar y la puerta no publica la versión. **Lo que no ve:** las variantes que las reglas dejan pasar a propósito para no detener la obra por una palabra corriente |
 
 Lo que se encuentra en una de estas comprobaciones se queda como caso sembrado
 para siempre: un ataque descubierto y no reincorporado al conjunto de casos es
@@ -405,7 +554,7 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | La política de cada paso es la que fija la spec | Lectura de `guion.toml` contra la tabla de SPEC1 RF-97, además enumerada en una prueba | `inspeccion` |
 | Cada política de agotamiento hace lo que declara | Avería sembrada en una tarea de cada política | `prueba` |
 | Lo que falta en el brief lo dice el borde, con su ruta completa | Pasada con un borrador al que le faltan campos | `prueba` |
-| La tesis, el elenco y los arcos son opcionales: sin ellos la obra se da de alta y la entrevista no los pide (SPEC1 D-50) | Alta y pasada con un brief sin los tres, y el cuerpo de la obra que queda | `prueba` |
+| La tesis, el elenco y los arcos son opcionales: sin ellos la obra se da de alta y la entrevista no los pide (SPEC1 D-60) | Alta y pasada con un brief sin los tres, y el cuerpo de la obra que queda | `prueba` |
 | Ninguna pasada de entrevista cambia lo que la persona escribió | Pasada con los campos escritos y un texto que dice otra cosa | `prueba` |
 | De un texto pegado solo entra lo que trae cita literal, y un recuerdo es su cita | Hechos con cita inventada, y el `Recuerdo` de la obra lanzada cotejado con el texto pegado | `prueba` |
 | Una contradicción sin evidencia citable no bloquea el alta, y una asumida tampoco | Contradicciones rotas a propósito, y la misma asumida en la pasada siguiente | `prueba` |
@@ -424,6 +573,33 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Terminar no publica, y solo se publica o se rehace una versión terminada | Lectura del manuscrito sin publicar, y publicar y rehacer una obra detenida sin terminar | `prueba` |
 | Sin pedir versión se lee la publicada, o la última si no hay ninguna | Publicar la 1, rehacer, publicar la 2 y volver a publicar la 1, leyendo el manuscrito tras cada paso | `prueba` |
 | Publicar pasa por un solo sitio del código | Búsqueda de quién llama a la escritura de publicaciones del almacén: solo `nucleo/versiones.py` | `inspeccion` |
+| Una versión que no pasa la puerta no se publica, y la respuesta dice qué validador falló y en qué capítulo (SPEC1 RF-146, RI-18) | Obra fingida con un defecto sembrado por validador, y la misma sin defecto | `prueba` |
+| Cada validador de la puerta acierta en su caso bueno y en su caso malo (SPEC1 RF-140 a RF-144) | Un caso que pasa y otro que falla por validador; el rango roto del guion no carga | `prueba` |
+| La puerta se puede consultar sin publicar y no guarda nada (SPEC1 RF-147, RD-30) | La puerta servida aparte da lo mismo que el rechazo, y el registro de publicaciones sigue vacío; ninguna migración nueva | `prueba` |
+| El hook de forma para un nombre de la biblia mal escrito, con los nombres llegados por el entorno (SPEC1 RF-145) | El programa del hook con la entrada de Claude Code, el veredicto del ejecutor y la orden interceptada | `prueba` |
+| La cronología se vuelca a Lean copiando lo escrito, con un teorema por invariante y suceso (SPEC1 RF-150) | Intervalos de las fechas ISO parciales y cada teorema anotado en su línea del módulo | `prueba` |
+| Lean demuestra los cuatro invariantes de una cronología coherente y no demuestra el roto de una rota (SPEC1 RF-151) | `lake build` sobre una cronología coherente y sobre una rota por cada invariante, leyendo su salida | `prueba` |
+| La puerta pasa la cronología por Lean y dice cómo quedó (SPEC1 RF-152) | Fallos `cronologia` con su capítulo, `comprobacion_formal` en la respuesta, y un error sin teorema que no se pierde | `prueba` |
+| El módulo generado no queda en disco (SPEC1 RF-153) | El directorio temporal vacío tras la comprobación y nada nuevo en el proyecto de Lean | `prueba` |
+| El fallo de la cronología vuelve como crítica de su capítulo, una vez (SPEC1 RF-154) | Críticas de la obra tras publicar rechazada, y las mismas tras pedirlo otra vez | `prueba` |
+| Sin Lean, se publica y se dice (SPEC1 RF-155) | La misma obra incoherente con Lean ausente: la puerta pasa y la publicación dice `sin_comprobacion` | `prueba` |
+| Hay un caso que solo Lean ve (SPEC1 RF-156) | La obra limpia para los cuatro programáticos con un personaje en dos lugares el mismo día | `prueba` |
+| Una fecha que no es ISO parcial es un fallo de la cronología (SPEC1 RF-157) | Volcado de un momento y un nacimiento escritos en prosa | `prueba` |
+| Todo capítulo cerrado tiene su `Capitulo`, lo escriba o no el Planificador (SPEC1 RF-180) | Planificador fingido que no lo devuelve y otro que sí: un solo `Capitulo` vivo por capítulo, y cerrado | `prueba` |
+| El capítulo y el estado de proceso de lo que devuelve un rol los pone el backend, y en `auditar` se respeta el capítulo de cada crítica (SPEC1 RF-181) | Escenas con estado fuera de vocabulario y el número de otro capítulo; una crítica global que apunta a un capítulo anterior | `prueba` |
+| Planificar sin escenas, o con un plan rechazado, es un intento fallido que acaba deteniendo la obra y no deja crítica (SPEC1 RF-182) | Plan vacío una vez, plan vacío siempre y plan con un artefacto malformado: trazas de cada intento, motivo de la detención y ninguna crítica de malformado | `prueba` |
+| Langfuse se enciende solo con las dos claves, del entorno o del `.env` de la raíz, sin exportarlas (SPEC1 RF-183) | Claves de entorno, de fichero y mezcladas; sin la secreta no hay cliente; el entorno del proceso no gana ninguna variable | `prueba` |
+| Una novela es una sesión, con una traza por la entrevista y otra por versión, y la misma traza tras una caída (SPEC1 RF-184, D-78) | Obra lanzada desde una entrevista y rehecha desde el 2, con un Langfuse fingido: tres trazas, una sesión, y la traza derivada de obra y versión | `prueba` |
+| Un span por capítulo, una generación `<rol> · <tarea>` por intento y una observación por llamada a herramienta (SPEC1 RF-185) | La misma obra: cada `Traza` tiene su generación, colgada de su capítulo, y cada `documentar` su herramienta; el flujo del CLI se lee con `tool_use` y `tool_result` | `prueba` |
+| Tokens, coste y latencia por llamada, por capítulo y por novela (SPEC1 RF-186) | Uso, coste y latencia en cada generación; la suma de las `Traza` del capítulo en su span; los totales de la versión y de la novela, entrevista incluida, en el evento de versión terminada | `prueba` |
+| Todos los validadores llegan como scores (SPEC1 RF-187) | Un score por validador de la puerta —sin el de la cronología si no hubo comprobación formal—, con `id` estable al repetirla; un score por hook en su generación | `prueba` |
+| Los prompts de las tareas se versionan solos y cada generación va enlazada (SPEC1 RF-188, D-81) | Todas las carpetas de `tareas/` suben su `prompt.md`; sin cambio no hay versión nueva; con cambio, sí; una consulta por prompt y proceso | `prueba` |
+| `obtener_prompt` y `enviar_score` hacen lo que dicen, y apagados no hacen nada (SPEC1 RF-189) | Con un Langfuse fingido instalado y sin él | `prueba` |
+| La observación nunca para la novela (SPEC1 RF-190, RNF-10) | Una obra con un Langfuse que revienta en cada llamada deja las mismas trazas, el mismo manuscrito y la misma respuesta de publicar que sin Langfuse | `prueba` |
+| Ningún subagente hereda una variable `LANGFUSE_` (SPEC1 RF-191, RNF-11) | La orden interceptada, con hooks y sin ellos, con las variables puestas en el entorno del backend | `prueba` |
+| Los evaluadores no están en el repositorio (SPEC1 RNF-11, D-82) | Revisión del árbol: ningún evaluador, rúbrica de juez ni prompt de juez fuera de lo que ya declaran las tareas | `inspeccion` |
+| La batería no manda nada a Langfuse (SPEC1 RF-192) | La observación se apaga para cada prueba en `tests/conftest.py`; la del SDK de verdad exporta a memoria | `prueba` |
+| Nada de Langfuse se guarda (SPEC1 RD-31) | Ninguna migración ni columna nueva; los identificadores se derivan | `inspeccion` |
 | Descartar un capítulo a medias se lleva también lo que escribió sin capítulo | `Evento` escrito por una tarea del capítulo descartado | `prueba` |
 | Los pasos que escriben prosa llevan sus dos hooks y ningún otro paso los lleva | Lectura del guion y de la orden del ejecutor paso a paso; un hook fuera de vocabulario o sin reserva no carga | `prueba` |
 | Los hooks viajan en la orden sin romper el aislamiento ni escribir en disco | Orden interceptada y el hook lanzado como proceso sobre un directorio que sigue vacío | `prueba` |
@@ -431,8 +607,13 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Una vuelta de corrección por intento, y solo si cabe en su reserva | El hook con `stop_hook_active` y con una respuesta que no cabe | `prueba` |
 | Lo que no pasa al final es un intento fallido, y su veredicto queda en la `Traza` y se sirve con ella | Redactor fingido que insiste en lo vetado hasta agotar los intentos | `prueba` |
 | La tanda de un paso con hooks cuenta su vuelta de corrección | Anchura calculada con y sin la reserva, y entrada medida de la última llamada | `prueba` |
-| Las tareas de una tanda corren a la vez sin pasar de su anchura, con el mismo recorrido que en serie; dos obras se turnan las tandas; la primera que detiene la obra es la única que la detiene; los hilos no dejan lectores abiertos, y el capítulo entero se lee en el orden de sus escenas (SPEC1 RF-13, D-51) | Ejecutor fingido que declara `simultaneo` y cuenta las tareas abiertas por paso y en total; el mismo capítulo en serie y en paralelo; dos obras caminando a la vez; un paso de `detener_obra` que falla en todas sus escenas, con un `reanudar` dado mientras la tanda cierra; escenas que terminan al revés de su orden | `prueba` |
+| Las tareas de una tanda corren a la vez sin pasar de su anchura, con el mismo recorrido que en serie; dos obras se turnan las tandas; la primera que detiene la obra es la única que la detiene; los hilos no dejan lectores abiertos, y el capítulo entero se lee en el orden de sus escenas (SPEC1 RF-13, D-88) | Ejecutor fingido que declara `simultaneo` y cuenta las tareas abiertas por paso y en total; el mismo capítulo en serie y en paralelo; dos obras caminando a la vez; un paso de `detener_obra` que falla en todas sus escenas, con un `reanudar` dado mientras la tanda cierra; escenas que terminan al revés de su orden | `prueba` |
 | El agente con hooks sabe que el motivo es del sistema | Lectura de la instrucción de sistema de un encargo con hooks, y sondeo real en el que corrige | `inspeccion` |
+| `policy` mira tres listas, y la global también sin destinatario (SPEC1 RF-130, RF-131) | Un caso por nivel sobre la ventana ensamblada; la lista global leída del almacén, sin borrado ni cambio posible y sin ruta en la API | `prueba` |
+| La comparación normaliza y va por palabras enteras, y el tema se busca como frase (RF-132, RF-133) | Variantes que casan y variantes que no, sembradas una a una | `prueba` |
+| Al agente le llega lo que escribió, no la lista (RF-134) | Motivo del hook con un veto de otra forma que la escrita | `prueba` |
+| Cada coincidencia queda en el registro, en la sesión y en el veredicto final, escrito al cerrar la `Traza` y de solo añadir (RF-135, RF-136) | Redactor fingido que insiste y otro que corrige a tiempo, con el CLI interceptado; borrados y cambios sembrados | `prueba` |
+| La obra detenida por lo vetado lo dice, y el registro se sirve por la API (RF-137, RF-138) | La ficha y `GET /obras/{id}/policy` tras el Redactor que insiste, con sus filtros | `prueba` |
 | La interfaz no calcula dominio: pinta lo que falta, lo que choca y el avance tal como llegan (SPEC2 RF-03, RF-25) | Lectura de las pantallas: ningún `if` decide qué falta o qué choca, y las cifras del avance salen de la respuesta sin operar salvo el cociente de la barra | `inspeccion` |
 | Cada pasada de entrevista manda todo lo acumulado, y la primera abre la entrevista (SPEC2 RF-01, RF-02, RF-04) | Servidor simulado que registra el cuerpo y la ruta de cada pasada | `prueba` |
 | La pasada que lanza salta sola al avance y borra el borrador (SPEC2 RF-05) | Respuesta `lanzada` simulada | `prueba` |
@@ -450,6 +631,37 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | La ficha marca lo opcional y lo que no se toca no se manda (SPEC2 RF-09) | Encargo simulado con solo lo obligatorio: las etiquetas y el cuerpo de la pasada | `prueba` |
 | Las tareas hechas salen agrupadas por capítulo con lo esencial, y «pasó los hooks» sale del veredicto final de la `Traza` (SPEC2 RF-26, RF-27, RI-08) | Trazas simuladas con hooks que pasan, que no pasan, sin hooks y una en curso | `prueba` |
 | Las pantallas de una obra se alcanzan unas desde otras con un clic (SPEC2 RF-30) | Recorrido simulado por el menú desde el avance | `prueba` |
+| El cambio del lector reescribe solo los capítulos que mencionan el hecho, y la versión anterior se conserva entera (SPEC1 RF-170 a RF-172, RF-175, RF-179) | Obra fingida con menciones en el 1 y el 3: capítulos cambiados, capítulos planificados, filas compartidas del 2 y todo lo servido de la 1 antes y después | `prueba` |
+| El hecho cambiado se versiona: ficha nueva sin rol en la versión nueva, la vieja relevada, y un registro de solo añadir (SPEC1 RF-173) | Filas de las dos fichas y disparadores del registro contra borrado y cambio | `prueba` |
+| Los que reescriben reciben el nombre nuevo por sus materiales de siempre (SPEC1 RF-174) | El canon de las ventanas del Planificador en la versión nueva, y lectura de las proyecciones: ningún material nuevo | `prueba` |
+| Un cambio que no cabe no crea nada (SPEC1 RF-170, RF-171, D-73) | Hecho inexistente, nombre igual o vacío, hecho sin menciones y versión sin terminar | `prueba` |
+| Volver al punto de guardado descarta lo de todo capítulo sin cerrar y no toca los cerrados de detrás (SPEC1 RF-176) | Caída sembrada en el capítulo 3 de una versión que reescribe el 1 y el 3, y la batería de caídas de siempre | `prueba` |
+| Las versiones dicen de qué cambio nacen, la cronología sigue a la ficha sustituta y la ficha trae la portada (SPEC1 RF-177) | Lista de versiones, cronología de las dos versiones y ficha de una obra con destinatario | `prueba` |
+| El PDF sale al vuelo, con acentos, y no toca el disco (SPEC1 RF-178) | Descarga de una obra fingida, flujos del PDF descomprimidos y la carpeta de trabajo antes y después | `prueba` |
+| La lectura abre con la portada, marca lo que cambió y la ficha enlaza cada hecho con sus capítulos (SPEC2 RF-70, RF-71) | Servidor simulado con y sin destinatario, y una versión con base | `prueba` |
+| Se lee la versión que se elige, y el PDF es el de esa versión (SPEC2 RF-72, RF-77) | Selector de versión, dirección y enlace de descarga contra el servidor simulado | `prueba` |
+| Las versiones se ven con su origen, y la puerta se pinta sin enumerar validadores (SPEC2 RF-73, RF-74) | Tres versiones simuladas, puerta con un validador desconocido y 409 al publicar | `prueba` |
+| Las críticas de un capítulo se piden al pulsar y salen tal como vienen (SPEC2 RF-75) | Petición registrada en el servidor simulado | `prueba` |
+| El cambio de nombre lo decide el servidor, y su respuesta o su rechazo se leen tal cual (SPEC2 RF-76) | Cuerpo enviado, versión devuelta y un 409 simulados | `prueba` |
+| La portada, el índice y la ficha se ven bien en un navegador de verdad (SPEC2 RF-78) | `npm run validar-visual` contra el backend sembrado, a dos anchos | `demostracion` |
+| Lo que el validador visual no ve sale como fallo registrable que dice a quién vuelve (SPEC2 RF-79) | La misma orden con la portada escondida a propósito: código 1 y una línea JSON por fallo con `vuelve_a` | `prueba` |
+| El flujo de producción no publica sin puerta, conserva la versión anterior y no produce dos cosas a la vez (SPEC1 RF-160, RF-161) | TLC recorre entero el modelo de `backend/formal/tla/` y no encuentra error | `prueba` |
+| Toda versión en producción acaba terminada o la obra detenida con su motivo (SPEC1 RF-162, RF-167) | La propiedad de vivacidad del modelo, con su equidad declarada, más una prueba con un fallo no previsto sembrado en el caminante | `prueba` |
+| Cada acción del modelo corresponde a una función del código (SPEC1 RF-163) | Lectura de `mapeo.md` contra el código | `inspeccion` |
+| La regeneración por cambio del lector está especificada y su reanudación descarta todo capítulo no cerrado (SPEC1 RF-164, RF-165) | El modelo la incluye y TLC la recorre; el código es de §4.18, que la implementa | `prueba` |
+| Dos órdenes que arrancan a la vez no dejan dos caminantes (SPEC1 RF-166) | Dos arranques simultáneos con la ventana entre leer y registrar ensanchada | `prueba` |
+| TLC corre desde la batería sin gastar y se salta limpio sin Java (SPEC1 RF-168) | La propia prueba, con y sin `NOVELA_TLA2TOOLS` | `prueba` |
+| El juez de la novela es externo: no escribe nada, no está en el guion ni en la API y solo juzga una versión terminada (SPEC1 RF-193, RD-34) | Obra fingida terminada: trazas del almacén antes y después; versión sin terminar e inexistente | `prueba` |
+| Sin rúbrica de Langfuse no se juzga, y no hay rúbrica por defecto (SPEC1 RF-194) | Observabilidad fingida sin prompt y con prompt vacío: ningún subagente abierto | `prueba` |
+| Sin destinatario la personalización no se puntúa (SPEC1 RF-195) | Ventana y criterios de una obra con y sin destinatario | `prueba` |
+| El juez recibe capítulos enteros por prioridad, dice cuáles no leyó y no se lanza si no cabe (SPEC1 RF-196) | Cinco capítulos con sitio para tres, y unos resúmenes que no caben | `prueba` |
+| El juez va por el ejecutor aislado, con Sonnet, sin herramientas y solo sin producción en marcha (SPEC1 RF-197, RNF-12) | Orden interceptada del ejecutor real, y una traza abierta en otra obra | `prueba` |
+| Solo un veredicto entero y con citas literales cuelga notas, una por criterio y con la versión de la rúbrica (SPEC1 RF-198, RF-199) | Juez fingido con veredicto bueno, con citas inventadas, con notas fuera de rango y con criterios de menos o de más | `prueba` |
+| El juez recibe la observabilidad por parámetro y no lee `tareas/` ni la API (SPEC1 RF-200) | Contrato de importación | `analisis` |
+| Los briefs de prueba los aceptaría `POST /obras` y lo que esperan nombra comprobaciones que existen (SPEC1 RF-201) | Carga de cada fichero contra el modelo del brief y los vocabularios | `prueba` |
+| Los briefs de prueba son entrada del desarrollador: nada del sistema los lee sin que alguien los lance, ni los escribe (SPEC1 RD-35) | Búsqueda en `backend/src/` de quién nombra `briefs-de-prueba`: solo el lanzador de RF-203, que los lee cuando alguien lo ejecuta a mano y nunca los escribe | `inspeccion` |
+| El texto de la rúbrica no está en el repositorio (SPEC1 RF-202, RNF-13) | Búsqueda de frases de la rúbrica en el árbol y en `git log -p` | `inspeccion` |
+| El lanzador corre los briefs de uno en uno, no arranca nada sin `--si-gasto` y traduce a la misma clave lo que dicen la puerta, los ganchos y el juez (SPEC1 RF-203) | Almacén y veredictos fingidos, más el cotejo de que toda comprobación que un brief declara la sabe observar el lanzador | `prueba` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha, el lugar y los presentes que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |
@@ -475,6 +687,7 @@ es un defecto del documento.
 | --- | --- | --- |
 | Calidad literaria | No hay predicado posible, y el gusto del editor es el suelo, no un método | Rúbrica ruidosa marcada aparte; el editor lee el resultado |
 | Fiabilidad del Juez de rúbrica | El juez es él mismo un modelo estocástico | Su salida no dispara regeneración; lo que vale es la reincidencia, no la nota suelta |
+| Fiabilidad del juez de la novela | Es un modelo estocástico que, en una novela larga, lee solo una parte | Su nota no dispara nada; juzga otro modelo que el que escribe, cada cita tiene que ser literal, la ventana dice qué no leyó y su ruido se mide repitiendo el juicio sobre la misma versión (SPEC1 OBJ-11). La lectura humana de una novela con la misma rúbrica es el contraste |
 | Que el dato calculado sea falso | Coherencia temporal, fatiga léxica y léxico vetado se comprueban contra un dato que escribió el propio sistema, y nadie lo recalcula porque no se usan herramientas externas de cálculo | Reincidencia por dimensión. Las tres cambiarían de método si se cierra a favor la decisión abierta de `architecture.md` §8 |
 | Forma interna del artefacto | No se tipa por decisión de diseño | El rechazo del agente siguiente, contado por capítulo |
 | Reproducibilidad de la recuperación por parecido | Dos consultas pueden ordenar distinto entre versiones del modelo de huellas | Queda en la `Traza` qué se recuperó y qué se usó; el modelo de huellas se fija |
@@ -568,12 +781,12 @@ simbólica. La razón es la misma para las tres: una novela no tiene
 especificación formal contra la que probarse y su espacio de estados no es
 enumerable.
 
-**Sobre el código:** la comprobación de modelos sí tendría sentido sobre el
-guion del capítulo y la tabla de gobierno, que son pequeños y son justamente
-donde viven los invariantes. No se adopta porque el guion ya es un artefacto
-declarativo de diez pasos y la tabla es finita: recorrerlos enteros en una
-prueba da lo mismo por mucho menos. Si el guion dejara de ser enumerable, la
-decisión se reabre.
+**Sobre el código:** la comprobación de modelos se adopta sobre el flujo de
+producción (§7), que no es enumerable en una prueba porque sus caminos se
+cruzan con caídas y órdenes del editor. No se adopta sobre el guion del
+capítulo ni sobre la tabla de gobierno: el guion es un artefacto declarativo de
+diez pasos y la tabla es finita, y recorrerlos enteros en una prueba da lo
+mismo por mucho menos.
 
 **Revisión humana dentro del ciclo:** no hay. El editor lee el resultado; no
 ejecuta pasos intermedios ni aprueba nada por el camino. Un paso manual

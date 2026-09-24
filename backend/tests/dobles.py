@@ -38,6 +38,9 @@ class EjecutorFingido:
 
     sembrados: list[CasoSembrado] = field(default_factory=list)
     sin_evidencia: bool = False
+    # Lo que escribe la costura por escena, que es lo que acaba aceptado. Una
+    # prueba lo cambia para dar al capitulo la longitud que quiera (RF-143).
+    texto_cosido: str = "Version cosida de la escena."
     # Lo que contesta el Entrevistador fingido: sus hechos y contradicciones, y
     # los artefactos que no deberia devolver y el backend no debe guardar.
     entrevista: dict[str, Any] = field(default_factory=dict)
@@ -68,8 +71,17 @@ class EjecutorFingido:
                 "Personaje",
                 {
                     "nombre": "Ines de Salcedo",
+                    "tratamientos": ["la impresora"],
+                    "estatus_ontologico": "ficticio",
                     "licencia": "plausible",
                     "fechas": {"nacimiento": "1551"},
+                    "extraccion_social": "menestral acomodada",
+                    "oficio": "impresora",
+                    "rasgos_fisicos": ["manos manchadas de tinta"],
+                    "voz": {"lexico": ["pliego"], "muletillas": [], "temas": ["el oficio"]},
+                    "motivacion_dominante": "conservar el taller",
+                    "herida": "no pudo despedirse de su padre",
+                    "arco_declarado": "del miedo al desafio",
                 },
             ),
             Artefacto("Lugar", {"nombre": "Sevilla", "licencia": "canon"}),
@@ -91,12 +103,16 @@ class EjecutorFingido:
                     "Escena",
                     {
                         "pov": "per_0001",
+                        "focalizacion": "tercera_limitada",
                         "elenco_presente": [],
                         "marco": {"lugar": "lug_0001", "instante": f"1587-04-0{orden}"},
                         "objetivo": "imprimir el pliego",
                         "obstaculo": "el alguacil ronda la calle",
                         "cambio_de_valor": {"entra": "confiada", "sale": "acorralada"},
+                        "informacion_revelada": {},
                         "funcion_estructural": "escalada",
+                        "compromisos_abiertos": [],
+                        "compromisos_pagados": [],
                     },
                     capitulo=encargo.capitulo,
                     orden=orden,
@@ -114,7 +130,17 @@ class EjecutorFingido:
             artefactos=[
                 Artefacto(
                     "Fuente",
-                    {"cita": "Ordenanzas de la imprenta, 1558", "tipo": "primaria"},
+                    {
+                        "cita": "Ordenanzas de la imprenta, 1558",
+                        "tipo": "primaria",
+                        "tipo_de_fuente": "primaria",
+                        "fiabilidad": "alta",
+                        "que_afirma": "Prohibe imprimir sin licencia",
+                        "texto_integro": "Ordenanzas de la imprenta, 1558",
+                        "procedencia": "archivo de pruebas",
+                        "recogida_en": "2026-09-24",
+                        "ambito": "Castilla",
+                    },
                     capitulo=encargo.capitulo,
                 )
             ],
@@ -127,7 +153,11 @@ class EjecutorFingido:
             artefactos=[
                 Artefacto(
                     "Borrador",
-                    {"texto": f"Version {vez} de la escena."},
+                    {
+                        "texto": f"Version {vez} de la escena.",
+                        "unidad": encargo.escena,
+                        "cumple": ["objetivo", "obstaculo", "cambio_de_valor"],
+                    },
                     capitulo=encargo.capitulo,
                     escena=encargo.escena,
                     estado="redactado",
@@ -152,7 +182,7 @@ class EjecutorFingido:
             artefactos=[
                 Artefacto(
                     "Borrador",
-                    {"texto": "Version cosida de la escena."},
+                    {"texto": self.texto_cosido, "unidad": escena, "capa": "superficie"},
                     capitulo=encargo.capitulo,
                     escena=escena,
                     estado="redactado",
@@ -167,7 +197,12 @@ class EjecutorFingido:
             artefactos=[
                 Artefacto(
                     "Revision",
-                    {"atendidas": 1, "rechazadas": 0},
+                    {
+                        "unidad": encargo.escena,
+                        "atendidas": 1,
+                        "rechazadas": 0,
+                        "diferencia": "reescrita la escena",
+                    },
                     capitulo=encargo.capitulo,
                     escena=encargo.escena,
                 ),
@@ -201,6 +236,9 @@ class EjecutorFingido:
                     {
                         "tipo_de_evento": "viaja_a",
                         "sujeto": "per_0001",
+                        "objeto": f"lug_000{encargo.capitulo}",
+                        "capitulo": encargo.capitulo,
+                        "evidencia": "«salio antes del alba»",
                         "fecha_resultante": f"1587-04-0{encargo.capitulo}",
                         "lugar_resultante": f"lug_000{encargo.capitulo}",
                         "presentes": self._personajes_del_indice(),
@@ -232,14 +270,26 @@ class EjecutorFingido:
         if self._ventana is not None:
             indice = self._ventana.materiales.get("indice_de_la_biblia") or []
         menciones = [
-            Artefacto("Mencion", {"hecho": fila["id"]}, capitulo=encargo.capitulo)
+            Artefacto(
+                "Mencion",
+                {"hecho": fila["id"], "capitulo": encargo.capitulo},
+                capitulo=encargo.capitulo,
+            )
             for fila in indice
         ]
         return Resultado(
             artefactos=[
                 Artefacto(
                     "ResumenCapitulo",
-                    {"que_paso": "Imprimieron el pliego", "que_quedo": "el alguacil sospecha"},
+                    {
+                        "capitulo": encargo.capitulo,
+                        "que_paso": "Imprimieron el pliego",
+                        "que_cambio": "el taller queda senalado",
+                        "que_quedo": "el alguacil sospecha",
+                        "que_quedo_pendiente": ["quien avisa al alguacil"],
+                        "compromisos_pagados": [],
+                        "compromisos_abiertos": [],
+                    },
                     capitulo=encargo.capitulo,
                 ),
                 *menciones,
@@ -269,8 +319,16 @@ class EjecutorFingido:
                                 "Critica",
                                 {
                                     "objeto": encargo.escena,
+                                    "dimension": caso.dimension,
+                                    "severidad": caso.severidad,
                                     "evidencia": self._evidencia(),
                                     "accion_sugerida": "narrar solo lo accesible al foco",
+                                    "detectada_por": {
+                                        "rol": encargo.rol,
+                                        "contrato": caso.dimension,
+                                    },
+                                    "ruidosa": False,
+                                    "nota": 3,
                                 },
                                 capitulo=encargo.capitulo,
                                 escena=encargo.escena,

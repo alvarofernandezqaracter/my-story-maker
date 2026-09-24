@@ -1,6 +1,6 @@
 [project]
 name = "novela"
-version = "0.6.0"
+version = "0.11.0"
 description = "Generador de novelas historicas por agentes: del brief del editor al manuscrito verificado"
 requires-python = ">=3.13"
 dependencies = [
@@ -9,6 +9,11 @@ dependencies = [
     "pydantic>=2.9",
     "sqlite-vec>=0.1.6",
     "fastembed>=0.4",
+    # El PDF del manuscrito, fabricado en memoria (SPEC1 RF-178, D-75).
+    "fpdf2>=2.8",
+    # La observacion en Langfuse, si hay claves (SPEC1 4.20). SDK v4, que manda
+    # por OpenTelemetry en segundo plano; la mayor, fijada.
+    "langfuse>=4,<5",
 ]
 
 [project.optional-dependencies]

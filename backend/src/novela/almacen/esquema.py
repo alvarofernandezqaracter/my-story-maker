@@ -21,10 +21,12 @@ from dataclasses import dataclass
 
 from novela.vocabularios import (
     CICLO_DE_VIDA_DEL_CAPITULO,
+    DECISION_DE_POLICY,
     DIMENSIONES,
     ESTADO_DE_COMPROMISO,
     ESTADO_DE_PRODUCCION,
     MEMORIA,
+    NIVEL_DE_VETO,
     ROLES,
     SEVERIDAD,
     TIPOS_DE_LA_CAPA_MUNDO,
@@ -657,6 +659,110 @@ def sentencias_de_las_versiones() -> list[str]:
     return sentencias
 
 
+# --- Lo vetado: la lista global y el registro de policy (SPEC1 4.14) -------
+#
+# Ninguna de las dos es un artefacto: no las escribe ningun rol. La lista global
+# es de la instalacion y no cuelga de ninguna obra (RD-26); el registro es la
+# constancia de lo que hizo `policy` y, como la `Traza`, no se caduca ni se
+# releva (RD-27). Ninguna de las dos se borra ni se modifica.
+
+# La lista de serie (RF-131, D-51). Corta a proposito: fuera quedan palabras con
+# un sentido historico o inocente que la normalizacion confundiria. Ampliarla es
+# anadir una migracion, no reescribir esta.
+TERMINOS_VETADOS_DE_SERIE: tuple[str, ...] = (
+    "cabrón",
+    "cojones",
+    "coño",
+    "estúpido",
+    "follar",
+    "gilipollas",
+    "hijo de puta",
+    "hijoputa",
+    "imbécil",
+    "joder",
+    "malparido",
+    "marica",
+    "maricón",
+    "mierda",
+    "puta",
+    "subnormal",
+    "sudaca",
+)
+
+
+def _literal(texto: str) -> str:
+    return "'" + texto.replace("'", "''") + "'"
+
+
+def sentencias_de_lo_vetado() -> list[str]:
+    """La migracion 8: la lista global sembrada y el registro de policy."""
+    return [
+        """CREATE TABLE termino_vetado_global (
+  termino TEXT NOT NULL PRIMARY KEY,
+  incorporado_en TEXT NOT NULL
+) STRICT""",
+        "CREATE TRIGGER termino_vetado_global_no_se_borra BEFORE DELETE "
+        f"ON termino_vetado_global BEGIN {_NO_SE_BORRA}; END",
+        "CREATE TRIGGER termino_vetado_global_es_inmutable BEFORE UPDATE "
+        "ON termino_vetado_global "
+        "BEGIN SELECT RAISE(ABORT, 'la lista global es inmutable: se amplia con otra "
+        "migracion'); END",
+        *(
+            "INSERT INTO termino_vetado_global (termino, incorporado_en) "
+            f"VALUES ({_literal(termino)}, strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))"
+            for termino in TERMINOS_VETADOS_DE_SERIE
+        ),
+        f"""CREATE TABLE decision_de_policy (
+  id INTEGER PRIMARY KEY,
+  id_obra TEXT NOT NULL REFERENCES artefacto_obra(id),
+  id_traza TEXT NOT NULL REFERENCES artefacto_traza(id),
+  decision TEXT NOT NULL {_check('decision', DECISION_DE_POLICY, obligatoria=True)},
+  nivel TEXT NOT NULL {_check('nivel', NIVEL_DE_VETO, obligatoria=True)},
+  termino TEXT NOT NULL,
+  encontrado TEXT NOT NULL,
+  registrada_en TEXT NOT NULL
+) STRICT""",
+        "CREATE INDEX indice_decision_de_policy ON decision_de_policy (id_obra, id)",
+        "CREATE TRIGGER decision_de_policy_no_se_borra BEFORE DELETE ON decision_de_policy "
+        f"BEGIN {_NO_SE_BORRA}; END",
+        "CREATE TRIGGER decision_de_policy_es_inmutable BEFORE UPDATE ON decision_de_policy "
+        "BEGIN SELECT RAISE(ABORT, 'el registro de policy es de solo anadir'); END",
+    ]
+
+
 assert {t.tipo for t in TABLAS} == set(
     TIPOS_DE_LA_CAPA_OBRA + TIPOS_DE_LA_CAPA_MUNDO + TIPOS_DE_LA_CAPA_PRODUCCION
 ), "El esquema y el censo de tipos de artefacto no dicen lo mismo"
+
+
+# --- El cambio del lector (SPEC1 4.18) -------------------------------------
+#
+# No es un artefacto: no lo escribe ningun rol. Es la constancia de que una
+# version nacio de que un lector cambio el nombre de un hecho, con los dos
+# nombres y la ficha que nacio en ella (RF-173). La ficha nueva si es un
+# artefacto, y vive en la tabla de su tipo con sus columnas de version. Una fila
+# por version, de solo anadir: ni se borra, ni se modifica, ni se releva.
+
+SENTENCIAS_DEL_CAMBIO_DEL_LECTOR: tuple[str, ...] = (
+    """CREATE TABLE cambio_del_lector (
+  id_obra TEXT NOT NULL,
+  version INT NOT NULL,
+  hecho TEXT NOT NULL,
+  tipo TEXT NOT NULL,
+  ficha_nueva TEXT NOT NULL,
+  anterior TEXT NOT NULL,
+  nuevo TEXT NOT NULL,
+  pedido_en TEXT NOT NULL,
+  PRIMARY KEY (id_obra, version),
+  FOREIGN KEY (id_obra, version) REFERENCES version_de_la_obra (id_obra, numero)
+) STRICT""",
+    "CREATE TRIGGER cambio_del_lector_no_se_borra BEFORE DELETE ON cambio_del_lector "
+    f"BEGIN {_NO_SE_BORRA}; END",
+    "CREATE TRIGGER cambio_del_lector_es_inmutable BEFORE UPDATE ON cambio_del_lector "
+    "BEGIN SELECT RAISE(ABORT, 'el registro de cambios del lector es de solo anadir'); END",
+)
+
+
+def sentencias_del_cambio_del_lector() -> list[str]:
+    """La migracion 11: el registro del cambio del lector y nada mas."""
+    return list(SENTENCIAS_DEL_CAMBIO_DEL_LECTOR)

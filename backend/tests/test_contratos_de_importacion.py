@@ -36,6 +36,15 @@ SIEMBRAS: dict[str, dict[str, str]] = {
     "El unico sitio con tipos declarados es el borde HTTP": {
         "almacen/sembrado.py": "import pydantic\n\n__all__ = ['pydantic']\n",
     },
+    "Los validadores son funciones puras: no leen el almacen ni las tareas": {
+        "validadores.py": "from novela import almacen\n\n__all__ = ['almacen']\n",
+    },
+    "El demostrador recibe la cronologia ya leida: no toca el almacen": {
+        "demostrador.py": "from novela import almacen\n\n__all__ = ['almacen']\n",
+    },
+    "La observabilidad recibe lo ya leido: no toca el almacen ni las tareas": {
+        "observabilidad.py": "from novela import almacen\n\n__all__ = ['almacen']\n",
+    },
 }
 
 

@@ -1,0 +1,9 @@
+# El proyecto de Lean del volcado formal de la cronologia (SPEC1 4.16).
+# Sin dependencias: se demuestra con el nucleo de Lean y sus tacticas de serie,
+# sin Mathlib, para que `lake build` no descargue nada ni tarde.
+name = "cronologia"
+defaultTargets = ["Cronologia"]
+
+[[lean_lib]]
+name = "Cronologia"
+globs = ["Cronologia.+"]

@@ -1,0 +1,414 @@
+TLC2 Version 2026.09.23.154203 (rev: 4260e47)
+Warning: Please run the Java VM, which executes TLC with a throughput optimized garbage collector, by passing the "-XX:+UseParallelGC" property.
+(Use the -nowarning option to disable this warning.)
+Running breadth-first search Model-Checking with fp 68 and seed 5427777705184603057 with 1 worker on 4 cores with 4096MB heap and 64MB offheap memory [pid: 6984] (Windows 11 10.0 amd64, Eclipse Adoptium 21.0.12.1 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file C:\Users\student\AppData\Local\Temp\claude\c--Users-student-Desktop-Harness-Engineering-my-story-maker\75a1da2e-dcae-41f5-820b-97bd519f1df2\scratchpad\wt\t11\backend\formal\tla\Produccion.tla
+Parsing file C:\Users\student\AppData\Local\Temp\tlc-6369689967869967372\Naturals.tla (jar:file:/C:/Users/student/tools/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file C:\Users\student\AppData\Local\Temp\tlc-6369689967869967372\FiniteSets.tla (jar:file:/C:/Users/student/tools/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file C:\Users\student\AppData\Local\Temp\tlc-6369689967869967372\Sequences.tla (jar:file:/C:/Users/student/tools/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file C:\Users\student\AppData\Local\Temp\tlc-6369689967869967372\TLC.tla (jar:file:/C:/Users/student/tools/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module Produccion
+Linting of module Produccion
+Starting... (2026-09-24 12:29:42)
+Implied-temporal checking--satisfiability problem has 1 branches.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-09-24 12:29:42.
+Error: Invariant UnaSolaProduccion is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ escrito = {}
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 0
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ pets = <<>>
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = FALSE
+/\ gen = 0
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 2: <Reanudar line 326, col 5 to line 332, col 56 of module Produccion>
+/\ escrito = {}
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 1
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ pets = <<1>>
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = FALSE
+/\ gen = 0
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 3: <Reanudar line 326, col 5 to line 332, col 56 of module Produccion>
+/\ escrito = {}
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 1
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 2
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 1
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ pets = <<1, 1>>
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = FALSE
+/\ gen = 0
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 4: <Registrar line 284, col 5 to line 290, col 57 of module Produccion>
+/\ escrito = {}
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 2
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 2
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 2
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ pets = <<1>>
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "espera",
+     espera |-> 1,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = FALSE
+/\ gen = 0
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 5: <Registrar line 284, col 5 to line 290, col 57 of module Produccion>
+/\ escrito = {}
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 3
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 2
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 3
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ pets = <<>>
+/\ hilos = << [ est |-> "activo",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "espera",
+     espera |-> 1,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "espera",
+     espera |-> 1,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = FALSE
+/\ gen = 0
+/\ fallos = 0
+/\ proceso = "arriba"
+
+State 6: <FalloNoPrevisto(1) line 271, col 5 to line 276, col 67 of module Produccion>
+/\ escrito = {}
+/\ foto = <<{}, {}, {}>>
+/\ caidas = 0
+/\ nh = 3
+/\ nv = 1
+/\ veredicto = <<"pendiente", "pendiente", "pendiente">>
+/\ reanudaciones = 2
+/\ cambiados = <<1..3, {}, {}>>
+/\ publicada = 0
+/\ publicadas = {}
+/\ tipo = <<"alta", "ninguno", "ninguno">>
+/\ ultimo = 3
+/\ detenida = FALSE
+/\ terminada = <<FALSE, FALSE, FALSE>>
+/\ rechazadas = {}
+/\ pets = <<>>
+/\ hilos = << [ est |-> "muerto",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "activo",
+     espera |-> 1,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "activo",
+     espera |-> 1,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ],
+   [ est |-> "libre",
+     espera |-> 0,
+     pc |-> "volver",
+     k |-> 1,
+     tarea |-> "planificar",
+     intento |-> 1,
+     g |-> 0 ] >>
+/\ auditada = 0
+/\ poblado = FALSE
+/\ gen = 0
+/\ fallos = 1
+/\ proceso = "arriba"
+
+479 states generated, 323 distinct states found, 182 states left on queue.
+The depth of the complete state graph search is 6.
+Finished in 01s at (2026-09-24 12:29:43)

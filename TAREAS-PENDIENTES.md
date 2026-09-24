@@ -58,9 +58,11 @@ de Claude Code, la API de diez rutas y la batería de 274 pruebas.
 | T10 | Validador formal de la historia en Lean 4 | 5c |
 | T11 | Validador formal del sistema en TLA+ | 5d |
 | T12 | Langfuse | 6 |
-| T13 | Juicio semántico, cinco briefs y tuning | 5b y evaluación |
+| T13a | La rúbrica ampliada y los cinco briefs escritos | 5b |
+| T13b | Correr los cinco briefs, la tabla y el ajuste | evaluación |
 | T14 | Lo que le falta al frontend, y el cambio del lector | 2 · después del backend |
-| T15 | Entregables del repositorio | — · al final |
+| T15a | El andamiaje de los entregables, sin cifras | — |
+| T15b | Lo que cuenta resultados: PDF, coste, deck y vídeo | — · al final |
 
 ---
 
@@ -284,6 +286,21 @@ números de antes y después.
 **Depende de** todo lo anterior, y de T12 en particular: mide el sistema entero
 y sus números salen de Langfuse, no de una hoja aparte.
 
+**Se parte en dos, y la primera mitad no espera a nada.** Lo que ata T13 a T12
+son los números, no el texto: la rúbrica y los briefs se escriben antes.
+
+- **T13a.** La rúbrica del juez ampliada y los cinco briefs escritos y
+  guardados, sin ejecutar ninguno. No depende de nada y puede ir en paralelo con
+  T12.
+- **T13b.** Correr los cinco briefs, la tabla de qué validador pasó en cada uno,
+  la iteración de ajuste con los números de antes y después, y la lectura humana
+  de una novela completa con la misma rúbrica. Necesita T12 dentro y **produce
+  novelas de verdad: son horas de máquina y dinero, no minutos de código.**
+
+**La lectura humana es el único trabajo de toda la lista que no puede hacer un
+agente**: su sentido es contrastar lo que puntúa la máquina con lo que puntuaría
+una persona, así que si la hace un agente no mide nada.
+
 **Con esto cierra la fase D**, y con ella todo lo que la rúbrica exige del
 backend.
 
@@ -348,6 +365,16 @@ ejemplo en PDF en `/ejemplos/`, la documentación de proceso en `/docs`
 —spec inicial, trade-offs, explainers, diagramas, registro de iteraciones y
 red-team log—, la carpeta `/presentacion/` con el deck y sus anexos, y el vídeo
 de demo.
+
+**Se parte en dos por la misma razón que T13.** El andamiaje no depende de
+resultados:
+
+- **T15a.** `README.md` con el brief de ejemplo, `.env.example`, y la estructura
+  de `/docs` y de `/presentacion/` con sus huecos. Sin una sola cifra. Puede ir
+  en paralelo con T12.
+- **T15b.** Lo que cuenta resultados: la novela de ejemplo en PDF, la slide de
+  coste con los números de Langfuse, el deck relleno y el vídeo. Va al final de
+  todo, después de T13b.
 
 Va al final porque cuenta lo que se hizo, y para contarlo hay que haberlo hecho.
 El registro de iteraciones y el red-team log no: esos ya existen vacíos en

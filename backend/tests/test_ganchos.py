@@ -181,7 +181,9 @@ def test_la_orden_de_un_paso_sin_prosa_no_lleva_settings(numero: int) -> None:
     orden = ejecutor._orden(encargo, _ventana())
     assert "--settings" not in orden
     assert "Stop hook feedback" not in orden[orden.index("--system-prompt") + 1]
-    assert ejecutor._entorno(encargo, _ventana()) is None
+    entorno = ejecutor._entorno(encargo, _ventana())
+    assert ganchos.VARIABLE_DE_VETOS not in entorno
+    assert ganchos.VARIABLE_DE_RESERVA not in entorno
 
 
 def test_los_vetos_viajan_por_el_entorno_y_no_por_disco_ni_por_la_ventana() -> None:
@@ -191,7 +193,9 @@ def test_los_vetos_viajan_por_el_entorno_y_no_por_disco_ni_por_la_ventana() -> N
     ventana = _ventana((VETO,))
     entorno = EjecutorDeSubagentes()._entorno(encargo, ventana)
     assert entorno is not None
-    assert json.loads(entorno[ganchos.VARIABLE_DE_VETOS]) == [VETO]
+    assert json.loads(entorno[ganchos.VARIABLE_DE_VETOS]) == [
+        {"termino": VETO, "nivel": "tema_del_comprador"}
+    ]
     assert entorno[ganchos.VARIABLE_DE_RESERVA] == str(encargo.reserva_de_la_vuelta)
     assert VETO not in EjecutorDeSubagentes()._encargo(ventana)
 
@@ -217,12 +221,12 @@ def test_policy_bloquea_lo_vetado_y_lo_nombra(monkeypatch: pytest.MonkeyPatch) -
     assert VETO in motivo
 
 
-def test_policy_compara_tal_cual(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sin normalizar todavia: otra mayuscula no casa (D-49)."""
+def test_policy_compara_normalizado(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Otra mayuscula casa igual (SPEC1 RF-132); el resto, en test_lo_vetado."""
     codigo, _, _ = _hook(
         "policy", _entrega("Hubo Muerte de animales."), vetos=[VETO], monkeypatch=monkeypatch
     )
-    assert codigo == ganchos.SALIDA_PASA
+    assert codigo == ganchos.SALIDA_BLOQUEA
 
 
 def test_policy_sin_vetos_no_bloquea_nunca(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -288,7 +292,9 @@ def test_se_pueden_sumar_comprobaciones_sin_tocar_el_enganche(
 ) -> None:
     """D-48: la tarea de validadores programaticos anadira las suyas a la lista."""
 
-    def sin_la_letra_z(entrega: dict[str, Any], tarea: str) -> list[str]:
+    def sin_la_letra_z(
+        entrega: dict[str, Any], tarea: str, datos: ganchos.DatosDeLaObra
+    ) -> list[str]:
         return ["lleva z"] if "z" in json.dumps(entrega) else []
 
     ampliada = [*ganchos.COMPROBACIONES_DE_CAPITULO, sin_la_letra_z]
@@ -490,7 +496,8 @@ def test_un_redactor_que_insiste_en_lo_vetado_detiene_la_obra(
         assert not policy["pasa"]
     # Los vetos del brief llegaron al hook por el entorno y no a la ventana.
     entorno = ejecutor.entornos[0]
-    assert entorno is not None and VETO in json.loads(entorno[ganchos.VARIABLE_DE_VETOS])
+    assert entorno is not None
+    assert VETO in [v["termino"] for v in json.loads(entorno[ganchos.VARIABLE_DE_VETOS])]
     assert all(VETO not in ventana.texto for ventana in ejecutor.ventanas)
 
 

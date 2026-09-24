@@ -9,7 +9,11 @@ from typing import Annotated, Any, Literal, get_args
 
 from pydantic import BaseModel, Field
 
-from novela.vocabularios import TIPO_DE_CONTRADICCION
+from novela.vocabularios import (
+    COMPROBACION_FORMAL,
+    TIPO_DE_CONTRADICCION,
+    VALIDADOR_DE_LA_PUERTA,
+)
 
 
 class Destinatario(BaseModel):
@@ -52,12 +56,12 @@ class Brief(BaseModel):
     tesis_tematica: str | None = Field(
         default=None,
         min_length=1,
-        description="Que sostiene la obra. Opcional: sin ella no hay tesis declarada (D-50)",
+        description="Que sostiene la obra. Opcional: sin ella no hay tesis declarada (D-60)",
     )
     elenco_declarado: list[str] = Field(
         default_factory=list,
         description=(
-            "Personajes que el editor fija. Vacio: los decide el Constructor de mundo (D-50)"
+            "Personajes que el editor fija. Vacio: los decide el Constructor de mundo (D-60)"
         ),
     )
     capitulos_objetivo: int = Field(ge=1, le=200, description="Cuantos capitulos")
@@ -89,6 +93,18 @@ class FichaDeObra(BaseModel):
     criticas_abiertas: int
     version_en_curso: int = Field(description="La ultima version, la unica que se produce")
     version_publicada: int | None = Field(description="La de la ultima publicacion, si la hay")
+    motivo_de_la_detencion: str | None = Field(
+        default=None,
+        description=(
+            "Por que esta detenida: la tarea, lo que fallo y su traza. Vacio si no (RI-17)"
+        ),
+    )
+    destinatario: str | None = Field(
+        default=None, description="Nombre del destinatario, para la portada (RF-177)"
+    )
+    dedicatoria: str | None = Field(
+        default=None, description="La dedicatoria tal como viene en el brief (RF-177)"
+    )
 
 
 class UnidadDelManuscrito(BaseModel):
@@ -124,6 +140,22 @@ class CriticaServida(BaseModel):
     detectada_por: str | None
     evidencia: str | None
     accion_sugerida: str | None
+
+
+class DecisionDePolicy(BaseModel):
+    """Una coincidencia de lo vetado y lo que `policy` hizo con ella (RI-16)."""
+
+    id: int
+    id_traza: str
+    capitulo: int | None
+    escena: str | None
+    tarea: str | None
+    intento: int | None
+    decision: Literal["devuelto_al_agente", "intento_fallido"]
+    nivel: Literal["global", "palabra_del_comprador", "tema_del_comprador"]
+    termino: str = Field(description="El veto tal como esta en su lista")
+    encontrado: str = Field(description="Lo que casó, tal como esta escrito en la prosa")
+    registrada_en: str
 
 
 class TrazaServida(BaseModel):
@@ -240,6 +272,22 @@ class PeticionDeRehacer(BaseModel):
     desde_capitulo: int = Field(ge=1, description="Primer capitulo que se reescribe")
 
 
+class PeticionDeCambio(BaseModel):
+    """El cambio del lector: un hecho de la biblia y su nombre nuevo (D-74)."""
+
+    hecho: str = Field(min_length=1, description="`id` del hecho, de la lista de hechos")
+    valor: str = Field(description="El nombre nuevo del hecho")
+
+
+class CambioDelLector(BaseModel):
+    """De que cambio del lector nace una version (RF-177)."""
+
+    hecho: str
+    tipo: str
+    anterior: str
+    nuevo: str
+
+
 class VersionDeLaObra(BaseModel):
     """Una version con su base y lo que cambio respecto de ella."""
 
@@ -250,6 +298,10 @@ class VersionDeLaObra(BaseModel):
     terminada_en: str | None
     terminada: bool
     publicada: bool = Field(description="Si es la de la ultima publicacion")
+    cambio: CambioDelLector | None = Field(
+        default=None,
+        description="Si nace de un cambio del lector, cual; vacio si del alta o de rehacer",
+    )
 
 
 class VersionAbierta(BaseModel):
@@ -259,10 +311,63 @@ class VersionAbierta(BaseModel):
     estado: str
 
 
+ComprobacionFormal = Literal["demostrada", "fallida", "sin_comprobacion"]
+assert get_args(ComprobacionFormal) == COMPROBACION_FORMAL, (
+    "El borde y el vocabulario de la comprobacion formal no dicen lo mismo"
+)
+
+
 class Publicacion(BaseModel):
     id_obra: str
     version: int
     publicada_en: str
+    comprobacion_formal: ComprobacionFormal = Field(
+        description=(
+            "Como quedo la cronologia en Lean al publicar: `sin_comprobacion` si Lean no "
+            "esta en la maquina, que no impide publicar (RF-155)"
+        )
+    )
+
+
+# --- La puerta de publicacion (SPEC1 4.15) -----------------------------------
+
+ValidadorDeLaPuerta = Literal[
+    "esquema", "nombres", "longitud", "elementos_personalizados", "cronologia"
+]
+assert get_args(ValidadorDeLaPuerta) == VALIDADOR_DE_LA_PUERTA, (
+    "El borde y el vocabulario de validadores de la puerta no dicen lo mismo"
+)
+
+
+class FalloDeLaPuerta(BaseModel):
+    """Lo que no pasa, de que validador y en que capitulo."""
+
+    validador: ValidadorDeLaPuerta
+    capitulo: int | None = Field(description="Vacio si el fallo no es de ningun capitulo")
+    detalle: str
+
+
+class PuertaDePublicacion(BaseModel):
+    """El resultado de pasar la puerta sobre una version. Se deriva al pedirlo."""
+
+    id_obra: str
+    version: int
+    terminada: bool = Field(description="Sin terminar no se publica aunque pase")
+    pasa: bool
+    comprobacion_formal: ComprobacionFormal = Field(
+        description=(
+            "La cronologia en Lean: `demostrada`, `fallida`, o `sin_comprobacion` si Lean "
+            "no esta en la maquina, que no hace fallar la puerta (RF-152, D-61)"
+        )
+    )
+    fallos: list[FalloDeLaPuerta]
+
+
+class RechazoDePublicacion(BaseModel):
+    """Por que no se publico. `puerta` viene si lo que fallo fue la puerta."""
+
+    detail: str
+    puerta: PuertaDePublicacion | None = None
 
 
 # --- La entrevista que completa el brief (SPEC1 4.8) -------------------------

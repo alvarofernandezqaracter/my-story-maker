@@ -1,4 +1,4 @@
-"""Las tareas de una tanda corren a la vez (SPEC1 RF-13, D-51).
+"""Las tareas de una tanda corren a la vez (SPEC1 RF-13, D-88).
 
 Metodo: `prueba`. Un ejecutor fingido que declara `simultaneo` y tarda un poco
 en contestar deja ver cuantas tareas tiene abiertas a la vez. Lo que tiene que

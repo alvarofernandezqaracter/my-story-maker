@@ -148,6 +148,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/obras/{id_obra}/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ver Policy
+         * @description El registro de auditoria de `policy`, en orden (RF-138). Solo lectura.
+         */
+        get: operations["ver_policy_obras__id_obra__policy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/obras/{id_obra}/estado": {
         parameters: {
             query?: never;
@@ -230,6 +250,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/obras/{id_obra}/cambios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cambiar Hecho
+         * @description El cambio del lector: el hecho toma su nombre nuevo en una version que
+         *     reescribe solo los capitulos que lo mencionan (RF-170, RF-171). La
+         *     anterior se conserva entera. No espera a que termine.
+         */
+        post: operations["cambiar_hecho_obras__id_obra__cambios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/obras/{id_obra}/versiones/{numero}/publicar": {
         parameters: {
             query?: never;
@@ -241,9 +283,53 @@ export interface paths {
         put?: never;
         /**
          * Publicar
-         * @description Publicar es una orden: terminar no publica (RF-116).
+         * @description Publicar es una orden: terminar no publica (RF-116), y la version pasa
+         *     antes por la puerta (RF-146), cronologia en Lean incluida (RF-152). Si no
+         *     pasa, no se publica y se explica; si falla la cronologia, el fallo queda
+         *     ademas como critica del capitulo (RF-154).
          */
         post: operations["publicar_obras__id_obra__versiones__numero__publicar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/obras/{id_obra}/versiones/{numero}/puerta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ver Puerta
+         * @description La puerta pasada ahora sobre la version, sin publicar nada (RF-147).
+         */
+        get: operations["ver_puerta_obras__id_obra__versiones__numero__puerta_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/obras/{id_obra}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Descargar Pdf
+         * @description Portada, indice y texto aceptado de la version, fabricado en memoria
+         *     (RF-178). Nada toca el disco (RD-08).
+         */
+        get: operations["descargar_pdf_obras__id_obra__pdf_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -421,12 +507,12 @@ export interface components {
             premisa: string;
             /**
              * Tesis Tematica
-             * @description Que sostiene la obra. Opcional: sin ella no hay tesis declarada (D-50)
+             * @description Que sostiene la obra. Opcional: sin ella no hay tesis declarada (D-60)
              */
             tesis_tematica?: string | null;
             /**
              * Elenco Declarado
-             * @description Personajes que el editor fija. Vacio: los decide el Constructor de mundo (D-50)
+             * @description Personajes que el editor fija. Vacio: los decide el Constructor de mundo (D-60)
              */
             elenco_declarado?: string[];
             /**
@@ -448,6 +534,20 @@ export interface components {
             arcos?: string[];
             /** @description A quien va dedicada. Opcional: sin el, la obra es historica y nada mas */
             destinatario?: components["schemas"]["Destinatario"] | null;
+        };
+        /**
+         * CambioDelLector
+         * @description De que cambio del lector nace una version (RF-177).
+         */
+        CambioDelLector: {
+            /** Hecho */
+            hecho: string;
+            /** Tipo */
+            tipo: string;
+            /** Anterior */
+            anterior: string;
+            /** Nuevo */
+            nuevo: string;
         };
         /** CapituloInspeccionado */
         CapituloInspeccionado: {
@@ -532,6 +632,46 @@ export interface components {
             sucesos: components["schemas"]["Suceso"][];
         };
         /**
+         * DecisionDePolicy
+         * @description Una coincidencia de lo vetado y lo que `policy` hizo con ella (RI-16).
+         */
+        DecisionDePolicy: {
+            /** Id */
+            id: number;
+            /** Id Traza */
+            id_traza: string;
+            /** Capitulo */
+            capitulo: number | null;
+            /** Escena */
+            escena: string | null;
+            /** Tarea */
+            tarea: string | null;
+            /** Intento */
+            intento: number | null;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "devuelto_al_agente" | "intento_fallido";
+            /**
+             * Nivel
+             * @enum {string}
+             */
+            nivel: "global" | "palabra_del_comprador" | "tema_del_comprador";
+            /**
+             * Termino
+             * @description El veto tal como esta en su lista
+             */
+            termino: string;
+            /**
+             * Encontrado
+             * @description Lo que casó, tal como esta escrito en la prosa
+             */
+            encontrado: string;
+            /** Registrada En */
+            registrada_en: string;
+        };
+        /**
          * Destinatario
          * @description La persona real a la que la obra va dedicada.
          *
@@ -600,6 +740,24 @@ export interface components {
             }[];
         };
         /**
+         * FalloDeLaPuerta
+         * @description Lo que no pasa, de que validador y en que capitulo.
+         */
+        FalloDeLaPuerta: {
+            /**
+             * Validador
+             * @enum {string}
+             */
+            validador: "esquema" | "nombres" | "longitud" | "elementos_personalizados" | "cronologia";
+            /**
+             * Capitulo
+             * @description Vacio si el fallo no es de ningun capitulo
+             */
+            capitulo: number | null;
+            /** Detalle */
+            detalle: string;
+        };
+        /**
          * FichaDeObra
          * @description Estado de la obra, capitulo en curso y recuento de cerrados y marcados.
          */
@@ -628,6 +786,21 @@ export interface components {
              * @description La de la ultima publicacion, si la hay
              */
             version_publicada: number | null;
+            /**
+             * Motivo De La Detencion
+             * @description Por que esta detenida: la tarea, lo que fallo y su traza. Vacio si no (RI-17)
+             */
+            motivo_de_la_detencion?: string | null;
+            /**
+             * Destinatario
+             * @description Nombre del destinatario, para la portada (RF-177)
+             */
+            destinatario?: string | null;
+            /**
+             * Dedicatoria
+             * @description La dedicatoria tal como viene en el brief (RF-177)
+             */
+            dedicatoria?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -764,6 +937,22 @@ export interface components {
             escena: string | null;
         };
         /**
+         * PeticionDeCambio
+         * @description El cambio del lector: un hecho de la biblia y su nombre nuevo (D-74).
+         */
+        PeticionDeCambio: {
+            /**
+             * Hecho
+             * @description `id` del hecho, de la lista de hechos
+             */
+            hecho: string;
+            /**
+             * Valor
+             * @description El nombre nuevo del hecho
+             */
+            valor: string;
+        };
+        /**
          * PeticionDeEntrevista
          * @description Lo que la persona manda en cada pasada. De las anteriores no llega nada:
          *     lo que quiera conservar lo vuelve a mandar (D-20).
@@ -835,6 +1024,46 @@ export interface components {
             version: number;
             /** Publicada En */
             publicada_en: string;
+            /**
+             * Comprobacion Formal
+             * @description Como quedo la cronologia en Lean al publicar: `sin_comprobacion` si Lean no esta en la maquina, que no impide publicar (RF-155)
+             * @enum {string}
+             */
+            comprobacion_formal: "demostrada" | "fallida" | "sin_comprobacion";
+        };
+        /**
+         * PuertaDePublicacion
+         * @description El resultado de pasar la puerta sobre una version. Se deriva al pedirlo.
+         */
+        PuertaDePublicacion: {
+            /** Id Obra */
+            id_obra: string;
+            /** Version */
+            version: number;
+            /**
+             * Terminada
+             * @description Sin terminar no se publica aunque pase
+             */
+            terminada: boolean;
+            /** Pasa */
+            pasa: boolean;
+            /**
+             * Comprobacion Formal
+             * @description La cronologia en Lean: `demostrada`, `fallida`, o `sin_comprobacion` si Lean no esta en la maquina, que no hace fallar la puerta (RF-152, D-61)
+             * @enum {string}
+             */
+            comprobacion_formal: "demostrada" | "fallida" | "sin_comprobacion";
+            /** Fallos */
+            fallos: components["schemas"]["FalloDeLaPuerta"][];
+        };
+        /**
+         * RechazoDePublicacion
+         * @description Por que no se publico. `puerta` viene si lo que fallo fue la puerta.
+         */
+        RechazoDePublicacion: {
+            /** Detail */
+            detail: string;
+            puerta?: components["schemas"]["PuertaDePublicacion"] | null;
         };
         /**
          * Suceso
@@ -961,6 +1190,8 @@ export interface components {
              * @description Si es la de la ultima publicacion
              */
             publicada: boolean;
+            /** @description Si nace de un cambio del lector, cual; vacio si del alta o de rehacer */
+            cambio?: components["schemas"]["CambioDelLector"] | null;
         };
     };
     responses: never;
@@ -1251,6 +1482,42 @@ export interface operations {
             };
         };
     };
+    ver_policy_obras__id_obra__policy_get: {
+        parameters: {
+            query?: {
+                capitulo?: number | null;
+                nivel?: ("global" | "palabra_del_comprador" | "tema_del_comprador") | null;
+                decision?: ("devuelto_al_agente" | "intento_fallido") | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identificador de la obra */
+                id_obra: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionDePolicy"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ver_estado_obras__id_obra__estado_get: {
         parameters: {
             query?: {
@@ -1427,6 +1694,42 @@ export interface operations {
             };
         };
     };
+    cambiar_hecho_obras__id_obra__cambios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la obra */
+                id_obra: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PeticionDeCambio"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionAbierta"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     publicar_obras__id_obra__versiones__numero__publicar_post: {
         parameters: {
             query?: never;
@@ -1448,6 +1751,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Publicacion"];
+                };
+            };
+            /** @description No se publica: la version no ha terminado, o no pasa la puerta y `puerta` dice que fallo y en que capitulo (RI-18) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RechazoDePublicacion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ver_puerta_obras__id_obra__versiones__numero__puerta_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador de la obra */
+                id_obra: string;
+                /** @description Version que se comprueba */
+                numero: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PuertaDePublicacion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    descargar_pdf_obras__id_obra__pdf_get: {
+        parameters: {
+            query?: {
+                /** @description Version que se lee. Sin ella, la publicada, y si no hay, la ultima */
+                version?: number | null;
+            };
+            header?: never;
+            path: {
+                /** @description Identificador de la obra */
+                id_obra: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description El PDF de la version, como descarga. No se guarda */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
             /** @description Validation Error */

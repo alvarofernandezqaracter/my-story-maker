@@ -22,6 +22,7 @@ descartado no puede recuperarse nunca como eco.
 
 import json
 import threading
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
@@ -137,7 +138,7 @@ class Indice:
     def __init__(self, almacen: Almacen) -> None:
         self.almacen = almacen
         self._modelo: Any = None
-        # Las tareas de una tanda consultan a la vez (D-51): el modelo se carga
+        # Las tareas de una tanda consultan a la vez (D-88): el modelo se carga
         # una sola vez y las huellas se calculan de una en una.
         self._turno_del_modelo = threading.Lock()
 
@@ -286,6 +287,39 @@ class Indice:
                 for fila in conexion.execute(
                     "SELECT rowid FROM fragmento WHERE id_obra = ? AND capitulo >= ?",
                     (id_obra, capitulo),
+                )
+            ]
+            for numero in numeros:
+                conexion.execute("DELETE FROM fts_fragmento WHERE rowid = ?", (numero,))
+                conexion.execute("DELETE FROM vec_fragmento WHERE fragmento = ?", (numero,))
+                conexion.execute("DELETE FROM fragmento WHERE rowid = ?", (numero,))
+        return len(numeros)
+
+    def retirar_capitulos(self, id_obra: str, capitulos: Iterable[int]) -> int:
+        """Saca del indice lo de esos capitulos y nada mas (SPEC1 RF-172).
+
+        Es lo que se hace con los capitulos que reescribe un cambio del lector:
+        pueden no ser contiguos, y los de detras siguen siendo de la version.
+        """
+        return self._retirar_donde(id_obra, "capitulo IN (SELECT value FROM json_each(?))",
+                                   (json.dumps(sorted(set(capitulos))),))
+
+    def retirar_sin_cerrar(self, id_obra: str, cerrados: Iterable[int]) -> int:
+        """Saca del indice lo de todo capitulo que no esta en `cerrados` (RF-176)."""
+        return self._retirar_donde(
+            id_obra,
+            "capitulo IS NOT NULL AND capitulo NOT IN (SELECT value FROM json_each(?))",
+            (json.dumps(sorted(set(cerrados))),),
+        )
+
+    def _retirar_donde(self, id_obra: str, condicion: str, parametros: tuple[Any, ...]) -> int:
+        conexion = self.almacen._escritor
+        with self.almacen._turno_de_escritura, escritura(conexion):
+            numeros = [
+                fila["rowid"]
+                for fila in conexion.execute(
+                    f"SELECT rowid FROM fragmento WHERE id_obra = ? AND {condicion}",
+                    (id_obra, *parametros),
                 )
             ]
             for numero in numeros:

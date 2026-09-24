@@ -5,7 +5,7 @@ openapi: 3.1.0
 info:
   title: Generador de novela historica por agentes
   summary: Lanza una obra desde un brief e inspecciona lo que los agentes producen
-  version: 0.6.0
+  version: 0.11.0
 paths:
   /obras:
     post:
@@ -330,6 +330,68 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/policy:
+    get:
+      summary: Ver Policy
+      description: El registro de auditoria de `policy`, en orden (RF-138). Solo lectura.
+      operationId: ver_policy_obras__id_obra__policy_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: capitulo
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          title: Capitulo
+      - name: nivel
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - global
+            - palabra_del_comprador
+            - tema_del_comprador
+            type: string
+          - type: 'null'
+          title: Nivel
+      - name: decision
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - devuelto_al_agente
+            - intento_fallido
+            type: string
+          - type: 'null'
+          title: Decision
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DecisionDePolicy'
+                title: Response Ver Policy Obras  Id Obra  Policy Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /obras/{id_obra}/estado:
     get:
       summary: Ver Estado
@@ -549,10 +611,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/cambios:
+    post:
+      summary: Cambiar Hecho
+      description: 'El cambio del lector: el hecho toma su nombre nuevo en una version
+        que
+
+        reescribe solo los capitulos que lo mencionan (RF-170, RF-171). La
+
+        anterior se conserva entera. No espera a que termine.'
+      operationId: cambiar_hecho_obras__id_obra__cambios_post
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeticionDeCambio'
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionAbierta'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /obras/{id_obra}/versiones/{numero}/publicar:
     post:
       summary: Publicar
-      description: 'Publicar es una orden: terminar no publica (RF-116).'
+      description: 'Publicar es una orden: terminar no publica (RF-116), y la version
+        pasa
+
+        antes por la puerta (RF-146), cronologia en Lean incluida (RF-152). Si no
+
+        pasa, no se publica y se explica; si falla la cronologia, el fallo queda
+
+        ademas como critica del capitulo (RF-154).'
       operationId: publicar_obras__id_obra__versiones__numero__publicar_post
       parameters:
       - name: id_obra
@@ -579,6 +686,91 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Publicacion'
+        '409':
+          description: 'No se publica: la version no ha terminado, o no pasa la puerta
+            y `puerta` dice que fallo y en que capitulo (RI-18)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RechazoDePublicacion'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/versiones/{numero}/puerta:
+    get:
+      summary: Ver Puerta
+      description: La puerta pasada ahora sobre la version, sin publicar nada (RF-147).
+      operationId: ver_puerta_obras__id_obra__versiones__numero__puerta_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: numero
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          description: Version que se comprueba
+          title: Numero
+        description: Version que se comprueba
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PuertaDePublicacion'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/pdf:
+    get:
+      summary: Descargar Pdf
+      description: 'Portada, indice y texto aceptado de la version, fabricado en memoria
+
+        (RF-178). Nada toca el disco (RD-08).'
+      operationId: descargar_pdf_obras__id_obra__pdf_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          description: Version que se lee. Sin ella, la publicada, y si no hay, la
+            ultima
+          title: Version
+        description: Version que se lee. Sin ella, la publicada, y si no hay, la ultima
+      responses:
+        '200':
+          description: El PDF de la version, como descarga. No se guarda
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
         '422':
           description: Validation Error
           content:
@@ -897,14 +1089,14 @@ components:
           - type: 'null'
           title: Tesis Tematica
           description: 'Que sostiene la obra. Opcional: sin ella no hay tesis declarada
-            (D-50)'
+            (D-60)'
         elenco_declarado:
           items:
             type: string
           type: array
           title: Elenco Declarado
           description: 'Personajes que el editor fija. Vacio: los decide el Constructor
-            de mundo (D-50)'
+            de mundo (D-60)'
         capitulos_objetivo:
           type: integer
           maximum: 200.0
@@ -941,6 +1133,28 @@ components:
         Si falta un campo obligatorio, la obra se rechaza nombrando el campo y sin
 
         crear nada. Un brief incompleto es un caso normal, no un error del sistema.'
+    CambioDelLector:
+      properties:
+        hecho:
+          type: string
+          title: Hecho
+        tipo:
+          type: string
+          title: Tipo
+        anterior:
+          type: string
+          title: Anterior
+        nuevo:
+          type: string
+          title: Nuevo
+      type: object
+      required:
+      - hecho
+      - tipo
+      - anterior
+      - nuevo
+      title: CambioDelLector
+      description: De que cambio del lector nace una version (RF-177).
     CapituloInspeccionado:
       properties:
         capitulo:
@@ -1104,6 +1318,73 @@ components:
       - sucesos
       title: Cronologia
       description: 'Los sucesos de la obra en orden. Es una vista: se deriva al pedirla.'
+    DecisionDePolicy:
+      properties:
+        id:
+          type: integer
+          title: Id
+        id_traza:
+          type: string
+          title: Id Traza
+        capitulo:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo
+        escena:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Escena
+        tarea:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tarea
+        intento:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Intento
+        decision:
+          type: string
+          enum:
+          - devuelto_al_agente
+          - intento_fallido
+          title: Decision
+        nivel:
+          type: string
+          enum:
+          - global
+          - palabra_del_comprador
+          - tema_del_comprador
+          title: Nivel
+        termino:
+          type: string
+          title: Termino
+          description: El veto tal como esta en su lista
+        encontrado:
+          type: string
+          title: Encontrado
+          description: Lo que casó, tal como esta escrito en la prosa
+        registrada_en:
+          type: string
+          title: Registrada En
+      type: object
+      required:
+      - id
+      - id_traza
+      - capitulo
+      - escena
+      - tarea
+      - intento
+      - decision
+      - nivel
+      - termino
+      - encontrado
+      - registrada_en
+      title: DecisionDePolicy
+      description: Una coincidencia de lo vetado y lo que `policy` hizo con ella (RI-16).
     Destinatario:
       properties:
         nombre:
@@ -1197,6 +1478,33 @@ components:
       - eventos
       title: EstadoPlegado
       description: El estado plegado hasta el capitulo indicado, y el log de eventos.
+    FalloDeLaPuerta:
+      properties:
+        validador:
+          type: string
+          enum:
+          - esquema
+          - nombres
+          - longitud
+          - elementos_personalizados
+          - cronologia
+          title: Validador
+        capitulo:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo
+          description: Vacio si el fallo no es de ningun capitulo
+        detalle:
+          type: string
+          title: Detalle
+      type: object
+      required:
+      - validador
+      - capitulo
+      - detalle
+      title: FalloDeLaPuerta
+      description: Lo que no pasa, de que validador y en que capitulo.
     FichaDeObra:
       properties:
         id_obra:
@@ -1232,6 +1540,25 @@ components:
           - type: 'null'
           title: Version Publicada
           description: La de la ultima publicacion, si la hay
+        motivo_de_la_detencion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Motivo De La Detencion
+          description: 'Por que esta detenida: la tarea, lo que fallo y su traza.
+            Vacio si no (RI-17)'
+        destinatario:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Destinatario
+          description: Nombre del destinatario, para la portada (RF-177)
+        dedicatoria:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dedicatoria
+          description: La dedicatoria tal como viene en el brief (RF-177)
       type: object
       required:
       - id_obra
@@ -1473,6 +1800,24 @@ components:
       - escena
       title: Pasaje
       description: Un trozo del manuscrito aceptado, localizado por parecido.
+    PeticionDeCambio:
+      properties:
+        hecho:
+          type: string
+          minLength: 1
+          title: Hecho
+          description: '`id` del hecho, de la lista de hechos'
+        valor:
+          type: string
+          title: Valor
+          description: El nombre nuevo del hecho
+      type: object
+      required:
+      - hecho
+      - valor
+      title: PeticionDeCambio
+      description: 'El cambio del lector: un hecho de la biblia y su nombre nuevo
+        (D-74).'
     PeticionDeEntrevista:
       properties:
         borrador:
@@ -1582,12 +1927,76 @@ components:
         publicada_en:
           type: string
           title: Publicada En
+        comprobacion_formal:
+          type: string
+          enum:
+          - demostrada
+          - fallida
+          - sin_comprobacion
+          title: Comprobacion Formal
+          description: 'Como quedo la cronologia en Lean al publicar: `sin_comprobacion`
+            si Lean no esta en la maquina, que no impide publicar (RF-155)'
       type: object
       required:
       - id_obra
       - version
       - publicada_en
+      - comprobacion_formal
       title: Publicacion
+    PuertaDePublicacion:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        version:
+          type: integer
+          title: Version
+        terminada:
+          type: boolean
+          title: Terminada
+          description: Sin terminar no se publica aunque pase
+        pasa:
+          type: boolean
+          title: Pasa
+        comprobacion_formal:
+          type: string
+          enum:
+          - demostrada
+          - fallida
+          - sin_comprobacion
+          title: Comprobacion Formal
+          description: 'La cronologia en Lean: `demostrada`, `fallida`, o `sin_comprobacion`
+            si Lean no esta en la maquina, que no hace fallar la puerta (RF-152, D-61)'
+        fallos:
+          items:
+            $ref: '#/components/schemas/FalloDeLaPuerta'
+          type: array
+          title: Fallos
+      type: object
+      required:
+      - id_obra
+      - version
+      - terminada
+      - pasa
+      - comprobacion_formal
+      - fallos
+      title: PuertaDePublicacion
+      description: El resultado de pasar la puerta sobre una version. Se deriva al
+        pedirlo.
+    RechazoDePublicacion:
+      properties:
+        detail:
+          type: string
+          title: Detail
+        puerta:
+          anyOf:
+          - $ref: '#/components/schemas/PuertaDePublicacion'
+          - type: 'null'
+      type: object
+      required:
+      - detail
+      title: RechazoDePublicacion
+      description: Por que no se publico. `puerta` viene si lo que fallo fue la puerta.
     Suceso:
       properties:
         origen:
@@ -1826,6 +2235,12 @@ components:
           type: boolean
           title: Publicada
           description: Si es la de la ultima publicacion
+        cambio:
+          anyOf:
+          - $ref: '#/components/schemas/CambioDelLector'
+          - type: 'null'
+          description: Si nace de un cambio del lector, cual; vacio si del alta o
+            de rehacer
       type: object
       required:
       - numero

@@ -26,6 +26,10 @@ ROLES: tuple[str, ...] = (
     "entrevistador",
 )
 
+# Quien evalua el sistema desde fuera del censo: no tiene carpeta en `tareas/`,
+# no escribe nada y no tiene herramienta ninguna (SPEC1 4.21, D-83).
+EVALUADORES_EXTERNOS: tuple[str, ...] = ("juez_de_la_novela",)
+
 TIPOS_DE_TAREA: tuple[str, ...] = (
     "poblar_mundo",
     "documentar",
@@ -109,6 +113,65 @@ AL_AGOTARSE: tuple[str, ...] = ("detener_obra", "critica_abierta", "seguir")
 # Los hooks `Stop` que puede llevar el subagente de un paso (SPEC1 4.13, RF-120):
 # `validar_capitulo` mira la forma de lo entregado y `policy`, lo vetado.
 GANCHOS: tuple[str, ...] = ("validar_capitulo", "policy")
+
+# De que lista sale cada veto que mira `policy` (SPEC1 4.14, RF-130): la global
+# de la instalacion y, de los vetos del brief, los de una palabra y los de varias.
+NIVEL_DE_VETO: tuple[str, ...] = ("global", "palabra_del_comprador", "tema_del_comprador")
+
+# Que hizo `policy` con una coincidencia (RF-135): devolverla al agente en la
+# sesion para que corrija, o dar el intento por fallido en el veredicto final.
+DECISION_DE_POLICY: tuple[str, ...] = ("devuelto_al_agente", "intento_fallido")
+
+# Que validador da cada fallo de la puerta de publicacion (SPEC1 4.15, RF-140).
+VALIDADOR_DE_LA_PUERTA: tuple[str, ...] = (
+    "esquema",
+    "nombres",
+    "longitud",
+    "elementos_personalizados",
+    # El validador formal de la cronologia, con Lean (SPEC1 4.16, RF-153).
+    "cronologia",
+)
+
+# Lo que puntua el juez de la novela, el evaluador externo que juzga una version
+# terminada (SPEC1 4.21, RF-195). No es una dimension de calidad del dominio: mide
+# el sistema desde fuera. Sin destinatario, el primero no se puntua.
+CRITERIO_DEL_JUEZ_DE_LA_NOVELA: tuple[str, ...] = (
+    "personalizacion_integrada",
+    "funciona_como_novela",
+    "fidelidad_a_la_epoca",
+)
+
+# Lo que un brief de prueba espera de cada comprobacion al correrlo (RF-201):
+# las tres primeras para la puerta y los hooks, las dos ultimas para el juez.
+RESULTADO_ESPERADO: tuple[str, ...] = (
+    "pasa",
+    "falla",
+    "puede_fallar",
+    "se_puntua",
+    "no_se_puntua",
+)
+
+# Para que esta cada brief de prueba (RF-201). Hay al menos uno de cada.
+PROPOSITO_DEL_BRIEF_DE_PRUEBA: tuple[str, ...] = (
+    "normal",
+    "mucha_personalizacion",
+    "sin_destinatario",
+    "inyeccion",
+    "incoherencia_temporal",
+)
+
+# Que invariante de la cronologia demuestra Lean suceso a suceso (SPEC1 4.16,
+# RF-151). Van en el orden en que el volcado escribe sus teoremas.
+INVARIANTE_DE_LA_CRONOLOGIA: tuple[str, ...] = (
+    "orden_temporal",
+    "edad_coherente",
+    "un_solo_lugar",
+    "no_reaparece",
+)
+
+# Como quedo la comprobacion formal de una version (RF-152, D-61): Lean la
+# demostro, Lean no pudo demostrarla, o Lean no esta en la maquina y no se hizo.
+COMPROBACION_FORMAL: tuple[str, ...] = ("demostrada", "fallida", "sin_comprobacion")
 
 # Las tres memorias (architecture.md 3). Cada artefacto declara a cual pertenece
 # porque es lo que permite al Archivero retirar la de capitulo sin decidir nada.
