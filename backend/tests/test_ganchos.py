@@ -290,7 +290,9 @@ def test_se_pueden_sumar_comprobaciones_sin_tocar_el_enganche(
 ) -> None:
     """D-48: la tarea de validadores programaticos anadira las suyas a la lista."""
 
-    def sin_la_letra_z(entrega: dict[str, Any], tarea: str) -> list[str]:
+    def sin_la_letra_z(
+        entrega: dict[str, Any], tarea: str, datos: ganchos.DatosDeLaObra
+    ) -> list[str]:
         return ["lleva z"] if "z" in json.dumps(entrega) else []
 
     ampliada = [*ganchos.COMPROBACIONES_DE_CAPITULO, sin_la_letra_z]

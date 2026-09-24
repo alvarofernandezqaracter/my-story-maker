@@ -1282,6 +1282,23 @@ class Almacen:
             )
         return nueva
 
+    def salidas_de_rol_de_la_version(self, id_obra: str, numero: int) -> list[Artefacto]:
+        """Lo que ve la version y escribio un rol (SPEC1 RF-141).
+
+        La `Traza` no es salida de ningun rol, y lo que escribe el backend —las
+        criticas de un malformado o de un «no comprobado»— no lleva rol.
+        """
+        salidas: list[Artefacto] = []
+        for tabla in esquema.TABLAS:
+            if tabla.tipo == "Traza":
+                continue
+            salidas += [
+                artefacto
+                for artefacto in self.listar(tabla.tipo, id_obra, version=numero)
+                if artefacto.procedencia_rol is not None
+            ]
+        return salidas
+
     def publicar_version(self, id_obra: str, numero: int) -> str:
         """Anade la publicacion al registro. Solo una version terminada (RF-116).
 

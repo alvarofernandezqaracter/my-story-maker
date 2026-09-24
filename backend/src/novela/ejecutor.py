@@ -26,7 +26,8 @@ ciclo de edicion acabaria en la ventana del Redactor.
 **Los subagentes de prosa llevan dos hooks `Stop`** (SPEC1 4.13), pasados en la
 propia orden con `--settings`: `novela.ganchos` revisa lo que entregan y, si no
 pasa, les hace corregir antes de terminar. Lo que el hook necesita —la lista de
-vetos y la reserva de la vuelta— va en el entorno del proceso, no en disco. Al
+vetos, los nombres de la biblia y la reserva de la vuelta— va en el entorno del
+proceso, no en disco. Al
 terminar, el ejecutor repite las mismas comprobaciones sobre lo entregado: ese
 es el veredicto que cuenta, y va a la `Traza` junto a lo que dijo cada hook.
 """
@@ -136,7 +137,9 @@ class EjecutorDeSubagentes:
                 f"{encargo.tarea}: el subagente salio con {terminado.returncode}: "
                 f"{terminado.stderr[:400]}"
             )
-        return self._recoger(encargo, terminado.stdout, latencia_ms, vetos_de(ventana))
+        return self._recoger(
+            encargo, terminado.stdout, latencia_ms, vetos_de(ventana), nombres=ventana.nombres
+        )
 
     # --- Lo que se le manda -------------------------------------------------
 
@@ -183,6 +186,7 @@ class EjecutorDeSubagentes:
             **os.environ,
             ganchos.VARIABLE_DE_VETOS: ganchos.vetos_para_el_entorno(vetos_de(ventana)),
             ganchos.VARIABLE_DE_RESERVA: str(encargo.reserva_de_la_vuelta),
+            ganchos.VARIABLE_DE_NOMBRES: json.dumps(list(ventana.nombres)),
         }
 
     def _sistema(self, encargo: Encargo) -> str:
@@ -210,13 +214,15 @@ class EjecutorDeSubagentes:
         salida: str,
         latencia_ms: int,
         vetos: tuple[ganchos.Veto | str, ...] = (),
+        *,
+        nombres: tuple[str, ...] = (),
     ) -> Resultado:
         envoltorio, eventos = _leer_flujo(encargo, salida)
         if envoltorio.get("is_error"):
             raise SubagenteFallo(f"{encargo.tarea}: {envoltorio.get('result')!r}")
 
         texto = envoltorio.get("result") or ""
-        registro = veredicto_de_los_ganchos(encargo, texto, vetos, eventos)
+        registro = veredicto_de_los_ganchos(encargo, texto, vetos, eventos, nombres=nombres)
         if registro is not None:
             no_pasan = [final for final in registro["final"] if not final["pasa"]]
             if no_pasan:
@@ -312,6 +318,8 @@ def veredicto_de_los_ganchos(
     texto: str,
     vetos: tuple[ganchos.Veto | str, ...],
     eventos: list[dict[str, Any]],
+    *,
+    nombres: tuple[str, ...] = (),
 ) -> dict[str, Any] | None:
     """Lo que va a la `Traza` en `ganchos` (RF-127). `None` si no hay hooks.
 
@@ -342,7 +350,7 @@ def veredicto_de_los_ganchos(
         en_sesion.append(dijo)
     final = []
     for gancho in encargo.ganchos:
-        motivos = ganchos.revisar(gancho, encargo.tarea, texto, vetos)
+        motivos = ganchos.revisar(gancho, encargo.tarea, texto, vetos, nombres=nombres)
         veredicto: dict[str, Any] = {"gancho": gancho, "pasa": not motivos, "motivos": motivos}
         if gancho == "policy":
             veredicto["coincidencias"] = _coincidencias(texto, vetos)

@@ -28,6 +28,7 @@ from novela.nucleo import versiones
 from novela.nucleo.caminante import Resultado
 from novela.nucleo.guion import Encargo
 from novela.nucleo.proyecciones import Ventana
+from novela.tareas import CatalogoDelRepositorio
 
 BRIEF = {
     "titulo": "El taller de la calle de las Sierpes",
@@ -41,6 +42,9 @@ BRIEF = {
 }
 
 
+PROSA_DE_ESCENA = "Version cosida de la escena. " + "tinta " * 400
+
+
 @dataclass
 class EjecutorFirmado:
     """El fingido de siempre, que firma la prosa y el lugar con `firma`.
@@ -50,7 +54,11 @@ class EjecutorFirmado:
     """
 
     firma: str = "v1"
-    interno: EjecutorFingido = field(default_factory=EjecutorFingido)
+    # Cada escena cosida trae lo bastante para que el capitulo tenga la longitud
+    # de un capitulo y la version pase la puerta de publicacion (RF-143).
+    interno: EjecutorFingido = field(
+        default_factory=lambda: EjecutorFingido(texto_cosido=PROSA_DE_ESCENA)
+    )
 
     def ejecutar(self, encargo: Encargo, ventana: Ventana) -> Resultado:
         resultado = self.interno.ejecutar(encargo, ventana)
@@ -412,7 +420,9 @@ def test_las_marcas_de_version_no_se_tocan(almacen: Almacen) -> None:
         conexion.execute(
             "UPDATE version_de_la_obra SET terminada_en = 'y' WHERE id_obra = ?", (id_obra,)
         )
-    versiones.publicar(almacen, id_obra, 1)
+    # Aqui se prueban los disparadores del registro, no la puerta: se escribe la
+    # publicacion directamente.
+    almacen.publicar_version(id_obra, 1)
     with pytest.raises(sqlite3.IntegrityError, match="no se borra"):
         conexion.execute("DELETE FROM publicacion_de_version WHERE id_obra = ?", (id_obra,))
     with pytest.raises(sqlite3.IntegrityError, match="inmutable"):
@@ -424,7 +434,7 @@ def test_las_marcas_de_version_no_se_tocan(almacen: Almacen) -> None:
 def test_sin_terminar_no_se_publica_ni_se_rehace(almacen: Almacen) -> None:
     id_obra = almacen.crear_obra({"titulo": "Obra"})
     with pytest.raises(VersionNoAdmitida):
-        versiones.publicar(almacen, id_obra, 1)
+        versiones.publicar(almacen, id_obra, 1, CatalogoDelRepositorio())
     with pytest.raises(VersionNoAdmitida):
         versiones.rehacer_desde(almacen, None, id_obra, 1, 1)
     assert versiones.de_referencia(almacen, id_obra) == 1

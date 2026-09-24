@@ -32,7 +32,10 @@ contrato y su prompt, el presupuesto de contexto, la recogida de fuentes fuera
 del sistema, el destinatario real al que la obra va dedicada con los hechos que
 vienen de su vida, la entrevista que completa el brief antes del alta, el
 punto de guardado por capítulo con la política de reintentos de cada paso, los
-dos hooks que revisan lo que entregan los subagentes de prosa, las listas de lo vetado con su registro de auditoría, y la API HTTP que el editor usa para lanzar e inspeccionar una obra.
+dos hooks que revisan lo que entregan los subagentes de prosa, las listas de
+lo vetado con su registro de auditoría, los validadores programáticos con la
+puerta que decide si una versión se publica, y la API HTTP que el editor usa
+para lanzar e inspeccionar una obra.
 
 Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
 lo enumerado en §11.
@@ -357,7 +360,7 @@ materia prima de la que sale la ficha `personal` y no la ficha misma.
 | D-26 | **El uso es un artefacto aparte, no un campo de la ficha.** Tampoco un campo del `Resumen de capítulo` | Un campo en la ficha que crece capítulo a capítulo choca con la inmutabilidad de `canon` y `personal` y con «el mundo solo cambia por `EventoEstado`». Dentro del resumen, saber dónde se usa un hecho obliga a recorrer todos los resúmenes, y eso crece con la obra. Con un artefacto de solo añadir la pregunta es una consulta por `id`, y «en qué capítulos» se deriva igual que el estado. El índice de la biblia que recibe el Archivero lee cuatro campos por ficha sin interpretarlos: es proyección, no decisión. Crece con la biblia, no con la prosa, y es mucho más corto que el canon que ya reciben el Planificador y el Verificador |
 | D-27 | **La cronología se deriva al consultar.** No es un artefacto del Contable ni una caché | Todo lo que lleva ya está escrito: la fecha, el lugar y los presentes en el `EventoEstado`, el suceso histórico en el `Evento` y el nacimiento en la ficha. Guardarlo otra vez sería un segundo sitio que mantener al día, y «el estado no se almacena, se deriva». Ordenar por la fecha escrita no es aritmética de calendario: no reabre D-05 |
 | D-28 | **`presentes` en el `EventoEstado` y fechas ISO parciales.** El formato lo piden el prompt y el esquema del rol que escribe; el almacén no lo comprueba en esta versión | Sin presencia por suceso no se puede afirmar que un personaje no está en dos sitios a la vez, y sin un formato de fecha fijo el volcado formal tendría que interpretar texto libre. La parcial admite lo que de verdad se sabe de una época —a veces solo el año— sin inventar el día. Comprobar el formato al escribir es trabajo del volcado formal, que es quien lo consume |
-| D-29 | **Alcance: registrar, derivar y servir.** Quedan fuera el validador de elementos personalizados, el fichero del demostrador formal y la propagación de cambios del lector | Son los tres consumidores de esto y cada uno tiene su propia pasada del ciclo. Servirlo por la API ya ahora es lo que permite a la interfaz enlazar cada ficha con sus capítulos sin volver a mover la frontera |
+| D-29 | **Alcance: registrar, derivar y servir.** Quedan fuera el fichero del demostrador formal y la propagación de cambios del lector; el validador de elementos personalizados es de §4.15 | Son los consumidores de esto y cada uno tiene su propia pasada del ciclo. Servirlo por la API ya ahora es lo que permite a la interfaz enlazar cada ficha con sus capítulos sin volver a mover la frontera |
 
 **Lo que queda fuera.** La comprobación de que el Archivero no se ha dejado
 ningún hecho sin anotar, y la validación del formato de fecha al escribir
@@ -512,7 +515,7 @@ versión terminada es una orden aparte, que se da o no se da.
 | RF-113 | **Qué ve cada versión.** La versión V ve lo escrito en V o antes que no haya relevado V o una anterior, y que no esté caducado por otro motivo. La última versión ve exactamente lo que no está caducado, así que la producción no cambia: sigue leyendo solo lo vivo | `prueba` |
 | RF-114 | **La versión anterior se conserva siempre.** Rehacer y producir la versión nueva no cambia nada de lo que se sirve de una versión anterior: su manuscrito, sus capítulos, sus críticas, su estado plegado, sus hechos con su uso y su cronología son los mismos antes y después | `prueba` |
 | RF-115 | **El estado en N es de su versión.** La caché del estado materializado lleva la versión que lo plegó. Rehacer desde N no la borra: la releva, igual que a los artefactos. Descartar un capítulo a medias (RF-91) sí borra, y solo lo de la versión en curso | `prueba` |
-| RF-116 | **Publicar es un acto explícito**, `POST /obras/{id}/versiones/{n}/publicar`. Solo se publica una versión terminada; terminar no publica. Cada publicación se añade a un registro de solo añadir, y la versión publicada es la de la última publicación, así que volver a publicar una anterior también queda escrito. Publicar pasa por **un solo sitio del código**, que es donde entra cualquier comprobación que haya que hacer antes | `prueba` |
+| RF-116 | **Publicar es un acto explícito**, `POST /obras/{id}/versiones/{n}/publicar`. Solo se publica una versión terminada; terminar no publica. Cada publicación se añade a un registro de solo añadir, y la versión publicada es la de la última publicación, así que volver a publicar una anterior también queda escrito. Publicar pasa por **un solo sitio del código**, que es donde entra la puerta de publicación (RF-146) | `prueba` |
 | RF-117 | **Lecturas por versión.** Manuscrito, capítulo, críticas, estado, hechos y cronología admiten `version`. Sin ella sirven **la versión de referencia**: la publicada si hay alguna y, si no, la última. Una versión que no existe es un 404. El manuscrito dice qué versión sirve y si está publicada. `GET /obras/{id}/versiones` lista las versiones con su base, sus capítulos cambiados, si ha terminado y cuál es la publicada, y la ficha de la obra dice cuál está en curso y cuál publicada. Trazas, progreso y búsqueda de pasajes siguen siendo de la producción en curso | `prueba` |
 | RF-118 | **Descartar un capítulo a medias sigue la misma regla de qué cuelga de un capítulo.** Lo que RF-91 caduca incluye también lo que no lleva capítulo pero escribió una tarea de un capítulo descartado, como un `Evento` que el Planificador añadió al mundo | `prueba` |
 
@@ -523,7 +526,7 @@ versión terminada es una orden aparte, que se da o no se da.
 | D-40 | **Las versiones van en fila: la nueva sale siempre de la última, y solo cuando la última ha terminado.** No hay ramas ni dos versiones produciéndose a la vez | Es la forma más pequeña que cumple lo pedido. Ramas obligarían a elegir de cuál sale cada rehacer y a producir dos a la vez, que es justo «varias obras a la vez» (§11) con otro nombre. Exigir la última terminada deja además toda versión anterior terminada, y por tanto publicable, que es un invariante sencillo de demostrar |
 | D-41 | **Cada versión tiene su propio mundo, y la biblia se versiona junto a la novela.** Los capítulos compartidos no se copian: cada fila lleva la versión en que nació y, si la hay, la que la relevó, y lo que ve una versión se deduce de esas dos marcas | Copiar los capítulos 1 a N-1 duplicaría el almacén en cada rehacer y dejaría dos filas diciendo lo mismo. Un mundo único que evoluciona sin volver atrás haría incoherente la versión vieja en cuanto la nueva emite sus eventos, que es lo que Álvaro descartó. Con dos marcas la producción no cambia —sigue leyendo lo vivo— y la regla de visibilidad es una comparación de números. Cierra la decisión abierta de `architecture.md` §8 sobre la biblia. La biblia de partida es común porque ninguna versión la reescribe |
 | D-42 | **Rehacer es desde un capítulo N hasta el final**, no una lista de capítulos sueltos | Lo que viene después de un capítulo rehecho se escribió sobre su mundo: dejarlo tal cual lo dejaría contradiciendo al capítulo nuevo. Aun así, qué cambió se registra como lista y no como un número, para que quien lo lea no dependa de la regla con que se calculó |
-| D-43 | **Publicar es un registro de solo añadir y pasa por un solo sitio.** Sin ella, las lecturas sirven la publicada si la hay y si no la última | Una marca en la versión se perdería al publicar otra; el registro guarda también las vueltas atrás. Un solo punto de paso es donde se engancha la puerta que haga falta antes de publicar, sin repartirla por la API. Servir la última mientras no haya publicada mantiene lo que el editor ve hoy durante la producción, y la respuesta dice cuál sirve para que no se confunda con la publicada |
+| D-43 | **Publicar es un registro de solo añadir y pasa por un solo sitio.** Sin ella, las lecturas sirven la publicada si la hay y si no la última | Una marca en la versión se perdería al publicar otra; el registro guarda también las vueltas atrás. Un solo punto de paso es donde se engancha la puerta de publicación (RF-146), sin repartirla por la API. Servir la última mientras no haya publicada mantiene lo que el editor ve hoy durante la producción, y la respuesta dice cuál sirve para que no se confunda con la publicada |
 | D-44 | **El estado materializado se releva con su versión en vez de borrarse** | Es caché, pero no se recalcula sola: quien pliega es el Contable, y volver a plegar una versión vieja costaría tareas sin producir nada. Borrarla dejaría la versión anterior sin estado que servir, que es incumplir RF-114 por la puerta de atrás |
 
 **Qué retira.** La salvedad de §4.9 sobre las menciones de un capítulo que se
@@ -533,8 +536,7 @@ los capítulos que se rehacen: lo releva (RF-115).
 **Qué queda fuera.** Qué cambia en la entrada de los capítulos que se
 reescriben: hoy rehacer vuelve a producir sobre el mismo brief y la misma
 biblia de partida, y meter un cambio del lector es trabajo de la lectura
-interactiva. La puerta de validación antes de publicar, que tiene su sitio
-reservado pero no existe. Rehacer la biblia de partida. Buscar pasajes en una
+interactiva. Rehacer la biblia de partida. Buscar pasajes en una
 versión que no es la en curso. Borrar o archivar versiones, que no se hace
 nunca (RD-07). OBJ-07 no cambia: cuenta las órdenes hasta la obra cerrada, y
 rehacer y publicar llegan después.
@@ -583,7 +585,7 @@ flowchart LR
 | RF-120 | Cada paso del guion declara en `guion.toml` qué hooks lleva su subagente, con un vocabulario cerrado de dos valores: `validar_capitulo` y `policy`. Los llevan los tres pasos que escriben prosa —3 `redactar`, 5 `revisar` y 7, la costura— y ningún otro; las cribas del paso 8, aunque las haga el mismo rol que cose, no. Un hook que no esté en el vocabulario no carga el guion | `prueba` |
 | RF-121 | Los hooks son hooks `Stop` de Claude Code de verdad y viajan en la orden del ejecutor, en `--settings` con JSON en línea. El aislamiento de §4.11 no se toca: el subagente sigue arrancando en su directorio vacío, sin `CLAUDE.md`, sin `.claude/` y sin MCP. Un encargo sin hooks lleva la misma orden que antes, sin `--settings` | `prueba` |
 | RF-122 | Cada hook es un programa del paquete, `python -m novela.ganchos <hook> <tarea>`. Lee la entrada que le da Claude Code —de ella, solo el último mensaje del agente y si ya ha bloqueado en ese turno—, no abre la base de datos, no escribe nada en disco y no llama a ningún modelo. El esquema y el contrato los lee de `tareas/<tarea>/`, que es entrada versionada (RD-09); la lista de vetos y la reserva de la vuelta le llegan en variables de entorno del proceso. Si bloquea, sale con código 2 y el motivo por su salida de error; si no, sale con 0 | `prueba` |
-| RF-123 | **`validar_capitulo` comprueba la forma, y nada del contenido.** La salida es un objeto JSON con la lista `artefactos`; cada artefacto trae `tipo` y `cuerpo`; cada tipo es uno de los que el contrato de la tarea deja escribir; el tipo principal del `esquema.json` de la tarea aparece al menos una vez y con todos los campos que su esquema declara; y todo `Borrador` trae `texto` no vacío. Las comprobaciones son una lista a la que se añaden otras sin tocar el enganche | `prueba` |
+| RF-123 | **`validar_capitulo` comprueba la forma, y nada del contenido.** La salida es un objeto JSON con la lista `artefactos`; cada artefacto trae `tipo` y `cuerpo`; cada tipo es uno de los que el contrato de la tarea deja escribir; el tipo principal del `esquema.json` de la tarea aparece al menos una vez y con todos los campos que su esquema declara; y todo `Borrador` trae `texto` no vacío. Las comprobaciones son una lista a la que se añaden otras sin tocar el enganche; la de nombres de la biblia es la única que mira el texto (RF-145) | `prueba` |
 | RF-124 | **`policy` aplica lo vetado.** Busca las tres listas de §4.14, con su comparación normalizada, en el `texto` de cada `Borrador` y cada `Parrafo` de la salida. Si algo aparece, bloquea nombrando lo que encontró. Sin nada que coincida, no bloquea nunca | `prueba` |
 | RF-125 | **Una vuelta de corrección por intento.** Un hook bloquea solo la primera vez en el turno: si ya bloqueó uno, el siguiente `Stop` termina. Tampoco bloquea si la vuelta no cabe en la reserva del paso (RF-128). El motivo que devuelve no pasa de 1 000 caracteres | `prueba` |
 | RF-126 | **El veredicto que cuenta es el del ejecutor.** Al terminar el subagente, el ejecutor aplica las mismas comprobaciones, con las mismas funciones, a lo que entregó al final. Si alguna no pasa, el intento ha fallado y se aplican el `reintentos` y el `al_agotarse` de su paso (§4.10): los tres pasos con hooks declaran `detener_obra` | `prueba` |
@@ -596,7 +598,7 @@ flowchart LR
 | D-45 | **Hooks de Claude Code en el subagente, no comprobaciones del servidor ni hooks del desarrollo.** El evento es `Stop`, que es el que dispara el agente principal en `--print`; `SubagentStop` es de los subagentes que un agente lanza por su cuenta | Comprobar solo en el servidor llega tarde: el agente ya ha terminado y no puede corregir. Un hook de `.claude/` no llega nunca, porque el subagente arranca fuera del repositorio (RF-100). Pasarlo en la orden es lo único que lo engancha a la tarea que escribe la novela sin romper el aislamiento |
 | D-46 | **Lo que el hook necesita le llega por la orden y el entorno, no por ficheros.** El nombre del hook y de la tarea van en su línea de orden; los vetos y la reserva, en variables de entorno del subagente; el esquema, del catálogo versionado | Escribir la lista de vetos en el directorio de la tarea contradiría D-35 —nace vacío y muere vacío— y RD-08. El hook no escribe en la base: informa por su salida y quien registra es el ejecutor, así que el almacén sigue con un solo escritor (RNF-05) |
 | D-47 | **Una vuelta en la sesión y, si no basta, un intento fallido.** No se inventa otra política: lo que pasa después lo deciden `reintentos` y `al_agotarse` | Un hook no guarda estado entre llamadas y la única memoria que Claude Code le da es si ya bloqueó en ese turno, así que «una vuelta» es lo único que puede contar sin escribir nada. Más vueltas harían crecer la entrada sin tope, y el propio CLI corta un hook a los diez bloqueos seguidos. El intento siguiente arranca en frío, así que el total queda acotado por los reintentos del paso |
-| D-48 | **`validar_capitulo` va en los tres pasos de prosa y solo mira la forma.** Nombres escritos como en la biblia, longitud del capítulo y la puerta de publicación son de la tarea de validadores programáticos, que añadirá sus comprobaciones a la misma lista | Es lo que se puede decidir sin gastar y sin interpretar el texto (§2.1). Engancharlo solo a la costura dejaría pasar una escena malformada hasta el final del capítulo; los tres pasos que escriben `Borrador` son los tres sitios donde se puede corregir en el acto |
+| D-48 | **`validar_capitulo` va en los tres pasos de prosa y mira la forma, más los nombres de la biblia** (RF-145, D-55) | Es lo que se puede decidir sin gastar y sin interpretar el texto (§2.1). Engancharlo solo a la costura dejaría pasar una escena malformada hasta el final del capítulo; los tres pasos que escriben `Borrador` son los tres sitios donde se puede corregir en el acto |
 | D-49 | **`policy` es un solo enganche para toda lista de lo vetado.** Qué listas mira y cómo compara lo fija §4.14; ampliarlas cambia de dónde sale la lista y la comparación, no el enganche | No es la dimensión de léxico vetado de la época, que sigue en el Editor de estilo: es una política del comprador y de la instalación, comprobada como se comprueba la forma de un artefacto (RF-23). Si una comparación de cadenas, también normalizada, cuenta como herramienta de cálculo en el sentido de D-05 lo decide esa decisión abierta, que no se cierra aquí |
 
 **Cuánto contexto añade.** Nada si el agente entrega bien a la primera: la
@@ -613,10 +615,10 @@ texto.
 aplican. RF-98 suma un caso de intento fallido: la salida final que no pasa un
 hook. Y RF-13 suma la reserva de la vuelta a la anchura de los pasos con hooks.
 
-**Qué queda fuera.** Los validadores de nombres exactos, de longitud y la
-puerta de publicación; detectar un tema vetado por su sentido y no por sus
-palabras; y hooks en los roles que no escriben prosa. Qué listas mira `policy`
-y cómo compara es de §4.14.
+**Qué queda fuera.** Detectar un tema vetado por su sentido y no por sus
+palabras, y hooks en los roles que no escriben prosa. Qué listas mira
+`policy` y cómo compara es de §4.14; los nombres, la longitud y la puerta de
+publicación, de §4.15.
 
 **De dónde sale.** `architecture.md` §3 (toda tarea arranca en frío,
 presupuesto) y §4 (reintentos por paso); RF-06, RF-13, RF-16, RF-23, RF-95 a
@@ -691,6 +693,66 @@ con lo que la normalización no ve; y §8, los métodos de RF-130 a RF-138.
 `definitions.md` y `domain-knowledge.md` no cambian: lo vetado ya era parte del
 destinatario y el registro es de producción.
 
+### 4.15 Validadores programáticos y puerta de publicación
+
+**El problema.** Publicar una versión era una orden sin condiciones: bastaba con
+que hubiera terminado. Nadie comprobaba lo que se puede comprobar sin juzgar el
+texto: que la salida de cada rol trae los campos de su esquema, que los nombres
+de la biblia —el del destinatario el primero— se escriben tal cual, que cada
+capítulo tiene una longitud de capítulo y que lo que sale de la vida del
+destinatario acaba en la novela. Un «Inés» donde la biblia dice «Ines», un
+capítulo de doscientas palabras o el perro del destinatario sin aparecer
+llegaban a la versión publicada sin que nada lo dijera.
+
+**La decisión, en una frase.** Cuatro validadores deterministas, funciones puras
+que no abren la base ni llaman a ningún modelo, y una puerta en el único sitio
+por el que se publica: si alguno falla, la versión no se publica y la respuesta
+dice qué falló y en qué capítulo. El de nombres va además en el hook
+`validar_capitulo`, para que quien escribe lo corrija en el acto.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-140 | Los cuatro validadores viven en `novela/validadores.py`: funciones puras que reciben lo ya leído y devuelven lo que falla. No abren la base de datos, no escriben en disco y no llaman a ningún modelo. Cada fallo de la puerta dice qué validador lo da —vocabulario cerrado `validador_de_la_puerta`: `esquema`, `nombres`, `longitud`, `elementos_personalizados`—, en qué capítulo está, vacío si no es de ninguno, y un detalle legible | `prueba` |
+| RF-141 | **Esquema.** Todo artefacto que ve la versión (RF-113), escrito por un rol y cuyo tipo declara el `esquema.json` de la tarea de ese rol, trae en su cuerpo todos los campos que ese esquema declara para su tipo. El fallo nombra el artefacto, su tipo y los campos que le faltan. Lo que escribe el backend —la `Traza`, las críticas de RF-23 y RF-99— no es salida de un rol y no se mira | `prueba` |
+| RF-142 | **Nombres.** Los nombres de la biblia son el del destinatario y el `nombre` y los `tratamientos` de cada `Personaje`, `Lugar`, `Objeto` y `Faccion`. En el texto de cada `Borrador` y cada `Parrafo`, una palabra que empieza por mayúscula, no es ninguna palabra de esos nombres y se parece a una —solo cambian acentos o mayúsculas; o, en un nombre de cinco letras o más, cambia una sola letra; o, en uno de siete o más, sobra o falta una— es un nombre mal escrito, salvo que la misma palabra aparezca también en minúscula en ese texto, que es lo que delata una palabra corriente. El fallo dice lo escrito y el nombre de la biblia. En la puerta, además, el nombre del destinatario aparece tal cual en algún capítulo | `prueba` |
+| RF-143 | **Longitud.** `guion.toml` declara en `[capitulo]` `palabras_minimas` y `palabras_maximas`, iguales para todas las obras: 1 000 y 4 000. Si faltan, no son enteros positivos o el mínimo pasa del máximo, el guion no carga. Cada capítulo de la versión, contado sobre su texto aceptado, cae dentro del rango; un capítulo sin texto tiene cero palabras | `prueba` |
+| RF-144 | **Elementos personalizados.** Todo hecho de la biblia de la versión con licencia `personal` tiene al menos una `Mencion` en un capítulo de la versión: los capítulos en que se usa (RF-84) no están vacíos. El fallo nombra el hecho | `prueba` |
+| RF-145 | **En la escritura, solo nombres.** `validar_capitulo` suma a su lista la comprobación de nombres de RF-142, sin la de presencia del destinatario. La lista de nombres le llega por la variable de entorno `NOVELA_GANCHO_NOMBRES`, como los vetos (D-46), y no entra en la ventana. Como toda comprobación de ese hook, la repite el ejecutor sobre lo entregado al final (RF-126). El esquema de lo guardado, la longitud y los elementos personalizados van solo en la puerta | `prueba` |
+| RF-146 | **La puerta.** `nucleo.versiones.publicar` —el único sitio por el que se publica (RF-116)— comprueba que la versión existe y ha terminado y después pasa los cuatro validadores sobre lo que ve esa versión. Si alguno falla, no publica: no añade nada al registro de publicaciones y la orden responde con la lista de fallos. Rehacer sigue siendo una orden del editor (RF-111): la puerta no regenera nada | `prueba` |
+| RF-147 | `GET /obras/{id}/versiones/{n}/puerta` sirve el resultado de pasar la puerta sobre esa versión en ese momento, sin publicar nada, haya terminado o no; la respuesta dice si ha terminado. Una versión que no existe es un 404 | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-55 | **En el hook, solo los nombres; lo demás, solo en la puerta** | Un nombre mal escrito está en el texto que el agente acaba de escribir, y una vuelta basta para arreglarlo: es lo que el hook hace bien. La longitud es del capítulo entero, y la única tarea que lo ve junto es la costura, cuyo rol no escribe contenido: estirar o recortar un capítulo es trabajo del Redactor, y pedírselo al Editor de estilo ensancharía su rol. Las `Mencion` nacen al cerrar el capítulo, después de los tres pasos de prosa. Y el esquema de los roles sin hooks no se comprueba al escribir porque no tienen vuelta de corrección: un fallo sería un intento fallido que acaba deteniendo la obra, justo lo que OBJ-07 evita. La forma del artefacto principal de los tres de prosa ya la mira el hook (RF-123) |
+| D-56 | **Un nombre mal escrito se detecta por distancia de letras, con reglas que prefieren no ver una variante antes que detener la obra por una palabra corriente** | En el hook, un fallo que el agente no corrige es un intento fallido y, agotados los reintentos, detiene la obra. «Pero» está a una letra de «Pedro» y «Marido» de «Mario»: por eso sobrar o faltar una letra solo cuenta en nombres de siete o más, y una palabra que también sale en minúscula no se toma por nombre. El precio declarado es que «Martha» por «Marta» pasa. Es comparar cadenas contra lo escrito en la biblia, como `policy` (D-49): no juzga el texto (§2.1) ni cierra D-05 |
+| D-57 | **Un elemento personalizado obligatorio es todo hecho de la biblia con licencia `personal`** | Es lo que RF-08 ya marca como salido de la vida del destinatario, y la tabla de hechos sabe en qué capítulos se usa cada uno. Contar por `Recuerdo` obligaría a fijar con qué campo apunta una ficha a su recuerdo, que el esquema del Constructor no declara |
+| D-58 | **El rango de longitud está en el guion, fijo, de 1 000 a 4 000 palabras por capítulo** | Fijo e igual para todas las obras, y no derivado de la extensión del brief, lo decidió el dueño. El máximo sale de la ventana de la costura: 4 000 palabras son unos 24 000 caracteres, unos 6 700 tokens a 3,6 por token, y eso cabe en los 8 000 del Editor de estilo sin partir el capítulo (RF-14). Por debajo de 1 000 palabras hay una escena, no un capítulo. Va en el guion, junto a lo demás que gobierna el capítulo, y no en `ajustes.py` |
+| D-59 | **La puerta explica y no guarda.** Responde 409 con los fallos, y su resultado se deriva cada vez que se pide | 409 porque la petición está bien formada y lo que choca es el estado de la versión, igual que publicar una sin terminar. Guardar el resultado sería un segundo sitio que mantener al día, y una versión terminada no cambia (RF-114): pasar la puerta dos veces da lo mismo. Regenerar solo al fallar lo descartó el dueño: rehacer es una decisión editorial |
+
+**Qué retira.** De §4.12, la puerta como pendiente; de §4.13, los validadores de
+nombres y de longitud como pendientes y la frase de D-48 que los aplazaba; de
+D-29 y de §11, el validador de elementos personalizados como fuera de alcance.
+RF-123 suma la comprobación de nombres a la lista de `validar_capitulo`.
+
+**Qué queda fuera.** El validador visual con navegador y enseñar en la web por
+qué no pasó una versión, que son de la lectura interactiva. Pedir la longitud a
+quien escribe: ni el Planificador ni el Redactor reciben el rango, y hasta que
+lo reciban la puerta es el primer sitio donde se ve un capítulo corto. Comprobar
+que cada `Recuerdo` tiene ficha. Detectar un nombre mal escrito por su parecido
+de sentido y no de letras. Y regenerar lo que falla sin que el editor lo pida.
+
+**De dónde sale.** RF-08, RF-23, RF-84, RF-111, RF-113, RF-116 y RF-123; D-43,
+D-46, D-48 y D-49; `validators.md` §3 (el contrato de verificación) y §7 (los
+guardarraíles).
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md`: §2, el
+vocabulario de proceso `validador_de_la_puerta`; §4, la puerta al publicar y el
+hook de nombres; §7, `validadores.py` en el árbol. `validators.md`: §6, las
+pruebas y el contrato de importación nuevo; §7, los hooks y lo que la
+comparación de nombres no ve; y §8, los métodos de RF-140 a RF-147, RD-30, RI-18
+y RI-19. `definitions.md` y `domain-knowledge.md` no cambian: el elemento
+personalizado es un hecho `personal`, que ya existía.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -719,6 +781,7 @@ destinatario y el registro es de producción.
 | RD-25 | El veredicto de los hooks vive en el cuerpo de la `Traza`, en `ganchos`, y no en una tabla ni en una columna nueva: no hace falta migración. Nadie consulta por él todavía; quien lo necesite para filtrar lo sacará a columna entonces | `prueba` |
 | RD-26 | La lista global de lo vetado tiene tabla propia, fuera de las de artefactos: es de la instalación, así que no cuelga de ningún `id_obra` (RD-02), y no se versiona. La siembra la migración 8; no se borra ni se modifica (RF-131) | `prueba` |
 | RD-27 | El registro de auditoría de `policy` tiene tabla propia, de solo añadir, fuera de las de artefactos: cuelga de la obra y de la `Traza` del intento, lleva `nivel_de_veto` y `decision_de_policy` como valores cerrados, y no se borra, no se modifica, no se caduca ni se releva. Capítulo, escena, tarea e intento no se copian: se leen de su `Traza` (RF-135, RF-136, D-53) | `prueba` |
+| RD-30 | El resultado de la puerta de publicación no tiene tabla ni se guarda: se deriva al pedirlo de lo que ve la versión (RF-146, RF-147, D-59). No hace falta migración | `prueba` |
 
 Un único ejemplo, que fija el estilo del cuerpo de todo artefacto. Los demás no
 se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe.
@@ -761,6 +824,8 @@ se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe
 | RI-15 | `GET /obras/{id}/trazas` | Ver por qué un intento falló | Cada `Traza` servida trae además `ganchos`, lo que RF-127 guardó: vacío si su paso no lleva hooks |
 | RI-16 | `GET /obras/{id}/policy` | Ver qué encontró la política de lo vetado | RF-138. Filtrable por capítulo, nivel y decisión. Sin operación de escritura |
 | RI-17 | `GET /obras/{id}` | Saber por qué se detuvo una obra | La ficha trae además el motivo de la detención, vacío si no está detenida (RF-137) |
+| RI-18 | `POST /obras/{id}/versiones/{n}/publicar` | Saber por qué no se publicó | RF-146. Si la puerta falla, 409 con `detail` y `puerta`: el mismo resultado que RI-19. Una versión sin terminar sigue siendo 409 solo con `detail` |
+| RI-19 | `GET /obras/{id}/versiones/{n}/puerta` | Ver la puerta antes de publicar | RF-147. Si pasa, si la versión ha terminado y la lista de fallos, cada uno con su validador, su capítulo y su detalle |
 
 Tres reglas de frontera. La interfaz web nunca lee ficheros ni la base de datos.
 El contrato HTTP se valida en el borde con modelos declarados —es el único sitio
@@ -820,6 +885,7 @@ requisitos que justifican.
 | §4.12 Versiones | `architecture.md` §3 (estado como pliegue) y §4 (punto de guardado); RD-07; D-32 |
 | §4.13 Los dos hooks, RD-25, RI-15 | `architecture.md` §3 (en frío y presupuesto) y §4 (reintentos por paso); `validators.md` §7 (guardarraíles); RF-06, RF-95 a RF-102 |
 | §4.14 Lo vetado, RD-26, RD-27, RI-16, RI-17 | §4.10 y §4.13; `validators.md` §7 (guardarraíles y adversario); RF-06, RD-02 y RD-08 |
+| §4.15 Validadores y puerta, RD-30, RI-18, RI-19 | `validators.md` §3 (contrato de verificación) y §7 (guardarraíles); RF-08, RF-23, RF-84, RF-116, RF-123; D-43, D-46 |
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
 
 ## §10 Verificación y criterios de aceptación
@@ -869,6 +935,12 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    Un Redactor fingido que insiste agota sus intentos y la ficha dice por qué
    se detuvo la obra; cada coincidencia, la de la sesión y la del veredicto
    final, está en el registro que sirve `GET /obras/{id}/policy`.
+11. **La puerta de publicación.** Sin gastar: cada validador tiene un caso que
+   pasa y otro que falla; el hook de forma bloquea un «Inés» donde la biblia dice
+   «Ines» y deja pasar una palabra corriente parecida; una versión terminada con
+   un capítulo corto, un nombre mal escrito, un hecho `personal` sin mención o un
+   artefacto sin un campo de su esquema no se publica, y la respuesta dice cuál
+   falló y en qué capítulo; y la misma obra sin el defecto se publica.
 
 ## §11 Fuera del alcance de v1
 
@@ -881,11 +953,10 @@ pero no compacta; el registro acumulado de estilo ya no lo necesita porque se
 consulta por parecido. El corpus curado de fuentes de época, por D-06. Y
 cualquier herramienta externa de cálculo, por D-05.
 
-También queda fuera todo lo que rodea al destinatario sin ser él: la
-comprobación de que cada elemento personalizado acaba apareciendo en algún
-capítulo, y del filtro de lo vetado, lo que enumera §4.14: el tema dicho con
-otras palabras y lo escrito para esquivar la lista. De la entrevista queda fuera lo que enumera §4.8, y de las
-versiones, lo que enumera §4.12.
+También queda fuera, del filtro de lo vetado, lo que enumera §4.14: el tema
+dicho con otras palabras y lo escrito para esquivar la lista. De la entrevista
+queda fuera lo que enumera §4.8; de las versiones, lo que enumera §4.12; y de
+la puerta de publicación, lo que enumera §4.15.
 
 ## §12 Decisiones abiertas
 

@@ -118,6 +118,14 @@ NIVEL_DE_VETO: tuple[str, ...] = ("global", "palabra_del_comprador", "tema_del_c
 # sesion para que corrija, o dar el intento por fallido en el veredicto final.
 DECISION_DE_POLICY: tuple[str, ...] = ("devuelto_al_agente", "intento_fallido")
 
+# Que validador da cada fallo de la puerta de publicacion (SPEC1 4.15, RF-140).
+VALIDADOR_DE_LA_PUERTA: tuple[str, ...] = (
+    "esquema",
+    "nombres",
+    "longitud",
+    "elementos_personalizados",
+)
+
 # Las tres memorias (architecture.md 3). Cada artefacto declara a cual pertenece
 # porque es lo que permite al Archivero retirar la de capitulo sin decidir nada.
 MEMORIA: tuple[str, ...] = ("tarea", "capitulo", "obra")
