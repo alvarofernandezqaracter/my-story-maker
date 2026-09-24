@@ -1,5 +1,6 @@
 # §19 Interfaz web. Servidor local de la biblioteca estandar: sirve web/ y
-# expone una API pequena sobre el canon de la novela en curso (§21).
+# expone una API pequena sobre el canon de las novelas de la biblioteca (§21).
+# Sin `?novela=` se mira la novela en curso; con el, cualquiera de las demas.
 #
 # **En el canon escribe el orquestador y nadie mas** (§21). Aqui no hay motor ni
 # hilo de flujo, y ninguna ruta toca un fichero del canon: lo que hay es un
@@ -15,11 +16,12 @@
 import json
 import time
 import webbrowser
+from collections import Counter
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs
 
-from . import lanzador, trazas_cc
+from . import biblioteca, lanzador, trazas_cc
 from .config import cargar_config, ErrorConfig
 from .canon_cc import CanonCC, auditar_gate, media_de, notas_en_lista, operacion
 
@@ -186,6 +188,10 @@ def _auditoria(canon, config):
 
 def _proyecto(config, raiz=None):
     canon = CanonCC(raiz) if raiz else CanonCC()
+    # La carpeta de la novela, que es su nombre en la biblioteca y en la URL de
+    # la pagina. Existe aunque aun no tenga canon: el lanzador la aparta antes
+    # de que el orquestador escriba nada. Sin ninguna, no hay novela que nombrar.
+    carpeta = raiz or biblioteca.actual()
     capitulos = _capitulos(canon)
     # El capitulo en curso es el que esta en el loop. Si no hay ninguno -lo
     # normal entre pasadas- se ensena el ultimo que tuvo intentos, marcado como
@@ -197,6 +203,7 @@ def _proyecto(config, raiz=None):
     texto_retoques, ruta_retoques = canon.retoques()
     return {
         'orquestador': 'Claude Code',
+        'novela': Path(carpeta).name if carpeta else None,
         'estado': canon.estado(),
         'actualizado': canon.actualizado(),
         'brief': canon.brief(),
@@ -280,23 +287,83 @@ def _contexto(numero, raiz=None):
     return {'capitulo': numero, 'texto': texto, 'ruta': ruta, 'origen': 'guardado'}
 
 
+# ---------------------------------------------------------------- biblioteca
+
+def _carpeta(consulta):
+    """La carpeta que pide `?novela=`, o None para la novela en curso.
+
+    El nombre se busca entre las carpetas que hay y no se compone con el: un
+    `../config` no es una novela, y asi no hace falta limpiarlo para que no se
+    salga de `biblioteca/`.
+    """
+    nombre = (parse_qs(consulta).get('novela') or [''])[0].strip()
+    if not nombre:
+        return None
+    for carpeta in biblioteca.carpetas():
+        if carpeta.name == nombre:
+            return carpeta.as_posix()
+    raise RespuestaError(404, 'no hay ninguna novela que se llame {} en {}/'.format(
+        nombre, biblioteca.RAIZ))
+
+
+def _novelas(config):
+    """Las novelas de la biblioteca, cada una con lo que su tarjeta ensena.
+
+    Es el tablero del taller: una fila por carpeta, con su estado de §4 y los
+    recuentos de su escaleta. Todo sale del canon de cada una o se recalcula
+    con las reglas del spec; lo que una carpeta aun no tiene va vacio y no se
+    rellena con lo que pidio el brief.
+    """
+    lanzado = lanzador.estado()
+    con_sesion = (lanzado.get('lanzado') or {}).get('novela') if lanzado.get('corriendo') else None
+    actual = biblioteca.actual()
+    salida = []
+    for novela in biblioteca.listar():
+        canon = CanonCC(novela['ruta'])
+        capitulos = _capitulos(canon)
+        cuenta = Counter(c['estado'] for c in capitulos)
+        texto_retoques, _ = canon.retoques()
+        salida.append({
+            'nombre': novela['nombre'],
+            'ruta': novela['ruta'],
+            'cuando': novela['cuando'],
+            'actual': novela['ruta'] == actual,
+            # Solo la sesion que se arranco desde aqui: una abierta a mano en
+            # Claude Code no deja rastro que esta pagina pueda ver.
+            'sesion': novela['nombre'] == con_sesion,
+            'estado': canon.estado(),
+            'actualizado': canon.actualizado(),
+            'brief': canon.brief(),
+            'capitulos': {
+                'total': len(capitulos),
+                'aprobados': cuenta['aprobado'],
+                'en_curso': cuenta['en_curso'],
+                'bloqueados': cuenta['bloqueado'],
+            },
+            'intentos': sum(c['intentos'] for c in capitulos),
+            'discrepancias': len(_auditoria(canon, config)['discrepancias']),
+            'retoques': bool(texto_retoques),
+        })
+    return {'novelas': salida, 'raiz': biblioteca.RAIZ}
+
+
 # -------------------------------------------------------------- trazas (§20)
 
-# Lo ultimo que se mando, para que la pagina pueda decir "esto ya salio" sin
-# volver a mandarlo. Es del proceso y no del canon: si el servidor se muere se
-# pierde, y da igual, porque la verdad de esto vive en Langfuse.
+# Lo ultimo que se mando de cada novela, para que la pagina pueda decir "esto
+# ya salio" sin volver a mandarlo. Es del proceso y no del canon: si el servidor
+# se muere se pierde, y da igual, porque la verdad de esto vive en Langfuse.
 _ULTIMO_ENVIO = {}
 
 
-def _trazas(config):
+def _trazas(config, raiz=None):
     disponible = trazas_cc.disponibilidad(config)
-    canon = CanonCC()
+    canon = CanonCC(raiz) if raiz else CanonCC()
     return {
         'activas': bool(config['trazas']['activas']),
         'entorno': config['trazas']['entorno'],
         'lista': disponible['lista'],
         'motivo': disponible['motivo'],
-        'ultimo': _ULTIMO_ENVIO.get('delegado'),
+        'ultimo': _ULTIMO_ENVIO.get(Path(canon.raiz).name),
         'plan': trazas_cc.plan(canon, config) if canon.existe else None,
         # Lo que sale de aqui se reconstruye del canon: sin latencia, sin tokens
         # y sin coste. Lo que si los tiene lo manda el hook de §22 en vivo.
@@ -304,9 +371,9 @@ def _trazas(config):
     }
 
 
-def _exportar_trazas(config):
-    resultado = trazas_cc.exportar(config)
-    _ULTIMO_ENVIO['delegado'] = {
+def _exportar_trazas(config, raiz=None):
+    resultado = trazas_cc.exportar(config, raiz)
+    _ULTIMO_ENVIO[Path(raiz or CanonCC().raiz).name] = {
         'cuando': time.time(),
         'enviado': resultado['enviado'],
         'motivo': resultado.get('motivo'),
@@ -338,19 +405,22 @@ def responder(metodo, camino, cuerpo, config, raiz_web=RAIZ_WEB):
     Devuelve (codigo, tipo de contenido, bytes).
     """
     camino, _, consulta = camino.partition('?')
-    parse_qs(consulta)
     try:
+        if camino == '/api/novelas' and metodo == 'GET':
+            return 200, TIPOS['.json'], _json(_novelas(config))
+
         if camino == '/api/proyecto' and metodo == 'GET':
-            return 200, TIPOS['.json'], _json(_proyecto(config))
+            return 200, TIPOS['.json'], _json(_proyecto(config, _carpeta(consulta)))
 
         if camino == '/api/trazas':
             if metodo == 'GET':
-                return 200, TIPOS['.json'], _json(_trazas(config))
+                return 200, TIPOS['.json'], _json(_trazas(config, _carpeta(consulta)))
             if metodo == 'POST':
                 # La unica escritura que hace esta interfaz sale del repositorio
                 # entero: manda a Langfuse lo que el canon ya dice. No toca el
                 # canon, que es lo que SOLO_MIRA protege.
-                return 200, TIPOS['.json'], _json(_exportar_trazas(config))
+                return 200, TIPOS['.json'], _json(
+                    _exportar_trazas(config, _carpeta(consulta)))
 
         if camino == '/api/lanzar':
             # La otra ruta que no es GET y tampoco escribe en el canon: arranca
@@ -372,13 +442,14 @@ def responder(metodo, camino, cuerpo, config, raiz_web=RAIZ_WEB):
             resto = camino[len('/api/capitulo/'):]
             if not resto.isdigit():
                 raise RespuestaError(400, 'el capitulo se pide por numero')
-            return 200, TIPOS['.json'], _json(_capitulo(config, int(resto)))
+            return 200, TIPOS['.json'], _json(
+                _capitulo(config, int(resto), _carpeta(consulta)))
 
         if camino.startswith('/api/contexto/') and metodo == 'GET':
             resto = camino[len('/api/contexto/'):]
             if not resto.isdigit():
                 raise RespuestaError(400, 'el contexto se pide por numero de capitulo')
-            return 200, TIPOS['.json'], _json(_contexto(int(resto)))
+            return 200, TIPOS['.json'], _json(_contexto(int(resto), _carpeta(consulta)))
 
         if camino.startswith('/api/'):
             if metodo != 'GET':

@@ -52,22 +52,29 @@ python -m novela ui           # http://127.0.0.1:8787
 ```
 
 Levanta un servidor local —`http.server`, nada que instalar— y abre el
-navegador. Son tres salas:
+navegador. Tiene la forma de un gestor de proyectos, al estilo de Jira:
 
-- **Brief.** Los cinco campos del canon, en lectura. Una escena en three.js
-  dibuja un cuadernillo por capítulo: el grosor son las palabras, el color el
-  estado en el canon y la luz la pone el tono, con el candil parpadeando encima
-  de la mesa.
-- **Escritorio.** El pipeline de estados, una tarjeta por subagente, la tabla de
-  intentos con el escalón de VD-08 y la operación entera del gate, la auditoría
-  de esa operación, la cronología de la novela por día de ficción, el reparto,
-  el dossier de época con su verificación, los últimos ficheros escritos y el
-  panel de trazas.
+- **Taller.** Todas las novelas de `biblioteca/` en un tablero, una columna por
+  estado de la máquina de estados y una tarjeta por novela: época, premisa,
+  capítulos aprobados, intentos y, en rojo, los capítulos bloqueados y las
+  cuentas del gate que no cuadran. La columna del bloqueado se queda a la vista.
+- **Nueva novela.** Los cinco campos del brief y el botón que arranca una sesión
+  de Claude Code con ellos, con un legajo en three.js que se monta mientras se
+  teclea. Se puede partir del brief de otra novela de la biblioteca.
+- **Dentro de cada novela**, un lateral con sus vistas: el **resumen** (la línea
+  de estados, tres objetivos del spec con su meta, los ocho subagentes, la
+  actividad en disco y las trazas), los **capítulos** en otro tablero, los
+  **intentos y el gate** con el escalón de VD-08, la operación entera y su
+  auditoría, el **canon** en pestañas (dossier, reparto, cronología e hilos
+  vivos), la **lectura** y la **arquitectura**.
 - **Lectura.** Los capítulos aprobados sobre vitela, con capitular y florones,
-  índice lateral, las notas del validador, el resumen del cronista, los hilos
-  que abrió o cerró y la deuda narrativa que queda viva. `←` y `→` cambian de
-  capítulo y `f` entra en modo inmersión. Desde la ficha se abre el paquete de
-  contexto con el que se escribió.
+  índice, las notas del validador, el resumen del cronista, los hilos que abrió
+  o cerró y la deuda narrativa que queda viva. `←` y `→` cambian de capítulo y
+  `f` entra en modo inmersión. Desde la ficha se abre el paquete de contexto con
+  el que se escribió.
+
+Cada vista tiene su dirección —`#/novela/<carpeta>/capitulos`— y se puede mandar
+tal cual.
 
 **La página mira y no toca.** En el canon escribe la sesión de Claude Code que
 orquesta y nadie más, así que en vez de botones la página da el comando exacto
@@ -161,7 +168,7 @@ Opción global: `--config <ruta>`.
 | `agentes/` | Un `.md` por rol, con su encargo y sus modos de fallo. Única fuente de los prompts |
 | `skills/` | Las skills de §10, que cada subagente carga al arrancar |
 | `novela/` | El Python que mira: canon, interfaz, trazas e informe |
-| `web/` | La interfaz: las tres salas, la escena three.js y la ambientación |
+| `web/` | La interfaz: el taller con sus tableros, las vistas de cada novela, la escena three.js y la ambientación |
 | `biblioteca/` | Las novelas, una carpeta cada una con su canon. Es salida y no se versiona |
 | `tests/` | Tests del Python de `novela/`, sin red |
 | `docs/spec/` | Los dos specs: el sistema y el análisis de trazas |

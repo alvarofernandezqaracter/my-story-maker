@@ -1,8 +1,8 @@
 ---
 doc: spec-sistema-novelas-historicas
-version: 1.30.0
+version: 1.31.0
 estado: vigente
-actualizado: 2026-09-21
+actualizado: 2026-09-24
 ---
 
 # Spec — Sistema multiagente de novelas históricas
@@ -606,6 +606,34 @@ pasó de borrador a vigente y en la que describe un solo sistema. Las entradas d
 las versiones anteriores describían un documento en construcción y ya no ayudan a
 leer este; cada una de aquellas versiones tiene su tag `spec-vX.Y.Z` en el
 repositorio, que es donde se mira si hace falta.
+
+### [1.31.0] — 2026-09-24
+
+**Cambiado**
+- §19. **La interfaz pasa a tener la forma de un gestor de proyectos, al estilo
+  de Jira.** Las cuatro salas —brief, escritorio, arquitectura y lectura— eran
+  de una sola novela, y la biblioteca de §21 ya guardaba varias sin que la
+  página pudiera enseñar más que la última. Ahora hay un taller con todas en un
+  tablero por estados de §4, y dentro de cada una un lateral con seis vistas.
+  La forma sale de la rama `zero` de `alberqq/StoryMaker`: se tomaron el
+  tablero, la tarjeta, el segundo tablero de capítulos, el seguimiento que se
+  pausa con la pestaña oculta y los estados de vacío y error como contrato; se
+  dejaron el arrastre, porque mover una tarjeta sería escribir el estado, y la
+  pila de React y Vite, porque la página sigue arrancando sin nada instalado.
+- §19. **La API mira cualquier novela.** `GET /api/novelas` da la tarjeta de
+  cada carpeta, y `?novela=` elige la novela en proyecto, capítulo, contexto y
+  trazas. El nombre se busca entre las carpetas que hay y no se compone con él,
+  así que un `../` contesta 404. `/api/proyecto` devuelve el nombre de la
+  carpeta en `novela`.
+- §19. **El resumen enseña tres objetivos de §23** que se leen en el canon de una
+  novela —OB-02, OB-04 y OB-07—, con su meta al lado.
+- §19. **La barra va en pizarra y la ambientación se queda en el libro.** El
+  nombre del logotipo es blanco y sobre claro no se leía; el grano de papel se
+  quita del marco, que es plano, y la vitela y los datos de época se quedan.
+- §19. **La escena three.js pasa a ser el legajo de la nueva novela**, en una
+  tarjeta junto al formulario, en vez del fondo a pantalla completa del brief.
+- §18 y §21. La carpeta `web/` y el mirador se describen con la biblioteca
+  entera y no con la novela en curso.
 
 ### [1.30.0] — 2026-09-21
 
@@ -1238,7 +1266,7 @@ desde fuera.
 | `agentes/` | Un fichero por rol de §5, con su encargo y sus modos de fallo. Cada subagente lo lee al arrancar |
 | `skills/` | Las skills de §10, una carpeta por skill |
 | `novela/` | Python: el lector del canon, la interfaz de §19, las trazas de §20 y el informe de §22 |
-| `web/` | La página de §19: las tres salas, la escena three.js, la ambientación y el logotipo |
+| `web/` | La página de §19: el taller con sus tableros, las vistas de cada novela, la escena three.js, la ambientación y el logotipo |
 | `biblioteca/` | Las novelas, una carpeta cada una con su canon (§21). Es salida y no se versiona |
 | `tests/` | Tests del Python de `novela/`, sin red |
 
@@ -1312,9 +1340,25 @@ de línea de Unix.
 > orquesta, y esta página no es el orquestador.
 
 
-**Qué es.** Una página local, `python -m novela ui`, desde la que se sigue una novela entera: el brief de §3, el estado del canon, el proceso, la arquitectura que lo ejecuta y los capítulos aprobados. Escucha solo en `127.0.0.1` y no necesita nada instalado, porque el servidor es `http.server` de la biblioteca estándar.
+**Qué es.** Una página local, `python -m novela ui`, desde la que se siguen las novelas de la biblioteca (§21): todas a la vez en un tablero, y cada una por dentro con su brief, su estado, el proceso, la arquitectura que la escribe y sus capítulos aprobados. Escucha solo en `127.0.0.1` y no necesita nada instalado, porque el servidor es `http.server` de la biblioteca estándar y la página es HTML y módulos de JavaScript sin compilar.
 
-Son cuatro salas y contestan cuatro preguntas distintas: **brief** qué libro es, **escritorio** por dónde va, **arquitectura** cómo está montado el sistema que lo escribe, y **lectura** el capítulo. Solo la tercera sigue diciendo algo con el canon vacío.
+**Tiene la forma de un gestor de proyectos, al estilo de Jira.** Una barra fija arriba con tres vistas globales —el **taller**, la **arquitectura** y la **nueva novela**—, y dentro de cada novela un **lateral de proyecto** con las suyas: **resumen**, **capítulos**, **intentos y gate**, **canon**, **lectura** y **arquitectura**. Cada una contesta una pregunta: el taller qué novelas hay y por dónde va cada una; el resumen, cómo va esta; los capítulos, por dónde va la escaleta; los intentos, por qué cayó lo que cayó; el canon, qué se ha dejado escrito; la lectura, el capítulo; y la arquitectura, cómo está montado lo que la escribe, que es la única que sigue diciendo algo con el canon vacío.
+
+### El taller, y lo que se tomó de fuera
+
+La forma sale de la rama `zero` de `alberqq/StoryMaker`, otro frontend del mismo problema: un tablero por fases con las novelas como tarjetas, un marco con barra persistente, una pantalla por novela y un seguimiento que vuelve a preguntar. Se tomaron las ideas y no la pila, y conviene decir cuáles y por qué.
+
+- **Se tomó el tablero.** El taller es un tablero con **una columna por estado de §4**, en su orden, y cada carpeta de `biblioteca/` es una tarjeta en la columna de su `estado.json`. Una carpeta sin estado —recién apartada por el lanzador, sin canon todavía— va en `borrador`. **`bloqueado` es la última columna y se queda pegada al borde derecho** mientras el tablero se desplaza: con ocho columnas no caben todas, y la que no puede quedar fuera de la vista es la única que pide mano humana.
+- **Se tomó la tarjeta**, con lo que su canon dice: la época, la premisa, el tono y lo pedido del brief; los capítulos aprobados sobre los de la escaleta, con su barra; los intentos; cuándo se tocó por última vez; y en rojo lo que pide mirar, **los capítulos bloqueados y las cuentas del gate que no cuadran**. El total es el de la escaleta y no el que pidió el brief: sin escaleta, la tarjeta dice que no la hay.
+- **Se tomó el segundo tablero, un nivel más abajo.** Los capítulos de una novela van en cuatro columnas, las de la ficha de §3: pendiente, en curso, aprobado y bloqueado. Un aprobado se abre para leer; uno que tiene intentos, en su tabla de intentos.
+- **Se tomó el seguimiento**: la página vuelve a preguntar mientras la pestaña está visible y deja de hacerlo cuando se oculta, y un refresco no borra lo que se está haciendo —un filtro tecleado, una pestaña del canon, un desplegable abierto—.
+- **Se tomaron los estados de carga, vacío y error como parte del contrato.** Una biblioteca vacía se anuncia como vacía, con la llamada a encargar la primera; una novela que no está en la biblioteca lo dice; y un servidor que no contesta no vacía el tablero, avisa de que lo que se ve es lo último que llegó.
+- **No se tomó el arrastre.** Allí soltar una tarjeta en la columna siguiente decide un gate. Aquí **mover una tarjeta sería escribir su estado**, y en el canon escribe el orquestador y nadie más (§21). El único punto de intervención humana, el capítulo bloqueado (§4), se resuelve en Claude Code, y la página da el comando.
+- **No se tomó la pila.** Aquello es React con Vite y un paso de construcción; esto sigue siendo `http.server` y módulos sin compilar, y la interfaz sigue arrancando sin nada instalado. Tampoco se tomaron las pantallas de lo que este sistema no tiene —versiones publicadas, PDF, peticiones de cambio del lector, edición de filas en un gate—: una pantalla para un dato que el canon no guarda sería inventarlo.
+
+**El lateral de proyecto** lleva la novela arriba —un avatar con la inicial del lugar y las dos últimas cifras del año, la época, el nombre de su carpeta y su estado—, sus vistas en medio y **el comando que toca** abajo, con su botón de copiar. En estrecho deja de ser columna y pasa a ser una tira de pestañas bajo la barra.
+
+**El resumen** junta lo que antes era el escritorio: la máquina de estados de §4 como línea de fases, **cuatro cifras**, el comando que toca, las tarjetas de los ocho subagentes, la actividad en disco, las trazas y lo que el canon no guarda. Tres de las cuatro cifras son objetivos de §23 que se leen en el canon de una sola novela —**OB-02** intentos por capítulo, **OB-04** el gate cuadra y **OB-07** el margen más justo—, con su meta al lado; la cuarta, los capítulos aprobados, es la que da sentido a las otras tres. Las demás de §23 necesitan el juez externo o el gasto, y no viven aquí.
 
 ### Por qué no escribe, y qué sí hace el botón
 
@@ -1326,7 +1370,7 @@ regla por la puerta de atrás, y el motivo por el que existe —que lo que entra
 haya pasado por una comprobación— no cambia porque quien escriba sea una
 interfaz.
 
-**Lo que sí hace es arrancar al orquestador.** La sala del brief tiene los cinco
+**Lo que sí hace es arrancar al orquestador.** La vista de nueva novela tiene los cinco
 campos de §3 y un botón, y ese botón no escribe: `POST /api/lanzar` arranca una
 sesión de Claude Code sobre este repositorio con el brief delante —`claude -p`
 con `/orquestar-novela` y los cinco campos— y se aparta. **La primera regla de
@@ -1356,6 +1400,11 @@ leer como dato: está para poder mirar por qué no arrancó algo que no arrancó
 Y la página sigue dando **el comando exacto** para hacerlo a mano en una sesión
 propia, que es lo mismo que hace el botón con la sesión delante.
 
+Al lanzar, la página **lleva a la novela recién apartada**, que es donde se va a
+ver el canon llenarse, y la barra enseña la sesión mientras vive. El formulario
+puede **partir del brief de otra novela de la biblioteca**, que copia sus cinco
+campos y nada más: la novela nueva sigue naciendo en su carpeta.
+
 **Y no hay diario que servir.** El relato de una pasada está en la conversación
 de Claude Code, que es donde se imprime la operación del gate. La página lo dice
 en vez de fingir un stream que nadie escribe, y enseña lo que sí tiene: el canon
@@ -1372,6 +1421,7 @@ llamada que esta página no ha visto.
 
 | Ruta | Qué hace |
 |---|---|
+| `GET /api/novelas` | Las novelas de la biblioteca, cada una con su estado, su brief y los recuentos de su tarjeta |
 | `GET /api/proyecto` | Estado, brief y escaleta con el estado, las notas y el resumen de cada capítulo |
 | `GET /api/capitulo/N` | Texto del capítulo aprobado con sus notas, su resumen y sus hilos. 409 si no lo está |
 | `GET /api/contexto/N` | El paquete de §7, tal cual quedó en disco |
@@ -1382,13 +1432,20 @@ llamada que esta página no ha visto.
 | `GET /*` | Los ficheros de `web/`, y nada de fuera de esa carpeta |
 | Cualquier otro método contra `/api/` | 409 con el porqué y el comando que sí escribe |
 
+**`?novela=` elige la novela.** Las rutas de proyecto, capítulo, contexto y trazas miran por defecto la novela en curso —la que se tocó más tarde (§21)— y con `?novela=<carpeta>` cualquier otra de la biblioteca. El nombre **se busca entre las carpetas que hay y no se compone con él**: un `../config.json` no es una novela, y contesta 404 sin que haga falta limpiarlo. `GET /api/proyecto` devuelve además el nombre de la carpeta en `novela`, que es el que lleva la URL de la página.
+
+**La tarjeta de `/api/novelas`** trae, por carpeta: el nombre y la ruta, cuándo se tocó, si es la de ahora, si tiene una sesión arrancada desde aquí, el estado y su fecha, el brief, los capítulos de la escaleta por estado, los intentos, cuántas cuentas del gate no cuadran y si hay retoques. Todo sale del canon de cada una o se recalcula con la fórmula de §8; lo que una carpeta aún no tiene va vacío.
+
 **Por qué el paquete de contexto tiene ruta propia.** Es lo único que explica después por qué el escritor escribió lo que escribió, y sin verlo la tabla de intentos es una lista de notas sin causa. Está en disco —`<novela>/contexto/cap-NN.md`, que el orquestador escribe justo para esto— y es literalmente el que se usó, no una reconstrucción con el canon de ahora. La respuesta lo dice, porque confundir las dos cosas convierte una auditoría en una suposición.
 
-**Qué se ve, y de dónde sale.** Nada de la pantalla es un dato propio de la interfaz: todo se lee del canon o se recalcula con las reglas de este documento. El estado de cada capítulo aparece en tres sitios a la vez —tarjeta, escena y barra inferior— porque son tres preguntas distintas: en qué anda este, cómo va el libro y cuánto queda.
+**Qué se ve, y de dónde sale.** Nada de la pantalla es un dato propio de la interfaz: todo se lee del canon o se recalcula con las reglas de este documento. El estado de un capítulo aparece en dos tableros a la vez —el de la novela y, contado, en su tarjeta del taller— porque son dos preguntas distintas: en qué anda este y cómo va el libro.
 
 | Componente | De dónde sale |
 |---|---|
-| Pipeline | Los seis estados de §4, con `bloqueado` marcado sobre el paso donde se quedó |
+| Tablero del taller | Una tarjeta por carpeta de `biblioteca/`, en la columna de su `estado.json` (§4) |
+| Tablero de capítulos | Una tarjeta por ficha de la escaleta, en la columna de su estado (§3) |
+| Cifras del resumen | OB-02, OB-04 y OB-07 de §23 sobre el canon de esa novela, y los capítulos aprobados |
+| Pipeline | Los siete estados de §4, con `bloqueado` marcado sobre el paso donde se quedó |
 | Tarjetas de subagentes | Los ocho de §21 —el validador partido en tres—, con lo que cada uno produce y lo que lleva entregado en este canon |
 | Grafo de arquitectura | El pipeline de §4, §7, §8 y §9, con los nodos encendidos por el rastro de cada uno |
 | Tarjetas de capítulo y lomos del índice | `estado` de la ficha, las notas del intento aprobado y el día de ficción |
@@ -1398,7 +1455,7 @@ llamada que esta página no ha visto.
 | Dossier de época | Los datos del investigador, con su estado de verificación (VD-04) |
 | Cronología | Los eventos de §3 por día de ficción; los históricos, sin capítulo (VD-05) |
 | Reparto | Las fichas de personaje, con la ubicación y el `sabe` que lleva el cronista |
-| Deuda narrativa | Hilos abiertos que ningún capítulo cerró, los mismos de §7 |
+| Hilos vivos | Hilos abiertos que ningún capítulo cerró, los mismos de §7 |
 | Paquete de contexto | `<novela>/contexto/cap-NN.md`, tal cual se usó |
 | Trazas | El estado de la capa de §20 y el recuento de lo que se mandaría |
 | Últimos archivos de trabajo | Los Markdown y JSON del canon activo, por fecha de modificación |
@@ -1407,14 +1464,15 @@ Cuando no hay capítulo en el loop, la tabla de intentos enseña el último cap�
 
 **La auditoría del gate.** §21 dice que el punto más débil del sistema es que la suma del gate la hace un modelo. La página coge las tres notas y el recuento de graves que el orquestador dejó escritos, aplica la fórmula de §8 con los umbrales del perfil y compara su veredicto con el guardado. **No corrige nada**: el canon es la verdad aunque se equivoque, y reescribirlo desde aquí sería justo lo que §21 prohíbe. Lo que hace es dejar la discrepancia a la vista, en la fila del intento y en un panel con el recuento. Es el único dato de esta pantalla que no habla de la novela sino del sistema, y existe porque una debilidad que nadie mide no se puede discutir.
 
-**Lo que la interfaz no puede enseñar.** Cada cosa que falta se sigue diciendo, pero **una vez y en corto**: los campos vacíos de una ficha se colapsan en una línea que dice cuántos son y cuáles al pasar por encima. Cuatro «sin datos todavía» seguidos tapaban los dos campos que sí tenían valor, que es el fallo contrario al que la regla quería evitar. Además se declaran todas juntas en un panel al final de la columna, con el motivo de cada una: la **cuota diaria** —no hay contabilidad de llamadas ni límite configurado en ningún sitio—, las **escenas** —la unidad de escritura es el capítulo entero mientras DA-09 siga abierta—, y el **focalizador** y el **gancho final**, que la ficha de §3 no guarda. A eso se suman dos más: el **coste y los tokens** de cada llamada, que el canon en ficheros no guarda y las trazas reconstruidas no inventan —los tiene el hook de §22, pero en Langfuse y no aquí—, y las **citas de las incidencias**, porque `estado.json` guarda la nota y el aviso pero no el bloque entero de revisión. Es deliberado: un hueco visible dice dónde falta modelo de datos, y en una lista se ve además cuánto falta.
+**Lo que la interfaz no puede enseñar.** Cada cosa que falta se sigue diciendo, pero **una vez y en corto**: los campos vacíos de una ficha se colapsan en una línea que dice cuántos son y cuáles al pasar por encima. Cuatro «sin datos todavía» seguidos tapaban los dos campos que sí tenían valor, que es el fallo contrario al que la regla quería evitar. Además se declaran todas juntas en un panel del resumen, con el motivo de cada una: la **cuota diaria** —no hay contabilidad de llamadas ni límite configurado en ningún sitio—, las **escenas** —la unidad de escritura es el capítulo entero mientras DA-09 siga abierta—, y el **focalizador** y el **gancho final**, que la ficha de §3 no guarda. A eso se suman dos más: el **coste y los tokens** de cada llamada, que el canon en ficheros no guarda y las trazas reconstruidas no inventan —los tiene el hook de §22, pero en Langfuse y no aquí—, y las **citas de las incidencias**, porque `estado.json` guarda la nota y el aviso pero no el bloque entero de revisión. Es deliberado: un hueco visible dice dónde falta modelo de datos, y en una lista se ve además cuánto falta.
 
-### La sala de arquitectura
+### La vista de arquitectura
 
 El diseño vivía en este documento y en la skill, y la página solo enseñaba su
 resultado: se veía que un capítulo había caído por continuidad, no **por dónde
-había pasado para caer ahí**. La cuarta sala dibuja el pipeline entero como un
-DAG por capas y le pone el canon encima.
+había pasado para caer ahí**. Esta vista dibuja el pipeline entero como un
+DAG por capas y le pone el canon encima: el de la novela que se está mirando
+desde su lateral, o el de la novela en curso desde la barra.
 
 - **SVG inline, sin ninguna librería de grafos.** Cajas, curvas y texto: no hay
   nada en un DAG de dieciocho nodos que justifique una dependencia, y el dibujo
@@ -1434,8 +1492,8 @@ DAG por capas y le pone el canon encima.
   llamar a nadie—. Una cuarta obliga a ir a mirar la leyenda cada vez.
 - **Diez columnas dan un dibujo casi cuatro veces más ancho que alto.** De ahí
   salen las dos decisiones de tamaño: la caja se aprieta todo lo que se puede y
-  el nombre que no cabe en una línea se parte en dos, y el grafo se lleva la
-  sala entera. Cada píxel de ancho que se le quitara se lo estaría quitando al
+  el nombre que no cabe en una línea se parte en dos, y el grafo se lleva el
+  alto entero de la vista. Cada píxel de ancho que se le quitara se lo estaría quitando al
   tamaño de la letra al encuadrar.
 - **Se navega con rueda y arrastre**, moviendo el `viewBox` y no las cajas: el
   zoom es sobre el puntero, porque lo que hay debajo del ratón tiene que
@@ -1461,7 +1519,7 @@ DAG por capas y le pone el canon encima.
   tres a la vez y los tres nodos se ponen activos a la vez, porque eso es lo que
   pasa: van en un mismo mensaje (§21).
 - **Un solo `requestAnimationFrame` para el grafo entero**, y solo mientras hay
-  algo que mover. Con la sala cerrada, con la pestaña del navegador de fondo o
+  algo que mover. Con la vista cerrada, con la pestaña del navegador de fondo o
   sin ninguna arista activa no se pide ni un fotograma.
 - **El recorrido de un capítulo.** Se elige uno y el grafo apaga lo que no
   recorrió y cuenta las veces que pasó por cada nodo. Aquí vuelve a mandar la
@@ -1514,27 +1572,36 @@ El grafo no se monta hasta que se abre la pestaña: son dieciocho nodos y
 veintitrés aristas, y construirlos de entrada se los cobraría a quien no va a
 verlos.
 
-**Cada sala tiene su enlace.** `#arquitectura` abre el grafo directamente, igual
-que `#capitulo/3` abre ese capítulo. Sirve para mandar a alguien a lo que se le
-quiere enseñar sin tener que decirle dónde hacer clic.
+**Cada vista tiene su enlace.** `#/` es el taller, `#/nuevo` la nueva novela y
+`#/arquitectura` el grafo; `#/novela/<carpeta>` abre una novela por su resumen, y
+detrás van sus vistas —`/capitulos`, `/intentos`, `/canon`, `/arquitectura`— y
+`/lectura/3` para un capítulo. Sirve para mandar a alguien a lo que se le quiere
+enseñar sin tener que decirle dónde hacer clic. **Los enlaces de antes siguen
+valiendo**: `#arquitectura` abre el grafo y `#capitulo/3` abre ese capítulo de la
+novela en curso, y la página cambia la dirección por la que nombra la novela,
+para que lo que se comparta después diga cuál es.
 
-**Qué valida.** Poco: el número de capítulo de las rutas que lo llevan, y del brief que entra por `/api/lanzar`, que estén los cinco campos y que los dos números sean números. El resto lo comprueba el orquestador antes de escribir, con los `VD-xx` de §9, que es donde esa comprobación significa algo.
+**Qué valida.** Poco: el número de capítulo de las rutas que lo llevan, que la novela de `?novela=` sea una carpeta de la biblioteca, y del brief que entra por `/api/lanzar`, que estén los cinco campos y que los dos números sean números. El resto lo comprueba el orquestador antes de escribir, con los `VD-xx` de §9, que es donde esa comprobación significa algo.
 
-**Por qué three.js.** La escena dibuja un cuadernillo por capítulo: cuántos son lo dice el brief, el grosor las palabras por capítulo, el color el estado del canon y la luz el tono. Es la parte que no se lee bien en una tabla —seis capítulos de 1.800 palabras es un número; seis cuadernillos sobre la mesa es una novela corta—, y según el orquestador va escribiendo se ve el capítulo en curso levantarse y los aprobados cambiar de color. El resto es HTML corriente.
+**Por qué three.js.** La escena dibuja un cuadernillo por capítulo: cuántos son lo dice el brief, el grosor las palabras por capítulo y la luz el tono. Es la parte que no se lee bien en una tabla —seis capítulos de 1.800 palabras es un número; seis cuadernillos sobre la mesa es una novela corta—. El resto es HTML corriente.
 
-**La escena es el fondo del brief y de ninguna otra sala.** Lo que contesta —qué libro es— es exactamente la pregunta de esa sala; en el escritorio y en la arquitectura no contestaba nada y le restaba contraste a lo que sí. Por eso se monta la primera vez que se entra en el brief y su bucle se para entero al salir, igual que hace el grafo de §19. Es lo único del repo que necesita red, porque three.js viaja por CDN; si no llega, la interfaz entera sigue funcionando y el brief se queda en su degradado.
+**La escena es el legajo de la nueva novela y de ninguna otra vista.** Vive en una tarjeta junto al formulario y se monta con lo que se va tecleando, así que contesta qué libro va a ser mientras se escribe el brief; en un tablero o en una tabla no contestaba nada y le restaba contraste a lo que sí. Se monta la primera vez que se entra en esa vista y su bucle se para entero al salir, igual que hace el grafo. Es lo único del repo que necesita red, porque three.js viaja por CDN; si no llega, la interfaz entera sigue funcionando y la tarjeta se queda en su degradado.
 
-El reparto de color de la escena se sigue del cuarto: el suelo tiene luz de día, así que el cuadernillo es la masa oscura sobre el claro. El que no se ha empezado va en azul pizarra, que es el único color de la marca que aguanta como masa contra ese suelo, y el naranja queda reservado al capítulo en curso.
+El reparto de color de la escena se sigue del cuarto: el suelo tiene luz de día, así que el cuadernillo es la masa oscura sobre el claro. El que no se ha empezado va en azul pizarra, que es el único color de la marca que aguanta como masa contra ese suelo.
 
-**Identidad visual.** La paleta sale del logotipo de Qaracter —naranja `#FF7932` y azul pizarra `#233441`—, con los neutros sesgados hacia ese azul, y el logotipo va en la barra superior. La página se compromete con **un solo mundo visual claro**: gris roto en el chrome y blanco en el papel. Mantener dos temas obligaría a pasarle la paleta al render en cada cambio para ganar poco.
+**Identidad visual.** La paleta sale del logotipo de Qaracter —naranja `#FF7932` y azul pizarra `#233441`—, con los neutros sesgados hacia ese azul. **La barra superior va en pizarra**, que es la barra oscura de siempre de un gestor de proyectos y además la única forma de que el logotipo se lea entero: su nombre está en blanco, y sobre claro se quedaba en la Q sola. El resto se compromete con **un solo mundo visual claro**: gris roto de fondo, columnas un escalón más oscuras y tarjetas blancas encima. Mantener dos temas obligaría a pasarle la paleta al render en cada cambio para ganar poco.
+
+**Los colores de estado tienen significado fijo** y son los mismos en la insignia, la columna, el filo de la tarjeta y la línea de fases: gris lo que no ha empezado, pizarra la preparación, naranja lo que se está escribiendo, verde lo terminado y rojo el bloqueo. El botón de marca va en naranja con letra pizarra, los dos colores del logotipo, porque blanco sobre `#FF7932` no llega a 3:1.
 
 El naranja de marca da 2,6:1 como texto sobre esos claros, que no pasa AA. La hoja declara por eso **dos variantes de cada color de marca**: la de relleno, que es la del logotipo y no se toca, y la de tinta, que es la misma señal bajada de valor. Los rellenos y los filos siguen siendo `#FF7932`; lo que se lee, no. Los tres semánticos —aprobado, aviso, fallo— se usan indistintamente como relleno y como texto, así que mandan las 4,5:1 del texto.
 
 **La escala.** Los espaciados salen de una escala de 4/8/12/16/24/32 y los tamaños de letra de cuatro pasos —título, sección, cuerpo y caption— declarados en `:root`. Lo que necesita otro tamaño lo deriva con `calc()` de uno de ellos, para que siga atado a la escala en vez de escaparse de ella. Los párrafos se cortan a unos 65 caracteres. No es decoración: con veinte medidas sueltas dos tarjetas de la misma fila acababan midiendo distinto, y eso se lee como si a una le faltara algo.
 
-**Ambientación histórica.** Lo que aquí se escribe son novelas históricas y la página no lo decía por ningún sitio: era una consola de proceso con una tipografía bonita. La ambientación entra **por debajo de la identidad, no en su lugar**: mandan los dos colores de Qaracter y lo histórico ocupa los neutros, las texturas y los adornos. El naranja hace además de lacre sin cambiar de valor, que es la coincidencia que permite tener sellos sin inventar un color nuevo.
+**Ambientación histórica.** Lo que aquí se escribe son novelas históricas. La ambientación entra **por debajo de la identidad, no en su lugar**, y desde que el marco es un gestor de proyectos **entra solo donde está la novela**: el marco es plano porque lo que se mira en él es un proceso, y un grano de papel sobre un tablero se leía como suciedad. Lo histórico queda en los datos que son de época —el día de ficción en oro, la cronología con su margen entintado, el reparto— y en el capítulo. El naranja hace de lacre sin cambiar de valor, que es la coincidencia que permite tener sellos sin inventar un color nuevo.
 
-La idea que lo ordena todo es un cuarto con luz de día y papel encima de la mesa. El escritorio lleva grano de papel verjurado, filos entintados y un florón en cada título. Y **el capítulo se lee sobre vitela**, con tinta ferrogálica, capitular en lacre y florón de cambio de escena: contra el gris roto del cuarto la vitela no destaca por clara sino por **cálida**, así que lleva filo marcado y sombra propia para que se lea como un objeto puesto encima de la mesa y no como un hueco del fondo. No contradice el «un solo mundo visual»: es un objeto, no un tema. La capitular la decide el código y no el CSS, porque solo se dibuja bien si el párrafo empieza por letra: una raya de diálogo a cuatro líneas de alto queda peor que sin adorno.
+**El capítulo se lee sobre vitela**, con tinta ferrogálica, capitular en lacre y florón de cambio de escena: contra el gris roto del marco la vitela no destaca por clara sino por **cálida**, así que lleva filo marcado y sombra propia para que se lea como un objeto puesto encima de la mesa y no como un hueco del fondo. No contradice el «un solo mundo visual»: es un objeto, no un tema. La capitular la decide el código y no el CSS, porque solo se dibuja bien si el párrafo empieza por letra: una raya de diálogo a cuatro líneas de alto queda peor que sin adorno.
+
+La lectura va en tres columnas —el índice, la hoja y la ficha— y la hoja manda: en cuanto falta sitio se apartan, primero la ficha y luego el índice. La **inmersión** deja la hoja sola, sin barra, lateral ni migas.
 
 En la escena, la luz rasante parpadea como un candil con dos senos que no casan, para que la llama no repita ciclo. Es lo primero que se apaga con `prefers-reduced-motion`, igual que las motas de polvo.
 
@@ -1803,7 +1870,7 @@ Se acepta a sabiendas. La contrapartida es que el sistema cabe en doce ficheros 
 
 ### El mirador
 
-Una conversación no deja panel, así que lo pone la interfaz de §19: lee la novela en curso y desde ahí **solo mira**. La primera regla de arriba dice que en este canon escribe el orquestador y nadie más, y una interfaz que escribiera lo rompería por la puerta de atrás.
+Una conversación no deja panel, así que lo pone la interfaz de §19: lee las novelas de la biblioteca —la de ahora por defecto, cualquiera nombrándola— y desde ahí **solo mira**. La primera regla de arriba dice que en este canon escribe el orquestador y nadie más, y una interfaz que escribiera lo rompería por la puerta de atrás.
 
 Tres cosas que solo tienen sentido aquí:
 

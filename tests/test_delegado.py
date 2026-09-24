@@ -347,6 +347,81 @@ class TestApiDelegada(CanonDelegadoDePrueba):
         self.assertEqual(codigo, 405)
 
 
+class TestApiBiblioteca(CanonDelegadoDePrueba):
+    """El tablero del taller y las rutas que miran una novela que no es la de ahora.
+
+    La segunda novela es mas reciente, asi que es la que se abre por defecto: la
+    primera solo se alcanza nombrandola, que es lo que hace `?novela=`.
+    """
+
+    OTRA = 'biblioteca/2026-09-20-toledo-1492'
+
+    def setUp(self):
+        super().setUp()
+        estado = Path(NOVELA) / 'canon' / 'estado.json'
+        os.utime(estado, (1_000_000, 1_000_000))
+        _escribir(Path(self.OTRA) / 'canon' / 'brief.json',
+                  {**BRIEF, 'epoca': 'Toledo, 1492', 'capitulos': 4})
+
+    def test_el_tablero_trae_una_tarjeta_por_novela(self):
+        codigo, cuerpo = self.pedir('GET', '/api/novelas')
+        self.assertEqual(codigo, 200)
+        nombres = [n['nombre'] for n in cuerpo['novelas']]
+        self.assertEqual(nombres, ['2026-09-20-toledo-1492', '2026-09-17-sevilla-1587'])
+        otra, sevilla = cuerpo['novelas']
+        self.assertTrue(otra['actual'])
+        self.assertFalse(sevilla['actual'])
+        self.assertEqual(sevilla['estado'], 'escribiendo')
+        self.assertEqual(sevilla['capitulos'],
+                         {'total': 2, 'aprobados': 1, 'en_curso': 0, 'bloqueados': 0})
+        self.assertEqual(sevilla['intentos'], 2)
+        self.assertEqual(sevilla['discrepancias'], 0)
+        self.assertFalse(sevilla['sesion'])
+
+    def test_lo_que_una_novela_no_tiene_va_vacio_y_no_se_rellena(self):
+        # El brief pide cuatro capitulos, pero sin escaleta no hay ninguno: el
+        # total es el de la escaleta y no lo que se pidio.
+        _, cuerpo = self.pedir('GET', '/api/novelas')
+        otra = cuerpo['novelas'][0]
+        self.assertIsNone(otra['estado'])
+        self.assertEqual(otra['brief']['capitulos'], 4)
+        self.assertEqual(otra['capitulos']['total'], 0)
+
+    def test_sin_novela_se_mira_la_de_ahora(self):
+        _, cuerpo = self.pedir('GET', '/api/proyecto')
+        self.assertEqual(cuerpo['novela'], '2026-09-20-toledo-1492')
+        self.assertEqual(cuerpo['capitulos'], [])
+
+    def test_con_novela_se_mira_esa(self):
+        codigo, cuerpo = self.pedir('GET', '/api/proyecto?novela=2026-09-17-sevilla-1587')
+        self.assertEqual(codigo, 200)
+        self.assertEqual(cuerpo['novela'], '2026-09-17-sevilla-1587')
+        self.assertEqual(cuerpo['estado'], 'escribiendo')
+        codigo, cuerpo = self.pedir('GET', '/api/capitulo/1?novela=2026-09-17-sevilla-1587')
+        self.assertEqual(codigo, 200)
+        self.assertIn('Segunda', cuerpo['texto'])
+        codigo, cuerpo = self.pedir('GET', '/api/contexto/1?novela=2026-09-17-sevilla-1587')
+        self.assertEqual(codigo, 200)
+        self.assertIn('Encargo del capitulo 1', cuerpo['texto'])
+
+    def test_una_novela_que_no_esta_es_404(self):
+        for nombre in ('no-existe', '../config.json', '..', '2026-09-17-sevilla-1587/canon'):
+            codigo, cuerpo = self.pedir('GET', '/api/proyecto?novela=' + nombre)
+            self.assertEqual(codigo, 404, nombre)
+            self.assertIn('no hay ninguna novela', cuerpo['error'])
+
+    def test_el_plan_de_trazas_es_el_de_la_novela_que_se_mira(self):
+        _, ahora = self.pedir('GET', '/api/trazas')
+        _, sevilla = self.pedir('GET', '/api/trazas?novela=2026-09-17-sevilla-1587')
+        self.assertEqual(ahora['plan']['capitulos'], 0)
+        self.assertEqual(sevilla['plan']['capitulos'], 1)
+
+    def test_el_tablero_tampoco_acepta_escrituras(self):
+        codigo, cuerpo = self.pedir('POST', '/api/novelas', BRIEF)
+        self.assertEqual(codigo, 409)
+        self.assertIn('orquestar-novela', cuerpo['error'])
+
+
 class TestTrazasDelegadas(CanonDelegadoDePrueba):
     def test_el_plan_cuenta_lo_que_saldria_sin_mandar_nada(self):
         resumen = plan(CanonCC(), self.config)

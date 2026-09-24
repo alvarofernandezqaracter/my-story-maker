@@ -1,15 +1,14 @@
 /* Ambientación histórica (§19).
 
-   Lo que se escribe aquí son novelas históricas, y la página no lo decía por
-   ningún sitio: era una consola de proceso con una tipografía bonita. Esta hoja
-   le pone el mundo encima sin tocar la identidad, que sigue siendo la de
-   Qaracter: el naranja #FF7932 y el azul pizarra #233441 mandan, y lo histórico
-   entra por debajo, en los neutros, las texturas y los adornos.
+   Lo que se escribe aquí son novelas históricas. El marco de la página es un
+   gestor de proyectos, plano y claro, y así tiene que ser: lo que se mira en él
+   es un proceso. Lo histórico entra donde está la novela y en ningún otro
+   sitio: el capítulo, que se lee sobre vitela con tinta ferrogálica, y los
+   datos que son de época -la cronología, el reparto, los días de ficción-.
 
-   La idea que ordena todo: un cuarto con luz de día y, sobre la mesa, papel.
-   El taller es gris roto y el capítulo se lee sobre vitela con tinta
-   ferrogálica, así que destaca por ser el único objeto cálido del cuarto. No es
-   un tema aparte: es un objeto, y por eso lleva filo y sombra propia.
+   No es un tema aparte: es un objeto puesto encima de la mesa, y por eso lleva
+   filo y sombra propia. Mandan los dos colores de Qaracter; el naranja hace
+   además de lacre sin cambiar de valor.
 
    Nada de esto añade datos. Lo que se ve sigue saliendo del canon. */
 
@@ -40,70 +39,18 @@
                               transparent 1px 26px);
 }
 
-/* ---------------------------------------------------------------- el aire */
-
-/* Grano de papel y viñeta de candil sobre toda la mesa. Va por encima de las
-   salas (z-index 1) y por debajo de la barra, el rail y los mandos de lectura
-   (3 y 4): es aire, no interfaz, y ni recibe el ratón ni apaga un control. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background:
-    radial-gradient(120% 85% at 62% 8%, rgba(255, 121, 50, .045) 0%,
-                    transparent 45%),
-    radial-gradient(130% 110% at 50% 50%, transparent 62%, rgba(35, 52, 65, .10) 100%),
-    var(--verjura);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body::after { background: none; }
-}
-
-/* --------------------------------------------------------------- paneles */
-
-/* Fichas de archivo: fibra de papel, filo superior entintado y la esquina
-   doblada de quien las ha manejado mucho. */
-.panel, .papeleta, .mando, .ejecucion {
-  background-image: var(--verjura);
-}
-
-.panel { position: relative; }
-
-.panel::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1px;
-  background: linear-gradient(90deg, var(--sepia), transparent 60%);
-  opacity: .5;
-}
-
-.titulo-panel::after {
-  content: "❧";
-  margin-left: .5rem;
-  color: var(--sepia);
-  font-size: .8em;
-  vertical-align: baseline;
-}
-
-.panel--hueco { border-style: dashed; }
-
 /* ------------------------------------------------------------- la consola */
 
-/* Esta página no lanza nada: da el comando exacto y se aparta. Tiene forma de
-   papeleta pegada al borde de la mesa. */
+/* Esta página no lanza nada: da el comando exacto y se aparta. */
 .consola {
   display: flex;
   flex-direction: column;
   gap: .45rem;
   padding: .8rem .9rem;
-  background: color-mix(in srgb, var(--qa-pizarra) 6%, var(--superficie-alta));
+  background: var(--superficie-baja);
   border: 1px solid var(--linea);
-  border-left: 2px solid var(--lacre);
-  border-radius: 2px;
+  border-left: 3px solid var(--lacre);
+  border-radius: var(--radio-s);
 }
 
 .consola__linea {
@@ -117,9 +64,19 @@ body::after {
   padding: .25rem .5rem;
   background: color-mix(in srgb, var(--qa-pizarra) 10%, var(--superficie-alta));
   border: 1px solid var(--linea);
-  border-radius: 2px;
+  border-radius: var(--radio-s);
   font-family: var(--dato);
   font-size: .8rem;
+  color: var(--qa-naranja-tinta);
+}
+
+/* En el lateral la consola es una linea: el comando y el copiar. */
+.lateral__pie .consola__linea { display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap; }
+.lateral__pie code {
+  padding: var(--e1) var(--e2);
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-s);
   color: var(--qa-naranja-tinta);
 }
 
@@ -348,7 +305,6 @@ body::after {
   overflow-wrap: anywhere;
 }
 
-.boton--fino { padding: .4rem .8rem; font-size: .75rem; }
 
 /* ------------------------------------------------------------- tarjetas */
 
@@ -376,9 +332,10 @@ body::after {
   max-height: 82vh;
   padding: 0;
   border: 1px solid var(--linea);
-  border-radius: 2px;
+  border-radius: var(--radio);
   background: var(--superficie);
   color: var(--texto);
+  box-shadow: var(--sombra-2);
 }
 
 .cajon::backdrop { background: rgba(35, 52, 65, .55); }
@@ -413,12 +370,130 @@ body::after {
 
 /* ================================================================ lectura */
 
-/* Aquí es donde la ambientación deja de ser adorno: el capítulo se lee sobre
-   papel, no sobre pantalla. Contra el gris roto del cuarto la vitela destaca por
-   cálida, no por clara, así que lleva filo marcado y sombra propia: tiene que
-   leerse como un objeto puesto encima de la mesa y no como un hueco del fondo. */
+/* Tres columnas: el indice, la hoja y la ficha. La hoja manda y las otras dos
+   se apartan en cuanto falta sitio, primero la ficha y luego el indice. */
+.lectura {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 42rem) 15rem;
+  justify-content: center;
+  gap: var(--e5);
+  align-items: start;
+  padding-bottom: 5rem;
+}
 
-#sala-lectura .lector {
+.progreso {
+  position: fixed;
+  top: calc(var(--barra-alto) + env(safe-area-inset-top, 0px));
+  left: 0;
+  z-index: 6;
+  height: 2px;
+  width: 0;
+  background: var(--qa-naranja);
+  transition: width .1s linear;
+}
+
+.lector { min-width: 0; }
+
+.lector__cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding-bottom: var(--e5);
+  margin-bottom: var(--e6);
+  border-bottom: 1px solid var(--linea);
+}
+
+.lector__cabecera h1 { font-family: var(--display); font-weight: 400; font-size: calc(var(--t-titulo) * 1.35); }
+
+.lector__notas { display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap; }
+
+.lector__texto {
+  font-family: var(--lectura);
+  font-size: 1.12rem;
+  line-height: 1.75;
+  color: var(--tinta);
+}
+
+.lector__texto p { margin: 0 0 1.35em; text-wrap: pretty; }
+
+.lector__pie {
+  margin-top: var(--e6);
+  padding-top: var(--e4);
+  border-top: 1px solid var(--linea);
+  font-family: var(--dato);
+  font-size: var(--t-caption);
+  color: var(--texto-tenue);
+}
+
+.ficha-lateral {
+  position: sticky;
+  top: 0;
+  max-height: calc(var(--alto-util) - var(--e6));
+  overflow-y: auto;
+  padding: var(--e4);
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  font-size: var(--t-cuerpo);
+  color: var(--texto-tenue);
+  transition: opacity .35s ease;
+}
+
+.ficha-lateral h3 {
+  margin: 0 0 var(--e3);
+  font-size: var(--t-seccion);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.ficha-lateral p { margin: 0 0 var(--e3); }
+.ficha-lateral ul { margin: 0 0 var(--e3); padding-left: var(--e4); }
+.ficha-lateral li { margin-bottom: var(--e1); }
+
+.hilo-cerrado { text-decoration: line-through; opacity: .7; }
+
+.mandos-lectura {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e2) var(--e3);
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  box-shadow: var(--sombra-2);
+}
+
+/* La inmersion deja la hoja sola: se van la barra, el lateral, las migas, el
+   indice y la ficha, y el marco sube a ocupar el sitio de la barra. */
+.barra, .lateral, .migas { transition: opacity .35s ease; }
+
+body[data-inmersion="si"] .barra,
+body[data-inmersion="si"] .lateral,
+body[data-inmersion="si"] .migas,
+body[data-inmersion="si"] .indice,
+body[data-inmersion="si"] .ficha-lateral { opacity: 0; pointer-events: none; }
+
+body[data-inmersion="si"] .app { inset: 0; }
+body[data-inmersion="si"] .lateral { display: none; }
+
+@media (max-width: 1280px) {
+  .lectura { grid-template-columns: 12rem minmax(0, 42rem); }
+  .ficha-lateral { grid-column: 2; position: static; max-height: none; }
+}
+
+@media (max-width: 1100px) {
+  .lectura { grid-template-columns: minmax(0, 42rem); }
+  .ficha-lateral { grid-column: 1; }
+}
+
+#vista-lectura .lector {
   position: relative;
   padding: clamp(2rem, 5vw, 3.4rem) clamp(1.6rem, 5vw, 3.6rem) 5rem;
   background:
@@ -433,7 +508,7 @@ body::after {
 }
 
 /* El filo de la hoja, que no está cortado a máquina. */
-#sala-lectura .lector::after {
+#vista-lectura .lector::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -441,18 +516,17 @@ body::after {
   box-shadow: inset 0 0 3.5rem rgba(138, 107, 69, .3);
 }
 
-#sala-lectura .lector__cabecera { border-bottom-color: var(--vitela-sombra); }
-#sala-lectura .lector__cabecera .eyebrow { color: var(--sepia); }
-#sala-lectura .lector__titulo,
-#sala-lectura .lector h1 { color: var(--tinta); }
+#vista-lectura .lector__cabecera { border-bottom-color: var(--vitela-sombra); }
+#vista-lectura .lector__cabecera .eyebrow { color: var(--sepia); }
+#vista-lectura .lector__titulo,
+#vista-lectura .lector h1 { color: var(--tinta); }
 
-#sala-lectura .lector__texto { color: var(--tinta); }
+#vista-lectura .lector__texto { color: var(--tinta); }
 
-/* La capitular ya no es del primer párrafo por posición sino del primero que de
+/* La capitular no es del primer párrafo por posición sino del primero que de
    verdad empieza con letra: lo decide lectura.js, que ve el texto. */
-#sala-lectura .lector__texto p:first-of-type::first-letter { color: inherit; float: none; font-size: inherit; padding: 0; }
 
-#sala-lectura .lector__texto .capitular::first-letter {
+#vista-lectura .lector__texto .capitular::first-letter {
   float: left;
   font-family: var(--display);
   font-size: 3.6em;
@@ -462,8 +536,8 @@ body::after {
 }
 
 /* Florón de cambio de escena y cierre del capítulo. */
-#sala-lectura .separador-escena,
-#sala-lectura .marca-fin {
+#vista-lectura .separador-escena,
+#vista-lectura .marca-fin {
   margin: 2.2rem 0;
   text-align: center;
   font-size: 1.1rem;
@@ -471,21 +545,21 @@ body::after {
   letter-spacing: .4em;
 }
 
-#sala-lectura .marca-fin { margin-top: 3rem; }
+#vista-lectura .marca-fin { margin-top: 3rem; }
 
-#sala-lectura .lector__pie {
+#vista-lectura .lector__pie {
   border-top-color: var(--vitela-sombra);
   color: var(--tinta-tenue);
 }
 
-#sala-lectura .metadatos dt { color: var(--sepia); }
-#sala-lectura .metadatos dd { color: var(--tinta); }
-#sala-lectura .metadatos dd[data-vacio="si"] { color: var(--tinta-tenue); }
+#vista-lectura .metadatos dt { color: var(--sepia); }
+#vista-lectura .metadatos dd { color: var(--tinta); }
+#vista-lectura .metadatos dd[data-vacio="si"] { color: var(--tinta-tenue); }
 
 /* Las notas del gate sobre papel: la nota alta es tinta, la baja es lacre. */
-#sala-lectura .lector__notas .dato { color: var(--tinta-tenue); }
-#sala-lectura .lector__notas .nota { background: var(--sepia); color: var(--vitela-alta); }
-#sala-lectura .lector__notas .nota[data-alta="si"] { background: var(--tinta); }
+#vista-lectura .lector__notas .dato { color: var(--tinta-tenue); }
+#vista-lectura .lector__notas .nota { background: var(--sepia); color: var(--vitela-alta); }
+#vista-lectura .lector__notas .nota[data-alta="si"] { background: var(--tinta); }
 
 @media (max-width: 900px) {
   .evento { grid-template-columns: minmax(0, 1fr); gap: .15rem; }

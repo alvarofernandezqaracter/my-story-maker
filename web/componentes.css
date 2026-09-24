@@ -1,114 +1,13 @@
-/* Componentes anadidos sobre la interfaz de §19.
+/* Componentes del dominio de §19: lo que solo existe porque esto escribe
+   novelas -notas del gate, sellos de VD-08, subagentes, cronologia, reparto, el
+   indice del lector y el grafo de arquitectura-.
 
-   Van en su propia hoja para no tocar estilo.css, que es donde viven los tokens
-   y la estructura de las tres salas. Todo lo de aqui reutiliza esos tokens: la
-   paleta de Qaracter, las tipografias y los estados. Ninguno toca la escena.
+   Van en su propia hoja porque estilo.css es la estructura -barra, lateral,
+   tablero- y lo generico. Todo lo de aqui reutiliza sus tokens.
 
    Lo que el canon no sabe se pinta en estado vacio (`data-vacio`), nunca
    relleno con un valor inventado. */
 
-.titulo-panel {
-  margin: 0 0 var(--e3);
-  font-family: var(--dato);
-  font-size: var(--t-seccion);
-  font-weight: 500;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--qa-naranja-tinta);
-}
-
-.panel {
-  padding: var(--e4);
-  background: color-mix(in srgb, var(--superficie) 88%, transparent);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--linea);
-  border-radius: 2px;
-}
-
-.vacio {
-  margin: 0;
-  max-width: var(--medida);
-  font-size: var(--t-caption);
-  font-style: italic;
-  color: var(--texto-tenue);
-}
-
-.columna-taller {
-  display: flex;
-  flex-direction: column;
-  gap: var(--e4);
-  min-width: 0;
-}
-
-/* ================================================================ cabecera */
-
-.barra__run {
-  max-width: 14rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--texto);
-}
-
-.barra-progreso {
-  height: 4px;
-  background: var(--linea);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.barra-progreso > span {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: var(--qa-naranja);
-  transition: width .3s ease;
-}
-
-.barra-progreso[data-tono="ok"] > span { background: var(--ok); }
-
-/* ======================================================= brief: ejecuciones */
-
-.ejecuciones {
-  width: min(27rem, 100%);
-  margin-top: var(--e4);
-  padding: var(--e4);
-  background: color-mix(in srgb, var(--superficie) 88%, transparent);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--linea);
-  border-radius: 2px;
-}
-
-.ejecucion {
-  display: flex;
-  flex-direction: column;
-  gap: var(--e2);
-  width: 100%;
-  padding: var(--e3);
-  text-align: left;
-  color: inherit;
-  background: none;
-  border: 1px solid var(--linea);
-  border-radius: 2px;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.ejecucion:hover, .ejecucion[data-activa="si"] { border-color: var(--qa-naranja); }
-
-.ejecucion__alto {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--e2);
-}
-
-.ejecucion__premisa { max-width: var(--medida); font-size: var(--t-cuerpo); line-height: 1.45; }
-
-.ejecucion__ruta, .ejecucion__cuenta {
-  font-family: var(--dato);
-  font-size: var(--t-caption);
-  color: var(--texto-tenue);
-}
 
 select {
   width: 100%;
@@ -123,66 +22,36 @@ select {
 
 select:focus { border-color: var(--qa-naranja); }
 
-code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 
-/* ========================================================= taller: estado */
+/* ============================================================ el gate */
 
-.linea-estado {
-  margin: 0;
-  max-width: var(--medida);
+/* Las tres notas del validador, siempre tres y en el mismo orden. */
+.notas { display: flex; gap: 2px; }
+
+.nota {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radio-s);
   font-family: var(--dato);
   font-size: var(--t-caption);
-  line-height: 1.6;
-  color: var(--texto-tenue);
+  color: #fff;
+  background: var(--texto-tenue);
 }
 
-.linea-estado b { color: var(--texto); font-weight: 500; }
+.nota[data-alta="si"] { background: var(--ok); }
+.nota[data-baja="si"] { background: var(--fallo); }
 
-/* La fecha del canon es un `.dato`, y `.dato` no parte linea porque en el rail
-   va en fila. Aqui esta dentro de un parrafo de veinte caracteres de ancho, y
-   sin partir se salia del panel. */
-.linea-estado .dato { white-space: normal; }
-
-/* La maquina de estados de §4 en fila: es una secuencia y por eso va numerada.
-   `bloqueado` no ocupa un puesto porque es salida lateral, no un paso mas: se
-   marca sobre el paso en el que el proyecto se quedo. */
-.pipeline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--e1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.paso {
-  display: flex;
-  align-items: center;
-  gap: var(--e1);
-  padding: var(--e1) var(--e2);
-  border: 1px solid var(--linea);
-  border-radius: 2px;
+/* La tabla de intentos lee cifras: el intento y el sello en monoespaciada,
+   para que las columnas cuadren de una fila a otra. */
+#tabla-intentos td:nth-child(1), #tabla-intentos td:nth-child(3) {
   font-family: var(--dato);
-  font-size: var(--t-caption);
-  color: var(--texto-tenue);
+  font-variant-numeric: tabular-nums;
 }
 
-.paso::before { content: attr(data-orden); font-size: calc(var(--t-caption) * .9); opacity: .6; }
-
-.paso[data-hecho="si"] { color: var(--texto); border-color: var(--texto-tenue); }
-
-.paso[data-actual="si"] {
-  color: var(--qa-naranja-tinta);
-  border-color: var(--qa-naranja);
-  background: color-mix(in srgb, var(--qa-naranja) 14%, transparent);
-}
-
-.paso[data-bloqueado="si"] {
-  color: var(--fallo);
-  border-color: var(--fallo);
-  background: color-mix(in srgb, var(--fallo) 14%, transparent);
-}
+#tabla-intentos td:nth-child(2) { font-family: var(--dato); color: var(--texto-tenue); }
+#tabla-intentos td:nth-child(4) { color: var(--texto-tenue); }
 
 /* ======================================================== taller: agentes */
 
@@ -258,46 +127,13 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 /* ======================================================= taller: intentos */
 
 .umbrales {
-  margin: 0 0 var(--e3);
-  max-width: var(--medida);
+  margin: var(--e1) 0 0;
+  max-width: 60rem;
   font-family: var(--dato);
   font-size: var(--t-caption);
   color: var(--texto-tenue);
 }
 
-.tabla-caja { overflow-x: auto; }
-
-.tabla { width: 100%; border-collapse: collapse; font-size: var(--t-caption); }
-
-.tabla th, .tabla td {
-  padding: var(--e2);
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid var(--linea);
-}
-
-.tabla th {
-  font-family: var(--dato);
-  font-size: var(--t-caption);
-  font-weight: 500;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: var(--texto-tenue);
-}
-
-.tabla td:nth-child(1), .tabla td:nth-child(3) {
-  font-family: var(--dato);
-  font-variant-numeric: tabular-nums;
-}
-
-.tabla td:nth-child(2) {
-  font-family: var(--dato);
-  font-size: var(--t-caption);
-  color: var(--texto-tenue);
-}
-
-.tabla td:nth-child(4) { color: var(--texto-tenue); }
 
 .veredicto {
   padding: var(--e1) var(--e2);
@@ -367,18 +203,14 @@ code { font-family: var(--dato); font-size: .9em; color: var(--texto); }
 /* ======================================================== lectura: indice */
 
 .indice {
-  position: fixed;
-  left: 16px;
-  top: calc(var(--barra-alto) + 2rem);
-  z-index: 2;
-  width: 14rem;
-  max-height: 64vh;
+  position: sticky;
+  top: 0;
+  max-height: calc(var(--alto-util) - var(--e6));
   overflow-y: auto;
   padding: var(--e3);
-  background: color-mix(in srgb, var(--superficie) 92%, transparent);
-  backdrop-filter: blur(12px);
+  background: var(--superficie);
   border: 1px solid var(--linea);
-  border-radius: 2px;
+  border-radius: var(--radio);
   transition: opacity .35s ease;
 }
 
@@ -500,53 +332,28 @@ body[data-inmersion="si"] .indice { opacity: 0; pointer-events: none; }
 
 /* ================================================================ estrecho */
 
-@media (min-width: 1240px) {
-  body[data-sala="lectura"] .lector { margin-left: 15rem; margin-right: 15rem; }
-}
-
-@media (max-width: 1239px) {
+@media (max-width: 1100px) {
   .indice {
     position: static;
     width: auto;
-    max-width: 40rem;
     max-height: none;
-    margin: 0 auto var(--e6);
   }
-}
-
-@media (max-width: 640px) {
-  .barra__run, #dato-perfil { display: none; }
-}
-
-/* El taller se ha llenado de paneles y la mesa queda detras de todos ellos:
-   se atenua para que el texto gane, sin tocar nada de la escena. La sala de
-   arquitectura tiene ademas su propio lienzo delante, asi que la mesa baja mas:
-   dos escenas WebGL compitiendo por la misma pantalla no se leen ni una. */
-body[data-sala="taller"] #escena { opacity: .5; }
-body[data-sala="arquitectura"] #escena { opacity: .22; }
-
-body[data-sala="taller"] .panel,
-body[data-sala="taller"] .tarjeta,
-body[data-sala="taller"] .mando {
-  background: color-mix(in srgb, var(--superficie) 96%, transparent);
 }
 
 /* ========================================================== arquitectura */
 
-/* La cuarta sala: el pipeline de §4 y §8 dibujado como grafo por capas. No
-   ensena la novela, ensena el sistema que la escribe, y por eso es la unica
-   pantalla que sigue teniendo algo que decir con el canon vacio.
+/* El pipeline de §4 y §8 dibujado como grafo por capas. No ensena la novela,
+   ensena el sistema que la escribe, y por eso es la unica vista que sigue
+   teniendo algo que decir con el canon vacio.
 
-   Ocupa el alto util entero y no scrollea. El grafo se lleva la sala entera y la
+   El grafo se lleva el alto que queda debajo de la cabecera y no scrollea. La
    ficha entra por la derecha cuando se pide: diez columnas en fila dan un dibujo
    cuatro veces mas ancho que alto, y cada pixel que se le quitara de ancho se lo
    quitaba al tamano de la letra al encuadrar. */
-#sala-arquitectura {
+.grafo-marco {
   position: relative;
-  display: block;
-  height: 100%;
-  padding: var(--barra-alto) var(--e4) var(--rail-alto);
-  overflow: hidden;
+  height: calc(var(--alto-util) - 9rem);
+  min-height: 26rem;
 }
 
 .grafo {
@@ -555,9 +362,8 @@ body[data-sala="taller"] .mando {
   min-height: 0;
   height: 100%;
   border: 1px solid var(--linea);
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--superficie) 96%, transparent);
-  background-image: var(--verjura);
+  border-radius: var(--radio);
+  background: var(--superficie);
   overflow: hidden;
 }
 
@@ -933,9 +739,9 @@ body[data-sala="taller"] .mando {
    pone dentro, nunca la forma, para que comparar dos sea leer el mismo sitio. */
 .ficha-nodo {
   position: absolute;
-  top: calc(var(--barra-alto) + var(--e4));
-  right: var(--e4);
-  bottom: calc(var(--rail-alto) + var(--e4));
+  top: var(--e3);
+  right: var(--e3);
+  bottom: var(--e3);
   z-index: 3;
   width: min(360px, calc(100% - var(--e5)));
   display: flex;
@@ -944,11 +750,10 @@ body[data-sala="taller"] .mando {
   min-height: 0;
   overflow-y: auto;
   padding: var(--e4);
-  background: color-mix(in srgb, var(--superficie) 92%, var(--superficie-alta));
-  background-image: var(--verjura);
+  background: var(--superficie);
   border: 1px solid var(--linea);
-  border-left: 2px solid var(--qa-naranja);
-  box-shadow: -12px 0 32px rgba(35, 52, 65, .12);
+  border-left: 3px solid var(--qa-naranja);
+  box-shadow: var(--sombra-2);
   visibility: hidden;
   transform: translateX(calc(100% + var(--e5)));
   transition: transform .22s ease, visibility .22s;
@@ -1005,9 +810,8 @@ body[data-sala="taller"] .mando {
    390px de pantalla no queda grafo detras que mirar. */
 @media (max-width: 720px) {
   .ficha-nodo {
-    left: var(--e4);
+    left: var(--e3);
     width: auto;
-    top: calc(var(--barra-alto) + var(--e5));
   }
 }
 
@@ -1076,19 +880,15 @@ body[data-sala="taller"] .mando {
 
 /* ---------------------------------------------------------------- estrecho */
 
-/* El grafo ocupa la sala entera y la ficha es un cajon encima, asi que aqui no
+/* El grafo ocupa la vista entera y la ficha es un cajon encima, asi que aqui no
    hay nada que reapilar: lo unico que cambia en estrecho es que el cajon se
    lleva todo el ancho, y eso ya esta mas arriba. El grafo sigue encuadrandose
    solo y se navega con rueda y arrastre, que es como se navega en cualquier
    tamano. */
 @media (max-width: 900px) {
-  #sala-arquitectura {
-    padding: var(--barra-alto) var(--e3) var(--rail-alto);
-  }
-
   /* Los mandos se apilan y cada uno se lleva el ancho entero. Puestos en fila
      el desplegable de capitulos empuja a la derecha y se sale de la caja, que
-     es la unica forma que tiene esta sala de generar scroll horizontal. */
+     es la unica forma que tiene esta vista de generar scroll horizontal. */
   .grafo__mandos { flex-direction: column; align-items: stretch; }
   .grafo__fila { width: 100%; }
   .grafo__mandos select { flex: 1 1 auto; min-width: 0; max-width: none; }

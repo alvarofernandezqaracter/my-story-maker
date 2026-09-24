@@ -81,7 +81,9 @@ function pintarDatos(caja, hueco, campos) {
 }
 
 export function crearLectura(ctx) {
-  const sala = $('sala-lectura');
+  // Lo que se desplaza es el contenido entero, no la vista: la barra y el
+  // lateral se quedan quietos, como en cualquier otra vista.
+  const desplazable = $('contenido');
   const texto = $('lector-texto');
   let capitulo = null;
 
@@ -272,9 +274,8 @@ export function crearLectura(ctx) {
     $('lector-pie').textContent = capitulo.resumen
       ? `Lo que el cronista dejó escrito: ${capitulo.resumen}` : '';
 
-    sala.scrollTop = 0;
+    desplazable.scrollTop = 0;
     ctx.elegirCapitulo(numero);
-    ctx.escena?.modoLectura(true, 0);
   }
 
   function saltar(paso) {
@@ -284,11 +285,11 @@ export function crearLectura(ctx) {
     if (destino) ctx.abrirLectura(destino);
   }
 
-  sala.addEventListener('scroll', () => {
-    const recorrido = sala.scrollHeight - sala.clientHeight;
-    const fraccion = recorrido > 0 ? sala.scrollTop / recorrido : 0;
+  desplazable.addEventListener('scroll', () => {
+    if (ctx.estado.vista !== 'lectura') return;
+    const recorrido = desplazable.scrollHeight - desplazable.clientHeight;
+    const fraccion = recorrido > 0 ? desplazable.scrollTop / recorrido : 0;
     $('progreso').style.width = `${(fraccion * 100).toFixed(1)}%`;
-    ctx.escena?.modoLectura(true, fraccion);
   });
 
   // El paquete con el que se escribió: es lo único que explica después por qué
@@ -302,14 +303,14 @@ export function crearLectura(ctx) {
   $('inmersion').addEventListener('click', () => ctx.inmersion());
 
   document.addEventListener('keydown', (e) => {
-    if (ctx.estado.sala !== 'lectura') return;
+    if (ctx.estado.vista !== 'lectura') return;
     if (e.target.matches('input, textarea')) return;
     if (e.key === 'ArrowLeft') saltar(-1);
     if (e.key === 'ArrowRight') saltar(1);
     if (e.key === 'f') ctx.inmersion();
     if (e.key === 'Escape') {
       if (document.body.dataset.inmersion === 'si') ctx.inmersion();
-      else ctx.ir('taller');
+      else ctx.ir('capitulos');
     }
   });
 

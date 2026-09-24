@@ -121,7 +121,7 @@ export function crearTrazas(ctx) {
       panel.hidden = false;
       // Se pregunta cuando cambia lo que importa, no en cada vuelta del
       // refresco: el estado de la capa no cambia solo y el plan depende del canon.
-      const huella = [proyecto.estado,
+      const huella = [proyecto.novela, proyecto.estado,
         proyecto.capitulos.length, proyecto.actualizado].join('|');
       if (panel.dataset.huella === huella) return;
       panel.dataset.huella = huella;

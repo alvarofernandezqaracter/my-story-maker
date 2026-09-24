@@ -1,6 +1,6 @@
-// Sala de arquitectura: el sistema que escribe la novela, no la novela.
+// Vista de arquitectura: el sistema que escribe la novela, no la novela.
 //
-// Las otras tres salas contestan «cómo va el libro». Esta contesta «cómo está
+// Las otras vistas contestan «cómo va el libro». Esta contesta «cómo está
 // montado esto», que es la pregunta que no tenía dónde mirarse: la máquina de
 // estados vive en el spec y en la skill, y la página solo enseñaba su resultado.
 // Aquí el pipeline de §4, §7, §8 y §9 se dibuja entero, con el canon encima
@@ -829,7 +829,9 @@ export function crearArquitectura(ctx) {
 
   return {
     pintar(proyecto) {
-      const cambia = proyecto.actualizado !== ultimo?.actualizado;
+      // Otra novela es otro replay aunque su canon se escribiera a la misma hora.
+      const cambia = proyecto.actualizado !== ultimo?.actualizado
+        || proyecto.novela !== ultimo?.novela;
       ultimo = proyecto;
       enVivo = Boolean(proyecto.en_curso?.activo);
       pintarSelector(proyecto);

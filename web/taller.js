@@ -1,10 +1,11 @@
-// Sala del escritorio: ver lo que los subagentes han dejado escrito.
+// Las vistas de una novela: resumen, capitulos, intentos y canon (§19).
 //
 // Las tarjetas son el estado del canon. No hay relato evento a evento porque no
 // hay motor que lo emita: lo que ha pasado esta en la conversacion de Claude
 // Code, y lo que queda de ello son los ficheros del canon. Esta pagina lee esos
 // ficheros y no inventa nada que no este en ellos.
 import { crearTrazas } from './trazas.js';
+import { crearColumna } from './tablero.js';
 
 // Cómo se lee el estado de una ficha de capítulo cuando se cuenta en una línea.
 const ESTADO = {
@@ -122,7 +123,16 @@ for (const sub of SUBAGENTES) {
 
 // La máquina de estados de §4, en su orden. `bloqueado` no ocupa puesto: es
 // salida lateral, y se marca sobre el paso donde el proyecto se quedó.
-const PASOS = ['borrador', 'investigado', 'estructurado', 'escribiendo', 'escrito', 'editado'];
+const PASOS = ['borrador', 'investigado', 'estructurado', 'escribiendo', 'escrito',
+  'retocando', 'editado'];
+
+// Las columnas del tablero de capítulos: los cuatro estados de una ficha (§3).
+const COLUMNAS_CAPITULO = [
+  { estado: 'pendiente', titulo: 'Pendiente' },
+  { estado: 'en_curso', titulo: 'En curso' },
+  { estado: 'aprobado', titulo: 'Aprobado' },
+  { estado: 'bloqueado', titulo: 'Bloqueado' },
+];
 
 const QUE_TOCA = {
   borrador: 'Toca «preparar»: el investigador levanta el dossier y el arquitecto la escaleta.',
@@ -130,12 +140,11 @@ const QUE_TOCA = {
   estructurado: 'Hay escaleta. Toca «escribir»: el primer capítulo pendiente entra en el loop.',
   escribiendo: 'A mitad del libro. «escribir» sigue por el primer capítulo no aprobado.',
   escrito: 'Todos los capítulos aprobados. Toca «cerrar»: el editor global y los retoques.',
-  editado: 'Terminado. Los retoques se aplican a mano.',
+  retocando: 'El editor global ha entregado su lista y el sistema aplica los retoques (§11).',
+  editado: 'Terminado: los retoques están aplicados y su desenlace, en retoques.md.',
   bloqueado: 'Hay un capítulo bloqueado. Desbloquéalo y luego reanuda.',
 };
 
-// Lo que esta página pediría y el canon no guarda (§19). Se enseña el hueco en
-// vez de rellenarlo: un número inventado esconde dónde falta modelo de datos.
 // Lo que esta página pediría y el canon no guarda (§19). Se enseña el hueco en
 // vez de rellenarlo: un número inventado esconde dónde falta modelo de datos.
 const HUECOS = [
@@ -169,6 +178,33 @@ function celda(texto, clase) {
   if (clase) td.className = clase;
   td.textContent = texto;
   return td;
+}
+
+function metrica(caja, { nombre, valor, pie, tono, objetivo }) {
+  const tarjeta = document.createElement('div');
+  tarjeta.className = 'metrica';
+  if (tono) tarjeta.dataset.tono = tono;
+  const titulo = document.createElement('span');
+  titulo.className = 'metrica__nombre';
+  titulo.textContent = nombre;
+  if (objetivo) {
+    const ob = document.createElement('span');
+    ob.className = 'etiqueta';
+    ob.textContent = objetivo;
+    titulo.append(' ', ob);
+  }
+  const cifra = document.createElement('strong');
+  cifra.className = 'metrica__valor';
+  cifra.textContent = valor;
+  const nota = document.createElement('span');
+  nota.className = 'metrica__pie';
+  nota.textContent = pie;
+  tarjeta.append(titulo, cifra, nota);
+  caja.append(tarjeta);
+}
+
+function decimal(valor, cifras = 2) {
+  return valor.toLocaleString('es-ES', { minimumFractionDigits: cifras, maximumFractionDigits: cifras });
 }
 
 export function crearTaller(ctx) {
@@ -276,11 +312,8 @@ export function crearTaller(ctx) {
     premisa.textContent = proyecto.brief.premisa;
     caja.append(premisa, document.createElement('br'));
 
-    const epoca = document.createElement('span');
-    epoca.className = 'linea-estado__epoca';
-    epoca.textContent = proyecto.brief.epoca;
-    caja.append(epoca, document.createElement('br'));
-
+    // La epoca ya es el titulo de la vista: aqui se diria dos veces.
+    caja.append(`${proyecto.brief.tono} · `);
     if (enCurso && enCurso.activo) {
       caja.append(`capítulo ${enCurso.numero} · ${enCurso.titulo} · intento`
         + ` ${enCurso.intentos.length} de ${proyecto.gate.max_intentos}`);
@@ -318,6 +351,8 @@ export function crearTaller(ctx) {
       : 'sin datos todavía';
 
     const enCurso = proyecto.en_curso;
+    $('intentos-titulo').textContent = enCurso
+      ? `Intentos del capítulo ${enCurso.numero} · ${enCurso.titulo}` : 'Intentos del capítulo';
     if (enCurso && !enCurso.activo) {
       umbrales.textContent += ` — ningún capítulo en curso ahora mismo; se muestra`
         + ` el último trabajado, el ${enCurso.numero}`;
@@ -444,6 +479,7 @@ export function crearTaller(ctx) {
   function pintarCronologia(proyecto) {
     const caja = $('cronologia');
     caja.textContent = '';
+    $('cuenta-cronologia').textContent = proyecto.cronologia?.length || '';
     if (!proyecto.cronologia?.length) {
       caja.append(vacio('sin datos todavía: el cronista aún no ha escrito ningún evento.'));
       return;
@@ -482,6 +518,7 @@ export function crearTaller(ctx) {
   function pintarReparto(proyecto) {
     const caja = $('reparto');
     caja.textContent = '';
+    $('cuenta-reparto').textContent = proyecto.reparto?.length || '';
     if (!proyecto.reparto?.length) {
       caja.append(vacio('sin datos todavía: el arquitecto aún no ha escrito las fichas.'));
       return;
@@ -525,19 +562,100 @@ export function crearTaller(ctx) {
   function pintarLedger(proyecto) {
     const caja = $('ledger');
     caja.textContent = '';
+    $('cuenta-dossier').textContent = proyecto.dossier.length || '';
     if (!proyecto.dossier.length) {
-      caja.append(vacio('sin datos todavía: el investigador aún no ha pasado.'));
+      const fila = caja.insertRow();
+      const hueco = fila.insertCell();
+      hueco.append(vacio('sin datos todavía: el investigador aún no ha pasado.'));
       return;
     }
+    const cabecera = caja.createTHead().insertRow();
+    for (const titulo of ['Dato', 'Categoría', 'Qué dice', 'Fuente', 'Estado']) {
+      const th = document.createElement('th');
+      th.textContent = titulo;
+      cabecera.append(th);
+    }
+    const cuerpo = caja.createTBody();
     for (const dato of proyecto.dossier) {
+      const fila = cuerpo.insertRow();
+      fila.append(celda(dato.id, 'clave'), celda(dato.categoria || '—'),
+        celda(dato.dato || '—'), celda(dato.fuente || '—'));
+      const estado = document.createElement('td');
       const chip = document.createElement('span');
       chip.className = 'chip';
       chip.dataset.estado = dato.estado;
-      chip.textContent = dato.id;
-      chip.title = [dato.categoria, dato.estado, dato.fuente && `fuente: ${dato.fuente}`,
-        dato.dato].filter(Boolean).join(' · ');
-      caja.append(chip);
+      chip.textContent = dato.estado || 'sin estado';
+      estado.append(chip);
+      fila.append(estado);
     }
+  }
+
+  // La deuda narrativa: lo que un capitulo abrio y ninguno cerro (§7).
+  function pintarHilos(proyecto) {
+    const caja = $('hilos');
+    caja.textContent = '';
+    $('cuenta-hilos').textContent = proyecto.deuda?.length || '';
+    if (!proyecto.deuda?.length) {
+      const li = document.createElement('li');
+      li.append(vacio(proyecto.capitulos.some((c) => c.resumen)
+        ? 'Ninguno: todos los hilos abiertos se cerraron.'
+        : 'sin datos todavía: el cronista aún no ha escrito ningún resumen.'));
+      caja.append(li);
+      return;
+    }
+    for (const h of proyecto.deuda) {
+      const li = document.createElement('li');
+      const cap = document.createElement('span');
+      cap.className = 'etiqueta';
+      cap.textContent = `cap. ${h.capitulo}`;
+      li.append(cap, ` ${h.hilo}`);
+      caja.append(li);
+    }
+  }
+
+  // Tres de los objetivos de §23 se leen en el canon de una sola novela, y la
+  // cuarta cifra es la que da sentido a las otras tres: cuanto va escrito.
+  function pintarMetricas(proyecto) {
+    const caja = $('metricas');
+    caja.textContent = '';
+    const total = proyecto.capitulos.length;
+    const aprobados = proyecto.capitulos.filter((c) => c.estado === 'aprobado');
+    metrica(caja, {
+      nombre: 'Capítulos aprobados',
+      valor: total ? `${aprobados.length} / ${total}` : '—',
+      pie: total ? `${proyecto.brief?.palabras_por_capitulo || '—'} palabras por capítulo`
+        : 'sin escaleta todavía',
+      tono: total && aprobados.length === total ? 'bien' : null,
+    });
+
+    const tocados = proyecto.capitulos.filter((c) => c.intentos);
+    const intentos = tocados.reduce((n, c) => n + c.intentos, 0);
+    metrica(caja, {
+      nombre: 'Intentos por capítulo', objetivo: 'OB-02',
+      valor: tocados.length ? decimal(intentos / tocados.length) : '—',
+      pie: tocados.length ? `${intentos} en ${tocados.length} · meta ≤ 1,15` : 'ningún capítulo en el loop',
+      tono: tocados.length ? (intentos / tocados.length <= 1.15 ? 'bien' : 'aviso') : null,
+    });
+
+    const { revisados = 0, discrepancias = [] } = proyecto.auditoria || {};
+    metrica(caja, {
+      nombre: 'El gate cuadra', objetivo: 'OB-04',
+      valor: revisados ? `${Math.round(((revisados - discrepancias.length) / revisados) * 100)} %` : '—',
+      pie: revisados ? `${revisados - discrepancias.length} de ${revisados} cuentas · meta 100 %`
+        : 'ningún intento ha llegado al gate',
+      tono: revisados ? (discrepancias.length ? 'mal' : 'bien') : null,
+    });
+
+    const medias = aprobados.map((c) => c.media).filter((m) => typeof m === 'number');
+    const minima = proyecto.gate?.media_minima;
+    const margen = medias.length && typeof minima === 'number' ? Math.min(...medias) - minima : null;
+    metrica(caja, {
+      nombre: 'Margen más justo', objetivo: 'OB-07',
+      valor: margen === null ? '—' : decimal(margen),
+      pie: margen === null ? 'ningún capítulo aprobado'
+        : `media del peor aprobado menos ${decimal(minima)} · meta ≥ 0,10`,
+      tono: margen === null ? null : (margen >= 0.1 ? 'bien' : 'aviso'),
+    });
   }
 
   function pintarArchivos(proyecto) {
@@ -572,6 +690,20 @@ export function crearTaller(ctx) {
 
   function pintarTarjetas(proyecto) {
     tarjetas.textContent = '';
+    const aprobados = proyecto.capitulos.filter((c) => c.estado === 'aprobado').length;
+    $('capitulos-subtitulo').textContent = proyecto.capitulos.length
+      ? `${aprobados} de ${proyecto.capitulos.length} aprobados · la escaleta, por el estado de cada ficha`
+      : 'sin datos todavía: el arquitecto aún no ha escrito la escaleta.';
+    if (!proyecto.capitulos.length) return;
+    const huecos = {};
+    for (const col of COLUMNAS_CAPITULO) {
+      const suyos = proyecto.capitulos.filter((c) => c.estado === col.estado).length;
+      const { columna, tarjetas: hueco } = crearColumna({
+        clave: col.estado, titulo: col.titulo, cuenta: suyos,
+      });
+      huecos[col.estado] = hueco;
+      tarjetas.append(columna);
+    }
     for (const c of proyecto.capitulos) {
       const tarjeta = document.createElement('button');
       tarjeta.type = 'button';
@@ -639,11 +771,15 @@ export function crearTaller(ctx) {
 
       tarjeta.append(alto, titulo, fecha, pie);
 
+      // Un aprobado se lee; uno que esta o estuvo en el loop se mira por sus
+      // intentos, que es lo unico que el canon guarda de el hasta aprobarse.
+      if (!c.legible && !c.intentos) tarjeta.disabled = true;
       tarjeta.addEventListener('click', () => {
         ctx.elegirCapitulo(c.numero);
         if (c.legible) ctx.abrirLectura(c.numero);
+        else if (c.intentos) ctx.ir('intentos');
       });
-      tarjetas.append(tarjeta);
+      (huecos[c.estado] || huecos.pendiente).append(tarjeta);
     }
   }
 
@@ -659,10 +795,13 @@ export function crearTaller(ctx) {
       pintarCronologia(proyecto);
       pintarReparto(proyecto);
       pintarLedger(proyecto);
+      pintarHilos(proyecto);
+      pintarMetricas(proyecto);
       pintarArchivos(proyecto);
       pintarHuecos();
       trazas.pintar(proyecto);
 
+      $('resumen-titulo').textContent = proyecto.brief?.epoca || proyecto.novela || 'Resumen';
       $('mando-titulo').textContent = proyecto.estado === 'editado'
         ? 'Novela terminada' : 'Los ocho subagentes';
     },

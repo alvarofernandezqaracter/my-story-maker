@@ -27,12 +27,23 @@ async function pedir(camino, opciones = {}) {
   return datos;
 }
 
+// La novela que se esta mirando. Sin ella, el servidor da la novela en curso,
+// que es la que se toco ultima (§21); con ella, cualquier carpeta de biblioteca/.
+let novela = null;
+
+function conNovela(camino) {
+  return novela ? `${camino}?novela=${encodeURIComponent(novela)}` : camino;
+}
+
 export const api = {
-  proyecto: () => pedir('/api/proyecto'),
-  capitulo: (numero) => pedir(`/api/capitulo/${numero}`),
-  contexto: (numero) => pedir(`/api/contexto/${numero}`),
-  trazas: () => pedir('/api/trazas'),
-  exportarTrazas: () => pedir('/api/trazas', {
+  get novela() { return novela; },
+  set novela(nombre) { novela = nombre || null; },
+  novelas: () => pedir('/api/novelas'),
+  proyecto: () => pedir(conNovela('/api/proyecto')),
+  capitulo: (numero) => pedir(conNovela(`/api/capitulo/${numero}`)),
+  contexto: (numero) => pedir(conNovela(`/api/contexto/${numero}`)),
+  trazas: () => pedir(conNovela('/api/trazas')),
+  exportarTrazas: () => pedir(conNovela('/api/trazas'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: '',

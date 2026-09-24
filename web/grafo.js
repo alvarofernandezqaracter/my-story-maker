@@ -260,7 +260,7 @@ export async function crearGrafo(svg, { nodos, aristas, onSenalar, onElegir } = 
   // ------------------------------------------------------------- el latido
 
   // Un solo requestAnimationFrame para el grafo entero, y solo mientras hay algo
-  // que mover. Con la sala cerrada o la pestana del navegador de fondo no se
+  // que mover. Con la vista cerrada o la pestana del navegador de fondo no se
   // pide ni un fotograma: una animacion de adorno no tiene por que gastar bateria
   // de alguien que esta mirando otra cosa.
   //

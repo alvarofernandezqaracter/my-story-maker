@@ -1,7 +1,7 @@
 # CLAUDE.md — my-story-maker
 
 Sistema multiagente que escribe una novela histórica capítulo a capítulo a partir
-de un brief de cinco campos. Versión 1.30.0.
+de un brief de cinco campos. Versión 1.31.0.
 
 **Tú eres el orquestador.** Tu trabajo **no es escribir la novela**: es decidir a
 quién se llama, con qué delante, y qué se hace con lo que devuelve. La prosa, el
@@ -122,7 +122,7 @@ Y conviene no olvidarlo, porque es el precio:
   conteo va por `wc`, pero el ensamblado lo hace un modelo: el invariante de que
   mismo capítulo y mismo canon dan el mismo paquete pasa de garantizado a
   instruido.
-- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 155
+- **La orquestación no tiene tests.** Lo que hace es una conversación. Los 162
   tests que hay cubren el Python de `novela/`, que mira el canon y arranca al
   orquestador, pero no escribe novelas. Lo único que se comprueba del camino
   delegado son los ficheros de `.claude/agents/`, y solo su forma: que el
@@ -232,7 +232,7 @@ python -m novela informe-trazas --salida informe.md   # agrega el gasto (§22)
 python -m novela idioma <ruta>               # VD-14: en que lengua esta un capitulo
 python -m novela afinar preparar             # abre una vuelta de afinado (AFINADO.md)
 python -m novela afinar puntuar              # cuenta lo que devolvieron los subagentes
-python -m unittest discover -s tests -t .    # 155 tests, sin red
+python -m unittest discover -s tests -t .    # 162 tests, sin red
 ```
 
 `hook-traza` existe pero no se llama a mano: lo llama el hook de
@@ -258,16 +258,22 @@ python -m unittest discover -s tests -t .    # 155 tests, sin red
 
 ## Interfaz web (§19) y observabilidad (§20)
 
-`python -m novela ui` levanta un servidor local de la biblioteca estándar.
-Cuatro salas: **brief** qué libro es, **escritorio** por dónde va, **arquitectura**
-el pipeline de §4, §7, §8 y §9 como grafo por capas en **SVG inline**, y
-**lectura** el capítulo. Solo la tercera sigue diciendo algo con el canon vacío,
-y cada una tiene su enlace (`#arquitectura`).
+`python -m novela ui` levanta un servidor local de la biblioteca estándar. Tiene
+**la forma de un gestor de proyectos, al estilo de Jira**: una barra con el
+**taller** —todas las novelas de `biblioteca/` en un tablero, una columna por
+estado de §4—, la **arquitectura** y la **nueva novela**; y dentro de cada novela
+un lateral con **resumen**, **capítulos** (otro tablero, por estado de ficha),
+**intentos y gate**, **canon**, **lectura** y **arquitectura**, el pipeline de
+§4, §7, §8 y §9 como grafo por capas en **SVG inline**. Cada vista tiene su
+enlace (`#/novela/<carpeta>/capitulos`), y los de antes siguen valiendo
+(`#arquitectura`, `#capitulo/3`). La API mira la novela en curso por defecto y
+cualquier otra con `?novela=<carpeta>`; `GET /api/novelas` da el tablero.
+**Las tarjetas no se arrastran**: mover una sería escribir su estado.
 **En el canon escribe el orquestador y nadie más**, así que cualquier método que
 no sea `GET` contra la API responde 409 y da el comando que sí escribe. Las dos
 excepciones no tocan el canon: `POST /api/trazas`, que manda a Langfuse lo que el
 canon ya dice, y `POST /api/lanzar`, que **arranca** una sesión de Claude Code con
-el brief de la sala del brief y se aparta. Esa segunda deroga el «solo GET» en una
+el brief de la vista de nueva novela y se aparta. Esa segunda deroga el «solo GET» en una
 ruta; la primera regla de §21 no se toca, porque quien escribe la novela sigue
 siendo esa sesión.
 
@@ -275,14 +281,16 @@ siendo esa sesión.
 recalcula con las reglas del spec. Lo que el canon no guarda se pinta «sin datos
 todavía», **no se rellena**, y además se declara junto en un panel con el motivo.
 
-La paleta es la de Qaracter (`#FF7932` y `#233441`) y manda. La ambientación
-histórica de [web/ambientacion.css](web/ambientacion.css) va **por debajo**: ocupa
-los neutros, las texturas y los adornos, y el naranja hace de lacre sin cambiar de
-valor. El cuarto tiene luz de día y va en gris roto; lo único cálido es el
-capítulo, que se lee sobre vitela. Cada color de marca tiene dos variantes,
-relleno y tinta, porque el naranja del logotipo no pasa AA como texto sobre claro.
-La escena WebGL es el fondo del **brief** y de ninguna otra sala: three.js viaja
-por CDN —lo único del repo que necesita red— y degrada.
+La paleta es la de Qaracter (`#FF7932` y `#233441`) y manda: la barra va en
+pizarra, que es donde el logotipo se lee entero, y el resto es claro y plano. Los
+colores de estado tienen significado fijo en todas partes. La ambientación
+histórica de [web/ambientacion.css](web/ambientacion.css) va **por debajo** y
+**solo donde está la novela**: el capítulo, que se lee sobre vitela, y los datos
+de época; el naranja hace de lacre sin cambiar de valor. Cada color de marca
+tiene dos variantes, relleno y tinta, porque el naranja del logotipo no pasa AA
+como texto sobre claro. La escena WebGL es el **legajo de la nueva novela** y de
+ninguna otra vista: three.js viaja por CDN —lo único del repo que necesita red—
+y degrada.
 
 **Una traza es una unidad de trabajo cerrada, no el libro.** Ningún fallo de
 observabilidad para una novela, y el hook menos que ninguno: devuelve 0 siempre,

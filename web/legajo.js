@@ -378,12 +378,14 @@ export async function crearLegajo(canvas, { onFoco } = {}) {
     actualizar,
     elegir,
     modoLectura,
-    // La escena es el fondo de una sola sala: fuera de ella no hay nada que
+    // La escena es de una sola vista, el encargo: fuera de ella no hay nada que
     // dibujar y el bucle se para entero.
     mostrar(si) {
       if (si === vivo) return;
       vivo = si;
-      if (si) fotograma();
+      // Vive en una tarjeta y no a pantalla completa: al volver a verse puede
+      // medir distinto que cuando se monto.
+      if (si) { medir(); fotograma(); }
     },
     destruir() {
       vivo = false;
