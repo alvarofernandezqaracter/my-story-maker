@@ -58,12 +58,12 @@ def test_un_brief_que_no_existe_se_dice_y_no_corre(
 # --- Los briefs de RF-201 se cargan ---------------------------------------
 
 
-def test_se_cargan_los_cinco_briefs_en_orden_estable() -> None:
+def test_se_cargan_todos_los_briefs_en_orden_estable() -> None:
     """El orden es el del nombre: la tabla tiene que salir igual cada vez."""
     nombres = [nombre for nombre, _ in lanzador.cargar_briefs()]
 
     assert nombres == sorted(nombres)
-    assert len(nombres) == 5
+    assert len(nombres) == len(list(lanzador.CARPETA_DE_LOS_BRIEFS.glob("*.json")))
 
 
 def test_toda_comprobacion_declarada_la_sabe_observar_el_lanzador() -> None:

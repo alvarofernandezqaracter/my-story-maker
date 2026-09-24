@@ -791,6 +791,10 @@ backend/
                        terminada: arma su ventana, lo lanza por el ejecutor y
                        cuelga sus notas en Langfuse. Su rubrica llega por
                        parametro; no esta en el repositorio
+    lanzador_de_briefs.py  corre los briefs de prueba de uno en uno
+                       —producir, pasar la puerta, publicar y juzgar— y deja
+                       la tabla de lo esperado frente a lo observado. Gasta:
+                       no corre nada sin `--si-gasto`
     tareas/            una carpeta por tipo de tarea del censo (§2), con su
                        contrato, su prompt, su esquema y, si le toca criba, sus
                        contratos de verificacion por dimension

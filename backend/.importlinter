@@ -108,7 +108,7 @@ forbidden_modules =
     novela.tareas
 
 [importlinter:contract:juez-de-la-novela-fuera]
-name = El juez de la novela no lee tareas ni la API, ni trae Langfuse: su rubrica llega por parametro
+name = El juez de la novela no lee tareas, ni la API, ni Langfuse
 type = forbidden
 # Lo prohibido es que las lea el propio juez: el ejecutor que lo lanza pasa por los hooks, que
 # leen el esquema de su tarea, y eso no le da al juez ningun prompt de `tareas/`.
