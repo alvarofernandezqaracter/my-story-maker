@@ -89,7 +89,7 @@ export function PantallaDelAvance() {
   return (
     <>
       <Cabecera pantalla="Avance" />
-        <MenuDeObra idObra={idObra} />
+      <MenuDeObra idObra={idObra} />
       <main className="pagina avance">
         <header className="avance__cabecera">
           <h1>{ficha.titulo}</h1>

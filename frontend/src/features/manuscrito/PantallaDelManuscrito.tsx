@@ -57,7 +57,7 @@ export function PantallaDelManuscrito() {
   return (
     <>
       <Cabecera pantalla="Lectura" />
-        <MenuDeObra idObra={idObra} />
+      <MenuDeObra idObra={idObra} />
       <main className="pagina lectura">
         <header className="lectura__cabecera">
           <h1>{ficha.titulo}</h1>

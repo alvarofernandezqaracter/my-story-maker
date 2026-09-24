@@ -384,7 +384,7 @@ Cada agente recibe una vista distinta, y algunas exclusiones son tan importantes
 
 | Agente | Ve | No ve | Por qué |
 | --- | --- | --- | --- |
-| Constructor de mundo | Obra, premisa, elenco declarado, fuentes ya recogidas, destinatario y sus recuerdos | Plan, prosa, estado en N | Puebla tipos, no reacciona a la trama |
+| Constructor de mundo | Obra, premisa, elenco declarado si lo hay, fuentes ya recogidas, destinatario y sus recuerdos | Plan, prosa, estado en N | Puebla tipos, no reacciona a la trama |
 | Documentalista | Marco de la escena, fuentes | Trama futura | Evita sesgar el dato hacia lo conveniente |
 | Arquitecto de arcos | Resúmenes de todos los capítulos, compromisos, curva de tensión | Prosa completa | Opera a escala de obra |
 | Planificador | Canon, estado en N, compromisos abiertos, arcos, contratos y resúmenes de escenas parecidas ya escritas, destinatario y sus recuerdos | Prosa anterior | Planifica estructura, no imita estilo: lo recuperado le llega como contrato y resumen, nunca como prosa |
