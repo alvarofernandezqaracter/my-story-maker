@@ -115,6 +115,8 @@ class Artefacto:
     procedencia_intento: int | None = None
     creado_en: str = ""
     caducado_en: str | None = None
+    version_de_obra: int | None = None
+    relevado_por: int | None = None
     propias: dict[str, Any] = field(default_factory=dict)
 
 
@@ -124,6 +126,7 @@ def _fila_a_artefacto(fila: sqlite3.Row) -> Artefacto:
         "id", "id_obra", "tipo", "cuerpo", "capitulo", "escena", "estado", "severidad",
         "dimension", "rol", "orden", "version", "memoria", "procedencia_rol",
         "procedencia_tarea", "procedencia_intento", "creado_en", "caducado_en",
+        "version_de_obra", "relevado_por",
     }
     return Artefacto(
         tipo=fila["tipo"],
@@ -144,6 +147,8 @@ def _fila_a_artefacto(fila: sqlite3.Row) -> Artefacto:
         procedencia_intento=fila["procedencia_intento"],
         creado_en=fila["creado_en"],
         caducado_en=fila["caducado_en"],
+        version_de_obra=fila["version_de_obra"] if "version_de_obra" in columnas else None,
+        relevado_por=fila["relevado_por"] if "relevado_por" in columnas else None,
         propias={c: fila[c] for c in columnas if c not in conocidas},
     )
 
@@ -201,6 +206,57 @@ def _nacimiento(ficha: "Artefacto | None") -> str | None:
     if isinstance(fechas, dict) and fechas.get("nacimiento") is not None:
         return str(fechas["nacimiento"])
     return None
+
+
+def _version_en_curso(conexion: sqlite3.Connection, id_obra: str) -> int:
+    """La ultima version de la obra, que es la unica que se produce (D-40)."""
+    fila = conexion.execute(
+        "SELECT COALESCE(MAX(numero), 1) AS numero FROM version_de_la_obra WHERE id_obra = ?",
+        (id_obra,),
+    ).fetchone()
+    return int(fila["numero"])
+
+
+def _visible(version: int | None, alias: str = "") -> tuple[str, dict[str, Any]]:
+    """Que filas ve una version (SPEC1 RF-113).
+
+    Sin version, lo vivo: lo que no esta caducado, que es lo que ve la version
+    en curso y lo unico que lee la produccion. Con version V, lo escrito en V o
+    antes que no haya relevado V ni una anterior, y que no se caduco por otro
+    motivo —memoria de capitulo, capitulo a medias—: un relevo siempre lleva su
+    marca, y un caducado sin relevo no lo ve ninguna version.
+    """
+    prefijo = f"{alias}." if alias else ""
+    if version is None:
+        return f"{prefijo}caducado_en IS NULL", {}
+    return (
+        f"{prefijo}version_de_obra <= :version_vista "
+        f"AND ({prefijo}relevado_por IS NULL OR {prefijo}relevado_por > :version_vista) "
+        f"AND ({prefijo}caducado_en IS NULL OR {prefijo}relevado_por IS NOT NULL)",
+        {"version_vista": version},
+    )
+
+
+def _estado_visible(version: int | None) -> tuple[str, dict[str, Any]]:
+    """Lo mismo para la cache del estado, que no se caduca: se releva o se borra."""
+    if version is None:
+        return "relevado_por IS NULL", {}
+    return (
+        "version_de_obra <= :version_vista "
+        "AND (relevado_por IS NULL OR relevado_por > :version_vista)",
+        {"version_vista": version},
+    )
+
+
+def _version_a_dict(fila: sqlite3.Row) -> dict[str, Any]:
+    version = dict(fila)
+    version["capitulos_cambiados"] = json.loads(version["capitulos_cambiados"])
+    return version
+
+
+class VersionNoAdmitida(Exception):
+    """La orden sobre una version no se puede cumplir tal como viene: rehacer
+    con una version sin terminar, o publicar una que no ha terminado."""
 
 
 class Almacen:
@@ -291,7 +347,11 @@ class Almacen:
             "procedencia_intento": artefacto.procedencia_intento,
             "creado_en": artefacto.creado_en,
             "caducado_en": artefacto.caducado_en,
+            # Toda fila nace en la version que se esta produciendo (RF-112).
+            "version_de_obra": artefacto.version_de_obra
+            or _version_en_curso(conexion, artefacto.id_obra),
         }
+        artefacto.version_de_obra = valores["version_de_obra"]
         for columna in tabla.consulta:
             valores[columna] = getattr(artefacto, columna)
         for propia in tabla.propias:
@@ -360,8 +420,12 @@ class Almacen:
         dimension: str | None = None,
         orden: str = "creado_en",
         incluir_caducados: bool = False,
+        version: int | None = None,
     ) -> list[Artefacto]:
-        """Lista acotada por obra, que es como se consulta siempre (RD-06)."""
+        """Lista acotada por obra, que es como se consulta siempre (RD-06).
+
+        Sin `version`, lo vivo; con ella, lo que ve esa version (RF-113).
+        """
         tabla = TABLA_POR_TIPO[tipo]
         condiciones = ["id_obra = :id_obra"]
         parametros: dict[str, Any] = {"id_obra": id_obra}
@@ -378,7 +442,9 @@ class Almacen:
                 condiciones.append(f"{columna} = :{columna}")
                 parametros[columna] = valor
         if not incluir_caducados:
-            condiciones.append("caducado_en IS NULL")
+            visible, de_la_version = _visible(version)
+            condiciones.append(visible)
+            parametros |= de_la_version
         sentencia = (
             f"SELECT * FROM {nombre_de_tabla(tipo)} "
             f"WHERE {' AND '.join(condiciones)} ORDER BY {orden}"
@@ -413,6 +479,12 @@ class Almacen:
         conexion.execute(
             "INSERT INTO control_de_ejecucion (id_obra, detenida, actualizado_en) "
             "VALUES (?, 0, ?)",
+            (id_obra, ahora()),
+        )
+        # La obra nace con su version 1, que no sale de ninguna (RF-110).
+        conexion.execute(
+            "INSERT INTO version_de_la_obra (id_obra, numero, base, capitulos_cambiados, "
+            "creada_en) VALUES (?, 1, NULL, '[]', ?)",
             (id_obra, ahora()),
         )
         return id_obra
@@ -531,15 +603,21 @@ class Almacen:
 
     # --- Capitulo ----------------------------------------------------------
 
-    def leer_capitulo(self, id_obra: str, numero: int) -> dict[str, Any]:
+    def leer_capitulo(
+        self, id_obra: str, numero: int, *, version: int | None = None
+    ) -> dict[str, Any]:
         """Todo lo que hay de un capitulo: plan, escenas, borradores y criticas."""
-        capitulos = self.listar("Capitulo", id_obra, capitulo=numero)
+        capitulos = self.listar("Capitulo", id_obra, capitulo=numero, version=version)
         return {
             "capitulo": capitulos[0] if capitulos else None,
-            "plan": next(iter(self.listar("Plan", id_obra, capitulo=numero)), None),
-            "escenas": self.listar("Escena", id_obra, capitulo=numero, orden="orden"),
-            "borradores": self.listar("Borrador", id_obra, capitulo=numero),
-            "criticas": self.listar("Critica", id_obra, capitulo=numero),
+            "plan": next(
+                iter(self.listar("Plan", id_obra, capitulo=numero, version=version)), None
+            ),
+            "escenas": self.listar(
+                "Escena", id_obra, capitulo=numero, orden="orden", version=version
+            ),
+            "borradores": self.listar("Borrador", id_obra, capitulo=numero, version=version),
+            "criticas": self.listar("Critica", id_obra, capitulo=numero, version=version),
         }
 
     def marcar_capitulo(self, id_capitulo: str, estado: str) -> None:
@@ -553,13 +631,16 @@ class Almacen:
             raise ArtefactoRechazado("guardar_borrador solo guarda borradores")
         return self.guardar([borrador])[0]
 
-    def borrador_vigente(self, id_obra: str, escena: str) -> Artefacto | None:
+    def borrador_vigente(
+        self, id_obra: str, escena: str, *, version: int | None = None
+    ) -> Artefacto | None:
         """El ultimo borrador vivo de una escena: el aceptado, si lo hay."""
+        visible, parametros = _visible(version)
         fila = self._lector.execute(
-            "SELECT * FROM artefacto_borrador WHERE id_obra = ? AND escena = ? "
-            "AND estado <> 'descartado' AND caducado_en IS NULL "
+            "SELECT * FROM artefacto_borrador WHERE id_obra = :id_obra AND escena = :escena "
+            f"AND estado <> 'descartado' AND {visible} "
             "ORDER BY version DESC LIMIT 1",
-            (id_obra, escena),
+            {"id_obra": id_obra, "escena": escena} | parametros,
         ).fetchone()
         return _fila_a_artefacto(fila) if fila else None
 
@@ -571,14 +652,17 @@ class Almacen:
     def descartar_borrador(self, id_borrador: str) -> None:
         self._actualizar("Borrador", id_borrador, {"estado": "descartado"})
 
-    def manuscrito_aceptado(self, id_obra: str) -> list[Artefacto]:
-        """Solo el texto aceptado, en orden (RF-50)."""
+    def manuscrito_aceptado(
+        self, id_obra: str, *, version: int | None = None
+    ) -> list[Artefacto]:
+        """Solo el texto aceptado, en orden (RF-50), de la version pedida."""
+        visible, parametros = _visible(version, "b")
         filas = self._lector.execute(
             "SELECT b.* FROM artefacto_borrador AS b "
             "JOIN artefacto_escena AS e ON e.id = b.escena "
-            "WHERE b.id_obra = ? AND b.estado = 'aceptado' AND b.caducado_en IS NULL "
+            f"WHERE b.id_obra = :id_obra AND b.estado = 'aceptado' AND {visible} "
             "ORDER BY b.capitulo, e.orden",
-            (id_obra,),
+            {"id_obra": id_obra} | parametros,
         )
         return [_fila_a_artefacto(f) for f in filas]
 
@@ -591,10 +675,20 @@ class Almacen:
         return self.guardar([critica])[0]
 
     def listar_criticas_abiertas(
-        self, id_obra: str, *, escena: str | None = None, severidad: str | None = None
+        self,
+        id_obra: str,
+        *,
+        escena: str | None = None,
+        severidad: str | None = None,
+        version: int | None = None,
     ) -> list[Artefacto]:
         return self.listar(
-            "Critica", id_obra, escena=escena, estado="abierta", severidad=severidad
+            "Critica",
+            id_obra,
+            escena=escena,
+            estado="abierta",
+            severidad=severidad,
+            version=version,
         )
 
     def resolver_critica(self, id_critica: str, estado: str) -> None:
@@ -605,15 +699,18 @@ class Almacen:
 
     # --- La biblia: en que capitulos se usa cada hecho ---------------------
 
-    def capitulos_de_uso(self, id_obra: str) -> dict[str, list[int]]:
+    def capitulos_de_uso(
+        self, id_obra: str, *, version: int | None = None
+    ) -> dict[str, list[int]]:
         """En que capitulos se usa cada hecho. Se deriva, no se guarda (RF-84).
 
         Una mencion repetida no duplica el capitulo.
         """
+        visible, parametros = _visible(version)
         filas = self._lector.execute(
             "SELECT DISTINCT hecho, capitulo FROM artefacto_mencion "
-            "WHERE id_obra = ? AND caducado_en IS NULL ORDER BY hecho, capitulo",
-            (id_obra,),
+            f"WHERE id_obra = :id_obra AND {visible} ORDER BY hecho, capitulo",
+            {"id_obra": id_obra} | parametros,
         )
         usos: dict[str, list[int]] = {}
         for fila in filas:
@@ -621,15 +718,20 @@ class Almacen:
         return usos
 
     def hechos_de_la_biblia(
-        self, id_obra: str, *, tipo: str | None = None, licencia: str | None = None
+        self,
+        id_obra: str,
+        *,
+        tipo: str | None = None,
+        licencia: str | None = None,
+        version: int | None = None,
     ) -> list[dict[str, Any]]:
         """Cada hecho con su tipo, nombre, licencia y capitulos de uso (RF-87)."""
         if tipo is not None and tipo not in HECHOS_DE_LA_BIBLIA:
             raise KeyError(f"{tipo!r} no es un hecho de la biblia")
-        usos = self.capitulos_de_uso(id_obra)
+        usos = self.capitulos_de_uso(id_obra, version=version)
         hechos: list[dict[str, Any]] = []
         for tipo_de_hecho in (tipo,) if tipo else HECHOS_DE_LA_BIBLIA:
-            for ficha in self.listar(tipo_de_hecho, id_obra):
+            for ficha in self.listar(tipo_de_hecho, id_obra, version=version):
                 if licencia is not None and ficha.cuerpo.get("licencia") != licencia:
                     continue
                 hechos.append(
@@ -643,14 +745,16 @@ class Almacen:
                 )
         return hechos
 
-    def cronologia(self, id_obra: str) -> list[dict[str, Any]]:
+    def cronologia(self, id_obra: str, *, version: int | None = None) -> list[dict[str, Any]]:
         """Los sucesos de la obra en orden, con quien estaba presente (RF-86).
 
         Es una vista, no una tabla: una fila por `EventoEstado` y por `Evento`
         del mundo. Copia lo escrito y no calcula fechas ni edades; ordenar por
         la fecha escrita no es aritmetica de calendario.
         """
-        personajes = {ficha.id: ficha for ficha in self.listar("Personaje", id_obra)}
+        personajes = {
+            ficha.id: ficha for ficha in self.listar("Personaje", id_obra, version=version)
+        }
 
         def presentes(identificadores: Any) -> list[dict[str, Any]]:
             if not isinstance(identificadores, list):
@@ -668,7 +772,7 @@ class Almacen:
             return filas
 
         sucesos: list[dict[str, Any]] = []
-        for evento in self.listar("EventoEstado", id_obra, orden="capitulo"):
+        for evento in self.listar("EventoEstado", id_obra, orden="capitulo", version=version):
             cuerpo = evento.cuerpo
             sucesos.append(
                 {
@@ -681,7 +785,7 @@ class Almacen:
                     "presentes": presentes(cuerpo.get("presentes")),
                 }
             )
-        for evento in self.listar("Evento", id_obra):
+        for evento in self.listar("Evento", id_obra, version=version):
             cuerpo = evento.cuerpo
             sucesos.append(
                 {
@@ -716,10 +820,14 @@ class Almacen:
         with self._turno_de_escritura, escritura(self._escritor) as conexion:
             _materializar(conexion, id_obra, capitulo, cuerpo)
 
-    def estado_en(self, id_obra: str, capitulo: int) -> dict[str, Any] | None:
+    def estado_en(
+        self, id_obra: str, capitulo: int, *, version: int | None = None
+    ) -> dict[str, Any] | None:
+        visible, parametros = _estado_visible(version)
         fila = self._lector.execute(
-            "SELECT cuerpo FROM cache_estado_materializado WHERE id_obra = ? AND capitulo = ?",
-            (id_obra, capitulo),
+            "SELECT cuerpo FROM cache_estado_materializado "
+            f"WHERE id_obra = :id_obra AND capitulo = :capitulo AND {visible}",
+            {"id_obra": id_obra, "capitulo": capitulo} | parametros,
         ).fetchone()
         return json.loads(fila["cuerpo"]) if fila else None
 
@@ -731,7 +839,8 @@ class Almacen:
         """
         with self._turno_de_escritura, escritura(self._escritor) as conexion:
             cursor = conexion.execute(
-                "DELETE FROM cache_estado_materializado WHERE id_obra = ? AND capitulo >= ?",
+                "DELETE FROM cache_estado_materializado "
+                "WHERE id_obra = ? AND capitulo >= ? AND relevado_por IS NULL",
                 (id_obra, capitulo),
             )
             return cursor.rowcount
@@ -785,9 +894,12 @@ class Almacen:
         hasta: int,
         lotes: Sequence[Sequence[Artefacto]],
         al_rechazar: Callable[[int, ArtefactoRechazado], Artefacto],
+        *,
+        de_cierre: bool = False,
     ) -> list[int]:
         """Las criticas de `auditar` y la constancia de hasta donde se audito,
-        juntas o ninguna (RF-94)."""
+        juntas o ninguna (RF-94). La de cierre termina ademas la version en
+        curso, en la misma transaccion (RF-110)."""
         with self._turno_de_escritura, escritura(self._escritor) as conexion:
             rechazados = self._insertar_lotes(conexion, lotes, al_rechazar)
             conexion.execute(
@@ -795,6 +907,12 @@ class Almacen:
                 "actualizado_en = ? WHERE id_obra = ?",
                 (hasta, ahora(), id_obra),
             )
+            if de_cierre:
+                conexion.execute(
+                    "UPDATE version_de_la_obra SET terminada_en = ? "
+                    "WHERE id_obra = ? AND numero = ? AND terminada_en IS NULL",
+                    (ahora(), id_obra, _version_en_curso(conexion, id_obra)),
+                )
         return rechazados
 
     def _insertar_lotes(
@@ -844,20 +962,11 @@ class Almacen:
         paso, tambien de lo que se tiro. El estado materializado es cache y se
         descarta de verdad.
         """
-        marca = ahora()
-        caducados = 0
         with self._turno_de_escritura, escritura(self._escritor) as conexion:
-            for tabla in esquema.TABLAS:
-                if "capitulo" not in tabla.consulta or tabla.tipo == "Traza":
-                    continue
-                cursor = conexion.execute(
-                    f"UPDATE {nombre_de_tabla(tabla.tipo)} SET caducado_en = ? "
-                    "WHERE id_obra = ? AND capitulo >= ? AND caducado_en IS NULL",
-                    (marca, id_obra, capitulo),
-                )
-                caducados += cursor.rowcount
+            caducados = _marcar_desde(conexion, id_obra, capitulo, relevo=None)
             conexion.execute(
-                "DELETE FROM cache_estado_materializado WHERE id_obra = ? AND capitulo >= ?",
+                "DELETE FROM cache_estado_materializado "
+                "WHERE id_obra = ? AND capitulo >= ? AND relevado_por IS NULL",
                 (id_obra, capitulo),
             )
         return caducados
@@ -1001,16 +1110,122 @@ class Almacen:
         ).fetchone()
         return bool(fila and fila["detenida"])
 
+    # --- Versiones de la obra (SPEC1 4.12) ---------------------------------
+
+    def listar_versiones(self, id_obra: str) -> list[dict[str, Any]]:
+        filas = self._lector.execute(
+            "SELECT * FROM version_de_la_obra WHERE id_obra = ? ORDER BY numero", (id_obra,)
+        )
+        return [_version_a_dict(fila) for fila in filas]
+
+    def leer_version(self, id_obra: str, numero: int) -> dict[str, Any] | None:
+        fila = self._lector.execute(
+            "SELECT * FROM version_de_la_obra WHERE id_obra = ? AND numero = ?",
+            (id_obra, numero),
+        ).fetchone()
+        return _version_a_dict(fila) if fila else None
+
+    def version_en_curso(self, id_obra: str) -> int:
+        """La ultima version, que es la unica que se produce (D-40)."""
+        return _version_en_curso(self._lector, id_obra)
+
+    def version_publicada(self, id_obra: str) -> int | None:
+        """La de la ultima publicacion, o ninguna (RF-116)."""
+        fila = self._lector.execute(
+            "SELECT numero FROM publicacion_de_version WHERE id_obra = ? "
+            "ORDER BY id DESC LIMIT 1",
+            (id_obra,),
+        ).fetchone()
+        return int(fila["numero"]) if fila else None
+
+    def abrir_version(self, id_obra: str, desde: int, hasta: int) -> int:
+        """Rehacer desde el capitulo `desde`: nace la version siguiente (RF-111).
+
+        En una sola transaccion: la version nueva con los capitulos que cambian,
+        el relevo de lo que colgaba de ellos en el mundo de la anterior (RF-112) y
+        de su estado materializado (RF-115), y la constancia de auditoria
+        rebajada a lo que sigue valiendo, para que la nueva se audite al cerrar.
+        La anterior tiene que haber terminado (D-40). Devuelve el numero nuevo.
+        """
+        with self._turno_de_escritura, escritura(self._escritor) as conexion:
+            ultima = conexion.execute(
+                "SELECT numero, terminada_en FROM version_de_la_obra WHERE id_obra = ? "
+                "ORDER BY numero DESC LIMIT 1",
+                (id_obra,),
+            ).fetchone()
+            if ultima is None:
+                raise KeyError(f"no hay ninguna obra {id_obra}")
+            if ultima["terminada_en"] is None:
+                raise VersionNoAdmitida(
+                    f"la version {ultima['numero']} de {id_obra} no ha terminado: "
+                    "solo se rehace desde una version terminada"
+                )
+            nueva = int(ultima["numero"]) + 1
+            conexion.execute(
+                "INSERT INTO version_de_la_obra (id_obra, numero, base, capitulos_cambiados, "
+                "creada_en) VALUES (?, ?, ?, ?, ?)",
+                (
+                    id_obra,
+                    nueva,
+                    ultima["numero"],
+                    json.dumps(list(range(desde, hasta + 1))),
+                    ahora(),
+                ),
+            )
+            _marcar_desde(conexion, id_obra, desde, relevo=nueva)
+            conexion.execute(
+                "UPDATE cache_estado_materializado SET relevado_por = ? "
+                "WHERE id_obra = ? AND capitulo >= ? AND relevado_por IS NULL",
+                (nueva, id_obra, desde),
+            )
+            conexion.execute(
+                "UPDATE control_de_ejecucion SET auditada_hasta = MIN(auditada_hasta, ?), "
+                "detenida = 0, motivo = NULL, actualizado_en = ? WHERE id_obra = ?",
+                (desde - 1, ahora(), id_obra),
+            )
+        return nueva
+
+    def publicar_version(self, id_obra: str, numero: int) -> str:
+        """Anade la publicacion al registro. Solo una version terminada (RF-116).
+
+        No se llama desde ningun otro sitio que `nucleo.versiones.publicar`: es el
+        unico camino por el que una version queda publicada.
+        """
+        with self._turno_de_escritura, escritura(self._escritor) as conexion:
+            version = conexion.execute(
+                "SELECT terminada_en FROM version_de_la_obra WHERE id_obra = ? AND numero = ?",
+                (id_obra, numero),
+            ).fetchone()
+            if version is None:
+                raise KeyError(f"la obra {id_obra} no tiene version {numero}")
+            if version["terminada_en"] is None:
+                raise VersionNoAdmitida(
+                    f"la version {numero} de {id_obra} no ha terminado: no se publica"
+                )
+            publicada_en = ahora()
+            conexion.execute(
+                "INSERT INTO publicacion_de_version (id_obra, numero, publicada_en) "
+                "VALUES (?, ?, ?)",
+                (id_obra, numero, publicada_en),
+            )
+        return publicada_en
+
 
 def _materializar(
     conexion: sqlite3.Connection, id_obra: str, capitulo: int, cuerpo: dict[str, Any]
 ) -> None:
     conexion.execute(
         "INSERT INTO cache_estado_materializado "
-        "(id_obra, capitulo, cuerpo, calculado_en) VALUES (?, ?, ?, ?) "
-        "ON CONFLICT (id_obra, capitulo) DO UPDATE SET "
+        "(id_obra, version_de_obra, capitulo, cuerpo, calculado_en) VALUES (?, ?, ?, ?, ?) "
+        "ON CONFLICT (id_obra, version_de_obra, capitulo) DO UPDATE SET "
         "cuerpo = excluded.cuerpo, calculado_en = excluded.calculado_en",
-        (id_obra, capitulo, json.dumps(cuerpo, ensure_ascii=False), ahora()),
+        (
+            id_obra,
+            _version_en_curso(conexion, id_obra),
+            capitulo,
+            json.dumps(cuerpo, ensure_ascii=False),
+            ahora(),
+        ),
     )
 
 
@@ -1026,6 +1241,40 @@ def _caducar_memoria(conexion: sqlite3.Connection, id_obra: str, capitulo: int) 
             "WHERE id_obra = ? AND capitulo = ? AND memoria = 'capitulo' "
             f"AND caducado_en IS NULL {sigue_abierta}",
             (marca, id_obra, capitulo),
+        )
+        caducados += cursor.rowcount
+    return caducados
+
+
+def _marcar_desde(
+    conexion: sqlite3.Connection, id_obra: str, capitulo: int, *, relevo: int | None
+) -> int:
+    """Caduca lo vivo que cuelga del capitulo N en adelante (RF-112, RF-118).
+
+    Cuelga de un capitulo lo que lleva ese capitulo y lo que, sin llevarlo, lo
+    escribio una tarea de ese capitulo, como un `Evento` que el Planificador
+    anadio al mundo: su `Traza` dice de que capitulo era. La `Traza` misma no se
+    marca: es el registro de lo que paso. Con `relevo`, la marca dice ademas que
+    version lo relevo, y la version anterior lo sigue viendo.
+    """
+    marca = ahora()
+    relevo_sql = ", relevado_por = :relevo" if relevo is not None else ""
+    parametros = {"marca": marca, "id_obra": id_obra, "capitulo": capitulo, "relevo": relevo}
+    caducados = 0
+    for tabla in esquema.TABLAS:
+        if tabla.tipo in ("Traza", "Obra"):
+            continue
+        if "capitulo" in tabla.consulta:
+            de_que_capitulo = "capitulo >= :capitulo"
+        else:
+            de_que_capitulo = (
+                "procedencia_tarea IN (SELECT id FROM artefacto_traza "
+                "WHERE id_obra = :id_obra AND capitulo >= :capitulo)"
+            )
+        cursor = conexion.execute(
+            f"UPDATE {nombre_de_tabla(tabla.tipo)} SET caducado_en = :marca{relevo_sql} "
+            f"WHERE id_obra = :id_obra AND caducado_en IS NULL AND {de_que_capitulo}",
+            parametros,
         )
         caducados += cursor.rowcount
     return caducados

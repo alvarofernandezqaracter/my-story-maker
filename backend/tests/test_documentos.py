@@ -95,7 +95,8 @@ def test_las_tres_decisiones_que_la_spec_cierra_ya_no_estan_abiertas(
     assert "umbral de severidad dispara regeneración" not in abiertas
     # La de la herramienta externa de calculo sigue abierta, anotada.
     assert "herramienta externa de cálculo" in abiertas
-    assert abiertas.count("- [ ]") == 8
+    # La de la biblia la cerro el dueno del proyecto: se versiona con la novela.
+    assert "versiona la biblia" not in abiertas
 
 
 def test_el_ciclo_de_vida_no_promete_validadores_deterministas(

@@ -198,7 +198,7 @@ flowchart LR
 | RF-22 | El cuerpo del artefacto se guarda íntegro tal como lo escribió el agente. El backend no lo reinterpreta: solo extrae las columnas por las que hace falta consultar | `inspeccion` |
 | RF-23 | Un artefacto con un campo obligatorio ausente o con un valor fuera de vocabulario controlado se rechaza, y el rechazo es una `Crítica` de severidad `bloqueante` cuyo objeto es el artefacto, no el texto | `prueba` |
 | RF-24 | `EventoEstado`, `Fuente`, `Resumen de capítulo`, `Decisión` y todo borrador ya aceptado son inmutables. Cambiar algo es escribir una versión nueva | `prueba` |
-| RF-25 | El estado en N se deriva plegando: el Contable recibe el estado en N-1 materializado y los eventos de N. El log no se lee nunca entero. Regenerar el capítulo 12 descarta los estados materializados de 12 en adelante y repliega hacia delante | `analisis` |
+| RF-25 | El estado en N se deriva plegando: el Contable recibe el estado en N-1 materializado y los eventos de N. El log no se lee nunca entero. Rehacer desde el capítulo 12 (§4.12) deja los estados materializados de 12 en adelante a la versión anterior y repliega hacia delante en la nueva | `analisis` |
 | RF-26 | Retirar la memoria de capítulo la ejecuta el Archivero como paso del guion: el almacén marca esos artefactos como caducados y deja de servirlos a cualquier proyección | `prueba` |
 
 ### 4.4 Control de calidad
@@ -359,10 +359,9 @@ materia prima de la que sale la ficha `personal` y no la ficha misma.
 | D-28 | **`presentes` en el `EventoEstado` y fechas ISO parciales.** El formato lo piden el prompt y el esquema del rol que escribe; el almacén no lo comprueba en esta versión | Sin presencia por suceso no se puede afirmar que un personaje no está en dos sitios a la vez, y sin un formato de fecha fijo el volcado formal tendría que interpretar texto libre. La parcial admite lo que de verdad se sabe de una época —a veces solo el año— sin inventar el día. Comprobar el formato al escribir es trabajo del volcado formal, que es quien lo consume |
 | D-29 | **Alcance: registrar, derivar y servir.** Quedan fuera el validador de elementos personalizados, el fichero del demostrador formal y la propagación de cambios del lector | Son los tres consumidores de esto y cada uno tiene su propia pasada del ciclo. Servirlo por la API ya ahora es lo que permite a la interfaz enlazar cada ficha con sus capítulos sin volver a mover la frontera |
 
-**Lo que queda fuera.** Qué pasa con las menciones de un capítulo que se
-regenera entero —hoy ningún camino regenera un capítulo cerrado—, la
-comprobación de que el Archivero no se ha dejado ningún hecho sin anotar, y la
-validación del formato de fecha al escribir (D-28).
+**Lo que queda fuera.** La comprobación de que el Archivero no se ha dejado
+ningún hecho sin anotar, y la validación del formato de fecha al escribir
+(D-28).
 
 **Documentos que pone al día la fase 3.** `definitions.md` (la `Mencion` en la
 capa Obra, la cronología como vista y el formato de fecha) y el árbol de la
@@ -486,6 +485,72 @@ la orden.
 
 Traza de este bloque: `architecture.md` §3 (toda tarea arranca en frío y
 presupuesto), RF-11, RF-13 y D-08.
+
+### 4.12 Versiones de la obra
+
+**El problema.** Una obra tiene hasta aquí un solo manuscrito, y lo que se
+escribe es a la vez lo que se lee: no hay forma de rehacer una parte sin perder
+la que había, ni de decir cuál de dos textos es el que se entrega. Rehacer un
+capítulo cerrado deja además un mundo que ya no cuadra con lo que viene
+después: los `EventoEstado`, las `Mencion` y el estado en N del capítulo
+rehecho cambian, y los capítulos siguientes se escribieron sobre el mundo
+viejo. La rúbrica pide como invariante que la versión anterior se conserve
+siempre, y una tarea posterior tiene que poder demostrarlo sobre el modelo del
+sistema, así que no basta con guardarla: tiene que poder servirse tal como era.
+
+**La decisión, en una frase.** Una obra tiene versiones numeradas. El editor
+ordena «rehaz desde el capítulo N»: nace la versión siguiente, que comparte con
+la anterior los capítulos 1 a N-1 y reescribe de N al final. Cada versión tiene
+su propio mundo, y la anterior conserva el suyo tal como quedó. Publicar una
+versión terminada es una orden aparte, que se da o no se da.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-110 | **Una obra tiene versiones numeradas desde 1.** El alta crea la 1 en la misma transacción que la `Obra`. Cada versión guarda su número, la versión de la que sale, **qué capítulos cambiaron respecto de ella** y cuándo nació y cuándo terminó. Una versión termina cuando consta su auditoría de cierre (RF-94). Nada de eso se borra ni se modifica, salvo la marca de terminada, que se pone una vez | `prueba` |
+| RF-111 | **Rehacer desde el capítulo N es una orden del editor**, `POST /obras/{id}/versiones` con `desde_capitulo`. Solo se admite si la última versión ha terminado y no hay producción en marcha para la obra, y N va de 1 al último capítulo. Crea la versión siguiente, que anota como cambiados los capítulos de N al último, retira de su mundo lo que colgaba de esos capítulos (RF-112), saca sus fragmentos del índice y arranca la producción, que empieza en el capítulo N por el camino de siempre (RF-91). No es mantenimiento: es una decisión editorial, y nada obliga a darla (RNF-08) | `prueba` |
+| RF-112 | **El mundo de una versión.** Todo artefacto lleva la versión en la que se escribió. Al rehacer desde N, lo que cuelga de un capítulo N o posterior —lo que lleva ese capítulo y lo que no lleva capítulo pero lo escribió una tarea de ese capítulo, según su `Traza`— recibe **la marca de relevado** con el número de la versión nueva, junto con la de caducado: solo una vez y sin poder quitarla, como en D-32. La `Traza` no se releva: es el registro. Lo escrito antes del capítulo 1, la biblia de partida del Constructor de mundo, el `Recuerdo` y la `Obra`, es común a todas las versiones | `prueba` |
+| RF-113 | **Qué ve cada versión.** La versión V ve lo escrito en V o antes que no haya relevado V o una anterior, y que no esté caducado por otro motivo. La última versión ve exactamente lo que no está caducado, así que la producción no cambia: sigue leyendo solo lo vivo | `prueba` |
+| RF-114 | **La versión anterior se conserva siempre.** Rehacer y producir la versión nueva no cambia nada de lo que se sirve de una versión anterior: su manuscrito, sus capítulos, sus críticas, su estado plegado, sus hechos con su uso y su cronología son los mismos antes y después | `prueba` |
+| RF-115 | **El estado en N es de su versión.** La caché del estado materializado lleva la versión que lo plegó. Rehacer desde N no la borra: la releva, igual que a los artefactos. Descartar un capítulo a medias (RF-91) sí borra, y solo lo de la versión en curso | `prueba` |
+| RF-116 | **Publicar es un acto explícito**, `POST /obras/{id}/versiones/{n}/publicar`. Solo se publica una versión terminada; terminar no publica. Cada publicación se añade a un registro de solo añadir, y la versión publicada es la de la última publicación, así que volver a publicar una anterior también queda escrito. Publicar pasa por **un solo sitio del código**, que es donde entra cualquier comprobación que haya que hacer antes | `prueba` |
+| RF-117 | **Lecturas por versión.** Manuscrito, capítulo, críticas, estado, hechos y cronología admiten `version`. Sin ella sirven **la versión de referencia**: la publicada si hay alguna y, si no, la última. Una versión que no existe es un 404. El manuscrito dice qué versión sirve y si está publicada. `GET /obras/{id}/versiones` lista las versiones con su base, sus capítulos cambiados, si ha terminado y cuál es la publicada, y la ficha de la obra dice cuál está en curso y cuál publicada. Trazas, progreso y búsqueda de pasajes siguen siendo de la producción en curso | `prueba` |
+| RF-118 | **Descartar un capítulo a medias sigue la misma regla de qué cuelga de un capítulo.** Lo que RF-91 caduca incluye también lo que no lleva capítulo pero escribió una tarea de un capítulo descartado, como un `Evento` que el Planificador añadió al mundo | `prueba` |
+
+**Decisiones de este cambio.**
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-40 | **Las versiones van en fila: la nueva sale siempre de la última, y solo cuando la última ha terminado.** No hay ramas ni dos versiones produciéndose a la vez | Es la forma más pequeña que cumple lo pedido. Ramas obligarían a elegir de cuál sale cada rehacer y a producir dos a la vez, que es justo «varias obras a la vez» (§11) con otro nombre. Exigir la última terminada deja además toda versión anterior terminada, y por tanto publicable, que es un invariante sencillo de demostrar |
+| D-41 | **Cada versión tiene su propio mundo, y la biblia se versiona junto a la novela.** Los capítulos compartidos no se copian: cada fila lleva la versión en que nació y, si la hay, la que la relevó, y lo que ve una versión se deduce de esas dos marcas | Copiar los capítulos 1 a N-1 duplicaría el almacén en cada rehacer y dejaría dos filas diciendo lo mismo. Un mundo único que evoluciona sin volver atrás haría incoherente la versión vieja en cuanto la nueva emite sus eventos, que es lo que Álvaro descartó. Con dos marcas la producción no cambia —sigue leyendo lo vivo— y la regla de visibilidad es una comparación de números. Cierra la decisión abierta de `architecture.md` §8 sobre la biblia. La biblia de partida es común porque ninguna versión la reescribe |
+| D-42 | **Rehacer es desde un capítulo N hasta el final**, no una lista de capítulos sueltos | Lo que viene después de un capítulo rehecho se escribió sobre su mundo: dejarlo tal cual lo dejaría contradiciendo al capítulo nuevo. Aun así, qué cambió se registra como lista y no como un número, para que quien lo lea no dependa de la regla con que se calculó |
+| D-43 | **Publicar es un registro de solo añadir y pasa por un solo sitio.** Sin ella, las lecturas sirven la publicada si la hay y si no la última | Una marca en la versión se perdería al publicar otra; el registro guarda también las vueltas atrás. Un solo punto de paso es donde se engancha la puerta que haga falta antes de publicar, sin repartirla por la API. Servir la última mientras no haya publicada mantiene lo que el editor ve hoy durante la producción, y la respuesta dice cuál sirve para que no se confunda con la publicada |
+| D-44 | **El estado materializado se releva con su versión en vez de borrarse** | Es caché, pero no se recalcula sola: quien pliega es el Contable, y volver a plegar una versión vieja costaría tareas sin producir nada. Borrarla dejaría la versión anterior sin estado que servir, que es incumplir RF-114 por la puerta de atrás |
+
+**Qué retira.** La salvedad de §4.9 sobre las menciones de un capítulo que se
+regenera: ahora se relevan con su capítulo. Y RF-25 deja de borrar el estado de
+los capítulos que se rehacen: lo releva (RF-115).
+
+**Qué queda fuera.** Qué cambia en la entrada de los capítulos que se
+reescriben: hoy rehacer vuelve a producir sobre el mismo brief y la misma
+biblia de partida, y meter un cambio del lector es trabajo de la lectura
+interactiva. La puerta de validación antes de publicar, que tiene su sitio
+reservado pero no existe. Rehacer la biblia de partida. Buscar pasajes en una
+versión que no es la en curso. Borrar o archivar versiones, que no se hace
+nunca (RD-07). OBJ-07 no cambia: cuenta las órdenes hasta la obra cerrada, y
+rehacer y publicar llegan después.
+
+**De dónde sale.** `architecture.md` §3 (estado como pliegue, «diferencia
+legible entre versiones») y §4 (el capítulo cerrado como punto de guardado);
+RF-24, RF-25, RF-91 y RF-94; RD-07 y RD-08; D-32; RNF-08.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md`: §2, la
+versión como entidad de producción; §3, el estado por versión; §4, rehacer y
+publicar; §6, la tabla de gobierno; y §8, retirando la decisión de la biblia.
+`validators.md`: §6, la tabla de pruebas, y §8, la matriz de cobertura, con los
+métodos de RF-110 a RF-118. `definitions.md` y `domain-knowledge.md` no cambian:
+la versión es de la capa de producción y no toca la ontología de la obra ni la
+del mundo.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -506,6 +571,10 @@ presupuesto), RF-11, RF-13 y D-08.
 | RD-08 | **Nada de lo que el sistema produce toca el sistema de ficheros.** Artefactos, borradores, críticas, log de eventos, estado materializado, resúmenes, decisiones y trazas viven en la base de datos, incluidos los cuerpos de texto y los embeddings. No hay carpeta de trabajo, ni volcados a disco para inspeccionar: lo que hay que ver se sirve por la API (§6) | `inspeccion` |
 | RD-09 | Los prompts de los doce roles y el guion declarativo son entrada versionada con el repositorio, no almacenamiento: son lo único que el sistema lee de fuera de la base de datos, y nunca los escribe | `inspeccion` |
 | RD-16 | `Recuerdo` tiene tabla propia en la capa Mundo, con el texto íntegro tal como lo entregó el editor. Entra en la ventana de un agente como dato delimitado, nunca como instrucción, igual que el cuerpo de una `Fuente` | `inspeccion` |
+| RD-20 | Las versiones tienen tabla propia fuera de las de artefactos, como el control de ejecución: la escribe el backend y no un rol. Una fila por versión y obra; no se borra, y solo la marca de terminada cambia, una vez (RF-110) | `prueba` |
+| RD-21 | Toda tabla de artefactos lleva la versión en que se escribió cada fila, que no cambia nunca, y la versión que la relevó, que se pone una sola vez y solo junto con la marca de caducado (RF-112) | `prueba` |
+| RD-22 | Las publicaciones son un registro de solo añadir: ni se borran ni se modifican (RF-116) | `prueba` |
+| RD-23 | La caché del estado materializado se indexa por obra, versión y capítulo, y lleva también la versión que la relevó (RF-115, D-44) | `prueba` |
 | RD-17 | `licencia` admite un cuarto valor, `personal`, para lo que viene de la vida del destinatario. Es inmutable como `canon`, pero su respaldo no es una `Fuente` sino un `Recuerdo`, y por eso no cuenta en la cobertura documental (OBJ-06) ni en la fidelidad histórica | `analisis` |
 
 Un único ejemplo, que fija el estilo del cuerpo de todo artefacto. Los demás no
@@ -540,7 +609,11 @@ se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe
 | RI-06 | `GET /obras/{id}/trazas` | Medir el sistema | Filtrable por capítulo, rol y tarea (RF-52) |
 | RI-07 | `GET /obras/{id}/estado` | Auditar continuidad | Estado plegado hasta el capítulo indicado, y log de eventos (RF-54) |
 | RI-08 | `GET /obras/{id}/progreso` | Ver la ejecución en vivo | Flujo de eventos de progreso mientras la obra corre (RF-53). Un contrato OpenAPI no describe lo que viaja dentro de un flujo abierto: la forma de cada evento es la que sirve la consulta puntual del mismo recurso, y ahí sí queda descrita |
-| RI-09 | `POST /obras/{id}/detener` · `/reanudar` | Control, no mantenimiento | RF-04. No hay ninguna operación de limpieza ni de archivado que el editor deba ejecutar |
+| RI-09 | `POST /obras/{id}/detener` · `/reanudar` | Control, no mantenimiento | RF-04. No hay ninguna operación de limpieza ni de archivado que el editor deba ejecutar: rehacer y publicar (RI-11, RI-12) son decisiones editoriales, no mantenimiento |
+| RI-11 | `POST /obras/{id}/versiones` | Rehacer desde un capítulo | RF-111. Devuelve la versión nueva y no espera a que termine |
+| RI-12 | `POST /obras/{id}/versiones/{n}/publicar` | Publicar una versión terminada | RF-116. Es el único camino por el que una versión queda publicada |
+| RI-13 | `GET /obras/{id}/versiones` | Ver las versiones | RF-117 |
+| RI-14 | `?version=` en manuscrito, capítulo, críticas, estado, hechos y cronología | Leer una versión concreta | RF-117. Sin el parámetro, la versión de referencia |
 | RI-10 | `GET /openapi.json` | Acordar la frontera | Documento OpenAPI 3.1 del borde entero, generado desde los modelos declarados. Se vuelca además a `backend/openapi.yaml`, que es el contrato versionado del que `frontend/` deriva su cliente (D-11, RNF-09) |
 
 Tres reglas de frontera. La interfaz web nunca lee ficheros ni la base de datos.
@@ -598,6 +671,7 @@ requisitos que justifican.
 | §4.7 Recuperación y fuentes | `architecture.md` §3 (recuperación por parecido y de dónde sale la documentación) |
 | §5 Datos | `definitions.md` (vocabularios); `AGENTS.md` (SQLite y extensión vectorial) |
 | RF-06 a RF-09, RD-16, RD-17 | `definitions.md` (capa Mundo y grado de licencia); D-12, D-13 y D-14 |
+| §4.12 Versiones | `architecture.md` §3 (estado como pliegue) y §4 (punto de guardado); RD-07; D-32 |
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
 
 ## §10 Verificación y criterios de aceptación
@@ -627,6 +701,11 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
 7. Una obra con destinatario llega a cerrada: su nombre real aparece escrito en
    el manuscrito, el `Plan` declara qué papel se le dio, y ninguna de las cuatro
    dimensiones de anacronismo lo saca como defecto.
+8. Una obra terminada de tres capítulos se rehace desde el 2: la versión 1
+   sirve el mismo manuscrito, estado y cronología que antes; la 2 comparte el
+   capítulo 1, reescribe el 2 y el 3 y los anota como cambiados. Ninguna está
+   publicada hasta que se publica, publicar una versión sin terminar se rechaza
+   y, publicada la 2, es la que se lee sin pedir versión.
 
 ## §11 Fuera del alcance de v1
 
@@ -642,7 +721,8 @@ cualquier herramienta externa de cálculo, por D-05.
 También queda fuera todo lo que rodea al destinatario sin ser él: la
 comprobación de que cada elemento personalizado acaba apareciendo en algún
 capítulo, y el filtro de las palabras vetadas, que esta versión guarda pero
-todavía no aplica. De la entrevista queda fuera lo que enumera §4.8.
+todavía no aplica. De la entrevista queda fuera lo que enumera §4.8, y de las
+versiones, lo que enumera §4.12.
 
 ## §12 Decisiones abiertas
 
@@ -654,7 +734,12 @@ quedan cerradas aquí:
 - **Qué severidad dispara regeneración completa** → `bloqueante`, y solo ella (RF-32).
 - **Si se acepta herramienta externa de cálculo** → no en v1 (D-05), y sigue abierta para las siguientes.
 
-Las otras siete de §8 son de dominio y no bloquean esta versión. De las cinco
+De las siete de dominio, una queda cerrada por decisión del dueño del
+proyecto:
+
+- **Si la biblia se versiona junto a la novela** → sí: cada versión tiene su propio mundo (D-41).
+
+Las otras seis de §8 no bloquean esta versión. De las cinco
 que este SRS abrió, cuatro quedan cerradas:
 
 - **Cómo se ejecuta una tarea y con qué modelo** → subagente de Claude Code con Haiku (D-08).

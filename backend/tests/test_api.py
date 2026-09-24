@@ -2,7 +2,7 @@
 
 Cierre por `prueba`, `analisis` y `demostracion`: un brief al que le falta un
 campo obligatorio se rechaza nombrando el campo y sin crear nada; se enumeran
-las operaciones de escritura que ofrece la API y son exactamente cinco; y
+las operaciones de escritura que ofrece la API y todas son ordenes del editor; y
 detener y reanudar a mitad de capitulo no duplica ni pierde trabajo aceptado.
 Evidencia: el esquema HTTP publicado y la lista de sus operaciones de escritura.
 """
@@ -77,15 +77,16 @@ def test_los_mensajes_de_error_van_en_espanol(cliente: TestClient) -> None:
     assert "No hay ninguna obra" in respuesta.json()["detail"]
 
 
-# --- Las operaciones de escritura son cinco --------------------------------
+# --- Las operaciones de escritura son ordenes del editor --------------------
 
 
-def test_la_api_ofrece_exactamente_cinco_operaciones_de_escritura(
+def test_toda_operacion_de_escritura_es_una_orden_del_editor(
     cliente: TestClient,
 ) -> None:
-    """Las dos de la entrevista, alta, detener y reanudar. La entrevista ocurre
-    antes de que la obra exista, y detener y reanudar son control, no
-    mantenimiento: no hay limpieza ni archivado que el editor deba ejecutar."""
+    """Las dos de la entrevista, alta, detener, reanudar, rehacer y publicar. La
+    entrevista ocurre antes de que la obra exista, detener y reanudar son
+    control, y rehacer y publicar son decisiones editoriales: no hay limpieza ni
+    archivado que el editor deba ejecutar."""
     escrituras = operaciones_de_escritura(cliente.app)  # type: ignore[arg-type]
 
     assert escrituras == [
@@ -94,6 +95,8 @@ def test_la_api_ofrece_exactamente_cinco_operaciones_de_escritura(
         "POST /obras",
         "POST /obras/{id_obra}/detener",
         "POST /obras/{id_obra}/reanudar",
+        "POST /obras/{id_obra}/versiones",
+        "POST /obras/{id_obra}/versiones/{numero}/publicar",
     ]
 
 
@@ -117,6 +120,8 @@ def test_el_esquema_publicado_trae_todas_las_rutas(cliente: TestClient) -> None:
         "/obras/{id_obra}/progreso/ahora",
         "/obras/{id_obra}/reanudar",
         "/obras/{id_obra}/trazas",
+        "/obras/{id_obra}/versiones",
+        "/obras/{id_obra}/versiones/{numero}/publicar",
     ]
 
 

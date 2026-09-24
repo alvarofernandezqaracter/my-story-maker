@@ -162,6 +162,8 @@ Sin esta estructura no se puede medir si el bucle de revisión converge o gira e
 
 **Entrevista.** El espacio anterior a la obra en el que se completa el brief. Se identifica por su `id_entrevista`, igual que una obra por su `id_obra`, y guarda, pasada por pasada, lo que entró, lo que salió, cuántos hechos y contradicciones se descartaron y la traza de la pasada. No se borra ni se modifica. Anota una sola vez la obra que lanzó, y esa obra anota de qué entrevista sale.
 
+**Versión.** Una redacción entera de la obra, con su propio mundo. Atributos: número, versión de la que sale, capítulos que cambiaron respecto de ella, cuándo nació y cuándo terminó. La obra nace con la versión 1; cada «rehaz desde el capítulo N» abre la siguiente, que comparte con la anterior los capítulos 1 a N-1 y reescribe de N al final. Las versiones van en fila: la nueva sale siempre de la última y solo cuando la última ha terminado, y una versión termina cuando consta su auditoría de cierre. No la escribe ningún rol, sino el backend al recibir la orden del editor, y nunca se borra. **Publicar** una versión terminada es otra orden: cada publicación se añade a un registro que no se borra, y la publicada es la de la última publicación. Terminar no publica.
+
 ```mermaid
 flowchart TD
   PRO[Entidad de produccion] --> QUIEN[Quien actua]
@@ -348,11 +350,13 @@ almacén.
 
 Cada capítulo, al cerrarse, emite `EventoEstado` tipados. El estado en el capítulo N se computa reduciendo el log de eventos hasta N. Esto da tres cosas que un campo mutable no da: reproducibilidad, diferencia legible entre versiones, y la posibilidad de regenerar el capítulo 12 sin corromper el 13.
 
-**El pliegue es incremental y lo hace el Contable de estado.** No relee el log entero: recibe el estado en N-1 ya materializado y los `EventoEstado` del capítulo N, y emite el estado en N. Esto es lo que hace el pliegue viable sin código: la tarea no crece con la longitud de la obra, siempre es "un estado más un puñado de eventos". Si se regenera el capítulo 12, se descartan los estados materializados de 12 en adelante y se repliega hacia delante capítulo a capítulo.
+**El pliegue es incremental y lo hace el Contable de estado.** No relee el log entero: recibe el estado en N-1 ya materializado y los `EventoEstado` del capítulo N, y emite el estado en N. Esto es lo que hace el pliegue viable sin código: la tarea no crece con la longitud de la obra, siempre es "un estado más un puñado de eventos". Si se rehace desde el capítulo 12, los estados materializados de 12 en adelante se quedan en la versión anterior y la nueva repliega hacia delante capítulo a capítulo.
 
 Corolario práctico: el estado epistémico de cada personaje es una proyección del mismo log filtrando eventos `aprende` y `revela_a`. No hace falta modelarlo aparte.
 
 Por la misma razón hay otras dos cosas que tampoco se guardan. **La cronología** se compone al pedirla con los `EventoEstado` —fecha, lugar y presentes—, los `Evento` del mundo y la fecha de nacimiento de cada `Personaje`, en orden de fecha escrita y sin calcular nada. Y **en qué capítulos se usa cada hecho** se deriva de las `Mención` que el Archivero anota al cerrar. Las dos las sirve la API en rutas de lectura.
+
+**Cada versión tiene su propio mundo.** Toda fila del almacén lleva la versión en que se escribió y, si otra la sustituyó, la versión que la relevó. Rehacer desde N pone esa marca de relevo, junto con la de caducado, a todo lo que cuelga de un capítulo N o posterior: lo que lleva ese capítulo —eventos, menciones, resúmenes, borradores, críticas, fuentes— y lo que no lo lleva pero lo escribió una tarea de ese capítulo según su `Traza`, como un `Evento` que añadió el Planificador. El estado materializado se releva igual en vez de borrarse, porque quien lo pliega es el Contable y no se recalcula solo. Una versión ve lo escrito en ella o antes que ni ella ni una anterior hayan relevado, así que la versión vieja sigue siendo coherente consigo misma y la producción, que siempre es de la última, sigue leyendo solo lo vivo. Lo escrito antes del capítulo 1 —la biblia de partida, los `Recuerdo` y la `Obra`— es común a todas las versiones.
 
 ```mermaid
 flowchart LR
@@ -520,7 +524,7 @@ Una obra puede cortarse en cualquier momento: el editor la detiene, una tarea ag
 **Reanudar es volver al punto de guardado, y siempre por el mismo camino.** Arrancar una obra, reanudarla por orden del editor y relanzarla tras una caída empiezan igual:
 
 1. Las `Traza` que quedaron abiertas se cierran como interrumpidas. Una tarea cortada no ha fallado, así que no cuenta como intento.
-2. Todo lo que cuelga de capítulos posteriores al último cerrado se caduca, sin borrar. Eso incluye los borradores ya aceptados y las `Fuente` recogidas. A un inmutable se le admite la marca de caducado, pero solo esa, solo una vez y sin poder quitarla: marcar no es modificar. Sus fragmentos salen del índice y su estado materializado se descarta.
+2. Todo lo que cuelga de capítulos posteriores al último cerrado se caduca, sin borrar. Eso incluye los borradores ya aceptados, las `Fuente` recogidas y lo que, sin llevar capítulo, escribió una tarea de esos capítulos, como un `Evento` que añadió el Planificador. A un inmutable se le admite la marca de caducado, pero solo esa, solo una vez y sin poder quitarla: marcar no es modificar. Sus fragmentos salen del índice y su estado materializado se descarta.
 3. Si al último capítulo cerrado le falta algo en el índice, se completa, porque el índice es derivado.
 4. El capítulo siguiente empieza en el paso 1.
 
@@ -529,6 +533,12 @@ Lo único que se pierde es el trabajo del capítulo que estaba abierto. Salvar p
 **La auditoría tiene su propio punto de guardado.** Las críticas de `auditar` se escriben junto con la constancia de hasta qué capítulo está auditada la obra. Si el último capítulo cerrado tenía auditoría pendiente y no consta, se audita antes de abrir el siguiente. Una obra ha terminado cuando consta su auditoría de cierre. Si la auditoría de cadencia cae en el último capítulo, es la de cierre y corre una sola vez.
 
 **Tras una caída no hace falta ninguna orden.** Al arrancar, el backend relanza toda obra que no esté detenida ni terminada. Así, que la máquina se reinicie no añade ninguna intervención humana.
+
+### Rehacer desde un capítulo y publicar
+
+Con la obra terminada, el editor puede ordenar **«rehaz desde el capítulo N»**. En una sola transacción nace la versión siguiente, que anota como cambiados los capítulos de N al último; lo que colgaba de ellos recibe la marca de relevo; sus fragmentos salen del índice; y la constancia de auditoría baja a N-1 para que la versión nueva se audite al cerrar. Después la producción arranca por el camino de siempre: vuelve al último capítulo cerrado, que es el N-1, y sigue desde N. Se rehace hasta el final y no un capítulo suelto porque lo que viene detrás se escribió sobre el mundo del capítulo rehecho. Rehacer no se admite mientras la obra produce ni sobre una versión sin terminar.
+
+**Publicar** una versión terminada es una orden aparte y pasa por un solo sitio del código, que es donde entra cualquier comprobación previa a publicar. Sin pedir versión, la API sirve la versión de referencia: la publicada si la hay y, si no, la última; y el manuscrito dice cuál sirve y si está publicada. Rehacer y publicar son decisiones editoriales, no mantenimiento: nada obliga a darlas.
 
 ### Cuántas veces se intenta cada paso
 
@@ -595,6 +605,7 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `Compromiso` | Planificador y redactor | Se cierra al pagarse | Siempre, cola abierta | Economía narrativa |
 | `Crítica` | Verificador, Editor de estilo, Arquitecto de arcos, Juez; y el backend, cuando rechaza un artefacto malformado o cuando una comprobación agota sus intentos | Se resuelve en revisión | Solo al agente que revisa | Convergencia del bucle |
 | `Decisión` | Cualquier agente de la obra; el Entrevistador no escribe nada | Inmutable | Canon comprimido | Coherencia de diseño |
+| `Versión` | El backend, con el alta y con cada orden de rehacer del editor | Solo la marca de terminada, una vez; publicarla es añadir al registro de publicaciones | Nunca: decide qué filas ve cada lectura | Conservación de la versión anterior (`validators.md` §8) |
 
 Dos reglas que la tabla implica y conviene explicitar: ninguna entidad del mundo se modifica por escritura directa del redactor, solo mediante eventos emitidos al cerrar un capítulo; y ningún agente valida su propia salida.
 
@@ -640,8 +651,9 @@ backend/
                        camina y vuelve al punto de guardado (§4), el
                        ensamblador de proyecciones (§3), el
                        enrutado por severidad y los topes de vueltas (§5), el
-                       presupuesto de contexto (§3), los permisos por rol (§6)
-                       y la ventana y el filtro de la pasada de entrevista (§4)
+                       presupuesto de contexto (§3), los permisos por rol (§6),
+                       la ventana y el filtro de la pasada de entrevista (§4)
+                       y el orden de rehacer y el unico camino de publicar (§4)
     almacen/           unica puerta de lectura y escritura, incluido el indice
                        de recuperacion por parecido
     api/               un procedimiento por caso de uso del editor
@@ -712,7 +724,6 @@ En los tres casos el patrón es el mismo: **convertir un cálculo en un dato esc
 - [ ] ¿El estado epistémico del lector se modela explícitamente o se deriva de lo aparecido en texto?
 - [ ] ¿Los `Compromiso` los declara el planificador o se extraen del texto tras redactar?
 - [ ] ¿La lista de léxico vetado se construye a mano, se deriva de corpus de época, o ambas?
-- [ ] ¿Se versiona la biblia junto a la novela o evoluciona monotónicamente?
 - [ ] ¿El Contable de estado es un rol con su propio modelo y temperatura baja, o el mismo modelo que el resto con otro contrato?
 - [ ] ¿Quién arbitra cuando Verificador y Juez discrepan de forma sistemática en una dimensión?
 - [ ] ¿Se acepta alguna herramienta externa de cálculo (fechas, recuento léxico) sin que eso cuente como harness, o la restricción de cero código es absoluta? **No en v1**, y por eso coherencia temporal, fatiga léxica y léxico vetado se comprueban contra el dato ya escrito y lo que las vigila es la reincidencia por dimensión.

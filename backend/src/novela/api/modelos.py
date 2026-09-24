@@ -78,6 +78,8 @@ class FichaDeObra(BaseModel):
     capitulos_cerrados: int
     capitulos_marcados: int
     criticas_abiertas: int
+    version_en_curso: int = Field(description="La ultima version, la unica que se produce")
+    version_publicada: int | None = Field(description="La de la ultima publicacion, si la hay")
 
 
 class UnidadDelManuscrito(BaseModel):
@@ -89,6 +91,8 @@ class UnidadDelManuscrito(BaseModel):
 
 class Manuscrito(BaseModel):
     id_obra: str
+    version: int = Field(description="La version que se sirve")
+    publicada: bool = Field(description="Si esa version es la publicada")
     unidades: list[UnidadDelManuscrito]
 
 
@@ -209,6 +213,40 @@ class Confirmacion(BaseModel):
     id_obra: str
     detenida: bool
     motivo: str | None
+
+
+# --- Las versiones de la obra (SPEC1 4.12) ---------------------------------
+
+
+class PeticionDeRehacer(BaseModel):
+    """Rehacer desde un capitulo: de el al final se reescribe (D-42)."""
+
+    desde_capitulo: int = Field(ge=1, description="Primer capitulo que se reescribe")
+
+
+class VersionDeLaObra(BaseModel):
+    """Una version con su base y lo que cambio respecto de ella."""
+
+    numero: int
+    base: int | None = Field(description="La version de la que sale; la 1 no sale de ninguna")
+    capitulos_cambiados: list[int] = Field(description="Los que reescribe respecto de su base")
+    creada_en: str
+    terminada_en: str | None
+    terminada: bool
+    publicada: bool = Field(description="Si es la de la ultima publicacion")
+
+
+class VersionAbierta(BaseModel):
+    id_obra: str
+    version: int
+    capitulos_cambiados: list[int]
+    estado: str
+
+
+class Publicacion(BaseModel):
+    id_obra: str
+    version: int
+    publicada_en: str
 
 
 # --- La entrevista que completa el brief (SPEC1 4.8) -------------------------
