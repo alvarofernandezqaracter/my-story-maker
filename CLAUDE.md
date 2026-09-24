@@ -72,8 +72,11 @@ La primera vez en una máquina hace falta el navegador que esa versión espera:
 npx -y -p @playwright/mcp@0.0.82 playwright install chromium
 ```
 
-Subir la versión del servidor es cambiarla en los dos sitios: `mcp.json` y la
-orden de instalación de aquí arriba.
+El validador visual de la lectura (`npm run validar-visual`, en `frontend/`)
+usa el paquete `playwright` en la misma versión que este servidor, así que ese
+mismo Chromium le sirve. Subir la versión es cambiarla en los tres sitios:
+`mcp.json`, la orden de instalación de aquí arriba y el `playwright` de
+`frontend/package.json`.
 
 ## Cómo se trabaja con el backend
 
