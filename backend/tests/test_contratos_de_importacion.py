@@ -42,6 +42,9 @@ SIEMBRAS: dict[str, dict[str, str]] = {
     "El demostrador recibe la cronologia ya leida: no toca el almacen": {
         "demostrador.py": "from novela import almacen\n\n__all__ = ['almacen']\n",
     },
+    "La observabilidad recibe lo ya leido: no toca el almacen ni las tareas": {
+        "observabilidad.py": "from novela import almacen\n\n__all__ = ['almacen']\n",
+    },
 }
 
 

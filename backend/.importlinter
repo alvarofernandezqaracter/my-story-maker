@@ -36,6 +36,7 @@ source_modules =
     novela.ganchos
     novela.validadores
     novela.demostrador
+    novela.observabilidad
 forbidden_modules =
     sqlite3
     sqlite_vec
@@ -62,6 +63,7 @@ source_modules =
     novela.ganchos
     novela.validadores
     novela.demostrador
+    novela.observabilidad
 forbidden_modules =
     pydantic
     fastapi
@@ -95,6 +97,19 @@ name = El demostrador recibe la cronologia ya leida: no toca el almacen
 type = forbidden
 source_modules =
     novela.demostrador
+forbidden_modules =
+    novela.almacen
+    novela.nucleo
+    novela.api
+    novela.ejecutor
+    novela.ganchos
+    novela.tareas
+
+[importlinter:contract:observabilidad-sin-almacen]
+name = La observabilidad recibe lo ya leido: no toca el almacen ni las tareas
+type = forbidden
+source_modules =
+    novela.observabilidad
 forbidden_modules =
     novela.almacen
     novela.nucleo

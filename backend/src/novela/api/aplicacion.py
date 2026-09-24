@@ -18,6 +18,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import BaseModel, ValidationError
 
 from novela import __version__
+from novela import observabilidad as observacion
 from novela.ajustes import (
     PASADAS_DE_ENTREVISTA_A_LA_VEZ,
     RUTA_DE_LA_BASE,
@@ -71,7 +72,7 @@ from novela.ejecutor import EjecutorDeSubagentes, SubagenteFallo
 from novela.nucleo import entrevista, versiones
 from novela.nucleo.caminante import Caminante
 from novela.nucleo.gobierno import puede_escribir
-from novela.tareas import CatalogoDelRepositorio
+from novela.tareas import CatalogoDelRepositorio, prompt_de_tarea, tareas_declaradas
 
 
 def _rutas_del_brief() -> tuple[frozenset[str], frozenset[str]]:
@@ -141,7 +142,13 @@ def _validar(propuesta: entrevista.Propuesta) -> tuple[Brief | None, list[str], 
 class Produccion:
     """Lo que la aplicacion necesita tener abierto: el almacen y quien camina."""
 
-    def __init__(self, ruta: Any = None, ejecutor: Any = None, demostrador: Any = None) -> None:
+    def __init__(
+        self,
+        ruta: Any = None,
+        ejecutor: Any = None,
+        demostrador: Any = None,
+        observabilidad: observacion.Observabilidad | None = None,
+    ) -> None:
         self.almacen: Almacen = abrir_almacen(ruta or RUTA_DE_LA_BASE)
         self.indice = Indice(self.almacen)
         self.catalogo = CatalogoDelRepositorio()
@@ -156,6 +163,14 @@ class Produccion:
         # Una pasada de entrevista a la vez en la instalacion: es lo que hace que
         # quepa en el margen del techo (SPEC1 RF-70).
         self.turno_de_entrevista = threading.BoundedSemaphore(PASADAS_DE_ENTREVISTA_A_LA_VEZ)
+        # Langfuse, si hay claves; si no, apagada y sin coste (SPEC1 4.20). Los
+        # prompts de todas las tareas se versionan al arrancar, sin esperar a la
+        # red (RF-188).
+        self.observabilidad = observabilidad or observacion.actual()
+        self.observabilidad.leer_prompt = prompt_de_tarea
+        self.hilo_de_los_prompts = self.observabilidad.registrar_prompts_en_segundo_plano(
+            tareas_declaradas()
+        )
 
     def caminante(self) -> Caminante:
         return Caminante(
@@ -163,6 +178,7 @@ class Produccion:
             self.ejecutor,
             catalogo=self.catalogo,
             indice=self.indice,
+            observador=self.observabilidad if self.observabilidad.activa else None,
         )
 
     def arrancar(self, id_obra: str, capitulos: int) -> None:
@@ -214,18 +230,25 @@ class Produccion:
         return relanzadas
 
     def cerrar(self) -> None:
+        self.observabilidad.vaciar()
         self.almacen.cerrar()
 
 
 def crear_aplicacion(
-    ruta_de_la_base: Any = None, ejecutor: Any = None, demostrador: Any = None
+    ruta_de_la_base: Any = None,
+    ejecutor: Any = None,
+    demostrador: Any = None,
+    observabilidad: observacion.Observabilidad | None = None,
 ) -> FastAPI:
-    """Monta la aplicacion. `ejecutor` se pasa solo para recorrer en seco, y
-    `demostrador` solo para comprobar la puerta sin Lean de por medio."""
+    """Monta la aplicacion. `ejecutor` se pasa solo para recorrer en seco,
+    `demostrador` solo para comprobar la puerta sin Lean de por medio y
+    `observabilidad` solo para mirar lo que se manda a un Langfuse fingido."""
 
     @asynccontextmanager
     async def ciclo(app: FastAPI) -> AsyncIterator[None]:
-        app.state.produccion = Produccion(ruta_de_la_base, ejecutor, demostrador)
+        app.state.produccion = Produccion(
+            ruta_de_la_base, ejecutor, demostrador, observabilidad
+        )
         app.state.produccion.relanzar_las_caidas()
         yield
         app.state.produccion.cerrar()
@@ -331,10 +354,14 @@ def crear_aplicacion(
                 )
 
         abierta_en = ahora()
+        # La pasada es una generacion en la traza de su entrevista (RF-185).
+        observada = f"{id_entrevista}:{abierta_en}"
+        casa.observabilidad.abrir_pasada(observada, id_entrevista)
         with casa.turno_de_entrevista:
             try:
                 resultado = casa.ejecutor.ejecutar(entrevista.encargo(), ventana)
             except SubagenteFallo as fallo:
+                casa.observabilidad.cerrar_tarea(observada, error=str(fallo))
                 raise HTTPException(
                     status.HTTP_502_BAD_GATEWAY,
                     f"La pasada de entrevista no se pudo completar: {fallo}",
@@ -396,7 +423,18 @@ def crear_aplicacion(
                 alta=alta,
             )
         except EscrituraProhibida as error:
+            casa.observabilidad.cerrar_tarea(observada, error=str(error))
             raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+        casa.observabilidad.cerrar_tarea(
+            observada,
+            salida=resultado.salida,
+            tokens_de_entrada=resultado.tokens_de_entrada_medidos,
+            tokens_de_salida=resultado.tokens_de_salida,
+            coste=resultado.coste,
+            latencia_ms=resultado.latencia_ms,
+            modelo=resultado.modelo,
+            herramientas=resultado.herramientas,
+        )
         if id_obra is not None and brief is not None:
             casa.arrancar(id_obra, brief.capitulos_objetivo)
 
@@ -792,6 +830,12 @@ def crear_aplicacion(
         except VersionNoAdmitida as error:
             raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
         except versiones.PuertaNoSuperada as rechazo:
+            casa.observabilidad.resultado_de_la_puerta(
+                id_obra,
+                numero,
+                rechazo.resultado["fallos"],
+                rechazo.resultado["comprobacion_formal"],
+            )
             return JSONResponse(
                 status_code=status.HTTP_409_CONFLICT,
                 content=RechazoDePublicacion(
@@ -799,6 +843,8 @@ def crear_aplicacion(
                     puerta=PuertaDePublicacion.model_validate(rechazo.resultado),
                 ).model_dump(),
             )
+        # Paso la puerta: todos los validadores, a 1 (RF-187).
+        casa.observabilidad.resultado_de_la_puerta(id_obra, numero, [], comprobacion)
         return Publicacion(
             id_obra=id_obra,
             version=numero,
@@ -822,6 +868,9 @@ def crear_aplicacion(
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND, f"La obra {id_obra} no tiene version {numero}"
             ) from error
+        casa.observabilidad.resultado_de_la_puerta(
+            id_obra, numero, resultado["fallos"], resultado["comprobacion_formal"]
+        )
         return PuertaDePublicacion.model_validate(resultado)
 
     # --- RF-178. El manuscrito en PDF, al vuelo ------------------------------

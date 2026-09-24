@@ -98,6 +98,10 @@ def _ejercer_la_interfaz_de_lectura(almacen: Almacen, id_obra: str) -> None:
     almacen.listar_trazas(id_obra)
     almacen.trazas_abiertas(id_obra)
     almacen.contexto_de_entrada_abierto(id_obra)
+    # Las sumas que se mandan a Langfuse (SPEC1 RF-186).
+    almacen.sumar_trazas(id_obra)
+    almacen.sumar_trazas(id_obra, version=1, capitulo=1)
+    almacen.sumar_pasadas("ent_que_no_existe")
     almacen.esta_detenida(id_obra)
     # Las mismas lecturas vistas desde una version (SPEC1 4.12), y las versiones.
     almacen.leer_capitulo(id_obra, 1, version=1)

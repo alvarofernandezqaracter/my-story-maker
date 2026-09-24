@@ -16,7 +16,7 @@ siguiente empieza en el paso 1. Cuantas veces se intenta cada tarea y que pasa
 al agotarse lo declara su paso en el guion; aqui solo se lee.
 """
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -26,6 +26,7 @@ from novela.ajustes import (
     TOPE_DE_REVISIONES_POR_BORRADOR,
 )
 from novela.almacen import Almacen, Artefacto, ArtefactoRechazado, esquema
+from novela.almacen.artefactos import sumar_totales
 from novela.nucleo import calidad, ciclo, guion, presupuesto
 from novela.nucleo.gobierno import comprobar_escritura
 from novela.nucleo.guion import Encargo
@@ -77,6 +78,10 @@ class Resultado:
     estado_en_n: dict[str, Any] | None = None
     # Lo que dijeron los hooks de su paso, si los lleva (SPEC1 RF-127).
     ganchos: dict[str, Any] | None = None
+    # Lo que hace falta para observarlo en Langfuse (SPEC1 4.20): con que modelo
+    # corrio y que herramientas llamo, leidas del flujo del CLI.
+    modelo: str | None = None
+    herramientas: list[dict[str, Any]] = field(default_factory=list)
 
 
 class Ejecutor(Protocol):
@@ -84,6 +89,33 @@ class Ejecutor(Protocol):
     lanza un subagente de Claude Code."""
 
     def ejecutar(self, encargo: Encargo, ventana: Ventana) -> Resultado: ...
+
+
+class Observador(Protocol):
+    """Quien mira la produccion desde fuera: Langfuse, si hay claves (SPEC1 4.20).
+
+    Recibe lo ya leido y no devuelve nada: la produccion no depende de lo que
+    haga, y un fallo suyo no para nada (RF-190). Lo que recibe cada aviso lo
+    fija quien lo implementa; aqui solo se nombran.
+    """
+
+    @property
+    def abrir_capitulo(self) -> Callable[..., Any]: ...
+
+    @property
+    def cerrar_capitulo(self) -> Callable[..., Any]: ...
+
+    @property
+    def abrir_tarea(self) -> Callable[..., Any]: ...
+
+    @property
+    def cerrar_tarea(self) -> Callable[..., Any]: ...
+
+    @property
+    def version_terminada(self) -> Callable[..., Any]: ...
+
+    @property
+    def soltar(self) -> Callable[..., Any]: ...
 
 
 class IndiceDeLaObra(Protocol):
@@ -150,11 +182,13 @@ class Caminante:
         *,
         catalogo: Catalogo | None = None,
         indice: IndiceDeLaObra | None = None,
+        observador: Observador | None = None,
     ) -> None:
         self.almacen = almacen
         self.ejecutor = ejecutor
         self.catalogo = catalogo
         self.indice = indice
+        self.observador = observador
         self._tanda = 0
 
     # --- La obra entera ----------------------------------------------------
@@ -187,7 +221,92 @@ class Caminante:
                 id_obra, f"fallo no previsto del caminante: {type(error).__name__}: {error}"
             )
             raise
+        finally:
+            # Lo que quede abierto se cierra como interrumpido: sin cerrar,
+            # Langfuse no lo recibe (RF-185).
+            self._observar("soltar", id_obra)
         return informes
+
+    # --- Lo que ve Langfuse (SPEC1 4.20) ----------------------------------
+
+    def _observar(self, metodo: str, *args: Any, **datos: Any) -> None:
+        """Avisa al observador. Nada de lo que haga, ni un fallo suyo, ni leer lo
+        que necesita, cambia la produccion (RF-190, RNF-10)."""
+        if self.observador is None:
+            return
+        try:
+            getattr(self.observador, metodo)(*args, **datos)
+        except Exception:  # noqa: BLE001
+            return
+
+    def _de_la_obra(self, id_obra: str) -> dict[str, Any]:
+        """La version en curso, la entrevista de la que sale y el titulo."""
+        obra = self.almacen.leer_obra(id_obra)
+        cuerpo = obra.cuerpo if obra is not None else {}
+        return {
+            "version": self.almacen.version_en_curso(id_obra),
+            "id_entrevista": cuerpo.get("id_entrevista"),
+            "titulo": cuerpo.get("titulo"),
+        }
+
+    def _observar_capitulo(self, id_obra: str, numero: int, *, abrir: bool) -> None:
+        if self.observador is None:
+            return
+        try:
+            obra = self._de_la_obra(id_obra)
+            version = obra.pop("version")
+            if abrir:
+                self._observar("abrir_capitulo", id_obra, version, numero, **obra)
+            else:
+                totales = self.almacen.sumar_trazas(id_obra, version=version, capitulo=numero)
+                self._observar("cerrar_capitulo", id_obra, version, numero, totales)
+        except Exception:  # noqa: BLE001
+            return
+
+    def _observar_fin_de_version(self, id_obra: str) -> None:
+        """Los totales de la version y los de la novela entera, entrevista
+        incluida (RF-186)."""
+        if self.observador is None:
+            return
+        try:
+            obra = self._de_la_obra(id_obra)
+            version = obra.pop("version")
+            de_la_version = self.almacen.sumar_trazas(id_obra, version=version)
+            partes = [self.almacen.sumar_trazas(id_obra)]
+            if obra["id_entrevista"]:
+                partes.append(self.almacen.sumar_pasadas(obra["id_entrevista"]))
+            self._observar(
+                "version_terminada",
+                id_obra,
+                version,
+                totales_de_la_version=de_la_version,
+                totales_de_la_novela=sumar_totales(*partes),
+                **obra,
+            )
+        except Exception:  # noqa: BLE001
+            return
+
+    def _observar_tarea(
+        self, encargo: Encargo, id_traza: str, intento: int, tokens: int
+    ) -> None:
+        if self.observador is None:
+            return
+        try:
+            self._observar(
+                "abrir_tarea",
+                id_traza,
+                id_obra=encargo.id_obra,
+                rol=encargo.rol,
+                tarea=encargo.tarea,
+                intento=intento,
+                capitulo=encargo.capitulo,
+                escena=encargo.escena,
+                dimension=encargo.dimension,
+                tokens_estimados=tokens,
+                **self._de_la_obra(encargo.id_obra),
+            )
+        except Exception:  # noqa: BLE001
+            return
 
     def volver_al_punto_de_guardado(self, id_obra: str) -> int:
         """Deja la obra tal como quedo al cerrar su ultimo capitulo (RF-91).
@@ -238,6 +357,8 @@ class Caminante:
             # publica, pero sin terminar no se publica.
             de_cierre=numero == capitulos,
         )
+        if numero == capitulos:
+            self._observar_fin_de_version(id_obra)
 
     def _fuera_del_guion(
         self,
@@ -275,6 +396,7 @@ class Caminante:
     def caminar_capitulo(self, id_obra: str, numero: int) -> Informe:
         informe = Informe(capitulo=numero)
         self._parar_si_detenida(id_obra)
+        self._observar_capitulo(id_obra, numero, abrir=True)
 
         # Paso 1: planificar. Solo, y de el salen las escenas del capitulo.
         self._mandar_en_tandas(
@@ -408,6 +530,7 @@ class Caminante:
             lambda lote, rechazo: self._critica_de_malformado(aplazados[lote][0], rechazo),
         )
         informe.estado = cerrado
+        self._observar_capitulo(id_obra, numero, abrir=False)
         # El indice es derivado: si una caida lo deja a medias, volver al punto
         # de guardado lo completa.
         if self.indice is not None:
@@ -580,6 +703,9 @@ class Caminante:
                 # pueden comparar tarea por tarea.
                 tokens_estimados=presupuesto.coste_de_abrir(ventana.tokens),
             )
+            self._observar_tarea(
+                encargo, id_traza, intento, presupuesto.coste_de_abrir(ventana.tokens)
+            )
             try:
                 resultado = self.ejecutor.ejecutar(encargo, ventana)
                 if aplazados is None:
@@ -596,6 +722,12 @@ class Caminante:
                     # Un intento que no pasa un hook tambien deja su veredicto.
                     ganchos=getattr(error, "ganchos", None),
                 )
+                self._observar(
+                    "cerrar_tarea",
+                    id_traza,
+                    error=f"fallo: {error}",
+                    ganchos=getattr(error, "ganchos", None),
+                )
                 continue
             self.almacen.cerrar_traza(
                 id_traza,
@@ -608,6 +740,18 @@ class Caminante:
                     recuperacion | {"usados": resultado.fragmentos_usados}
                     for recuperacion in ventana.recuperaciones
                 ],
+                ganchos=resultado.ganchos,
+            )
+            self._observar(
+                "cerrar_tarea",
+                id_traza,
+                salida=resultado.salida,
+                tokens_de_entrada=resultado.tokens_de_entrada_medidos,
+                tokens_de_salida=resultado.tokens_de_salida,
+                coste=resultado.coste,
+                latencia_ms=resultado.latencia_ms,
+                modelo=resultado.modelo,
+                herramientas=resultado.herramientas,
                 ganchos=resultado.ganchos,
             )
             return resultado

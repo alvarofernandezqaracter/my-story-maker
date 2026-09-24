@@ -11,6 +11,9 @@ dependencies = [
     "fastembed>=0.4",
     # El PDF del manuscrito, fabricado en memoria (SPEC1 RF-178, D-75).
     "fpdf2>=2.8",
+    # La observacion en Langfuse, si hay claves (SPEC1 4.20). SDK v4, que manda
+    # por OpenTelemetry en segundo plano; la mayor, fijada.
+    "langfuse>=4,<5",
 ]
 
 [project.optional-dependencies]

@@ -30,6 +30,10 @@ vetos, los nombres de la biblia y la reserva de la vuelta— va en el entorno de
 proceso, no en disco. Al
 terminar, el ejecutor repite las mismas comprobaciones sobre lo entregado: ese
 es el veredicto que cuenta, y va a la `Traza` junto a lo que dijo cada hook.
+
+**Ningun subagente ve Langfuse** (SPEC1 RF-191): su entorno sale del del backend
+sin ninguna variable `LANGFUSE_`, lleve hooks o no. Del flujo del CLI se sacan
+ademas las llamadas a herramienta, para que la observacion las muestre.
 """
 
 import json
@@ -53,6 +57,7 @@ from novela.nucleo.caminante import Resultado
 from novela.nucleo.gobierno import HERRAMIENTAS_POR_ROL
 from novela.nucleo.guion import Encargo
 from novela.nucleo.proyecciones import Ventana
+from novela.observabilidad import TOPE_DE_LO_QUE_SE_MANDA_EN_CARACTERES, entorno_sin_langfuse
 
 MARCA_DE_APERTURA = "<datos_del_encargo>"
 MARCA_DE_CIERRE = "</datos_del_encargo>"
@@ -175,15 +180,16 @@ class EjecutorDeSubagentes:
             orden += ["--settings", ajustes_de_los_ganchos(encargo)]
         return orden
 
-    def _entorno(self, encargo: Encargo, ventana: Ventana) -> dict[str, str] | None:
-        """Lo que el hook necesita saber, sin escribirlo en disco (D-46).
-
-        Sin hooks, el subagente hereda el entorno tal cual, como siempre.
+    def _entorno(self, encargo: Encargo, ventana: Ventana) -> dict[str, str]:
+        """El entorno del subagente: el del backend sin nada de Langfuse (RF-191)
+        y, si lleva hooks, lo que el hook necesita saber, sin escribirlo en disco
+        (D-46).
         """
+        entorno = entorno_sin_langfuse(os.environ)
         if not encargo.ganchos:
-            return None
+            return entorno
         return {
-            **os.environ,
+            **entorno,
             ganchos.VARIABLE_DE_VETOS: ganchos.vetos_para_el_entorno(vetos_de(ventana)),
             ganchos.VARIABLE_DE_RESERVA: str(encargo.reserva_de_la_vuelta),
             ganchos.VARIABLE_DE_NOMBRES: json.dumps(list(ventana.nombres)),
@@ -217,7 +223,7 @@ class EjecutorDeSubagentes:
         *,
         nombres: tuple[str, ...] = (),
     ) -> Resultado:
-        envoltorio, eventos = _leer_flujo(encargo, salida)
+        envoltorio, eventos, herramientas = _leer_flujo(encargo, salida)
         if envoltorio.get("is_error"):
             raise SubagenteFallo(f"{encargo.tarea}: {envoltorio.get('result')!r}")
 
@@ -248,6 +254,8 @@ class EjecutorDeSubagentes:
             fragmentos_usados=list(devuelto.get("fragmentos_usados") or []),
             estado_en_n=devuelto.get("estado_en_n"),
             ganchos=registro,
+            modelo=self.modelo,
+            herramientas=herramientas,
         )
 
 
@@ -278,8 +286,11 @@ def ajustes_de_los_ganchos(encargo: Encargo) -> str:
     return json.dumps({"hooks": {"Stop": [{"hooks": manejadores}]}})
 
 
-def _leer_flujo(encargo: Encargo, salida: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """El envoltorio final y los eventos de los hooks, del flujo del CLI.
+def _leer_flujo(
+    encargo: Encargo, salida: str
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+    """El envoltorio final, los eventos de los hooks y las llamadas a
+    herramienta, del flujo del CLI.
 
     Cada linea es un objeto; el envoltorio es la de `type = result`. Si la
     salida es un solo objeto, ese es el envoltorio.
@@ -289,6 +300,7 @@ def _leer_flujo(encargo: Encargo, salida: str) -> tuple[dict[str, Any], list[dic
     # hook devolvio en la sesion se reconstruye con el mensaje que bloqueo
     # (SPEC1 RF-135).
     eventos: list[dict[str, Any]] = []
+    objetos: list[dict[str, Any]] = []
     for linea in salida.splitlines():
         try:
             objeto = json.loads(linea)
@@ -296,6 +308,7 @@ def _leer_flujo(encargo: Encargo, salida: str) -> tuple[dict[str, Any], list[dic
             continue
         if not isinstance(objeto, dict):
             continue
+        objetos.append(objeto)
         if objeto.get("type") == "result":
             envoltorio = objeto
         elif objeto.get("type") == "assistant" or (
@@ -310,7 +323,44 @@ def _leer_flujo(encargo: Encargo, salida: str) -> tuple[dict[str, Any], list[dic
         if not isinstance(unico, dict):
             raise SubagenteFallo(f"{encargo.tarea}: el CLI no devolvio un objeto")
         envoltorio = unico
-    return envoltorio, eventos
+    return envoltorio, eventos, llamadas_a_herramienta(objetos)
+
+
+def llamadas_a_herramienta(objetos: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Cada `tool_use` que el agente pidio, con el `tool_result` que recibio
+    (SPEC1 RF-185). El flujo no las fecha: se sabe que se pidio y que volvio, no
+    cuanto tardo (D-80). Lo que se guarda se recorta.
+    """
+    llamadas: dict[str, dict[str, Any]] = {}
+    for objeto in objetos:
+        mensaje = objeto.get("message")
+        contenido = mensaje.get("content") if isinstance(mensaje, dict) else None
+        if not isinstance(contenido, list):
+            continue
+        for bloque in contenido:
+            if not isinstance(bloque, dict):
+                continue
+            if bloque.get("type") == "tool_use":
+                clave = str(bloque.get("id") or len(llamadas))
+                llamadas[clave] = {
+                    "nombre": str(bloque.get("name") or "?"),
+                    "entrada": _recortado(bloque.get("input")),
+                    "salida": None,
+                    "error": False,
+                }
+            elif bloque.get("type") == "tool_result":
+                llamada = llamadas.get(str(bloque.get("tool_use_id")))
+                if llamada is not None:
+                    llamada["salida"] = _recortado(bloque.get("content"))
+                    llamada["error"] = bool(bloque.get("is_error"))
+    return list(llamadas.values())
+
+
+def _recortado(valor: Any) -> str | None:
+    if valor is None:
+        return None
+    texto = valor if isinstance(valor, str) else json.dumps(valor, ensure_ascii=False)
+    return texto[:TOPE_DE_LO_QUE_SE_MANDA_EN_CARACTERES]
 
 
 def veredicto_de_los_ganchos(
