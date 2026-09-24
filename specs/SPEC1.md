@@ -808,7 +808,10 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
 ## §11 Fuera del alcance de v1
 
 La interfaz web. Autenticación y varios usuarios. Varias obras produciéndose a
-la vez —el techo de contexto es de la instalación, no de la obra—. La
+la vez como algo que el sistema ofrezca —el techo de contexto es de la
+instalación, no de la obra—: no se reparte el techo entre ellas ni se
+planifican. Si llegan a caminar dos, como al relanzar las caídas, D-51 turna
+sus tandas para que no pasen del techo, y nada más. La
 calibración de los topes de ventana contra trazas reales, que necesita trazas
 que todavía no existen. La compactación del único material que sigue entrando
 entero, los `Resumen de capítulo`: v1 declara su tope y avisa al alcanzarlo,
