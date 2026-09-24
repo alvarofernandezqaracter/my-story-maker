@@ -572,7 +572,7 @@ def test_una_orden_en_el_texto_pegado_no_cambia_lo_que_la_persona_escribio(
 def test_sin_tesis_ni_elenco_la_entrevista_no_los_pide_y_la_obra_se_lanza(
     cliente: TestClient,
 ) -> None:
-    """D-50: la entrevista no pide ni recuerda lo opcional. Con lo obligatorio
+    """D-60: la entrevista no pide ni recuerda lo opcional. Con lo obligatorio
     completo, la pasada lanza aunque no haya tesis ni elenco."""
     sin_opcionales = {
         clave: valor

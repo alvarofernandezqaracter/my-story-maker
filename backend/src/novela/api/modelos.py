@@ -52,12 +52,12 @@ class Brief(BaseModel):
     tesis_tematica: str | None = Field(
         default=None,
         min_length=1,
-        description="Que sostiene la obra. Opcional: sin ella no hay tesis declarada (D-50)",
+        description="Que sostiene la obra. Opcional: sin ella no hay tesis declarada (D-60)",
     )
     elenco_declarado: list[str] = Field(
         default_factory=list,
         description=(
-            "Personajes que el editor fija. Vacio: los decide el Constructor de mundo (D-50)"
+            "Personajes que el editor fija. Vacio: los decide el Constructor de mundo (D-60)"
         ),
     )
     capitulos_objetivo: int = Field(ge=1, le=200, description="Cuantos capitulos")

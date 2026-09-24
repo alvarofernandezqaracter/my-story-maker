@@ -66,7 +66,7 @@ def test_un_brief_sin_un_campo_obligatorio_se_rechaza_nombrando_el_campo(
 
 
 def test_sin_tesis_ni_elenco_ni_arcos_la_obra_se_da_de_alta(cliente: TestClient) -> None:
-    """D-50: la tesis, el elenco y los arcos son opcionales. Lo que no viene no
+    """D-60: la tesis, el elenco y los arcos son opcionales. Lo que no viene no
     se rellena por el editor: la obra guarda el elenco vacio y sin tesis."""
     minimo = {
         clave: valor

@@ -5,7 +5,7 @@ openapi: 3.1.0
 info:
   title: Generador de novela historica por agentes
   summary: Lanza una obra desde un brief e inspecciona lo que los agentes producen
-  version: 0.5.0
+  version: 0.6.0
 paths:
   /obras:
     post:
@@ -1005,14 +1005,14 @@ components:
           - type: 'null'
           title: Tesis Tematica
           description: 'Que sostiene la obra. Opcional: sin ella no hay tesis declarada
-            (D-50)'
+            (D-60)'
         elenco_declarado:
           items:
             type: string
           type: array
           title: Elenco Declarado
           description: 'Personajes que el editor fija. Vacio: los decide el Constructor
-            de mundo (D-50)'
+            de mundo (D-60)'
         capitulos_objetivo:
           type: integer
           maximum: 200.0

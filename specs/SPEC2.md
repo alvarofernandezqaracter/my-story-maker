@@ -154,7 +154,7 @@ flowchart LR
 | RF-06 | Lo que la persona lleva escrito y pegado **sobrevive a recargar la página y a cerrar el navegador**, hasta que la obra se lanza. Al lanzarse se descarta | `prueba` |
 | RF-07 | Un texto pegado se muestra siempre como lo que es —material de la persona—, identificable y separado de lo que dice el sistema. Nunca se mezcla con la conversación como si lo hubiera dicho alguien | `inspeccion` |
 | RF-08 | Si el servidor rechaza la pasada por tamaño, la interfaz dice cuánto sobra y no recorta nada por su cuenta | `prueba` |
-| RF-09 | La ficha distingue lo obligatorio de lo opcional según lo que el servidor exige (SPEC1 RF-01, D-50): la tesis, los personajes y los arcos se pueden dejar sin tocar, y dejarlos así no los manda. La interfaz no los pide ni los marca como pendientes | `prueba` |
+| RF-09 | La ficha distingue lo obligatorio de lo opcional según lo que el servidor exige (SPEC1 RF-01, D-60): la tesis, los personajes y los arcos se pueden dejar sin tocar, y dejarlos así no los manda. La interfaz no los pide ni los marca como pendientes | `prueba` |
 
 ### 4.2 El avance
 
