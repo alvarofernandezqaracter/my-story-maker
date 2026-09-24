@@ -21,7 +21,7 @@ ambos es la misma desde el principio.
 
 | Carpeta | Qué contendrá | Pila |
 | --- | --- | --- |
-| `backend/` | El servidor: guarda y sirve artefactos, camina el guion encargando tareas a los agentes y expone por HTTP lo que el editor necesita ver | Python + FastAPI |
+| `backend/` | El servidor: guarda y sirve artefactos, camina el guion encargando tareas a los agentes y expone por HTTP lo que el editor necesita ver. En `backend/formal/tla/`, el flujo de producción como máquina de estados, con el modelo que recorre TLC y el mapeo de cada acción a su función | Python + FastAPI; TLA+ |
 | `frontend/` | La interfaz web: encargar una obra conversando con el Entrevistador, ver cómo avanza, ver las tareas ya hechas y leer el manuscrito, con un menú que salta entre las pantallas de cada obra. Se pone en pie con `npm run dev`, que arranca también el backend | Vite + React + TypeScript |
 | `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
 | `specs/` | Las specs vivas —el contexto específico—: `SPEC1.md` para el backend y `SPEC2.md` para el frontend, con qué tiene que hacer cada uno y por qué | Markdown |

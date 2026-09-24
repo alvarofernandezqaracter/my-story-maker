@@ -33,7 +33,7 @@ capítulos cerrados de la versión en curso son siempre 1..último y «posterior
 lector (RF-164) reescribe capítulos sueltos y rompe esa igualdad: basta un
 capítulo que no sea el último.
 
-**Qué cambió.** El commit que guarda esta traza:
+**Qué cambió.** El commit que guarda esta traza, `1c6a3ec` («spec: volver al punto de guardado descarta todo capitulo no cerrado»):
 
 - En la spec: SPEC1 RF-165. Lo que se descarta al volver al punto de guardado
   es lo que cuelga de todo capítulo que no está cerrado en la versión en curso,

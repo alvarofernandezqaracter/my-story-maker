@@ -549,6 +549,10 @@ Lo único que se pierde es el trabajo del capítulo que estaba abierto. Salvar p
 
 **Tras una caída no hace falta ninguna orden.** Al arrancar, el backend relanza toda obra que no esté detenida ni terminada. Así, que la máquina se reinicie no añade ninguna intervención humana.
 
+**Un solo caminante por obra, y nunca una obra parada sin decir por qué.** Arrancar la producción —al dar de alta, al reanudar, al rehacer o al relanzar— lee qué hilo tiene la obra y registra el nuevo en una sola operación, bajo cerrojo: el nuevo espera a que el anterior acabe, y dos órdenes que llegan a la vez, como un doble clic en «reanudar», no dejan dos caminantes descartándose el trabajo. Y si al caminante le salta un fallo que no es de ninguna tarea —una ventana que no cabe ni partiendo, una proyección que no cuadra con su contrato—, la obra queda detenida con ese motivo, igual que cuando una tarea agota sus intentos. Una obra nunca se queda sin hilo, sin detener y sin terminar.
+
+**Lo que se descarta al volver es lo de todo capítulo no cerrado.** Hoy los capítulos cerrados de la versión en curso son siempre del 1 al último cerrado, porque rehacer reescribe de N al final, y descartar «lo posterior al último cerrado» es lo mismo. Una versión que reescriba capítulos sueltos —la regeneración por cambio del lector, que SPEC1 especifica y la lectura interactiva implementa— tiene que descartar lo de cada capítulo no cerrado, no solo lo del final.
+
 ### Rehacer desde un capítulo y publicar
 
 Con la obra terminada, el editor puede ordenar **«rehaz desde el capítulo N»**. En una sola transacción nace la versión siguiente, que anota como cambiados los capítulos de N al último; lo que colgaba de ellos recibe la marca de relevo; sus fragmentos salen del índice; y la constancia de auditoría baja a N-1 para que la versión nueva se audite al cerrar. Después la producción arranca por el camino de siempre: vuelve al último capítulo cerrado, que es el N-1, y sigue desde N. Se rehace hasta el final y no un capítulo suelto porque lo que viene detrás se escribió sobre el mundo del capítulo rehecho. Rehacer no se admite mientras la obra produce ni sobre una versión sin terminar.
@@ -594,6 +598,12 @@ Los hooks viajan en la orden del ejecutor, con `--settings`, y no rompen el aisl
 **El registro de `policy`.** Cada coincidencia queda escrita en un registro de solo añadir: la obra, la `Traza` del intento, qué se hizo con ella —devolverla al agente en la sesión o dar el intento por fallido—, de qué lista sale, el término de la lista y lo que casó tal como estaba escrito. Lo escribe el almacén al cerrar la `Traza`, en la misma transacción, con lo que el ejecutor dejó en su veredicto; la coincidencia de la sesión la reconstruye el ejecutor aplicando la misma comprobación al mensaje del agente que el hook bloqueó. No se caduca ni se releva, como la `Traza`, y se sirve por la API. Cuando los intentos se agotan y la obra se detiene, su ficha dice por qué.
 
 **Una vuelta por intento.** Un hook bloquea solo la primera vez: si ya bloqueó uno en ese turno, el siguiente deja terminar. Tampoco bloquea si la vuelta no cabe en la reserva del paso (§3). Al terminar, el ejecutor aplica las mismas comprobaciones a lo que el agente entregó al final, y ese es el veredicto que cuenta: si no pasa, el intento ha fallado y se aplican los reintentos del paso y su `al_agotarse`, que en los tres es `detener_obra`. Lo que cada hook dijo durante la sesión y el veredicto final quedan en la `Traza` del intento, también cuando falla, y se sirven con ella.
+
+### El flujo, especificado como máquina de estados
+
+Todo lo anterior —el caminante, el punto de guardado, los reintentos con su política, las caídas y el relanzamiento, detener y reanudar, las versiones y la puerta— está además escrito como una máquina de estados en TLA+, en `backend/formal/tla/`, junto con la regeneración por cambio del lector que SPEC1 especifica. Un comprobador de modelos, TLC, recorre **todos** los órdenes posibles de un modelo pequeño —tres capítulos, dos versiones, dos intentos por paso, una caída, un reanudar y un fallo no previsto— y comprueba en cada estado que ninguna versión se publica sin pasar la puerta, que una versión terminada sigue viendo lo mismo, que no hay dos producciones a la vez y que lo vivo de un capítulo es de una sola producción; y, en cada recorrido, que toda versión en producción acaba terminada o la obra detenida.
+
+El modelo no ve el texto: distingue capítulos, tareas, intentos, versiones y hilos, no escenas ni el bucle de calidad. Cada acción nombra la función del código que la implementa, y esa correspondencia se sostiene por revisión, no se demuestra. Lo que el modelo encontró por el camino —dos caminantes a la vez, una obra parada sin motivo, un capítulo duplicado tras un cambio del lector— se guarda con su traza junto al modelo y está recogido arriba.
 
 ## 5. Bucle de control de calidad
 
@@ -706,6 +716,9 @@ backend/
     almacen/           unica puerta de lectura y escritura, incluido el indice
                        de recuperacion por parecido
     api/               un procedimiento por caso de uso del editor
+  formal/tla/          el flujo de produccion como maquina de estados en TLA+,
+                       con el modelo pequeno que recorre TLC, el mapeo de cada
+                       accion a su funcion y los contraejemplos guardados
   tests/               las pruebas y los casos sembrados, fuera de tareas/
 ```
 

@@ -245,6 +245,7 @@ manda.
 | La puerta de publicación | Cada validador con un caso que pasa y otro que falla: un capítulo fuera del rango de palabras, un «Inés» donde la biblia dice «Ines» frente a un «Pero» que no se toma por «Pedro», un cuerpo al que le falta un campo de su esquema y un hecho `personal` sin mención. Un rango del guion roto no carga. El hook de forma bloquea el nombre mal escrito con los nombres llegados por el entorno y el ejecutor repite la comprobación. Una obra entera con un ejecutor fingido y un defecto sembrado por validador no se publica, la respuesta dice cuál falló y en qué capítulo, el registro de publicaciones sigue vacío y la puerta servida aparte dice lo mismo; sin el defecto, se publica |
 | La frontera con la interfaz | El contrato OpenAPI versionado frente al que genera el código: si el borde cambia, la prueba lo vuelve a volcar y falla una vez, para que el movimiento pase por el diff. Comprueba además que toda operación declare la forma de lo que devuelve, porque un contrato con respuestas sin tipar no sirve para generar cliente. En el otro lado, `frontend/` genera su cliente desde ese mismo fichero y su prueba del contrato hace lo mismo: regenera, compara con lo commiteado y, si difiere, lo reescribe y falla una vez. Un campo renombrado rompe además la compilación de la pantalla que lo usa |
 | La interfaz | Cada requisito de SPEC2 con su prueba contra un servidor simulado y un flujo de progreso falso, sin gastar: lo que lleva cada pasada, lo que sobrevive a recargar, el salto al avance al lanzarse, el reenganche del flujo, las órdenes de detener y reanudar, la agrupación del manuscrito y cada formato de error |
+| El flujo de producción entero | TLC recorre todos los órdenes del modelo de `backend/formal/tla/` con la configuración del repositorio y tiene que terminar sin error; la prueba lo lanza si hay Java y `tla2tools.jar` y se salta diciendo qué falta si no. Cada contraejemplo que salió tiene además su caso en el código: dos arranques a la vez con la ventana entre leer y registrar ensanchada a propósito dejan un solo caminante, y un fallo no previsto del caminante deja la obra detenida con su motivo |
 | Que las pruebas afirmen algo | Pruebas de mutación sobre `nucleo/` y sobre los permisos por rol, en periodo y no en cada commit, porque son lentas |
 
 ### El recorrido en seco
@@ -310,6 +311,40 @@ con su validador, su capítulo y un detalle que se puede citar.
 
 El de nombres corre además dentro del hook `validar_capitulo`, porque quien
 escribe lo puede corregir en el acto. Los otros tres solo en la puerta.
+
+### El flujo, recorrido entero por un comprobador de modelos
+
+Las pruebas del punto de guardado, los reintentos y las versiones recorren los
+caminos que alguien preparó. Lo que no recorren es la combinación: una caída
+después de un rehacer, dos órdenes del editor a la vez, un fallo que no es de
+ninguna tarea. Para eso el flujo está escrito como máquina de estados en TLA+ y
+TLC recorre **todos** los estados alcanzables de un modelo pequeño. Es `prueba`:
+el modelo es el caso preparado y TLC da el resultado, «No error has been
+found» o un contraejemplo con su traza.
+
+| Propiedad | Clase | Qué afirma |
+| --- | --- | --- |
+| `PuertaRespetada` | Seguridad | Ninguna versión está publicada sin haber terminado y pasado la puerta |
+| `AnteriorIntacta` | Seguridad | Lo que ve una versión terminada es lo mismo que veía al terminar |
+| `UnaSolaProduccion` | Seguridad | Toda versión salvo la última está terminada, y trabaja un solo caminante |
+| `NiDuplica`, `NiPierde`, `NoEscribeEnTerminada`, `TypeOK` | Seguridad, auxiliares | Lo vivo de un capítulo es de una sola producción; un capítulo cerrado sigue cerrado salvo relevo; nada nuevo nace en una versión terminada; el intento no pasa del tope |
+| `AcabaTerminadaODetenida` | Vivacidad | Toda versión en producción acaba terminada o la obra detenida con su motivo |
+
+La vivacidad vale bajo hipótesis declaradas en el modelo: el caminante avanza
+cuando puede, el backend caído vuelve a arrancar y las caídas son finitas. El
+editor y la máquina no deben nada.
+
+**Lo que no demuestra.** Que el código implementa el modelo: cada acción nombra
+su función en `backend/formal/tla/mapeo.md` y la correspondencia es por
+revisión. Que las propiedades valgan en un modelo más grande que el de la
+configuración: tres capítulos y dos versiones. El contenido de lo que se
+escribe, el bucle de calidad, las tandas y el índice, que el modelo no
+distingue. Cambiar una función del mapeo obliga a revisar su acción y volver a
+pasar TLC.
+
+**La puerta, sin decir cuál.** El modelo la reduce a «pasa» o «no pasa»,
+fijado cuando la versión termina: así cubre los cuatro validadores de hoy y el
+formal de la historia sin depender de ninguno.
 
 ### Medir a los verificadores
 
@@ -481,6 +516,12 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | La ficha marca lo opcional y lo que no se toca no se manda (SPEC2 RF-09) | Encargo simulado con solo lo obligatorio: las etiquetas y el cuerpo de la pasada | `prueba` |
 | Las tareas hechas salen agrupadas por capítulo con lo esencial, y «pasó los hooks» sale del veredicto final de la `Traza` (SPEC2 RF-26, RF-27, RI-08) | Trazas simuladas con hooks que pasan, que no pasan, sin hooks y una en curso | `prueba` |
 | Las pantallas de una obra se alcanzan unas desde otras con un clic (SPEC2 RF-30) | Recorrido simulado por el menú desde el avance | `prueba` |
+| El flujo de producción no publica sin puerta, conserva la versión anterior y no produce dos cosas a la vez (SPEC1 RF-160, RF-161) | TLC recorre entero el modelo de `backend/formal/tla/` y no encuentra error | `prueba` |
+| Toda versión en producción acaba terminada o la obra detenida con su motivo (SPEC1 RF-162, RF-167) | La propiedad de vivacidad del modelo, con su equidad declarada, más una prueba con un fallo no previsto sembrado en el caminante | `prueba` |
+| Cada acción del modelo corresponde a una función del código (SPEC1 RF-163) | Lectura de `mapeo.md` contra el código | `inspeccion` |
+| La regeneración por cambio del lector está especificada y su reanudación descarta todo capítulo no cerrado (SPEC1 RF-164, RF-165) | El modelo la incluye y TLC la recorre; el código es de §4.18, que la implementa | `prueba` |
+| Dos órdenes que arrancan a la vez no dejan dos caminantes (SPEC1 RF-166) | Dos arranques simultáneos con la ventana entre leer y registrar ensanchada | `prueba` |
+| TLC corre desde la batería sin gastar y se salta limpio sin Java (SPEC1 RF-168) | La propia prueba, con y sin `NOVELA_TLA2TOOLS` | `prueba` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha, el lugar y los presentes que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |
@@ -599,12 +640,12 @@ simbólica. La razón es la misma para las tres: una novela no tiene
 especificación formal contra la que probarse y su espacio de estados no es
 enumerable.
 
-**Sobre el código:** la comprobación de modelos sí tendría sentido sobre el
-guion del capítulo y la tabla de gobierno, que son pequeños y son justamente
-donde viven los invariantes. No se adopta porque el guion ya es un artefacto
-declarativo de diez pasos y la tabla es finita: recorrerlos enteros en una
-prueba da lo mismo por mucho menos. Si el guion dejara de ser enumerable, la
-decisión se reabre.
+**Sobre el código:** la comprobación de modelos se adopta sobre el flujo de
+producción (§7), que no es enumerable en una prueba porque sus caminos se
+cruzan con caídas y órdenes del editor. No se adopta sobre el guion del
+capítulo ni sobre la tabla de gobierno: el guion es un artefacto declarativo de
+diez pasos y la tabla es finita, y recorrerlos enteros en una prueba da lo
+mismo por mucho menos.
 
 **Revisión humana dentro del ciclo:** no hay. El editor lee el resultado; no
 ejecuta pasos intermedios ni aprueba nada por el camino. Un paso manual

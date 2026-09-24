@@ -24,7 +24,7 @@ otra excepción subía hasta el hilo y lo mataba sin tocar nada del almacén.
    que OBJ-07 y RNF-08 prohíben. Y si se reinicia, el relanzamiento vuelve a
    chocar con lo mismo.
 
-**Qué cambió.** El commit que guarda esta traza:
+**Qué cambió.** El commit que guarda esta traza, `16636a5` («fix: un fallo no previsto del caminante detiene la obra»):
 
 - En el código: `Caminante.caminar_obra` recoge cualquier otra excepción,
   detiene la obra con el motivo «fallo no previsto del caminante: …» y la

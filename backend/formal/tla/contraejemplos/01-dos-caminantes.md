@@ -27,7 +27,7 @@ lectura queda en `pets` y el registro es la acción `Registrar`.
 síncronas y corren en un grupo de hilos: dos `POST /reanudar` seguidos se
 atienden a la vez. `reanudar` y `rehacer` llaman a `arrancar`.
 
-**Qué cambió.** El commit que guarda esta traza:
+**Qué cambió.** El commit que guarda esta traza, `d6d61dc` («fix: arrancar la produccion es una sola operacion»):
 
 - En el código: `Produccion.arrancar` lee el anterior y registra el nuevo bajo
   un cerrojo, `Produccion._turno_de_arranque` (`backend/src/novela/api/aplicacion.py`).
