@@ -53,6 +53,7 @@ from novela.nucleo.caminante import Resultado
 from novela.nucleo.gobierno import HERRAMIENTAS_POR_ROL
 from novela.nucleo.guion import Encargo
 from novela.nucleo.proyecciones import Ventana
+from novela.vocabularios import EVALUADORES_EXTERNOS
 
 MARCA_DE_APERTURA = "<datos_del_encargo>"
 MARCA_DE_CIERRE = "</datos_del_encargo>"
@@ -145,7 +146,7 @@ class EjecutorDeSubagentes:
 
     def _orden(self, encargo: Encargo, ventana: Ventana) -> list[str]:
         ejecutable = shutil.which("claude") or "claude"
-        herramientas = sorted(HERRAMIENTAS_POR_ROL[encargo.rol])
+        herramientas = sorted(herramientas_de(encargo.rol))
         orden = [
             ejecutable,
             "--print",
@@ -249,6 +250,15 @@ class EjecutorDeSubagentes:
             estado_en_n=devuelto.get("estado_en_n"),
             ganchos=registro,
         )
+
+
+def herramientas_de(rol: str) -> frozenset[str]:
+    """Lo que el contrato concede al rol. Un evaluador externo, como el juez de
+    la novela, no es del censo y no tiene ninguna (SPEC1 RF-197); un rol que no
+    es ni lo uno ni lo otro es un error, no un subagente sin herramientas."""
+    if rol in EVALUADORES_EXTERNOS:
+        return frozenset()
+    return HERRAMIENTAS_POR_ROL[rol]
 
 
 def vetos_de(ventana: Ventana) -> tuple[ganchos.Veto, ...]:

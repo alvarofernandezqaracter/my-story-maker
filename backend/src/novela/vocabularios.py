@@ -26,6 +26,10 @@ ROLES: tuple[str, ...] = (
     "entrevistador",
 )
 
+# Quien evalua el sistema desde fuera del censo: no tiene carpeta en `tareas/`,
+# no escribe nada y no tiene herramienta ninguna (SPEC1 4.21, D-83).
+EVALUADORES_EXTERNOS: tuple[str, ...] = ("juez_de_la_novela",)
+
 TIPOS_DE_TAREA: tuple[str, ...] = (
     "poblar_mundo",
     "documentar",
@@ -126,6 +130,34 @@ VALIDADOR_DE_LA_PUERTA: tuple[str, ...] = (
     "elementos_personalizados",
     # El validador formal de la cronologia, con Lean (SPEC1 4.16, RF-153).
     "cronologia",
+)
+
+# Lo que puntua el juez de la novela, el evaluador externo que juzga una version
+# terminada (SPEC1 4.21, RF-195). No es una dimension de calidad del dominio: mide
+# el sistema desde fuera. Sin destinatario, el primero no se puntua.
+CRITERIO_DEL_JUEZ_DE_LA_NOVELA: tuple[str, ...] = (
+    "personalizacion_integrada",
+    "funciona_como_novela",
+    "fidelidad_a_la_epoca",
+)
+
+# Lo que un brief de prueba espera de cada comprobacion al correrlo (RF-201):
+# las tres primeras para la puerta y los hooks, las dos ultimas para el juez.
+RESULTADO_ESPERADO: tuple[str, ...] = (
+    "pasa",
+    "falla",
+    "puede_fallar",
+    "se_puntua",
+    "no_se_puntua",
+)
+
+# Para que esta cada brief de prueba (RF-201). Hay al menos uno de cada.
+PROPOSITO_DEL_BRIEF_DE_PRUEBA: tuple[str, ...] = (
+    "normal",
+    "mucha_personalizacion",
+    "sin_destinatario",
+    "inyeccion",
+    "incoherencia_temporal",
 )
 
 # Que invariante de la cronologia demuestra Lean suceso a suceso (SPEC1 4.16,

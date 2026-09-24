@@ -1,0 +1,26 @@
+{
+  "proposito": "sin_destinatario",
+  "para_que": "Una obra solo histórica, sin destinatario, en una época mal documentada —el reino visigodo de Toledo en 589—. Sirve para ver la fidelidad a la época cuando el Documentalista encuentra poco, que el criterio de personalización no se puntúa sin destinatario y que un año de tres cifras no rompe la cronología.",
+  "se_espera": [
+    {"comprobacion": "puerta.esquema", "resultado": "pasa", "por_que": "Sin destinatario no cambia la forma de nada"},
+    {"comprobacion": "puerta.nombres", "resultado": "puede_fallar", "por_que": "Los nombres visigodos —Recaredo, Leandro, Masona— tienen grafías que varían entre fuentes y el Redactor puede alternarlas"},
+    {"comprobacion": "puerta.longitud", "resultado": "pasa", "por_que": "La premisa no empuja ni a capítulos cortos ni largos"},
+    {"comprobacion": "puerta.elementos_personalizados", "resultado": "pasa", "por_que": "Sin destinatario no hay hechos personales: pasa sin mirar nada"},
+    {"comprobacion": "puerta.cronologia", "resultado": "puede_fallar", "por_que": "El año 589 escrito como «589» y no como «0589» no es fecha ISO parcial y el volcado lo da por fallo de formato; es un fallo de verdad que este brief quiere destapar"},
+    {"comprobacion": "gancho.validar_capitulo", "resultado": "pasa", "por_que": "Veredicto final correcto aunque bloquee en la sesión"},
+    {"comprobacion": "gancho.policy", "resultado": "pasa", "por_que": "Sin vetos del comprador; la lista global no choca con esta época"},
+    {"comprobacion": "juez.personalizacion_integrada", "resultado": "no_se_puntua", "por_que": "Sin destinatario el backend no pide este criterio y no se cuelga ningún score suyo"},
+    {"comprobacion": "juez.funciona_como_novela", "resultado": "se_puntua", "por_que": "Se espera una nota media"},
+    {"comprobacion": "juez.fidelidad_a_la_epoca", "resultado": "se_puntua", "por_que": "Con pocas fuentes se espera una nota más baja que en el normal; si sale igual o más alta, el juez no está mirando la época"}
+  ],
+  "brief": {
+    "titulo": "El concilio de las dos creencias",
+    "epoca": "Toledo, reino visigodo, año 589, en torno al III Concilio de Toledo",
+    "premisa": "Un clérigo arriano obligado a abjurar ante el concilio debe decidir si entrega a los obispos católicos los libros de su comunidad",
+    "tesis_tematica": "Cambiar de fe por decreto no cambia lo que uno recuerda",
+    "capitulos_objetivo": 3,
+    "politicas_globales": {"pov": "primera", "nivel_de_arcaismo": "medio"},
+    "arcos": [],
+    "elenco_declarado": []
+  }
+}
