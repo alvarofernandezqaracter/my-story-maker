@@ -647,6 +647,23 @@ Todo lo anterior —el caminante, el punto de guardado, los reintentos con su po
 
 El modelo no ve el texto: distingue capítulos, tareas, intentos, versiones y hilos, no escenas ni el bucle de calidad. Cada acción nombra la función del código que la implementa, y esa correspondencia se sostiene por revisión, no se demuestra. Lo que el modelo encontró por el camino —dos caminantes a la vez, una obra parada sin motivo, un capítulo duplicado tras un cambio del lector— se guarda con su traza junto al modelo y está recogido arriba.
 
+### La producción, vista desde Langfuse
+
+Si la instalación tiene claves de Langfuse, todo lo que la `Traza` ya mide se manda además a Langfuse, para ver una novela entera de un vistazo y saber qué versión de cada prompt produjo cada resultado. Sin claves no se manda nada y la producción es la misma. Las claves —`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` y, si no es la nube por defecto, `LANGFUSE_HOST`— salen del entorno o del `.env` de la raíz del repositorio, que el backend lee solo y no copia a su entorno.
+
+| En Langfuse | Qué es aquí |
+| --- | --- |
+| Sesión | La novela. Nace con la entrevista y la obra la hereda; una obra dada de alta sin entrevista es su propia sesión |
+| Traza | Una por la entrevista y una por cada versión de la obra: la primera escritura y cada rehacer o cambio del lector. Su identificador se deriva de la obra y la versión, así que tras una caída se sigue en la misma |
+| Span `capitulo N` | Cada capítulo que la versión produce, del paso 1 al cierre; al cerrar lleva la suma de tokens, coste y latencia de sus `Traza` |
+| Generación `<rol> · <tarea>` | Cada intento, abierto con su `Traza` y cerrado con ella: modelo, tokens de entrada y salida, coste, latencia y la versión del prompt de su tarea. Un intento fallido sale como error |
+| Observación `herramienta · <nombre>` | Cada llamada a herramienta del subagente, con lo que pidió y lo que recibió, leída del flujo del CLI; sin su propia duración, porque el flujo no la fecha |
+| Evento `version terminada` | Los totales de la versión y los de la novela entera, entrevista incluida, sumados de SQLite |
+| Scores | Uno por validador de la puerta cada vez que se pasa, y uno por hook en la generación de cada intento que los lleva |
+| Prompts | El `prompt.md` de cada carpeta de `tareas/`, registrado al arrancar con el nombre de su tarea: una versión nueva solo si el texto cambió |
+
+Langfuse es un espejo de salida: nada de la producción lee de allí, y un fallo suyo se anota y se traga, sin parar ni frenar la novela. Lo único que espera a la red es la versión de un prompt, una vez por prompt y proceso. `observabilidad.py` recibe lo ya leído y no abre el almacén; ningún subagente de tarea recibe una variable `LANGFUSE_` en su entorno, y los evaluadores que juzgan la obra viven solo en Langfuse, nunca en el repositorio, para que el sistema evaluado no pueda leer cómo se le juzga.
+
 ## 5. Bucle de control de calidad
 
 **Estrategia de validación.** Toda dimensión de calidad debe seguir expresándose como predicado sobre entidades de la ontología: "continuidad" no es un juicio, es `∀ escena: estado_implicado ⊆ estado_derivado`. Lo que cambia aquí es quién evalúa el predicado. No hay validadores deterministas de la calidad —lo que se comprueba sin agentes, los hooks y la puerta de publicación (§4), mira la forma de lo entregado y el dato ya escrito, no la calidad del texto—: el predicado se entrega a un agente como **contrato de verificación**, es decir, un enunciado comprobable más los datos exactos que se necesitan para comprobarlo y nada más.
@@ -748,6 +765,10 @@ backend/
                        con la comparacion normalizada de lo vetado
     validadores.py     los validadores programaticos: funciones puras que usan
                        el hook de forma y la puerta de publicacion
+    observabilidad.py  lo que se manda a Langfuse si hay claves: sesion por
+                       novela, traza por version, span por capitulo, generacion
+                       por intento, scores y prompts versionados. Recibe lo ya
+                       leido y no abre el almacen
     demostrador.py     el volcado de la cronologia a Lean y la orden
                        `lake build` que la demuestra en la puerta, en un
                        directorio temporal

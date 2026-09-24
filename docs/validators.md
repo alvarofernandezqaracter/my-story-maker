@@ -194,6 +194,7 @@ la que más protege.
 | Los hooks no tocan el almacén ni el guion: informan por su salida y registra el ejecutor | Contrato de importación sobre `ganchos` |
 | Los validadores programáticos son funciones puras: no leen el almacén, ni las tareas, ni el guion | Contrato de importación sobre `validadores` |
 | El demostrador formal recibe la cronología ya leída: no toca el almacén, ni el guion, ni las tareas | Contrato de importación sobre `demostrador` |
+| La observación en Langfuse recibe lo ya leído: no toca el almacén, ni el guion, ni las tareas, ni el ejecutor | Contrato de importación sobre `observabilidad` |
 
 ### Dónde no se comprueban tipos, y por qué
 
@@ -252,6 +253,7 @@ manda.
 | La lectura interactiva | La portada con y sin destinatario, los capítulos cambiados en el índice, la ficha agrupada con sus enlaces y la biblia pedida de la versión leída, la versión elegida en la dirección y en el enlace del PDF, las críticas pedidas al pulsar, el cambio de nombre con su respuesta y su rechazo, y la pantalla de versiones con la puerta genérica —también con un validador que la interfaz no conoce— y el 409 al publicar; todo contra el servidor simulado |
 | El validador visual | `npm run validar-visual`: un backend sembrado con el ejecutor fingido, Vite y Chromium sin cabeza a dos anchos cotejan portada, índice, ficha y ancho de página con lo que sirve la API. Sin fallos sale con 0 y una línea de resumen; con la portada escondida a propósito (`VALIDAR_ROMPER=portada`) sale con 1 y una línea JSON por fallo que dice `vuelve_a: frontend`. No corre en cada commit porque necesita Python y un navegador: se corre al cerrar la fase 2 de un cambio que toque la lectura |
 | El flujo de producción entero | TLC recorre todos los órdenes del modelo de `backend/formal/tla/` con la configuración del repositorio y tiene que terminar sin error; la prueba lo lanza si hay Java y `tla2tools.jar` y se salta diciendo qué falta si no. Cada contraejemplo que salió tiene además su caso en el código: dos arranques a la vez con la ventana entre leer y registrar ensanchada a propósito dejan un solo caminante, y un fallo no previsto del caminante deja la obra detenida con su motivo |
+| La observación en Langfuse | Con un Langfuse fingido que guarda lo que recibe y una obra entera lanzada desde una entrevista con el ejecutor fingido: la sesión es la de la entrevista, hay una traza por la entrevista y otra por versión, un span por capítulo con la suma de sus `Traza`, una generación por `Traza` con sus tokens, coste, latencia, modelo y prompt, una observación hija por llamada a herramienta, el evento con los totales de la versión y la novela, un score por validador al pasar la puerta —con el mismo `id` al repetirla— y uno por hook. Los prompts de todas las carpetas de `tareas/`, leídas y no contadas a mano, suben una vez y solo vuelven a subir si cambia el texto. Las claves salen del entorno y del `.env` sin exportarse; sin ellas no hay cliente. Con un Langfuse que revienta en cada llamada, la obra escribe las mismas trazas y el mismo manuscrito que sin él. Ningún subagente, con hooks o sin ellos, recibe una variable `LANGFUSE_`. El SDK de verdad, exportando a memoria, recibe la sesión, el `id` de traza de la semilla y el padre de cada observación. La batería va siempre con la observación apagada, aunque haya `.env` |
 | Que las pruebas afirmen algo | Pruebas de mutación sobre `nucleo/` y sobre los permisos por rol, en periodo y no en cada commit, porque son lentas |
 
 ### El recorrido en seco
@@ -282,6 +284,13 @@ que tiene que poder contestar son cuatro:
 - Qué fragmentos devolvió cada consulta por parecido y cuáles acabó usando el
   agente.
 
+Si hay claves, lo mismo se ve además en Langfuse, agrupado por novela, versión y
+capítulo, con la versión del prompt que produjo cada generación y los
+validadores como scores (`architecture.md` §4). Es un espejo: lo que decide
+sigue saliendo de la `Traza` en SQLite, y que Langfuse falte o falle no cambia
+ni una línea de lo que se escribe. Los evaluadores que juzgan la obra en
+Langfuse no están en el repositorio ni en este documento, a propósito.
+
 ### Los guardarraíles no son un filtro añadido: son el diseño
 
 Lo que impide que un rol haga lo que no le toca no es una instrucción en su
@@ -298,6 +307,7 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 | El Entrevistador no escribe nada | `prueba` | Su contrato no declara ninguna escritura, la tabla de gobierno no le asigna ninguna, y lo que devuelva como artefacto se cuenta y no se guarda |
 | Una sola pasada de entrevista abierta a la vez | `prueba` | Se lanzan varias a la vez contra un ejecutor que cuenta las que tiene abiertas, y el pico es uno. Por eso su coste cabe en el margen del techo |
 | Lo que entrega un subagente de prosa está bien formado, escribe los nombres de la biblia tal cual y no trae nada vetado | `prueba` | Dos hooks `Stop` en su orden, que no le dejan terminar sin corregir, y el ejecutor repite las mismas comprobaciones sobre lo entregado al final. Un hook, no el prompt: el agente puede no hacer caso de una petición, pero no puede terminar sin pasar |
+| Ningún rol ve Langfuse | `prueba` | El entorno de cada subagente de tarea sale del del backend sin ninguna variable `LANGFUSE_`, lleve hooks o no; los evaluadores no están en el repositorio (inspección) |
 | Cada coincidencia de lo vetado queda escrita | `prueba` | El registro de `policy` lo escribe el almacén en la misma transacción que cierra la `Traza`, y ni se borra ni se modifica. Se comprueba con el recorrido de un Redactor fingido y con borrados y cambios sembrados contra sus disparadores |
 
 ### La puerta de publicación
@@ -536,6 +546,18 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Todo capítulo cerrado tiene su `Capitulo`, lo escriba o no el Planificador (SPEC1 RF-180) | Planificador fingido que no lo devuelve y otro que sí: un solo `Capitulo` vivo por capítulo, y cerrado | `prueba` |
 | El capítulo y el estado de proceso de lo que devuelve un rol los pone el backend, y en `auditar` se respeta el capítulo de cada crítica (SPEC1 RF-181) | Escenas con estado fuera de vocabulario y el número de otro capítulo; una crítica global que apunta a un capítulo anterior | `prueba` |
 | Planificar sin escenas, o con un plan rechazado, es un intento fallido que acaba deteniendo la obra y no deja crítica (SPEC1 RF-182) | Plan vacío una vez, plan vacío siempre y plan con un artefacto malformado: trazas de cada intento, motivo de la detención y ninguna crítica de malformado | `prueba` |
+| Langfuse se enciende solo con las dos claves, del entorno o del `.env` de la raíz, sin exportarlas (SPEC1 RF-183) | Claves de entorno, de fichero y mezcladas; sin la secreta no hay cliente; el entorno del proceso no gana ninguna variable | `prueba` |
+| Una novela es una sesión, con una traza por la entrevista y otra por versión, y la misma traza tras una caída (SPEC1 RF-184, D-78) | Obra lanzada desde una entrevista y rehecha desde el 2, con un Langfuse fingido: tres trazas, una sesión, y la traza derivada de obra y versión | `prueba` |
+| Un span por capítulo, una generación `<rol> · <tarea>` por intento y una observación por llamada a herramienta (SPEC1 RF-185) | La misma obra: cada `Traza` tiene su generación, colgada de su capítulo, y cada `documentar` su herramienta; el flujo del CLI se lee con `tool_use` y `tool_result` | `prueba` |
+| Tokens, coste y latencia por llamada, por capítulo y por novela (SPEC1 RF-186) | Uso, coste y latencia en cada generación; la suma de las `Traza` del capítulo en su span; los totales de la versión y de la novela, entrevista incluida, en el evento de versión terminada | `prueba` |
+| Todos los validadores llegan como scores (SPEC1 RF-187) | Un score por validador de la puerta —sin el de la cronología si no hubo comprobación formal—, con `id` estable al repetirla; un score por hook en su generación | `prueba` |
+| Los prompts de las tareas se versionan solos y cada generación va enlazada (SPEC1 RF-188, D-81) | Todas las carpetas de `tareas/` suben su `prompt.md`; sin cambio no hay versión nueva; con cambio, sí; una consulta por prompt y proceso | `prueba` |
+| `obtener_prompt` y `enviar_score` hacen lo que dicen, y apagados no hacen nada (SPEC1 RF-189) | Con un Langfuse fingido instalado y sin él | `prueba` |
+| La observación nunca para la novela (SPEC1 RF-190, RNF-10) | Una obra con un Langfuse que revienta en cada llamada deja las mismas trazas, el mismo manuscrito y la misma respuesta de publicar que sin Langfuse | `prueba` |
+| Ningún subagente hereda una variable `LANGFUSE_` (SPEC1 RF-191, RNF-11) | La orden interceptada, con hooks y sin ellos, con las variables puestas en el entorno del backend | `prueba` |
+| Los evaluadores no están en el repositorio (SPEC1 RNF-11, D-82) | Revisión del árbol: ningún evaluador, rúbrica de juez ni prompt de juez fuera de lo que ya declaran las tareas | `inspeccion` |
+| La batería no manda nada a Langfuse (SPEC1 RF-192) | La observación se apaga para cada prueba en `tests/conftest.py`; la del SDK de verdad exporta a memoria | `prueba` |
+| Nada de Langfuse se guarda (SPEC1 RD-31) | Ninguna migración ni columna nueva; los identificadores se derivan | `inspeccion` |
 | Descartar un capítulo a medias se lleva también lo que escribió sin capítulo | `Evento` escrito por una tarea del capítulo descartado | `prueba` |
 | Los pasos que escriben prosa llevan sus dos hooks y ningún otro paso los lleva | Lectura del guion y de la orden del ejecutor paso a paso; un hook fuera de vocabulario o sin reserva no carga | `prueba` |
 | Los hooks viajan en la orden sin romper el aislamiento ni escribir en disco | Orden interceptada y el hook lanzado como proceso sobre un directorio que sigue vacío | `prueba` |
