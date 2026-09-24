@@ -9,6 +9,7 @@ version y los disparadores que rechazan cada escritura.
 """
 
 import sqlite3
+import threading
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -217,6 +218,60 @@ def test_lo_que_no_se_admite_se_rechaza_sin_crear_nada(cliente: TestClient) -> N
     assert cliente.get(f"/obras/{id_obra}/manuscrito?version=9").status_code == 404
     assert len(produccion.almacen.listar_versiones(id_obra)) == 1
     assert produccion.almacen.version_publicada(id_obra) is None
+
+
+def test_tres_versiones_en_fila_cada_una_ve_lo_suyo_y_el_indice_solo_lo_vivo(
+    cliente: TestClient, ejecutor: EjecutorFirmado
+) -> None:
+    """La 3 sale de la 2, que salio de la 1: cada una sigue sirviendo lo que
+    servia, y la 3 comparte el capitulo 1 con la 1 y el 2 con la 2 (RF-113)."""
+    id_obra = _obra_terminada(cliente)
+    antes_v1 = _lo_que_sirve(cliente, id_obra, 1)
+    ejecutor.firma = "v2"
+    cliente.post(f"/obras/{id_obra}/versiones", json={"desde_capitulo": 2})
+    _esperar(cliente, id_obra)
+    antes_v2 = _lo_que_sirve(cliente, id_obra, 2)
+    ejecutor.firma = "v3"
+    respuesta = cliente.post(f"/obras/{id_obra}/versiones", json={"desde_capitulo": 3})
+    assert respuesta.json()["version"] == 3
+    _esperar(cliente, id_obra)
+
+    assert _lo_que_sirve(cliente, id_obra, 1) == antes_v1
+    assert _lo_que_sirve(cliente, id_obra, 2) == antes_v2
+    v3 = cliente.get(f"/obras/{id_obra}/manuscrito?version=3").json()["unidades"]
+    firmas: dict[int, set[str]] = {}
+    for unidad in v3:
+        firmas.setdefault(unidad["capitulo"], set()).add(unidad["texto"].split(" ")[0])
+    assert firmas == {1: {"[v1]"}, 2: {"[v2]"}, 3: {"[v3]"}}
+
+    # RF-111: ningun fragmento del indice apunta a algo relevado.
+    produccion = cliente.app.state.produccion  # type: ignore[attr-defined]
+    fragmentos = produccion.almacen._lector.execute(
+        "SELECT artefacto, tipo_de_artefacto FROM fragmento WHERE id_obra = ?", (id_obra,)
+    ).fetchall()
+    assert fragmentos
+    for fragmento in fragmentos:
+        artefacto = produccion.almacen.leer(
+            fragmento["tipo_de_artefacto"], fragmento["artefacto"], incluir_caducados=True
+        )
+        assert artefacto is not None and artefacto.relevado_por is None, fragmento["artefacto"]
+
+
+def test_no_se_rehace_mientras_la_obra_produce(cliente: TestClient) -> None:
+    id_obra = _obra_terminada(cliente)
+    produccion = cliente.app.state.produccion  # type: ignore[attr-defined]
+    suelta = threading.Event()
+    hilo = threading.Thread(target=suelta.wait, daemon=True)
+    hilo.start()
+    produccion.hilos[id_obra] = hilo
+    try:
+        respuesta = cliente.post(f"/obras/{id_obra}/versiones", json={"desde_capitulo": 1})
+    finally:
+        suelta.set()
+        hilo.join()
+    assert respuesta.status_code == 409
+    assert "produciendo" in respuesta.json()["detail"]
+    assert len(produccion.almacen.listar_versiones(id_obra)) == 1
 
 
 # --- El mundo de cada version, en el almacen --------------------------------
