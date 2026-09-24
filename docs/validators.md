@@ -193,6 +193,7 @@ la que más protege.
 | El único sitio con tipos declarados es el borde HTTP | Comprobación de tipos sobre `api/` |
 | Los hooks no tocan el almacén ni el guion: informan por su salida y registra el ejecutor | Contrato de importación sobre `ganchos` |
 | Los validadores programáticos son funciones puras: no leen el almacén, ni las tareas, ni el guion | Contrato de importación sobre `validadores` |
+| El demostrador formal recibe la cronología ya leída: no toca el almacén, ni el guion, ni las tareas | Contrato de importación sobre `demostrador` |
 
 ### Dónde no se comprueban tipos, y por qué
 
@@ -243,6 +244,7 @@ manda.
 | Los dos hooks | El programa del hook se prueba dándole la entrada JSON que le daría Claude Code, también lanzado como proceso: bloquea con código 2 lo malformado y lo vetado, deja terminar lo bueno, bloquea una sola vez por turno, no bloquea si la vuelta no cabe en la reserva y su motivo está acotado. La orden del ejecutor lleva los dos hooks `Stop` en los pasos 3, 5 y 7 y ninguno en los demás, con los vetos en el entorno y no en la ventana; y un Redactor fingido que insiste en lo vetado agota sus intentos y detiene la obra con el veredicto en cada `Traza`. Que el CLI de verdad dispara el hook en `--print` y el agente corrige se confirma con un sondeo mínimo, fuera de la batería |
 | Lo vetado | Un caso por lista —un término global en una obra sin destinatario, una palabra y un tema del comprador—, las variantes que tienen que casar —mayúscula, acento, diéresis, plural, género, letra alargada— y las que no —una palabra dentro de otra, la `ñ` frente a la `n`, el tema dicho con otras palabras—. La lista global viene sembrada y no se borra ni se cambia. Un Redactor fingido con el CLI interceptado deja en el registro la vuelta de la sesión y el fallo final de cada intento, detiene la obra y la ficha dice por qué; uno que corrige a tiempo deja solo la vuelta. Ninguna prueba cuenta cuántos términos trae la lista: se leen del almacén |
 | La puerta de publicación | Cada validador con un caso que pasa y otro que falla: un capítulo fuera del rango de palabras, un «Inés» donde la biblia dice «Ines» frente a un «Pero» que no se toma por «Pedro», un cuerpo al que le falta un campo de su esquema y un hecho `personal` sin mención. Un rango del guion roto no carga. El hook de forma bloquea el nombre mal escrito con los nombres llegados por el entorno y el ejecutor repite la comprobación. Una obra entera con un ejecutor fingido y un defecto sembrado por validador no se publica, la respuesta dice cuál falló y en qué capítulo, el registro de publicaciones sigue vacío y la puerta servida aparte dice lo mismo; sin el defecto, se publica |
+| La cronología en Lean | El volcado y la lectura de la salida de Lean, sin Lean: fechas ISO parciales a intervalos, un teorema por invariante y suceso en su línea, lo que no es fecha se dice y un error que no cae en ningún teorema no se pierde. Con Lean, y saltadas limpias si no está: una cronología coherente se demuestra; una rota a propósito solo en un invariante, por cada uno de los cuatro, falla solo en ese; el directorio temporal no queda en disco. Una obra entera limpia para los otros cuatro validadores con un personaje en dos lugares el mismo día no se publica, deja críticas de su capítulo y no las repite al volver a pedirlo; sin Lean, la misma obra se publica marcada `sin_comprobacion` |
 | La frontera con la interfaz | El contrato OpenAPI versionado frente al que genera el código: si el borde cambia, la prueba lo vuelve a volcar y falla una vez, para que el movimiento pase por el diff. Comprueba además que toda operación declare la forma de lo que devuelve, porque un contrato con respuestas sin tipar no sirve para generar cliente. En el otro lado, `frontend/` genera su cliente desde ese mismo fichero y su prueba del contrato hace lo mismo: regenera, compara con lo commiteado y, si difiere, lo reescribe y falla una vez. Un campo renombrado rompe además la compilación de la pantalla que lo usa |
 | La interfaz | Cada requisito de SPEC2 con su prueba contra un servidor simulado y un flujo de progreso falso, sin gastar: lo que lleva cada pasada, lo que sobrevive a recargar, el salto al avance al lanzarse, el reenganche del flujo, las órdenes de detener y reanudar, la agrupación del manuscrito y cada formato de error |
 | Que las pruebas afirmen algo | Pruebas de mutación sobre `nucleo/` y sobre los permisos por rol, en periodo y no en cada commit, porque son lentas |
@@ -295,9 +297,9 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 
 ### La puerta de publicación
 
-Antes de publicar una versión pasan cuatro validadores deterministas sobre lo
-que esa versión ve. No los hace ningún agente: son funciones puras que comparan
-datos ya escritos, así que sobre la obra son `analisis`, y su propio código se
+Antes de publicar una versión pasan cinco validadores deterministas sobre lo
+que esa versión ve. No los hace ningún agente. Los cuatro primeros son
+funciones puras que comparan datos ya escritos, así que sobre la obra son `analisis`, y su propio código se
 cierra por `prueba`. Si uno falla la versión no se publica, y cada fallo sale
 con su validador, su capítulo y un detalle que se puede citar.
 
@@ -310,6 +312,39 @@ con su validador, su capítulo y un detalle que se puede citar.
 
 El de nombres corre además dentro del hook `validar_capitulo`, porque quien
 escribe lo puede corregir en el acto. Los otros tres solo en la puerta.
+
+El quinto, `cronologia`, no es una función de Python: es una demostración de
+Lean 4. Sobre la obra es `analisis` —un predicado decidible sobre el dato ya
+escrito, que decide el núcleo de Lean—, y su volcado y su lectura se cierran
+por `prueba`.
+
+| Invariante | Predicado | Dato de partida | Lo que no ve |
+| --- | --- | --- | --- |
+| `orden_temporal` | Ningún suceso de un capítulo anterior ocurre después de uno de un capítulo posterior | Fecha resultante de cada `EventoEstado` y momento de cada `Evento`, con su capítulo | El orden dentro de un mismo capítulo, que no está registrado |
+| `edad_coherente` | Todo presente había nacido y no pasa de 120 años | Presentes de cada suceso y su `fechas.nacimiento` | Un presente sin fecha de nacimiento |
+| `un_solo_lugar` | Dos sucesos del mismo día exacto en lugares distintos no comparten presentes | Fecha, lugar y presentes de cada suceso | Dos sucesos fechados solo por mes o año, o sin lugar |
+| `no_reaparece` | Quien muere en un suceso no está presente en ninguno posterior, por capítulo o por fecha | Sujeto de cada `EventoEstado` `muere` y presentes de los demás | Una muerte que el Contable no emitió como `muere` |
+
+Lean solo mira lo que la cronología registra: un suceso que la prosa narra y
+el Contable no emitió, o un presente que no se anotó, no se pueden
+contradecir. Una fecha que no es ISO parcial no se vuelca y es un fallo. Si
+Lean no está en la máquina, la cronología no se comprueba y el resultado lo
+dice (`comprobacion_formal: sin_comprobacion`) sin hacer fallar la puerta; si
+está, lo que no demuestra —un teorema falso, un módulo que no compila, Lean
+que no termina— no se publica, y cada fallo con suceso queda como `Crítica`
+bloqueante de su capítulo.
+
+**El caso que solo Lean pilla, fabricado a propósito.** Ningún caso real lo
+había dado todavía, así que se siembra en la prueba de la puerta: la obra de
+Sevilla de 1587 con el ejecutor fingido, con Ines de Salcedo nacida en 1551,
+limpia para esquema, nombres, longitud y elementos personalizados, y un
+Contable que en el capítulo 2 emite dos `EventoEstado` del 2 de abril de 1587
+en dos lugares distintos con los mismos presentes. Los otros cuatro no tienen
+con qué verlo, y el Verificador de continuidad juzga la escena antes de que
+esos eventos existan. Lean no demuestra `un_solo_lugar` para ninguno de los
+dos, la versión no se publica y los fallos quedan como críticas de
+`continuidad_de_estado` del capítulo 2. Se reproduce con
+`python -m pytest tests/test_demostrador.py`.
 
 ### Medir a los verificadores
 
@@ -451,6 +486,14 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Cada validador de la puerta acierta en su caso bueno y en su caso malo (SPEC1 RF-140 a RF-144) | Un caso que pasa y otro que falla por validador; el rango roto del guion no carga | `prueba` |
 | La puerta se puede consultar sin publicar y no guarda nada (SPEC1 RF-147, RD-30) | La puerta servida aparte da lo mismo que el rechazo, y el registro de publicaciones sigue vacío; ninguna migración nueva | `prueba` |
 | El hook de forma para un nombre de la biblia mal escrito, con los nombres llegados por el entorno (SPEC1 RF-145) | El programa del hook con la entrada de Claude Code, el veredicto del ejecutor y la orden interceptada | `prueba` |
+| La cronología se vuelca a Lean copiando lo escrito, con un teorema por invariante y suceso (SPEC1 RF-150) | Intervalos de las fechas ISO parciales y cada teorema anotado en su línea del módulo | `prueba` |
+| Lean demuestra los cuatro invariantes de una cronología coherente y no demuestra el roto de una rota (SPEC1 RF-151) | `lake build` sobre una cronología coherente y sobre una rota por cada invariante, leyendo su salida | `prueba` |
+| La puerta pasa la cronología por Lean y dice cómo quedó (SPEC1 RF-152) | Fallos `cronologia` con su capítulo, `comprobacion_formal` en la respuesta, y un error sin teorema que no se pierde | `prueba` |
+| El módulo generado no queda en disco (SPEC1 RF-153) | El directorio temporal vacío tras la comprobación y nada nuevo en el proyecto de Lean | `prueba` |
+| El fallo de la cronología vuelve como crítica de su capítulo, una vez (SPEC1 RF-154) | Críticas de la obra tras publicar rechazada, y las mismas tras pedirlo otra vez | `prueba` |
+| Sin Lean, se publica y se dice (SPEC1 RF-155) | La misma obra incoherente con Lean ausente: la puerta pasa y la publicación dice `sin_comprobacion` | `prueba` |
+| Hay un caso que solo Lean ve (SPEC1 RF-156) | La obra limpia para los cuatro programáticos con un personaje en dos lugares el mismo día | `prueba` |
+| Una fecha que no es ISO parcial es un fallo de la cronología (SPEC1 RF-157) | Volcado de un momento y un nacimiento escritos en prosa | `prueba` |
 | Descartar un capítulo a medias se lleva también lo que escribió sin capítulo | `Evento` escrito por una tarea del capítulo descartado | `prueba` |
 | Los pasos que escriben prosa llevan sus dos hooks y ningún otro paso los lleva | Lectura del guion y de la orden del ejecutor paso a paso; un hook fuera de vocabulario o sin reserva no carga | `prueba` |
 | Los hooks viajan en la orden sin romper el aislamiento ni escribir en disco | Orden interceptada y el hook lanzado como proceso sobre un directorio que sigue vacío | `prueba` |

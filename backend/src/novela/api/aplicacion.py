@@ -63,6 +63,7 @@ from novela.api.modelos import (
     VersionAbierta,
     VersionDeLaObra,
 )
+from novela.demostrador import DemostradorLean
 from novela.ejecutor import EjecutorDeSubagentes, SubagenteFallo
 from novela.nucleo import entrevista, versiones
 from novela.nucleo.caminante import Caminante
@@ -137,11 +138,15 @@ def _validar(propuesta: entrevista.Propuesta) -> tuple[Brief | None, list[str], 
 class Produccion:
     """Lo que la aplicacion necesita tener abierto: el almacen y quien camina."""
 
-    def __init__(self, ruta: Any = None, ejecutor: Any = None) -> None:
+    def __init__(self, ruta: Any = None, ejecutor: Any = None, demostrador: Any = None) -> None:
         self.almacen: Almacen = abrir_almacen(ruta or RUTA_DE_LA_BASE)
         self.indice = Indice(self.almacen)
         self.catalogo = CatalogoDelRepositorio()
         self.ejecutor = ejecutor or EjecutorDeSubagentes(catalogo=self.catalogo)
+        # Quien demuestra la cronologia en la puerta: Lean con `lake build`
+        # (SPEC1 4.16). Si Lean no esta en la maquina, la puerta lo dice y no
+        # bloquea por eso (D-61).
+        self.demostrador = demostrador or DemostradorLean()
         self.hilos: dict[str, threading.Thread] = {}
         # Una pasada de entrevista a la vez en la instalacion: es lo que hace que
         # quepa en el margen del techo (SPEC1 RF-70).
@@ -203,12 +208,15 @@ class Produccion:
         self.almacen.cerrar()
 
 
-def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastAPI:
-    """Monta la aplicacion. `ejecutor` se pasa solo para recorrer en seco."""
+def crear_aplicacion(
+    ruta_de_la_base: Any = None, ejecutor: Any = None, demostrador: Any = None
+) -> FastAPI:
+    """Monta la aplicacion. `ejecutor` se pasa solo para recorrer en seco, y
+    `demostrador` solo para comprobar la puerta sin Lean de por medio."""
 
     @asynccontextmanager
     async def ciclo(app: FastAPI) -> AsyncIterator[None]:
-        app.state.produccion = Produccion(ruta_de_la_base, ejecutor)
+        app.state.produccion = Produccion(ruta_de_la_base, ejecutor, demostrador)
         app.state.produccion.relanzar_las_caidas()
         yield
         app.state.produccion.cerrar()
@@ -723,10 +731,14 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
         casa: ProduccionDep,
     ) -> Publicacion | JSONResponse:
         """Publicar es una orden: terminar no publica (RF-116), y la version pasa
-        antes por la puerta (RF-146). Si no pasa, no se publica y se explica."""
+        antes por la puerta (RF-146), cronologia en Lean incluida (RF-152). Si no
+        pasa, no se publica y se explica; si falla la cronologia, el fallo queda
+        ademas como critica del capitulo (RF-154)."""
         _obra_o_404(casa, id_obra)
         try:
-            publicada_en = versiones.publicar(casa.almacen, id_obra, numero, casa.catalogo)
+            publicada_en, comprobacion = versiones.publicar(
+                casa.almacen, id_obra, numero, casa.catalogo, casa.demostrador
+            )
         except KeyError as error:
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND, f"La obra {id_obra} no tiene version {numero}"
@@ -741,7 +753,12 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
                     puerta=PuertaDePublicacion.model_validate(rechazo.resultado),
                 ).model_dump(),
             )
-        return Publicacion(id_obra=id_obra, version=numero, publicada_en=publicada_en)
+        return Publicacion(
+            id_obra=id_obra,
+            version=numero,
+            publicada_en=publicada_en,
+            comprobacion_formal=comprobacion,  # type: ignore[arg-type]
+        )
 
     @app.get("/obras/{id_obra}/versiones/{numero}/puerta")
     def ver_puerta(
@@ -752,7 +769,9 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
         """La puerta pasada ahora sobre la version, sin publicar nada (RF-147)."""
         _obra_o_404(casa, id_obra)
         try:
-            resultado = versiones.puerta(casa.almacen, id_obra, numero, casa.catalogo)
+            resultado = versiones.puerta(
+                casa.almacen, id_obra, numero, casa.catalogo, casa.demostrador
+            )
         except KeyError as error:
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND, f"La obra {id_obra} no tiene version {numero}"

@@ -124,7 +124,22 @@ VALIDADOR_DE_LA_PUERTA: tuple[str, ...] = (
     "nombres",
     "longitud",
     "elementos_personalizados",
+    # El validador formal de la cronologia, con Lean (SPEC1 4.16, RF-153).
+    "cronologia",
 )
+
+# Que invariante de la cronologia demuestra Lean suceso a suceso (SPEC1 4.16,
+# RF-151). Van en el orden en que el volcado escribe sus teoremas.
+INVARIANTE_DE_LA_CRONOLOGIA: tuple[str, ...] = (
+    "orden_temporal",
+    "edad_coherente",
+    "un_solo_lugar",
+    "no_reaparece",
+)
+
+# Como quedo la comprobacion formal de una version (RF-152, D-61): Lean la
+# demostro, Lean no pudo demostrarla, o Lean no esta en la maquina y no se hizo.
+COMPROBACION_FORMAL: tuple[str, ...] = ("demostrada", "fallida", "sin_comprobacion")
 
 # Las tres memorias (architecture.md 3). Cada artefacto declara a cual pertenece
 # porque es lo que permite al Archivero retirar la de capitulo sin decidir nada.

@@ -34,7 +34,8 @@ vienen de su vida, la entrevista que completa el brief antes del alta, el
 punto de guardado por capítulo con la política de reintentos de cada paso, los
 dos hooks que revisan lo que entregan los subagentes de prosa, las listas de
 lo vetado con su registro de auditoría, los validadores programáticos con la
-puerta que decide si una versión se publica, y la API HTTP que el editor usa
+puerta que decide si una versión se publica, con la cronología demostrada en
+Lean, y la API HTTP que el editor usa
 para lanzar e inspeccionar una obra.
 
 Fuera: la interfaz web, la calibración de los topes contra trazas reales y todo
@@ -360,7 +361,7 @@ materia prima de la que sale la ficha `personal` y no la ficha misma.
 | D-26 | **El uso es un artefacto aparte, no un campo de la ficha.** Tampoco un campo del `Resumen de capítulo` | Un campo en la ficha que crece capítulo a capítulo choca con la inmutabilidad de `canon` y `personal` y con «el mundo solo cambia por `EventoEstado`». Dentro del resumen, saber dónde se usa un hecho obliga a recorrer todos los resúmenes, y eso crece con la obra. Con un artefacto de solo añadir la pregunta es una consulta por `id`, y «en qué capítulos» se deriva igual que el estado. El índice de la biblia que recibe el Archivero lee cuatro campos por ficha sin interpretarlos: es proyección, no decisión. Crece con la biblia, no con la prosa, y es mucho más corto que el canon que ya reciben el Planificador y el Verificador |
 | D-27 | **La cronología se deriva al consultar.** No es un artefacto del Contable ni una caché | Todo lo que lleva ya está escrito: la fecha, el lugar y los presentes en el `EventoEstado`, el suceso histórico en el `Evento` y el nacimiento en la ficha. Guardarlo otra vez sería un segundo sitio que mantener al día, y «el estado no se almacena, se deriva». Ordenar por la fecha escrita no es aritmética de calendario: no reabre D-05 |
 | D-28 | **`presentes` en el `EventoEstado` y fechas ISO parciales.** El formato lo piden el prompt y el esquema del rol que escribe; el almacén no lo comprueba en esta versión | Sin presencia por suceso no se puede afirmar que un personaje no está en dos sitios a la vez, y sin un formato de fecha fijo el volcado formal tendría que interpretar texto libre. La parcial admite lo que de verdad se sabe de una época —a veces solo el año— sin inventar el día. Comprobar el formato al escribir es trabajo del volcado formal, que es quien lo consume |
-| D-29 | **Alcance: registrar, derivar y servir.** Quedan fuera el fichero del demostrador formal y la propagación de cambios del lector; el validador de elementos personalizados es de §4.15 | Son los consumidores de esto y cada uno tiene su propia pasada del ciclo. Servirlo por la API ya ahora es lo que permite a la interfaz enlazar cada ficha con sus capítulos sin volver a mover la frontera |
+| D-29 | **Alcance: registrar, derivar y servir.** Queda fuera la propagación de cambios del lector; el validador de elementos personalizados es de §4.15 y el volcado al demostrador formal, de §4.16 | Son los consumidores de esto y cada uno tiene su propia pasada del ciclo. Servirlo por la API ya ahora es lo que permite a la interfaz enlazar cada ficha con sus capítulos sin volver a mover la frontera |
 
 **Lo que queda fuera.** La comprobación de que el Archivero no se ha dejado
 ningún hecho sin anotar, y la validación del formato de fecha al escribir
@@ -753,6 +754,83 @@ comparación de nombres no ve; y §8, los métodos de RF-140 a RF-147, RD-30, RI
 y RI-19. `definitions.md` y `domain-knowledge.md` no cambian: el elemento
 personalizado es un hecho `personal`, que ya existía.
 
+### 4.16 La cronología, demostrada en Lean antes de publicar
+
+**El problema.** La cronología (§4.9) registra cuándo ocurre cada suceso, dónde
+y quién estaba, pero nadie comprobaba que no se contradiga. Los cuatro
+validadores de la puerta (§4.15) miran esquema, nombres, longitud y elementos
+personalizados, y el Verificador de continuidad juzga cada escena antes de que
+el capítulo cierre, cuando los `EventoEstado` de ese capítulo todavía no
+existen. Un personaje presente en un suceso anterior a su nacimiento, que
+muere en el capítulo 3 y vuelve a estar presente en el 5, o que el mismo día
+está en dos lugares, llegaba a la versión publicada sin que nada lo dijera. Es
+aritmética de fechas y cotejo exhaustivo, lo que peor hace un modelo y lo que
+`architecture.md` §7 da por perdido sin cálculo determinista.
+
+**La decisión, en una frase.** Antes de publicar, la cronología de la versión
+se vuelca a un módulo de Lean 4 y `lake build` tiene que demostrar cuatro
+invariantes suceso a suceso; si Lean está en la máquina y no los demuestra, la
+versión no se publica y cada fallo vuelve al editor como `Crítica`; si Lean no
+está, la versión se publica igual y la respuesta dice que salió sin
+comprobación formal.
+
+La regla del último punto es literal del dueño en el interrogatorio: «si me
+aseguras que va a estar instalado pues hacemos esa comprobación; si no, no
+tires una versión por esa tontería». La máquina de desarrollo lleva Lean
+instalado para que lo segundo sea la excepción.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-150 | **El volcado.** `novela/demostrador.py` traduce la cronología que ve la versión —la vista de RF-86, más el sujeto de cada `EventoEstado` `muere`, leído de su cuerpo— a un módulo de Lean, sin abrir la base ni llamar a ningún modelo. Copia lo escrito y no calcula nada: una fecha ISO parcial pasa a un intervalo de días `AAAAMMDD` —`1587` es del 1 de enero al 31 de diciembre—, cada personaje y cada lugar a su posición en una tabla, y lo que no consta a un valor que no choca con nada. Escribe un teorema por invariante y por suceso, y uno final que reúne los cuatro sobre la cronología entera | `prueba` |
+| RF-151 | **Los cuatro invariantes**, definidos una vez en el proyecto de Lean versionado en `novela/lean/`, con su `lean-toolchain` fijada y sin Mathlib: **orden temporal** —un suceso de un capítulo anterior no ocurre después de uno de un capítulo posterior—; **edad coherente** —todo presente había nacido y no pasa de 120 años—; **un solo lugar** —dos sucesos del mismo día exacto en lugares distintos no comparten presentes—; y **no reaparece** —quien muere en un suceso no está presente en ninguno posterior, por capítulo o por fecha—. Se demuestran con `decide` sobre los datos del volcado | `prueba` |
+| RF-152 | **En la puerta.** `validador_de_la_puerta` gana el valor `cronologia`. La puerta (RF-146, RF-147) pasa el volcado por Lean, y cada teorema que Lean no demuestra es un fallo `cronologia` con el capítulo del suceso y un detalle que dice qué invariante, qué suceso, sus datos y el mensaje de Lean. Un error que no cae en ningún teorema, o Lean que no termina en 300 segundos, es un fallo sin capítulo. El resultado de la puerta dice además `comprobacion_formal`, de un vocabulario cerrado: `demostrada`, `fallida` o `sin_comprobacion` | `prueba` |
+| RF-153 | **La ejecución.** Cada comprobación copia el proyecto de `novela/lean/` a un directorio temporal, escribe allí el módulo generado, ejecuta `lake build` y lee su salida. El directorio se borra al terminar, falle o no: el módulo no se guarda ni en el repositorio ni en una carpeta de trabajo (D-62) | `prueba` |
+| RF-154 | **El fallo vuelve como crítica.** Cuando `publicar` rechaza una versión, cada fallo `cronologia` que señala un suceso se guarda como `Crítica` `bloqueante`, abierta, de esa versión y del capítulo del suceso, con objeto el `id` del suceso, dimensión `coherencia_temporal` —orden, edad y formato— o `continuidad_de_estado` —lugar y reaparición—, y como evidencia el detalle con el teorema y el mensaje de Lean. La escribe el backend, como las de RF-23 y RF-99. Mientras siga abierta, volver a pedir la publicación no la repite. Ver la puerta con RF-147 no escribe nada | `prueba` |
+| RF-155 | **Sin Lean, se publica y se dice.** Si `lake` no está en la máquina, la cronología no se comprueba, eso no es un fallo, y la puerta responde `comprobacion_formal: sin_comprobacion`. La respuesta de publicar (RI-12) dice también `comprobacion_formal`, para que una versión publicada sin comprobar se vea al publicarla | `prueba` |
+| RF-156 | **El caso que solo Lean ve.** Una obra entera con el ejecutor fingido, limpia para los cuatro validadores de §4.15, cuyo Contable deja a los mismos presentes en dos lugares el mismo día del capítulo 2: con Lean, la versión no se publica, todos los fallos son `cronologia` del capítulo 2 y quedan como críticas; sin Lean, la misma versión se publica marcada `sin_comprobacion` | `prueba` |
+| RF-157 | **El formato de fecha lo comprueba el volcado.** Un momento o un nacimiento escrito que no es ISO parcial (RF-85) no se puede volcar, y es un fallo `cronologia` que nombra el suceso, el campo y lo escrito, haya Lean o no. Cierra lo que D-28 dejó al volcado | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-61 | **Con Lean instalado, lo que no se demuestra no se publica; sin Lean, se publica y se marca** | Es la regla del dueño. Que falte una herramienta en la máquina no dice nada de la novela, y tumbar la versión por eso sería un paso manual disfrazado: instalar algo para poder publicar. Con Lean presente, en cambio, «no demostrado» se trata como fallo aunque la causa sea que el módulo no compila o que Lean no termina: dejarlo pasar convertiría un error del volcado en una versión sin comprobar que nadie ve. Lo que se cuenta como ausencia es solo que `lake` no se encuentre |
+| D-62 | **El módulo generado vive en un directorio temporal que se borra al terminar; los invariantes, en el repositorio** | RD-08 prohíbe guardar en disco lo que el sistema produce, y el módulo lo es. Pero Lean solo lee ficheros, así que existir en disco mientras dura la comprobación es el formato de entrada de la herramienta, no un almacén: nadie lo vuelve a leer, como el directorio vacío donde el ejecutor lanza cada subagente. Los invariantes no los produce el sistema: son entrada versionada que se lee y no se escribe, como el guion y los prompts de RD-09. Se copia el proyecto en vez de construir dentro de `novela/lean/` para que el servidor no escriba en el repositorio ni se pisen dos comprobaciones a la vez |
+| D-63 | **La puerta sigue sin guardar su resultado; lo que se guarda es la crítica que deja una publicación rechazada por la cronología** | D-59 no se rompe: ver la puerta deriva siempre y no escribe, y el resultado de la puerta no tiene tabla (RD-30). La crítica no es una copia de ese resultado sino el registro de un hecho —se pidió publicar y Lean lo impidió—, igual que RF-99 registra una comprobación agotada. Es lo que pide la tarea, «el fallo vuelve al editor como crítica», y es lo que coloca el fallo en su capítulo junto a las demás críticas, que es donde el editor mira. Solo la cronología deja crítica, porque es lo que pide la tarea: extenderlo a los cuatro de §4.15 cambiaría lo que D-59 ya decidió para ellos, y queda fuera |
+| D-64 | **Lean es una herramienta externa en la puerta, no en la producción; D-05 sigue rigiendo la producción** | Ningún agente recibe nada que Lean calcule, y la coherencia temporal sigue comprobándose durante la producción como `analisis` contra el dato escrito, que es lo que dice D-05. Lean solo decide si una versión terminada se publica. Aun así es exactamente una herramienta externa de cálculo en el camino de publicar, así que **toca la decisión abierta de `architecture.md` §8** sobre herramientas externas. Este cambio no la cierra: la usa en la puerta, lo deja escrito en §12 y espera la decisión del dueño |
+| D-65 | **Se demuestra «no hay contradicción segura», suceso a suceso, con `decide` y sin Mathlib** | Con fechas parciales solo falla lo que falla para cualquier día del intervalo: lo contrario llenaría de críticas cada suceso fechado solo por el año. Un teorema por suceso e invariante es lo que permite decir en qué suceso y capítulo está el fallo sin volver a comprobar nada en Python; el teorema final prueba que los cuatro valen para la cronología entera. `decide` sobre naturales lo comprueba el núcleo de Lean sin tácticas de fe, y sin Mathlib `lake build` no descarga nada y tarda segundos. El precio es que el coste crece con el cuadrado de los sucesos: unos 45 segundos para 200 en la máquina de desarrollo, dentro de la espera de 300 |
+
+**Lo que Lean no demuestra aquí.** Solo mira lo que la cronología registra:
+un suceso que la prosa narra y el Contable no emitió, un presente que no se
+anotó o un nacimiento que falta no se pueden contradecir, y pasan. «El mismo
+día» exige día exacto en los dos sucesos; dentro de un mismo capítulo no hay
+orden entre sucesos, así que el orden temporal solo compara capítulos
+distintos. Y que la fecha escrita sea la verdadera de la época lo sigue
+respaldando la `Fuente`, no Lean.
+
+**Qué retira.** De D-29, el fichero del demostrador formal como fuera de
+alcance. De §11, el demostrador de la puerta deja de contar entre las
+herramientas externas de cálculo excluidas, con la salvedad de D-64.
+
+**Qué queda fuera.** Que el Planificador o el Contable reciban el resultado de
+Lean durante la producción; demostrar la cronología de un capítulo al
+cerrarlo; guardar en el registro de publicaciones que una versión salió sin
+comprobación formal, que hoy solo dice la respuesta de publicar; dejar crítica
+por los fallos de los otros cuatro validadores; más invariantes que los cuatro;
+y regenerar lo que Lean rechaza sin que el editor lo pida (D-59).
+
+**De dónde sale.** RF-85, RF-86, RF-116, RF-146 y RF-147; D-28, D-29, D-43 y
+D-59; RD-08 y RD-09; `architecture.md` §7 («Qué se pierde sin cálculo
+determinista») y §8; `validators.md` §3 y §4.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md`: §2,
+los vocabularios de proceso `validador_de_la_puerta` con `cronologia`,
+`invariante_de_la_cronologia` y `comprobacion_formal`; §4, la cronología en
+Lean dentro de la puerta y su crítica; §7, `demostrador.py` y `lean/` en el
+árbol, y la coherencia temporal en «Qué se pierde sin cálculo determinista».
+`validators.md`: el método de RF-150 a RF-157, las pruebas y el contrato de
+importación nuevo, lo que Lean no ve y el caso que solo Lean pilla.
+`definitions.md` y `domain-knowledge.md` no cambian: la cronología ya era una
+vista y el formato de fecha ya estaba fijado.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -782,6 +860,10 @@ personalizado es un hecho `personal`, que ya existía.
 | RD-26 | La lista global de lo vetado tiene tabla propia, fuera de las de artefactos: es de la instalación, así que no cuelga de ningún `id_obra` (RD-02), y no se versiona. La siembra la migración 8; no se borra ni se modifica (RF-131) | `prueba` |
 | RD-27 | El registro de auditoría de `policy` tiene tabla propia, de solo añadir, fuera de las de artefactos: cuelga de la obra y de la `Traza` del intento, lleva `nivel_de_veto` y `decision_de_policy` como valores cerrados, y no se borra, no se modifica, no se caduca ni se releva. Capítulo, escena, tarea e intento no se copian: se leen de su `Traza` (RF-135, RF-136, D-53) | `prueba` |
 | RD-30 | El resultado de la puerta de publicación no tiene tabla ni se guarda: se deriva al pedirlo de lo que ve la versión (RF-146, RF-147, D-59). No hace falta migración | `prueba` |
+
+La cronología en Lean (§4.16) no añade tabla ni migración: el módulo de cada
+comprobación vive en un directorio temporal que se borra (RF-153, D-62), y sus
+críticas van a la tabla de `Critica` que ya existe (RF-154).
 
 Un único ejemplo, que fija el estilo del cuerpo de todo artefacto. Los demás no
 se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe.
@@ -826,6 +908,11 @@ se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe
 | RI-17 | `GET /obras/{id}` | Saber por qué se detuvo una obra | La ficha trae además el motivo de la detención, vacío si no está detenida (RF-137) |
 | RI-18 | `POST /obras/{id}/versiones/{n}/publicar` | Saber por qué no se publicó | RF-146. Si la puerta falla, 409 con `detail` y `puerta`: el mismo resultado que RI-19. Una versión sin terminar sigue siendo 409 solo con `detail` |
 | RI-19 | `GET /obras/{id}/versiones/{n}/puerta` | Ver la puerta antes de publicar | RF-147. Si pasa, si la versión ha terminado y la lista de fallos, cada uno con su validador, su capítulo y su detalle |
+
+La cronología en Lean (§4.16) no añade rutas: el resultado de la puerta
+(RI-18, RI-19) trae `comprobacion_formal` y el validador `cronologia`
+(RF-152), y la respuesta de publicar (RI-12) trae también
+`comprobacion_formal` (RF-155).
 
 Tres reglas de frontera. La interfaz web nunca lee ficheros ni la base de datos.
 El contrato HTTP se valida en el borde con modelos declarados —es el único sitio
@@ -891,6 +978,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.13 Los dos hooks, RD-25, RI-15 | `architecture.md` §3 (en frío y presupuesto) y §4 (reintentos por paso); `validators.md` §7 (guardarraíles); RF-06, RF-95 a RF-102 |
 | §4.14 Lo vetado, RD-26, RD-27, RI-16, RI-17 | §4.10 y §4.13; `validators.md` §7 (guardarraíles y adversario); RF-06, RD-02 y RD-08 |
 | §4.15 Validadores y puerta, RD-30, RI-18, RI-19 | `validators.md` §3 (contrato de verificación) y §7 (guardarraíles); RF-08, RF-23, RF-84, RF-116, RF-123; D-43, D-46 |
+| §4.16 La cronología en Lean | `architecture.md` §7 (qué se pierde sin cálculo determinista) y §8; `validators.md` §3 y §4; RF-85, RF-86, RF-146, RF-147; D-28, D-59 |
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
 
 ## §10 Verificación y criterios de aceptación
@@ -946,6 +1034,12 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    un capítulo corto, un nombre mal escrito, un hecho `personal` sin mención o un
    artefacto sin un campo de su esquema no se publica, y la respuesta dice cuál
    falló y en qué capítulo; y la misma obra sin el defecto se publica.
+12. **La cronología en Lean.** Con Lean instalado, `lake build` demuestra los
+   cuatro invariantes de una cronología coherente y no demuestra cada uno en
+   una cronología rota a propósito solo en él; una obra limpia para los cuatro
+   validadores de §4.15 con un personaje en dos lugares el mismo día no se
+   publica, y el fallo queda como crítica de su capítulo. Sin Lean, la misma
+   obra se publica y la respuesta dice `sin_comprobacion`.
 
 ## §11 Fuera del alcance de v1
 
@@ -956,12 +1050,14 @@ que todavía no existen. La compactación del único material que sigue entrando
 entero, los `Resumen de capítulo`: v1 declara su tope y avisa al alcanzarlo,
 pero no compacta; el registro acumulado de estilo ya no lo necesita porque se
 consulta por parecido. El corpus curado de fuentes de época, por D-06. Y
-cualquier herramienta externa de cálculo, por D-05.
+cualquier herramienta externa de cálculo, por D-05, salvo el demostrador de la
+puerta de publicación (§4.16, D-64).
 
 También queda fuera, del filtro de lo vetado, lo que enumera §4.14: el tema
 dicho con otras palabras y lo escrito para esquivar la lista. De la entrevista
 queda fuera lo que enumera §4.8; de las versiones, lo que enumera §4.12; y de
-la puerta de publicación, lo que enumera §4.15.
+la puerta de publicación, lo que enumera §4.15; y de la cronología en Lean,
+lo que enumera §4.16.
 
 ## §12 Decisiones abiertas
 
@@ -995,3 +1091,10 @@ Quedan dos abiertas, y ninguna bloquea:
 - [ ] Cuánto mide un fragmento y cuánto se solapa con el siguiente. Troceado
       corto recupera preciso y pierde contexto; largo al revés. Valor de partida
       declarado en el código, pendiente de calibrar contra trazas.
+
+Y una que este documento no cierra porque es del dueño:
+
+- [ ] Si el demostrador de la puerta (§4.16) cuenta como la herramienta externa
+      de cálculo que D-05 deja fuera de v1. Hoy se usa solo para decidir si una
+      versión terminada se publica, sin darle nada a ningún agente (D-64), y la
+      decisión de `architecture.md` §8 sigue abierta.

@@ -617,7 +617,11 @@ paths:
       description: 'Publicar es una orden: terminar no publica (RF-116), y la version
         pasa
 
-        antes por la puerta (RF-146). Si no pasa, no se publica y se explica.'
+        antes por la puerta (RF-146), cronologia en Lean incluida (RF-152). Si no
+
+        pasa, no se publica y se explica; si falla la cronologia, el fallo queda
+
+        ademas como critica del capitulo (RF-154).'
       operationId: publicar_obras__id_obra__versiones__numero__publicar_post
       parameters:
       - name: id_obra
@@ -1381,6 +1385,7 @@ components:
           - nombres
           - longitud
           - elementos_personalizados
+          - cronologia
           title: Validador
         capitulo:
           anyOf:
@@ -1790,11 +1795,21 @@ components:
         publicada_en:
           type: string
           title: Publicada En
+        comprobacion_formal:
+          type: string
+          enum:
+          - demostrada
+          - fallida
+          - sin_comprobacion
+          title: Comprobacion Formal
+          description: 'Como quedo la cronologia en Lean al publicar: `sin_comprobacion`
+            si Lean no esta en la maquina, que no impide publicar (RF-155)'
       type: object
       required:
       - id_obra
       - version
       - publicada_en
+      - comprobacion_formal
       title: Publicacion
     PuertaDePublicacion:
       properties:
@@ -1811,6 +1826,15 @@ components:
         pasa:
           type: boolean
           title: Pasa
+        comprobacion_formal:
+          type: string
+          enum:
+          - demostrada
+          - fallida
+          - sin_comprobacion
+          title: Comprobacion Formal
+          description: 'La cronologia en Lean: `demostrada`, `fallida`, o `sin_comprobacion`
+            si Lean no esta en la maquina, que no hace fallar la puerta (RF-152, D-61)'
         fallos:
           items:
             $ref: '#/components/schemas/FalloDeLaPuerta'
@@ -1822,6 +1846,7 @@ components:
       - version
       - terminada
       - pasa
+      - comprobacion_formal
       - fallos
       title: PuertaDePublicacion
       description: El resultado de pasar la puerta sobre una version. Se deriva al

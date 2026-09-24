@@ -21,6 +21,7 @@ from dobles import EjecutorFingido
 from novela import ganchos, validadores
 from novela.almacen import Artefacto
 from novela.api.aplicacion import crear_aplicacion
+from novela.demostrador import buscar_lake
 from novela.ejecutor import EjecutorDeSubagentes, veredicto_de_los_ganchos
 from novela.nucleo import guion
 from novela.nucleo.caminante import Resultado
@@ -214,6 +215,17 @@ class EjecutorDeLaPuerta:
                 artefacto.cuerpo = {
                     k: v for k, v in artefacto.cuerpo.items() if k != "focalizacion"
                 }
+        if self.defecto == "cronologia" and encargo.tarea == "plegar" and aqui:
+            # El Contable deja a los mismos presentes en otro lugar el mismo dia:
+            # nada que vean los cuatro programaticos, y Lean si (SPEC1 RF-156).
+            [evento] = [a for a in resultado.artefactos if a.tipo == "EventoEstado"]
+            resultado.artefactos.append(
+                Artefacto(
+                    "EventoEstado",
+                    evento.cuerpo | {"objeto": "lug_0009", "lugar_resultante": "lug_0009"},
+                    capitulo=evento.capitulo,
+                )
+            )
         if self.defecto == "elementos_personalizados" and encargo.tarea == "destilar":
             nala = [
                 fila["id"]
@@ -264,6 +276,8 @@ def test_una_version_limpia_pasa_la_puerta_y_se_publica(tmp_path: Path) -> None:
 def test_una_version_con_un_fallo_no_se_publica_y_dice_cual_y_donde(
     tmp_path: Path, defecto: str
 ) -> None:
+    if defecto == "cronologia" and buscar_lake() is None:
+        pytest.skip("la cronologia la comprueba Lean, y Lean no esta instalado aqui")
     for cliente in _cliente(tmp_path, EjecutorDeLaPuerta(defecto=defecto)):
         id_obra = _obra_terminada(cliente)
         respuesta = cliente.post(f"/obras/{id_obra}/versiones/1/publicar")

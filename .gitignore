@@ -19,3 +19,6 @@ Thumbs.db
 
 # Salida del servidor MCP de navegador (.claude/mcp.json)
 .playwright-mcp/
+
+# Lo que construye lake en el proyecto de Lean de la cronologia (SPEC1 4.16)
+.lake/

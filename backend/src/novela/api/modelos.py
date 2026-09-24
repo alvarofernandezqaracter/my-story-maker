@@ -9,7 +9,11 @@ from typing import Annotated, Any, Literal, get_args
 
 from pydantic import BaseModel, Field
 
-from novela.vocabularios import TIPO_DE_CONTRADICCION, VALIDADOR_DE_LA_PUERTA
+from novela.vocabularios import (
+    COMPROBACION_FORMAL,
+    TIPO_DE_CONTRADICCION,
+    VALIDADOR_DE_LA_PUERTA,
+)
 
 
 class Destinatario(BaseModel):
@@ -281,15 +285,29 @@ class VersionAbierta(BaseModel):
     estado: str
 
 
+ComprobacionFormal = Literal["demostrada", "fallida", "sin_comprobacion"]
+assert get_args(ComprobacionFormal) == COMPROBACION_FORMAL, (
+    "El borde y el vocabulario de la comprobacion formal no dicen lo mismo"
+)
+
+
 class Publicacion(BaseModel):
     id_obra: str
     version: int
     publicada_en: str
+    comprobacion_formal: ComprobacionFormal = Field(
+        description=(
+            "Como quedo la cronologia en Lean al publicar: `sin_comprobacion` si Lean no "
+            "esta en la maquina, que no impide publicar (RF-155)"
+        )
+    )
 
 
 # --- La puerta de publicacion (SPEC1 4.15) -----------------------------------
 
-ValidadorDeLaPuerta = Literal["esquema", "nombres", "longitud", "elementos_personalizados"]
+ValidadorDeLaPuerta = Literal[
+    "esquema", "nombres", "longitud", "elementos_personalizados", "cronologia"
+]
 assert get_args(ValidadorDeLaPuerta) == VALIDADOR_DE_LA_PUERTA, (
     "El borde y el vocabulario de validadores de la puerta no dicen lo mismo"
 )
@@ -310,6 +328,12 @@ class PuertaDePublicacion(BaseModel):
     version: int
     terminada: bool = Field(description="Sin terminar no se publica aunque pase")
     pasa: bool
+    comprobacion_formal: ComprobacionFormal = Field(
+        description=(
+            "La cronologia en Lean: `demostrada`, `fallida`, o `sin_comprobacion` si Lean "
+            "no esta en la maquina, que no hace fallar la puerta (RF-152, D-61)"
+        )
+    )
     fallos: list[FalloDeLaPuerta]
 
 

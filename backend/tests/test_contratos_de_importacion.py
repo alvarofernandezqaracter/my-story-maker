@@ -39,6 +39,9 @@ SIEMBRAS: dict[str, dict[str, str]] = {
     "Los validadores son funciones puras: no leen el almacen ni las tareas": {
         "validadores.py": "from novela import almacen\n\n__all__ = ['almacen']\n",
     },
+    "El demostrador recibe la cronologia ya leida: no toca el almacen": {
+        "demostrador.py": "from novela import almacen\n\n__all__ = ['almacen']\n",
+    },
 }
 
 

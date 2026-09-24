@@ -7,10 +7,11 @@ sitio, que es donde esta la puerta de publicacion (SPEC1 4.15).
 """
 
 import json
+from collections.abc import Sequence
 from typing import Any, Protocol
 
 from novela import validadores
-from novela.almacen import Almacen
+from novela.almacen import Almacen, Artefacto
 from novela.almacen.artefactos import VersionNoAdmitida
 from novela.nucleo import guion
 from novela.nucleo.caminante import IndiceDeLaObra
@@ -23,6 +24,17 @@ class Esquemas(Protocol):
     que `nucleo` no importa."""
 
     def esquema(self, tarea: str) -> str: ...
+
+
+class Demostrador(Protocol):
+    """Quien comprueba la cronologia con Lean (SPEC1 4.16): `novela.demostrador`.
+
+    Devuelve `comprobacion` —`demostrada`, `fallida` o `sin_comprobacion`— y la
+    lista de `fallos` de la cronologia, cada uno con su invariante, su suceso,
+    su capitulo, su detalle y su evidencia.
+    """
+
+    def comprobar(self, sucesos: Sequence[dict[str, Any]]) -> dict[str, Any]: ...
 
 
 class PuertaNoSuperada(Exception):
@@ -160,11 +172,54 @@ def _elementos_personalizados(
     ]
 
 
-def puerta(almacen: Almacen, id_obra: str, numero: int, esquemas: Esquemas) -> dict[str, Any]:
-    """Pasa los cuatro validadores sobre lo que ve la version (RF-146, RF-147).
+def sucesos_de_la_cronologia(
+    almacen: Almacen, id_obra: str, numero: int
+) -> list[dict[str, Any]]:
+    """Lo que se vuelca a Lean: la cronologia de la version y quien muere (RF-150).
 
-    No guarda nada: el resultado se deriva cada vez (RD-30). Una version que no
-    existe es un `KeyError`.
+    La vista de RF-86 no dice el sujeto de cada `EventoEstado`; para el suceso
+    `muere` se lee de su cuerpo, tal como lo escribio el Contable. Se copia, no
+    se interpreta.
+    """
+    muertes = {
+        evento.id: evento.cuerpo.get("sujeto")
+        for evento in almacen.listar("EventoEstado", id_obra, version=numero)
+        if evento.cuerpo.get("tipo_de_evento") == "muere"
+    }
+    return [
+        suceso | {"muere": muertes.get(suceso["id"])}
+        for suceso in almacen.cronologia(id_obra, version=numero)
+    ]
+
+
+def _cronologia(
+    almacen: Almacen, id_obra: str, numero: int, demostrador: Demostrador | None
+) -> tuple[str, list[dict[str, Any]]]:
+    """RF-152: la cronologia, demostrada por Lean o dicho que no se comprobo."""
+    if demostrador is None:
+        return "sin_comprobacion", []
+    resultado = demostrador.comprobar(sucesos_de_la_cronologia(almacen, id_obra, numero))
+    fallos = [
+        _fallo("cronologia", fallo["capitulo"], fallo["detalle"]) | {"formal": fallo}
+        for fallo in resultado["fallos"]
+    ]
+    return str(resultado["comprobacion"]), fallos
+
+
+def puerta(
+    almacen: Almacen,
+    id_obra: str,
+    numero: int,
+    esquemas: Esquemas,
+    demostrador: Demostrador | None = None,
+) -> dict[str, Any]:
+    """Pasa los validadores sobre lo que ve la version (RF-146, RF-147, RF-152).
+
+    Los cuatro programaticos y, con `demostrador`, la cronologia en Lean. Sin
+    Lean en la maquina la cronologia no se comprueba y el resultado lo dice en
+    `comprobacion_formal`, pero eso no hace fallar la puerta (D-61). No guarda
+    nada: el resultado se deriva cada vez (RD-30). Una version que no existe es
+    un `KeyError`.
     """
     version = almacen.leer_version(id_obra, numero)
     obra = almacen.leer_obra(id_obra)
@@ -172,28 +227,109 @@ def puerta(almacen: Almacen, id_obra: str, numero: int, esquemas: Esquemas) -> d
         raise KeyError(f"la obra {id_obra} no tiene version {numero}")
     capitulos = int(obra.cuerpo.get("capitulos_objetivo", 1))
     textos = _textos_por_capitulo(almacen, id_obra, numero, capitulos)
+    comprobacion, de_la_cronologia = _cronologia(almacen, id_obra, numero, demostrador)
     fallos = [
         *_esquema(almacen, id_obra, numero, esquemas),
         *_nombres(almacen, id_obra, numero, textos),
         *_longitud(textos),
         *_elementos_personalizados(almacen, id_obra, numero),
+        *de_la_cronologia,
     ]
     return {
         "id_obra": id_obra,
         "version": numero,
         "terminada": version["terminada_en"] is not None,
         "pasa": not fallos,
+        "comprobacion_formal": comprobacion,
         "fallos": fallos,
     }
 
 
-def publicar(almacen: Almacen, id_obra: str, numero: int, esquemas: Esquemas) -> str:
+# Que dimension de calidad toca cada invariante de la cronologia (RF-154).
+_DIMENSION_DEL_INVARIANTE = {
+    "orden_temporal": "coherencia_temporal",
+    "edad_coherente": "coherencia_temporal",
+    "formato": "coherencia_temporal",
+    "un_solo_lugar": "continuidad_de_estado",
+    "no_reaparece": "continuidad_de_estado",
+}
+
+
+def _de_la_cronologia(critica: Artefacto) -> tuple[Any, Any] | None:
+    detectada = critica.cuerpo.get("detectada_por") or {}
+    if detectada.get("validador") != "cronologia":
+        return None
+    return critica.cuerpo.get("objeto"), detectada.get("invariante")
+
+
+def _criticas_de_la_cronologia(almacen: Almacen, resultado: dict[str, Any]) -> list[str]:
+    """RF-154: cada fallo de la cronologia con suceso vuelve como `Critica`.
+
+    La escribe el backend, como la de un artefacto malformado (RF-23): ningun
+    agente valida su propia salida. Una sola por suceso e invariante mientras
+    siga abierta: volver a pedir la publicacion no la repite (D-63).
+    """
+    id_obra, numero = resultado["id_obra"], resultado["version"]
+    abiertas = {
+        _de_la_cronologia(critica)
+        for critica in almacen.listar_criticas_abiertas(id_obra, version=numero)
+    }
+    nuevas = []
+    for fallo in resultado["fallos"]:
+        formal = fallo.get("formal")
+        if not formal or not formal.get("suceso"):
+            continue
+        clave = (formal["suceso"], formal["invariante"])
+        if clave in abiertas:
+            continue
+        abiertas.add(clave)
+        capitulo = formal.get("capitulo")
+        nuevas.append(
+            Artefacto(
+                tipo="Critica",
+                cuerpo={
+                    "objeto": formal["suceso"],
+                    "evidencia": formal["detalle"],
+                    "salida_de_lean": formal["evidencia"],
+                    "accion_sugerida": (
+                        f"rehacer desde el capitulo {capitulo} para que la cronologia no "
+                        "se contradiga"
+                        if capitulo
+                        else "revisar el suceso del mundo para que la cronologia no se "
+                        "contradiga"
+                    ),
+                    "detectada_por": {
+                        "rol": None,
+                        "tarea": None,
+                        "validador": "cronologia",
+                        "invariante": formal["invariante"],
+                    },
+                },
+                id_obra=id_obra,
+                capitulo=capitulo,
+                dimension=_DIMENSION_DEL_INVARIANTE.get(formal["invariante"]),
+                severidad="bloqueante",
+                estado="abierta",
+                version_de_obra=numero,
+            )
+        )
+    return [almacen.guardar_critica(critica) for critica in nuevas]
+
+
+def publicar(
+    almacen: Almacen,
+    id_obra: str,
+    numero: int,
+    esquemas: Esquemas,
+    demostrador: Demostrador | None = None,
+) -> tuple[str, str]:
     """El unico sitio por el que una version queda publicada (RF-116, D-43).
 
     Terminar no publica: esto es una orden. Primero, que la version exista y
     haya terminado; despues, la puerta. Si la puerta falla no se publica y se
-    dice por que; rehacer es otra orden del editor (RF-146). Devuelve cuando
-    quedo publicada.
+    dice por que; rehacer es otra orden del editor (RF-146). Si lo que falla es
+    la cronologia, el fallo vuelve ademas como `Critica` (RF-154). Devuelve
+    cuando quedo publicada y como quedo la comprobacion formal (RF-155).
     """
     version = almacen.leer_version(id_obra, numero)
     if version is None:
@@ -202,10 +338,11 @@ def publicar(almacen: Almacen, id_obra: str, numero: int, esquemas: Esquemas) ->
         raise VersionNoAdmitida(
             f"la version {numero} de {id_obra} no ha terminado: no se publica"
         )
-    resultado = puerta(almacen, id_obra, numero, esquemas)
+    resultado = puerta(almacen, id_obra, numero, esquemas, demostrador)
     if not resultado["pasa"]:
+        _criticas_de_la_cronologia(almacen, resultado)
         raise PuertaNoSuperada(resultado)
-    return almacen.publicar_version(id_obra, numero)
+    return almacen.publicar_version(id_obra, numero), resultado["comprobacion_formal"]
 
 
 def de_referencia(almacen: Almacen, id_obra: str) -> int:

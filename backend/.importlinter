@@ -35,6 +35,7 @@ source_modules =
     novela.ejecutor
     novela.ganchos
     novela.validadores
+    novela.demostrador
 forbidden_modules =
     sqlite3
     sqlite_vec
@@ -60,6 +61,7 @@ source_modules =
     novela.ejecutor
     novela.ganchos
     novela.validadores
+    novela.demostrador
 forbidden_modules =
     pydantic
     fastapi
@@ -80,6 +82,19 @@ name = Los validadores son funciones puras: no leen el almacen ni las tareas
 type = forbidden
 source_modules =
     novela.validadores
+forbidden_modules =
+    novela.almacen
+    novela.nucleo
+    novela.api
+    novela.ejecutor
+    novela.ganchos
+    novela.tareas
+
+[importlinter:contract:demostrador-sin-almacen]
+name = El demostrador recibe la cronologia ya leida: no toca el almacen
+type = forbidden
+source_modules =
+    novela.demostrador
 forbidden_modules =
     novela.almacen
     novela.nucleo
