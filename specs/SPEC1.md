@@ -621,8 +621,8 @@ se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe
 | RI-07 | `GET /obras/{id}/estado` | Auditar continuidad | Estado plegado hasta el capítulo indicado, y log de eventos (RF-54) |
 | RI-08 | `GET /obras/{id}/progreso` | Ver la ejecución en vivo | Flujo de eventos de progreso mientras la obra corre (RF-53). Un contrato OpenAPI no describe lo que viaja dentro de un flujo abierto: la forma de cada evento es la que sirve la consulta puntual del mismo recurso, y ahí sí queda descrita |
 | RI-09 | `POST /obras/{id}/detener` · `/reanudar` | Control, no mantenimiento | RF-04. No hay ninguna operación de limpieza ni de archivado que el editor deba ejecutar |
-| RI-15 | `GET /obras/{id}/trazas` | Ver por qué un intento falló | Cada `Traza` servida trae además `ganchos`, lo que RF-127 guardó: vacío si su paso no lleva hooks |
 | RI-10 | `GET /openapi.json` | Acordar la frontera | Documento OpenAPI 3.1 del borde entero, generado desde los modelos declarados. Se vuelca además a `backend/openapi.yaml`, que es el contrato versionado del que `frontend/` deriva su cliente (D-11, RNF-09) |
+| RI-15 | `GET /obras/{id}/trazas` | Ver por qué un intento falló | Cada `Traza` servida trae además `ganchos`, lo que RF-127 guardó: vacío si su paso no lleva hooks |
 
 Tres reglas de frontera. La interfaz web nunca lee ficheros ni la base de datos.
 El contrato HTTP se valida en el borde con modelos declarados —es el único sitio

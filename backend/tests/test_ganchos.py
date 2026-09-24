@@ -492,3 +492,30 @@ def test_un_redactor_que_insiste_en_lo_vetado_detiene_la_obra(
     entorno = ejecutor.entornos[0]
     assert entorno is not None and VETO in json.loads(entorno[ganchos.VARIABLE_DE_VETOS])
     assert all(VETO not in ventana.texto for ventana in ejecutor.ventanas)
+
+
+def test_la_api_sirve_el_veredicto_de_los_hooks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """RI-15: la `Traza` servida trae `ganchos`, y vacio en un paso sin hooks."""
+    from fastapi.testclient import TestClient
+
+    from novela.api.aplicacion import crear_aplicacion
+
+    def lanzar(orden: list[str], **opciones: Any) -> subprocess.CompletedProcess[str]:
+        salida = _flujo(_entrega(f"Y hubo {VETO}."))
+        return subprocess.CompletedProcess(orden, 0, stdout=salida, stderr="")
+
+    monkeypatch.setattr(subprocess, "run", lanzar)
+    app = crear_aplicacion(tmp_path / "api.sqlite3", ejecutor=RedactorQueInsiste())
+    with TestClient(app) as cliente:
+        id_obra = cliente.post("/obras", json=BRIEF).json()["id_obra"]
+        hilo = cliente.app.state.produccion.hilos[id_obra]  # type: ignore[attr-defined]
+        hilo.join(timeout=60)
+        de_redactar = cliente.get(f"/obras/{id_obra}/trazas?tarea=redactar").json()
+        de_planificar = cliente.get(f"/obras/{id_obra}/trazas?tarea=planificar").json()
+
+    assert de_redactar and all(t["ganchos"]["final"] for t in de_redactar)
+    policy = next(f for f in de_redactar[0]["ganchos"]["final"] if f["gancho"] == "policy")
+    assert policy["pasa"] is False
+    assert de_planificar and all(t["ganchos"] is None for t in de_planificar)
