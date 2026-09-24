@@ -17,7 +17,7 @@
     "titulo": "El campanario de Santo Tomé",
     "epoca": "Toledo, 1561, el año en que la corte se marcha a Madrid",
     "premisa": "El hijo de un relojero se queda en una ciudad que se vacía y tiene que decidir si sigue a la corte o arregla el reloj que nadie va a mirar",
-    "capitulos_objetivo": 3,
+    "capitulos_objetivo": 10,
     "politicas_globales": {"pov": "tercera_limitada"},
     "arcos": [],
     "elenco_declarado": [],

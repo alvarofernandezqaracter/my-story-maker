@@ -17,7 +17,7 @@
     "titulo": "Dos bautizos el mismo día",
     "epoca": "Valladolid y Madrid, marzo de 1605, con la corte de Felipe III en Valladolid",
     "premisa": "El 12 de marzo de 1605 por la mañana, Martina y su tío Gaspar, músicos de capilla, tocan en Valladolid en una ceremonia de la corte; ese mismo 12 de marzo de 1605 por la tarde los dos tocan en Madrid en la boda de un banquero genovés, porque Gaspar ha cobrado por adelantado las dos cosas y no puede devolver ninguna",
-    "capitulos_objetivo": 3,
+    "capitulos_objetivo": 10,
     "politicas_globales": {
       "pov": "tercera_limitada",
       "fechas": "cada suceso con su día exacto, año, mes y día; los dos del 12 de marzo de 1605 se cuentan en capítulos distintos"
