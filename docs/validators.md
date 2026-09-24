@@ -208,7 +208,6 @@ la que más protege.
 | El demostrador formal recibe la cronología ya leída: no toca el almacén, ni el guion, ni las tareas | Contrato de importación sobre `demostrador` |
 | El juez de la novela no lee `tareas/` ni la API ni trae Langfuse: su rúbrica le llega por parámetro | Contrato de importación sobre `juez_de_la_novela` |
 | La observación en Langfuse recibe lo ya leído: no toca el almacén, ni el guion, ni las tareas, ni el ejecutor | Contrato de importación sobre `observabilidad` |
-| El lanzador de los briefs no corre nada sin permiso, y traduce a la misma clave lo que dicen la puerta, los ganchos y el juez | Pruebas con almacén y veredictos fingidos, más el cotejo de que toda comprobación que un brief declara la sabe observar el lanzador |
 
 ### Dónde no se comprueban tipos, y por qué
 
@@ -659,8 +658,9 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Solo un veredicto entero y con citas literales cuelga notas, una por criterio y con la versión de la rúbrica (SPEC1 RF-198, RF-199) | Juez fingido con veredicto bueno, con citas inventadas, con notas fuera de rango y con criterios de menos o de más | `prueba` |
 | El juez recibe la observabilidad por parámetro y no lee `tareas/` ni la API (SPEC1 RF-200) | Contrato de importación | `analisis` |
 | Los briefs de prueba los aceptaría `POST /obras` y lo que esperan nombra comprobaciones que existen (SPEC1 RF-201) | Carga de cada fichero contra el modelo del brief y los vocabularios | `prueba` |
-| Los briefs de prueba son entrada del desarrollador: nada del sistema los lee sin que alguien los lance, ni los escribe (SPEC1 RD-35) | Búsqueda en `backend/src/` de quién nombra `briefs-de-prueba`: nadie | `inspeccion` |
+| Los briefs de prueba son entrada del desarrollador: nada del sistema los lee sin que alguien los lance, ni los escribe (SPEC1 RD-35) | Búsqueda en `backend/src/` de quién nombra `briefs-de-prueba`: solo el lanzador de RF-203, que los lee cuando alguien lo ejecuta a mano y nunca los escribe | `inspeccion` |
 | El texto de la rúbrica no está en el repositorio (SPEC1 RF-202, RNF-13) | Búsqueda de frases de la rúbrica en el árbol y en `git log -p` | `inspeccion` |
+| El lanzador corre los briefs de uno en uno, no arranca nada sin `--si-gasto` y traduce a la misma clave lo que dicen la puerta, los ganchos y el juez (SPEC1 RF-203) | Almacén y veredictos fingidos, más el cotejo de que toda comprobación que un brief declara la sabe observar el lanzador | `prueba` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha, el lugar y los presentes que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |
