@@ -421,14 +421,14 @@ export interface components {
             premisa: string;
             /**
              * Tesis Tematica
-             * @description Que sostiene la obra
+             * @description Que sostiene la obra. Opcional: sin ella no hay tesis declarada (D-50)
              */
-            tesis_tematica: string;
+            tesis_tematica?: string | null;
             /**
              * Elenco Declarado
-             * @description Personajes que el editor fija
+             * @description Personajes que el editor fija. Vacio: los decide el Constructor de mundo (D-50)
              */
-            elenco_declarado: string[];
+            elenco_declarado?: string[];
             /**
              * Capitulos Objetivo
              * @description Cuantos capitulos

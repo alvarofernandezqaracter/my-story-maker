@@ -16,3 +16,4 @@ export type Progreso = Esquemas["Progreso"];
 export type Manuscrito = Esquemas["Manuscrito"];
 export type UnidadDelManuscrito = Esquemas["UnidadDelManuscrito"];
 export type Confirmacion = Esquemas["Confirmacion"];
+export type TrazaServida = Esquemas["TrazaServida"];

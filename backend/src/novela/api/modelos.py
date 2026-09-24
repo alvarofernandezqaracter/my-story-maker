@@ -49,8 +49,17 @@ class Brief(BaseModel):
     titulo: str = Field(min_length=1, description="Titulo de la obra")
     epoca: str = Field(min_length=1, description="Epoca y ambito geografico")
     premisa: str = Field(min_length=1, description="De que va")
-    tesis_tematica: str = Field(min_length=1, description="Que sostiene la obra")
-    elenco_declarado: list[str] = Field(description="Personajes que el editor fija")
+    tesis_tematica: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Que sostiene la obra. Opcional: sin ella no hay tesis declarada (D-50)",
+    )
+    elenco_declarado: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Personajes que el editor fija. Vacio: los decide el Constructor de mundo (D-50)"
+        ),
+    )
     capitulos_objetivo: int = Field(ge=1, le=200, description="Cuantos capitulos")
     politicas_globales: dict[str, Any] = Field(
         default_factory=dict,

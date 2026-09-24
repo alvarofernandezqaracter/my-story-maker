@@ -48,7 +48,11 @@ export function FichaDelEncargo({
         data-ruta={campo.ruta}
       >
         <label htmlFor={id}>
-          {campo.etiqueta} <span className="ruta">{campo.ruta}</span>
+          <span>
+            {campo.etiqueta}
+            {campo.opcional && <span className="campo__opcional"> (opcional)</span>}
+          </span>{" "}
+          <span className="ruta">{campo.ruta}</span>
         </label>
         {campo.clase === "texto" && (
           <input
@@ -102,6 +106,7 @@ export function FichaDelEncargo({
       {GRUPOS.map((grupo) => (
         <fieldset key={grupo.titulo} className="ficha__grupo">
           <legend>{grupo.titulo}</legend>
+          {grupo.nota && <p className="ficha__nota">{grupo.nota}</p>}
           {grupo.campos.map(renderCampo)}
         </fieldset>
       ))}

@@ -4,6 +4,7 @@ import { leerManuscrito, verObra, type Resultado } from "../../compartido/api/cl
 import type { FichaDeObra, Manuscrito } from "../../compartido/api/tipos";
 import { AvisoDeFallo } from "../../compartido/componentes/AvisoDeFallo";
 import { Cabecera } from "../../compartido/componentes/Cabecera";
+import { MenuDeObra } from "../../compartido/componentes/MenuDeObra";
 import { Espera } from "../../compartido/componentes/Espera";
 import { useConsulta } from "../../compartido/usar-consulta";
 import { agrupar } from "./agrupar";
@@ -30,6 +31,7 @@ export function PantallaDelManuscrito() {
     return (
       <>
         <Cabecera pantalla="Lectura" />
+        <MenuDeObra idObra={idObra} />
         <main className="pagina">
           {consulta.estado === "fallo" ? (
             consulta.fallo.tipo === "sin_servidor" ? (
@@ -55,6 +57,7 @@ export function PantallaDelManuscrito() {
   return (
     <>
       <Cabecera pantalla="Lectura" />
+      <MenuDeObra idObra={idObra} />
       <main className="pagina lectura">
         <header className="lectura__cabecera">
           <h1>{ficha.titulo}</h1>

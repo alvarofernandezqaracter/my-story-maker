@@ -7,7 +7,7 @@ manuscrito verificado.
 
 Esta rama es `v2`, un arranque desde cero. Contiene `docs/`, las specs y los
 planes en `specs/`, el `backend/` implementado según los suyos y el `frontend/`
-con su primera versión: encargar una obra, verla avanzar y leerla.
+con su primera versión: encargar una obra, verla avanzar, ver lo hecho y leerla.
 
 - Considera como fuente de verdad únicamente lo que existe en esta rama. Ignora
   `main` y cualquier historial, convención o código anterior: no aplica aquí.
@@ -22,7 +22,7 @@ ambos es la misma desde el principio.
 | Carpeta | Qué contendrá | Pila |
 | --- | --- | --- |
 | `backend/` | El servidor: guarda y sirve artefactos, camina el guion encargando tareas a los agentes y expone por HTTP lo que el editor necesita ver | Python + FastAPI |
-| `frontend/` | La interfaz web: encargar una obra conversando con el Entrevistador, ver cómo avanza y leer el manuscrito. Se pone en pie con `npm run dev`, que arranca también el backend | Vite + React + TypeScript |
+| `frontend/` | La interfaz web: encargar una obra conversando con el Entrevistador, ver cómo avanza, ver las tareas ya hechas y leer el manuscrito, con un menú que salta entre las pantallas de cada obra. Se pone en pie con `npm run dev`, que arranca también el backend | Vite + React + TypeScript |
 | `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
 | `specs/` | Las specs vivas —el contexto específico—: `SPEC1.md` para el backend y `SPEC2.md` para el frontend, con qué tiene que hacer cada uno y por qué | Markdown |
 | `.claude/` | El andamiaje de desarrollo con Claude Code: las skills, los comandos `/ciclo` y `/verificar`, el subagente `verificador` y, en `mcp.json`, el servidor de navegador que se carga a propósito con `--mcp-config`. Su guía de uso es `CLAUDE.md`, en la raíz | Markdown + JSON |

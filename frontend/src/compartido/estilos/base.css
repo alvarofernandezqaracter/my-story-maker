@@ -183,3 +183,30 @@ a:focus-visible {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+.menu-de-obra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1);
+  padding: 0 var(--espacio-4);
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+
+.menu-de-obra__pestana {
+  padding: var(--espacio-3) var(--espacio-4);
+  color: var(--tinta-suave);
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+}
+
+.menu-de-obra__pestana:hover {
+  color: var(--tinta);
+}
+
+.menu-de-obra__pestana.activa {
+  color: var(--tinta);
+  font-weight: 600;
+  border-bottom-color: var(--acento);
+}

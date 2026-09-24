@@ -49,7 +49,7 @@ def _obra_terminada(cliente: TestClient) -> str:
 
 
 @pytest.mark.parametrize(
-    "campo", ["titulo", "epoca", "premisa", "tesis_tematica", "capitulos_objetivo"]
+    "campo", ["titulo", "epoca", "premisa", "capitulos_objetivo"]
 )
 def test_un_brief_sin_un_campo_obligatorio_se_rechaza_nombrando_el_campo(
     cliente: TestClient, campo: str
@@ -63,6 +63,27 @@ def test_un_brief_sin_un_campo_obligatorio_se_rechaza_nombrando_el_campo(
     assert campo in cuerpo["campos"]
     assert campo in cuerpo["detalle"]
     assert cuerpo["detalle"].startswith("Falta un campo obligatorio")
+
+
+def test_sin_tesis_ni_elenco_ni_arcos_la_obra_se_da_de_alta(cliente: TestClient) -> None:
+    """D-50: la tesis, el elenco y los arcos son opcionales. Lo que no viene no
+    se rellena por el editor: la obra guarda el elenco vacio y sin tesis."""
+    minimo = {
+        clave: valor
+        for clave, valor in BRIEF.items()
+        if clave not in {"tesis_tematica", "elenco_declarado", "arcos"}
+    }
+
+    respuesta = cliente.post("/obras", json=minimo)
+
+    assert respuesta.status_code == 202
+    produccion = cliente.app.state.produccion  # type: ignore[attr-defined]
+    id_obra = respuesta.json()["id_obra"]
+    produccion.hilos[id_obra].join(timeout=60)
+    cuerpo = produccion.almacen.leer_obra(id_obra).cuerpo
+    assert cuerpo["elenco_declarado"] == []
+    assert cuerpo["arcos"] == []
+    assert cuerpo.get("tesis_tematica") is None
 
 
 def test_un_brief_rechazado_no_crea_nada(cliente: TestClient) -> None:

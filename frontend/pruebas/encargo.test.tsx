@@ -261,6 +261,30 @@ describe("criterios de aceptación de SPEC2 §10 con el servidor simulado", () =
   });
 });
 
+describe("lo opcional (SPEC2 RF-09, criterio 8)", () => {
+  it("la tesis, los personajes y los arcos se marcan opcionales y, sin tocarlos, no se mandan", async () => {
+    const usuario = userEvent.setup();
+    const recibidas = grabarPasadas([lanzada]);
+    montar();
+    for (const etiqueta of [/^Qué sostiene la obra/, /^Personajes que fijas/, /^Arcos/]) {
+      expect(screen.getByLabelText(etiqueta).closest(".campo")).toHaveTextContent("(opcional)");
+    }
+    expect(screen.getByLabelText(/^Título/).closest(".campo")).not.toHaveTextContent("(opcional)");
+    await usuario.type(screen.getByLabelText(/^Título/), "El reloj del puerto");
+    await usuario.type(screen.getByLabelText(/^Época y lugar/), "Cádiz, 1812");
+    await usuario.type(screen.getByLabelText(/^De qué va/), "Un relojero y un asedio");
+    await usuario.type(screen.getByLabelText(/^Cuántos capítulos/), "1");
+    await usuario.click(screen.getByRole("button", { name: "Enviar" }));
+    expect(await screen.findByText("Avance de obra-9")).toBeInTheDocument();
+    expect(recibidas[0]!.cuerpo.borrador).toEqual({
+      titulo: "El reloj del puerto",
+      epoca: "Cádiz, 1812",
+      premisa: "Un relojero y un asedio",
+      capitulos_objetivo: 1,
+    });
+  });
+});
+
 describe("peticion.ts: reglas de forma", () => {
   it("no manda cadenas vacías, manda números como número y listas solo si se tocaron", () => {
     expect(

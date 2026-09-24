@@ -1,0 +1,56 @@
+.tareas-hechas__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.tareas-hechas__cabecera h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.tareas-hechas__vacia {
+  color: var(--tinta-suave);
+}
+
+.grupo-de-tareas h2 {
+  font-size: 1.05rem;
+  margin: var(--espacio-5) 0 var(--espacio-2);
+}
+
+.tabla-envoltorio {
+  overflow-x: auto;
+}
+
+.tabla-de-tareas {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--superficie);
+}
+
+.tabla-de-tareas th,
+.tabla-de-tareas td {
+  text-align: left;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-bottom: 1px solid var(--borde);
+}
+
+.tabla-de-tareas th {
+  font-size: 0.8rem;
+  color: var(--tinta-suave);
+}
+
+.veredicto--pasa {
+  color: var(--tinta);
+}
+
+.veredicto--no_pasa {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.veredicto--sin_hooks {
+  color: var(--tinta-tenue);
+}

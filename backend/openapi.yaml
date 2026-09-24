@@ -999,16 +999,20 @@ components:
           title: Premisa
           description: De que va
         tesis_tematica:
-          type: string
-          minLength: 1
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
           title: Tesis Tematica
-          description: Que sostiene la obra
+          description: 'Que sostiene la obra. Opcional: sin ella no hay tesis declarada
+            (D-50)'
         elenco_declarado:
           items:
             type: string
           type: array
           title: Elenco Declarado
-          description: Personajes que el editor fija
+          description: 'Personajes que el editor fija. Vacio: los decide el Constructor
+            de mundo (D-50)'
         capitulos_objetivo:
           type: integer
           maximum: 200.0
@@ -1037,8 +1041,6 @@ components:
       - titulo
       - epoca
       - premisa
-      - tesis_tematica
-      - elenco_declarado
       - capitulos_objetivo
       title: Brief
       description: 'Lo que el editor escribe para lanzar una obra.
