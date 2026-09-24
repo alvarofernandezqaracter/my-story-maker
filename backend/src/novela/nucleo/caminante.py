@@ -199,6 +199,9 @@ class Caminante:
             numero,
             [artefactos for _, artefactos in aplazados],
             lambda lote, rechazo: self._critica_de_malformado(aplazados[lote][0], rechazo),
+            # La de cierre termina la version en curso (RF-110): terminar no
+            # publica, pero sin terminar no se publica.
+            de_cierre=numero == capitulos,
         )
 
     def _fuera_del_guion(

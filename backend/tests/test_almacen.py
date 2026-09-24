@@ -299,10 +299,10 @@ def _referencias_que_no_son_id(almacen: Almacen, id_obra: str) -> list[str]:
 def test_las_migraciones_son_idempotentes(tmp_path: Path) -> None:
     ruta = tmp_path / "migrada.sqlite3"
     primera = abrir_almacen(ruta)
-    assert primera.migrar() == len(MIGRACIONES)
+    assert primera.migrar() == MIGRACIONES[-1][0]
     primera.cerrar()
     segunda = abrir_almacen(ruta)
-    assert segunda.migrar() == len(MIGRACIONES)
+    assert segunda.migrar() == MIGRACIONES[-1][0]
     segunda.cerrar()
 
 

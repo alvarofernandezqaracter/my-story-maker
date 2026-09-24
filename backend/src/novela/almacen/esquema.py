@@ -269,6 +269,15 @@ TABLAS: tuple[Tabla, ...] = (
 
 TABLA_POR_TIPO: dict[str, Tabla] = {tabla.tipo: tabla for tabla in TABLAS}
 
+# La migracion que da versiones a la obra (SPEC1 4.12), y las dos columnas que
+# anade a toda tabla de artefactos: en que version se escribio la fila y que
+# version la relevo. Lo que ve cada version se deduce de esas dos (RF-113).
+MIGRACION_DE_LAS_VERSIONES = 8
+COLUMNAS_DE_LA_VERSION: tuple[str, ...] = (
+    "version_de_obra INT NOT NULL DEFAULT 1",
+    "relevado_por INT",
+)
+
 TIPOS_INMUTABLES: tuple[str, ...] = tuple(t.tipo for t in TABLAS if t.inmutable)
 
 CAPA_POR_TIPO: dict[str, str] = {tabla.tipo: tabla.capa for tabla in TABLAS}
@@ -317,6 +326,10 @@ def _sentencia_de_tabla(tabla: Tabla) -> str:
         if propia.vocabulario:
             linea += " " + _check(propia.nombre, propia.vocabulario)
         lineas.append(linea)
+    if tabla.desde_migracion > MIGRACION_DE_LAS_VERSIONES:
+        # Una tabla que nace despues de las versiones las lleva desde el
+        # principio; a las anteriores se las anade esa migracion.
+        lineas += [f"  {columna}" for columna in COLUMNAS_DE_LA_VERSION]
     lineas += [
         f"  memoria TEXT NOT NULL {_check('memoria', MEMORIA, obligatoria=True)}",
         f"  procedencia_rol TEXT {_check('procedencia_rol', ROLES)}",
@@ -540,6 +553,108 @@ def sentencias_de_la_entrevista() -> list[str]:
 def sentencias_de_la_mencion() -> list[str]:
     """La migracion 4: la tabla de `Mencion` y nada mas."""
     return _sentencias_de(tablas_de_la_migracion(4))
+
+
+
+
+# --- Las versiones de la obra (SPEC1 4.12) --------------------------------
+#
+# Ni la version ni la publicacion son artefactos: las escribe el backend, no un
+# rol, igual que el control de ejecucion. Nada se borra; de una version solo
+# cambia, una vez, la marca de terminada, y una publicacion no cambia nunca.
+
+SENTENCIAS_DE_LAS_VERSIONES: tuple[str, ...] = (
+    """CREATE TABLE version_de_la_obra (
+  id_obra TEXT NOT NULL REFERENCES artefacto_obra(id),
+  numero INT NOT NULL CHECK (numero >= 1),
+  base INT,
+  capitulos_cambiados TEXT NOT NULL,
+  creada_en TEXT NOT NULL,
+  terminada_en TEXT,
+  PRIMARY KEY (id_obra, numero)
+) STRICT""",
+    "CREATE TRIGGER version_de_la_obra_no_se_borra BEFORE DELETE ON version_de_la_obra "
+    f"BEGIN {_NO_SE_BORRA}; END",
+    "CREATE TRIGGER version_de_la_obra_es_inmutable BEFORE UPDATE OF id_obra, numero, base, "
+    "capitulos_cambiados, creada_en ON version_de_la_obra "
+    "BEGIN SELECT RAISE(ABORT, 'una version es inmutable: rehacer es abrir otra'); END",
+    "CREATE TRIGGER version_de_la_obra_termina_una_vez BEFORE UPDATE OF terminada_en "
+    "ON version_de_la_obra WHEN OLD.terminada_en IS NOT NULL "
+    "BEGIN SELECT RAISE(ABORT, 'una version termina una sola vez'); END",
+    """CREATE TABLE publicacion_de_version (
+  id INTEGER PRIMARY KEY,
+  id_obra TEXT NOT NULL,
+  numero INT NOT NULL,
+  publicada_en TEXT NOT NULL,
+  FOREIGN KEY (id_obra, numero) REFERENCES version_de_la_obra (id_obra, numero)
+) STRICT""",
+    "CREATE INDEX indice_publicacion_de_version ON publicacion_de_version (id_obra, id)",
+    "CREATE TRIGGER publicacion_de_version_no_se_borra BEFORE DELETE ON publicacion_de_version "
+    f"BEGIN {_NO_SE_BORRA}; END",
+    "CREATE TRIGGER publicacion_de_version_es_inmutable "
+    "BEFORE UPDATE ON publicacion_de_version "
+    "BEGIN SELECT RAISE(ABORT, 'una publicacion es inmutable: se publica otra vez'); END",
+    # Las obras que ya existian son su version 1, terminada si ya consta su
+    # auditoria de cierre. La primera version no tiene base, y por eso no tiene
+    # capitulos cambiados respecto de ninguna.
+    "INSERT INTO version_de_la_obra (id_obra, numero, base, capitulos_cambiados, creada_en, "
+    "terminada_en) SELECT o.id, 1, NULL, '[]', o.creado_en, CASE WHEN c.auditada_hasta >= "
+    "COALESCE(json_extract(o.cuerpo, '$.capitulos_objetivo'), 1) "
+    "THEN strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') END "
+    "FROM artefacto_obra AS o LEFT JOIN control_de_ejecucion AS c ON c.id_obra = o.id",
+    # La cache del estado pasa a ser por version: rehacer la releva en vez de
+    # borrarla (D-44). SQLite no cambia una clave primaria en sitio, asi que se
+    # rehace la tabla; lo que habia es de la version 1.
+    """CREATE TABLE cache_estado_por_version (
+  id_obra TEXT NOT NULL REFERENCES artefacto_obra(id),
+  version_de_obra INT NOT NULL,
+  capitulo INT NOT NULL,
+  cuerpo TEXT NOT NULL,
+  calculado_en TEXT NOT NULL,
+  relevado_por INT,
+  PRIMARY KEY (id_obra, version_de_obra, capitulo)
+) STRICT""",
+    "INSERT INTO cache_estado_por_version (id_obra, version_de_obra, capitulo, cuerpo, "
+    "calculado_en) SELECT id_obra, 1, capitulo, cuerpo, calculado_en "
+    "FROM cache_estado_materializado",
+    "DROP TABLE cache_estado_materializado",
+    "ALTER TABLE cache_estado_por_version RENAME TO cache_estado_materializado",
+    "CREATE INDEX indice_cache_estado_materializado ON cache_estado_materializado "
+    "(id_obra, capitulo)",
+)
+
+
+def _versiones_en_la_tabla(tabla: Tabla) -> list[str]:
+    """Las dos columnas de la version y sus dos reglas (RD-21).
+
+    La version en que nacio una fila no cambia nunca. La que la relevo se pone
+    una sola vez, y solo junto con la marca de caducado: marcar no es modificar
+    (D-32). Los disparadores de inmutabilidad anteriores nombran sus columnas,
+    asi que estas dos no los disparan: las guardan estos.
+    """
+    nombre = nombre_de_tabla(tabla.tipo)
+    return [
+        *(f"ALTER TABLE {nombre} ADD COLUMN {columna}" for columna in COLUMNAS_DE_LA_VERSION),
+        f"CREATE TRIGGER {nombre}_la_version_no_cambia BEFORE UPDATE OF version_de_obra "
+        f"ON {nombre} WHEN NEW.version_de_obra IS NOT OLD.version_de_obra "
+        "BEGIN SELECT RAISE(ABORT, 'la version en que nacio una fila no cambia'); END",
+        f"CREATE TRIGGER {nombre}_se_releva_una_vez BEFORE UPDATE OF relevado_por "
+        f"ON {nombre} WHEN OLD.relevado_por IS NOT NULL OR NEW.caducado_en IS NULL "
+        "BEGIN SELECT RAISE(ABORT, 'el relevo se marca una vez y junto al caducado'); END",
+    ]
+
+
+def sentencias_de_las_versiones() -> list[str]:
+    """La migracion 8: versiones, publicaciones y las dos marcas en toda tabla.
+
+    Recorre todas las tablas de artefactos que ya existen, asi que va detras de
+    cualquier migracion que cree una.
+    """
+    sentencias = list(SENTENCIAS_DE_LAS_VERSIONES)
+    for tabla in TABLAS:
+        if tabla.desde_migracion <= MIGRACION_DE_LAS_VERSIONES:
+            sentencias += _versiones_en_la_tabla(tabla)
+    return sentencias
 
 
 assert {t.tipo for t in TABLAS} == set(

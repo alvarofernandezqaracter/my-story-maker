@@ -118,7 +118,10 @@ paths:
   /obras/{id_obra}/manuscrito:
     get:
       summary: Leer Manuscrito
-      description: Solo el texto aceptado, en orden, con los capitulos marcados.
+      description: 'Solo el texto aceptado, en orden, con los capitulos marcados,
+        de la
+
+        version pedida o de la de referencia.'
       operationId: leer_manuscrito_obras__id_obra__manuscrito_get
       parameters:
       - name: id_obra
@@ -129,6 +132,18 @@ paths:
           description: Identificador de la obra
           title: Id Obra
         description: Identificador de la obra
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          description: Version que se lee. Sin ella, la publicada, y si no hay, la
+            ultima
+          title: Version
+        description: Version que se lee. Sin ella, la publicada, y si no hay, la ultima
       responses:
         '200':
           description: Successful Response
@@ -162,6 +177,18 @@ paths:
           type: integer
           minimum: 1
           title: Numero
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          description: Version que se lee. Sin ella, la publicada, y si no hay, la
+            ultima
+          title: Version
+        description: Version que se lee. Sin ella, la publicada, y si no hay, la ultima
       responses:
         '200':
           description: Successful Response
@@ -221,6 +248,18 @@ paths:
             minimum: 1
           - type: 'null'
           title: Capitulo
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          description: Version que se lee. Sin ella, la publicada, y si no hay, la
+            ultima
+          title: Version
+        description: Version que se lee. Sin ella, la publicada, y si no hay, la ultima
       responses:
         '200':
           description: Successful Response
@@ -312,6 +351,18 @@ paths:
           minimum: 1
           default: 1
           title: Capitulo
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          description: Version que se lee. Sin ella, la publicada, y si no hay, la
+            ultima
+          title: Version
+        description: Version que se lee. Sin ella, la publicada, y si no hay, la ultima
       responses:
         '200':
           description: Successful Response
@@ -366,6 +417,18 @@ paths:
             type: string
           - type: 'null'
           title: Licencia
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          description: Version que se lee. Sin ella, la publicada, y si no hay, la
+            ultima
+          title: Version
+        description: Version que se lee. Sin ella, la publicada, y si no hay, la ultima
       responses:
         '200':
           description: Successful Response
@@ -396,6 +459,18 @@ paths:
           description: Identificador de la obra
           title: Id Obra
         description: Identificador de la obra
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          description: Version que se lee. Sin ella, la publicada, y si no hay, la
+            ultima
+          title: Version
+        description: Version que se lee. Sin ella, la publicada, y si no hay, la ultima
       responses:
         '200':
           description: Successful Response
@@ -403,6 +478,107 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Cronologia'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/versiones:
+    get:
+      summary: Ver Versiones
+      description: Cada version con su base, lo que cambio y si es la publicada.
+      operationId: ver_versiones_obras__id_obra__versiones_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VersionDeLaObra'
+                title: Response Ver Versiones Obras  Id Obra  Versiones Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      summary: Rehacer
+      description: 'Rehacer desde un capitulo: la version anterior se conserva entera
+        y la
+
+        nueva reescribe de ese capitulo al final (RF-111). No espera a que termine.'
+      operationId: rehacer_obras__id_obra__versiones_post
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeticionDeRehacer'
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionAbierta'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/versiones/{numero}/publicar:
+    post:
+      summary: Publicar
+      description: 'Publicar es una orden: terminar no publica (RF-116).'
+      operationId: publicar_obras__id_obra__versiones__numero__publicar_post
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: numero
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          description: Version que se publica
+          title: Numero
+        description: Version que se publica
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Publicacion'
         '422':
           description: Validation Error
           content:
@@ -1044,6 +1220,16 @@ components:
         criticas_abiertas:
           type: integer
           title: Criticas Abiertas
+        version_en_curso:
+          type: integer
+          title: Version En Curso
+          description: La ultima version, la unica que se produce
+        version_publicada:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Version Publicada
+          description: La de la ultima publicacion, si la hay
       type: object
       required:
       - id_obra
@@ -1053,6 +1239,8 @@ components:
       - capitulos_cerrados
       - capitulos_marcados
       - criticas_abiertas
+      - version_en_curso
+      - version_publicada
       title: FichaDeObra
       description: Estado de la obra, capitulo en curso y recuento de cerrados y marcados.
     HTTPValidationError:
@@ -1145,6 +1333,14 @@ components:
         id_obra:
           type: string
           title: Id Obra
+        version:
+          type: integer
+          title: Version
+          description: La version que se sirve
+        publicada:
+          type: boolean
+          title: Publicada
+          description: Si esa version es la publicada
         unidades:
           items:
             $ref: '#/components/schemas/UnidadDelManuscrito'
@@ -1153,6 +1349,8 @@ components:
       type: object
       required:
       - id_obra
+      - version
+      - publicada
       - unidades
       title: Manuscrito
     ObraCreada:
@@ -1301,6 +1499,18 @@ components:
         nada:
 
         lo que quiera conservar lo vuelve a mandar (D-20).'
+    PeticionDeRehacer:
+      properties:
+        desde_capitulo:
+          type: integer
+          minimum: 1.0
+          title: Desde Capitulo
+          description: Primer capitulo que se reescribe
+      type: object
+      required:
+      - desde_capitulo
+      title: PeticionDeRehacer
+      description: 'Rehacer desde un capitulo: de el al final se reescribe (D-42).'
     Presente:
       properties:
         id:
@@ -1359,6 +1569,23 @@ components:
       - techo
       title: Progreso
       description: Lo que hay abierto ahora mismo.
+    Publicacion:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        version:
+          type: integer
+          title: Version
+        publicada_en:
+          type: string
+          title: Publicada En
+      type: object
+      required:
+      - id_obra
+      - version
+      - publicada_en
+      title: Publicacion
     Suceso:
       properties:
         origen:
@@ -1534,3 +1761,69 @@ components:
       - msg
       - type
       title: ValidationError
+    VersionAbierta:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        version:
+          type: integer
+          title: Version
+        capitulos_cambiados:
+          items:
+            type: integer
+          type: array
+          title: Capitulos Cambiados
+        estado:
+          type: string
+          title: Estado
+      type: object
+      required:
+      - id_obra
+      - version
+      - capitulos_cambiados
+      - estado
+      title: VersionAbierta
+    VersionDeLaObra:
+      properties:
+        numero:
+          type: integer
+          title: Numero
+        base:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Base
+          description: La version de la que sale; la 1 no sale de ninguna
+        capitulos_cambiados:
+          items:
+            type: integer
+          type: array
+          title: Capitulos Cambiados
+          description: Los que reescribe respecto de su base
+        creada_en:
+          type: string
+          title: Creada En
+        terminada_en:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Terminada En
+        terminada:
+          type: boolean
+          title: Terminada
+        publicada:
+          type: boolean
+          title: Publicada
+          description: Si es la de la ultima publicacion
+      type: object
+      required:
+      - numero
+      - base
+      - capitulos_cambiados
+      - creada_en
+      - terminada_en
+      - terminada
+      - publicada
+      title: VersionDeLaObra
+      description: Una version con su base y lo que cambio respecto de ella.

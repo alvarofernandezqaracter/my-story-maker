@@ -25,7 +25,12 @@ from novela.ajustes import (
     tope_de_ventana,
 )
 from novela.almacen import Almacen, Artefacto
-from novela.almacen.artefactos import EscrituraProhibida, abrir_almacen, ahora
+from novela.almacen.artefactos import (
+    EscrituraProhibida,
+    VersionNoAdmitida,
+    abrir_almacen,
+    ahora,
+)
 from novela.almacen.indice import Indice
 from novela.api.modelos import (
     Brief,
@@ -46,13 +51,17 @@ from novela.api.modelos import (
     PasadaDeEntrevista,
     Pasaje,
     PeticionDeEntrevista,
+    PeticionDeRehacer,
     Progreso,
+    Publicacion,
     Suceso,
     TrazaServida,
     UnidadDelManuscrito,
+    VersionAbierta,
+    VersionDeLaObra,
 )
 from novela.ejecutor import EjecutorDeSubagentes, SubagenteFallo
-from novela.nucleo import entrevista
+from novela.nucleo import entrevista, versiones
 from novela.nucleo.caminante import Caminante
 from novela.nucleo.gobierno import puede_escribir
 from novela.tareas import CatalogoDelRepositorio
@@ -240,6 +249,24 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"No hay ninguna obra {id_obra}")
         return obra
 
+    VersionPedida = Annotated[
+        int | None,
+        Query(
+            ge=1,
+            description="Version que se lee. Sin ella, la publicada, y si no hay, la ultima",
+        ),
+    ]
+
+    def _version(casa: Produccion, id_obra: str, version: int | None) -> int:
+        """La version que se sirve: la pedida, o la de referencia (RF-117)."""
+        if version is None:
+            return versiones.de_referencia(casa.almacen, id_obra)
+        if casa.almacen.leer_version(id_obra, version) is None:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, f"La obra {id_obra} no tiene version {version}"
+            )
+        return version
+
     # --- RI-01. La unica llamada de escritura por obra --------------------
 
     @app.post("/obras", status_code=status.HTTP_202_ACCEPTED)
@@ -402,17 +429,28 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
             capitulos_cerrados=len(cerrados),
             capitulos_marcados=len([c for c in cerrados if c.capitulo in con_criticas]),
             criticas_abiertas=len(abiertas),
+            version_en_curso=casa.almacen.version_en_curso(id_obra),
+            version_publicada=casa.almacen.version_publicada(id_obra),
         )
 
     # --- RI-03. Leer -------------------------------------------------------
 
     @app.get("/obras/{id_obra}/manuscrito")
-    def leer_manuscrito(id_obra: IdObra, casa: ProduccionDep) -> Manuscrito:
-        """Solo el texto aceptado, en orden, con los capitulos marcados."""
+    def leer_manuscrito(
+        id_obra: IdObra, casa: ProduccionDep, version: VersionPedida = None
+    ) -> Manuscrito:
+        """Solo el texto aceptado, en orden, con los capitulos marcados, de la
+        version pedida o de la de referencia."""
         _obra_o_404(casa, id_obra)
-        marcados = {c.capitulo for c in casa.almacen.listar_criticas_abiertas(id_obra)}
+        numero = _version(casa, id_obra, version)
+        marcados = {
+            c.capitulo
+            for c in casa.almacen.listar_criticas_abiertas(id_obra, version=numero)
+        }
         return Manuscrito(
             id_obra=id_obra,
+            version=numero,
+            publicada=casa.almacen.version_publicada(id_obra) == numero,
             unidades=[
                 UnidadDelManuscrito(
                     capitulo=borrador.capitulo or 0,
@@ -420,7 +458,7 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
                     texto=str(borrador.cuerpo.get("texto", "")),
                     capitulo_marcado=borrador.capitulo in marcados,
                 )
-                for borrador in casa.almacen.manuscrito_aceptado(id_obra)
+                for borrador in casa.almacen.manuscrito_aceptado(id_obra, version=numero)
             ],
         )
 
@@ -431,13 +469,17 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
         id_obra: IdObra,
         numero: Annotated[int, Path(ge=1)],
         casa: ProduccionDep,
+        version: VersionPedida = None,
     ) -> CapituloInspeccionado:
         _obra_o_404(casa, id_obra)
-        leido = casa.almacen.leer_capitulo(id_obra, numero)
+        de_la_version = _version(casa, id_obra, version)
+        leido = casa.almacen.leer_capitulo(id_obra, numero, version=de_la_version)
         escenas = leido["escenas"]
         vigentes = {}
         for escena in escenas:
-            borrador = casa.almacen.borrador_vigente(id_obra, escena.id)
+            borrador = casa.almacen.borrador_vigente(
+                id_obra, escena.id, version=de_la_version
+            )
             if borrador is not None:
                 vigentes[escena.id] = borrador.cuerpo | {"id": borrador.id}
         capitulo = leido["capitulo"]
@@ -461,6 +503,7 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
         dimension: Annotated[str | None, Query()] = None,
         severidad: Annotated[str | None, Query()] = None,
         capitulo: Annotated[int | None, Query(ge=1)] = None,
+        version: VersionPedida = None,
     ) -> list[CriticaServida]:
         _obra_o_404(casa, id_obra)
         criticas = casa.almacen.listar(
@@ -470,6 +513,7 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
             dimension=dimension,
             severidad=severidad,
             capitulo=capitulo,
+            version=_version(casa, id_obra, version),
         )
         return [
             CriticaServida(
@@ -525,15 +569,19 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
         id_obra: IdObra,
         casa: ProduccionDep,
         capitulo: Annotated[int, Query(ge=1)] = 1,
+        version: VersionPedida = None,
     ) -> EstadoPlegado:
         _obra_o_404(casa, id_obra)
+        numero = _version(casa, id_obra, version)
         return EstadoPlegado(
             id_obra=id_obra,
             capitulo=capitulo,
-            estado=casa.almacen.estado_en(id_obra, capitulo),
+            estado=casa.almacen.estado_en(id_obra, capitulo, version=numero),
             eventos=[
                 evento.cuerpo | {"id": evento.id, "capitulo": evento.capitulo}
-                for evento in casa.almacen.listar("EventoEstado", id_obra, orden="capitulo")
+                for evento in casa.almacen.listar(
+                    "EventoEstado", id_obra, orden="capitulo", version=numero
+                )
                 if (evento.capitulo or 0) <= capitulo
             ],
         )
@@ -550,22 +598,101 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
         licencia: Annotated[
             Literal["canon", "plausible", "licencia", "personal"] | None, Query()
         ] = None,
+        version: VersionPedida = None,
     ) -> list[HechoDeLaBiblia]:
         """Cada hecho de la biblia con los capitulos en que se ha usado."""
         _obra_o_404(casa, id_obra)
         return [
             HechoDeLaBiblia(**hecho)
-            for hecho in casa.almacen.hechos_de_la_biblia(id_obra, tipo=tipo, licencia=licencia)
+            for hecho in casa.almacen.hechos_de_la_biblia(
+                id_obra,
+                tipo=tipo,
+                licencia=licencia,
+                version=_version(casa, id_obra, version),
+            )
         ]
 
     @app.get("/obras/{id_obra}/cronologia")
-    def ver_cronologia(id_obra: IdObra, casa: ProduccionDep) -> Cronologia:
+    def ver_cronologia(
+        id_obra: IdObra, casa: ProduccionDep, version: VersionPedida = None
+    ) -> Cronologia:
         """Sucesos en orden, con momento, lugar y presentes con su nacimiento."""
         _obra_o_404(casa, id_obra)
+        numero = _version(casa, id_obra, version)
         return Cronologia(
             id_obra=id_obra,
-            sucesos=[Suceso(**suceso) for suceso in casa.almacen.cronologia(id_obra)],
+            sucesos=[
+                Suceso(**suceso) for suceso in casa.almacen.cronologia(id_obra, version=numero)
+            ],
         )
+
+    # --- RI-11 a RI-13. Versiones: rehacer, publicar y verlas --------------
+
+    @app.get("/obras/{id_obra}/versiones")
+    def ver_versiones(id_obra: IdObra, casa: ProduccionDep) -> list[VersionDeLaObra]:
+        """Cada version con su base, lo que cambio y si es la publicada."""
+        _obra_o_404(casa, id_obra)
+        publicada = casa.almacen.version_publicada(id_obra)
+        return [
+            VersionDeLaObra(
+                **version,
+                terminada=version["terminada_en"] is not None,
+                publicada=version["numero"] == publicada,
+            )
+            for version in casa.almacen.listar_versiones(id_obra)
+        ]
+
+    @app.post("/obras/{id_obra}/versiones", status_code=status.HTTP_202_ACCEPTED)
+    def rehacer(
+        id_obra: IdObra, peticion: PeticionDeRehacer, casa: ProduccionDep
+    ) -> VersionAbierta:
+        """Rehacer desde un capitulo: la version anterior se conserva entera y la
+        nueva reescribe de ese capitulo al final (RF-111). No espera a que termine."""
+        obra = _obra_o_404(casa, id_obra)
+        ultimo = casa.capitulos_objetivo(obra)
+        if peticion.desde_capitulo > ultimo:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                f"La obra tiene {ultimo} capitulos: no se rehace desde el "
+                f"{peticion.desde_capitulo}",
+            )
+        hilo = casa.hilos.get(id_obra)
+        if hilo is not None and hilo.is_alive():
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"La obra {id_obra} esta produciendo: se rehace cuando termine",
+            )
+        try:
+            nueva = versiones.rehacer_desde(
+                casa.almacen, casa.indice, id_obra, peticion.desde_capitulo, ultimo
+            )
+        except VersionNoAdmitida as error:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+        casa.arrancar(id_obra, ultimo)
+        return VersionAbierta(
+            id_obra=id_obra,
+            version=nueva,
+            capitulos_cambiados=list(range(peticion.desde_capitulo, ultimo + 1)),
+            estado="en produccion",
+        )
+
+    @app.post("/obras/{id_obra}/versiones/{numero}/publicar")
+    def publicar(
+        id_obra: IdObra,
+        numero: Annotated[int, Path(ge=1, description="Version que se publica")],
+        casa: ProduccionDep,
+    ) -> Publicacion:
+        """Publicar es una orden: terminar no publica (RF-116)."""
+        _obra_o_404(casa, id_obra)
+        try:
+            publicada_en = versiones.publicar(casa.almacen, id_obra, numero)
+        except KeyError as error:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, f"La obra {id_obra} no tiene version {numero}"
+            ) from error
+        except VersionNoAdmitida as error:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+        return Publicacion(id_obra=id_obra, version=numero, publicada_en=publicada_en)
 
     # --- RI-08. Ver la ejecucion en vivo -----------------------------------
 
@@ -668,7 +795,7 @@ def crear_aplicacion(ruta_de_la_base: Any = None, ejecutor: Any = None) -> FastA
 
 def operaciones_de_escritura(app: FastAPI) -> list[str]:
     """Las rutas por las que el editor escribe algo: entrevistar, lanzar,
-    detener y reanudar. Ninguna es de mantenimiento."""
+    detener, reanudar, rehacer y publicar. Ninguna es de mantenimiento."""
     escrituras: list[str] = []
     for ruta in app.routes:
         metodos: Iterator[str] = iter(getattr(ruta, "methods", []) or [])
