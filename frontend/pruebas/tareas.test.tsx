@@ -128,7 +128,7 @@ describe("el menú de la obra (SPEC2 RF-30)", () => {
   it("desde cualquier pantalla se llega a las demás con un clic, y marca dónde se está", async () => {
     const usuario = userEvent.setup();
     montar(`/obras/${ID_OBRA}`);
-    await screen.findByText("La luz de Triana");
+    await screen.findByRole("heading", { name: "La luz de Triana" });
     const menu = () => screen.getByRole("navigation", { name: "Pantallas de la obra" });
     expect(within(menu()).getByRole("link", { name: "Avance" })).toHaveClass("activa");
 

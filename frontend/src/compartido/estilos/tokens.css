@@ -16,6 +16,8 @@
   --error-suave: #fdecea;
   --aviso-suave: #fff6dc;
   --aviso-tinta: #7a5500;
+  --exito: #1a7a57;
+  --exito-suave: #e2f3eb;
 
   --letra-interfaz: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --letra-lectura: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
@@ -29,6 +31,8 @@
   --espacio-5: 1.5rem;
   --espacio-6: 2rem;
   --ancho-lectura: 38rem;
+  --alto-cabecera: 3.5rem;
+  --ancho-lateral: 15rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -48,5 +52,7 @@
     --error-suave: #3b1f1d;
     --aviso-suave: #3a3120;
     --aviso-tinta: #f2d18b;
+    --exito: #7ed6ae;
+    --exito-suave: #1c3a2e;
   }
 }

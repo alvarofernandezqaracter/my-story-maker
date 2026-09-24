@@ -25,7 +25,7 @@ export function PantallaDeVersiones() {
         <h1>Versiones</h1>
         {consulta.estado === "fallo" && (
           <AvisoDeFallo fallo={consulta.fallo} reintentar={consulta.reintentar}>
-            {consulta.fallo.tipo === "rechazo" && <Link to="/">Ir al encargo</Link>}
+            {consulta.fallo.tipo === "rechazo" && <Link to="/">Ir al taller</Link>}
           </AvisoDeFallo>
         )}
         {consulta.datos === null ? (

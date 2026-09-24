@@ -9,6 +9,7 @@ import type {
   FichaDeObra,
   HechoDeLaBiblia,
   Manuscrito,
+  ObraDelTaller,
   PasadaDeEntrevista,
   Progreso,
   PuertaDePublicacion,
@@ -23,6 +24,7 @@ export function ficha(cambios: Partial<FichaDeObra> = {}): FichaDeObra {
   return {
     id_obra: ID_OBRA,
     titulo: "La luz de Triana",
+    situacion: "en_produccion",
     detenida: false,
     capitulo_en_curso: 2,
     capitulos_cerrados: 1,
@@ -32,6 +34,16 @@ export function ficha(cambios: Partial<FichaDeObra> = {}): FichaDeObra {
     version_publicada: null,
     destinatario: "Lucía",
     dedicatoria: "Para Lucía, que me enseñó a leer",
+    ...cambios,
+  };
+}
+
+export function obraDelTaller(cambios: Partial<ObraDelTaller> = {}): ObraDelTaller {
+  return {
+    ...ficha(),
+    epoca: "Sevilla, 1587",
+    capitulos_objetivo: 6,
+    creada_en: "2026-09-24T10:00:00+00:00",
     ...cambios,
   };
 }
@@ -159,6 +171,7 @@ export const confirmacion = (detenida: boolean, motivo: string | null = null): C
 });
 
 export const servidor = setupServer(
+  http.get(`${API}/obras`, () => HttpResponse.json([obraDelTaller()])),
   http.get(`${API}/obras/:id`, () => HttpResponse.json(ficha())),
   http.get(`${API}/obras/:id/progreso/ahora`, () => HttpResponse.json(progreso())),
   http.get(`${API}/obras/:id/manuscrito`, () => HttpResponse.json(manuscrito())),

@@ -8,7 +8,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Listar Obras
+         * @description Todas las obras, de la mas reciente a la mas antigua (RF-204).
+         */
+        get: operations["listar_obras_obras_get"];
         put?: never;
         /** Lanzar Obra */
         post: operations["lanzar_obra_obras_post"];
@@ -766,6 +770,12 @@ export interface components {
             id_obra: string;
             /** Titulo */
             titulo: string;
+            /**
+             * Situacion
+             * @description Donde esta la obra: detenida, en produccion, publicada o terminada, decidido en ese orden (RF-205)
+             * @enum {string}
+             */
+            situacion: "en_produccion" | "detenida" | "terminada" | "publicada";
             /** Detenida */
             detenida: boolean;
             /** Capitulo En Curso */
@@ -870,6 +880,72 @@ export interface components {
             id_obra: string;
             /** Estado */
             estado: string;
+        };
+        /**
+         * ObraDelTaller
+         * @description Una obra en el listado del taller: su ficha y lo que pide su brief (RF-204).
+         */
+        ObraDelTaller: {
+            /** Id Obra */
+            id_obra: string;
+            /** Titulo */
+            titulo: string;
+            /**
+             * Situacion
+             * @description Donde esta la obra: detenida, en produccion, publicada o terminada, decidido en ese orden (RF-205)
+             * @enum {string}
+             */
+            situacion: "en_produccion" | "detenida" | "terminada" | "publicada";
+            /** Detenida */
+            detenida: boolean;
+            /** Capitulo En Curso */
+            capitulo_en_curso: number | null;
+            /** Capitulos Cerrados */
+            capitulos_cerrados: number;
+            /** Capitulos Marcados */
+            capitulos_marcados: number;
+            /** Criticas Abiertas */
+            criticas_abiertas: number;
+            /**
+             * Version En Curso
+             * @description La ultima version, la unica que se produce
+             */
+            version_en_curso: number;
+            /**
+             * Version Publicada
+             * @description La de la ultima publicacion, si la hay
+             */
+            version_publicada: number | null;
+            /**
+             * Motivo De La Detencion
+             * @description Por que esta detenida: la tarea, lo que fallo y su traza. Vacio si no (RI-17)
+             */
+            motivo_de_la_detencion?: string | null;
+            /**
+             * Destinatario
+             * @description Nombre del destinatario, para la portada (RF-177)
+             */
+            destinatario?: string | null;
+            /**
+             * Dedicatoria
+             * @description La dedicatoria tal como viene en el brief (RF-177)
+             */
+            dedicatoria?: string | null;
+            /**
+             * Epoca
+             * @description Epoca y ambito geografico, tal como vienen en el brief
+             */
+            epoca: string;
+            /**
+             * Capitulos Objetivo
+             * @description Cuantos capitulos pide el brief
+             */
+            capitulos_objetivo: number;
+            /**
+             * Creada En
+             * @description Cuando se dio de alta la obra
+             */
+            creada_en: string;
         };
         /**
          * Orden
@@ -1202,6 +1278,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listar_obras_obras_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObraDelTaller"][];
+                };
+            };
+        };
+    };
     lanzar_obra_obras_post: {
         parameters: {
             query?: never;

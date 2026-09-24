@@ -82,7 +82,7 @@ export function PantallaDelManuscrito() {
               </AvisoDeFallo>
             ) : (
               <AvisoDeFallo fallo={consulta.fallo}>
-                <Link to="/">Ir al encargo</Link>
+                <Link to="/">Ir al taller</Link>
               </AvisoDeFallo>
             )
           ) : (

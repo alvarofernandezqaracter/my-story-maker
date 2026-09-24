@@ -32,7 +32,7 @@ afterEach(() => {
 describe("el avance (SPEC2 §4.2)", () => {
   it("RF-21: se pinta con la foto antes de que el flujo mande nada, y solo después se engancha", async () => {
     montar();
-    expect(await screen.findByText("La luz de Triana")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "La luz de Triana" })).toBeInTheDocument();
     expect(screen.getByTestId("tokens")).toHaveTextContent("12.340 de 100.000");
     expect(screen.getByText("redactar_escena")).toBeInTheDocument();
     await waitFor(() => expect(EventSourceFalso.creadas).toHaveLength(1));
@@ -41,7 +41,7 @@ describe("el avance (SPEC2 §4.2)", () => {
 
   it("RF-20: cada `progreso` repinta capítulo, tareas y tokens", async () => {
     montar();
-    await screen.findByText("La luz de Triana");
+    await screen.findByRole("heading", { name: "La luz de Triana" });
     await waitFor(() => expect(EventSourceFalso.creadas).toHaveLength(1));
     const flujo = EventSourceFalso.ultima();
     act(() => {
@@ -65,7 +65,7 @@ describe("el avance (SPEC2 §4.2)", () => {
 
   it("RF-22: si el flujo se corta lo dice, se reabre solo y el último progreso sigue en pantalla", async () => {
     montar();
-    await screen.findByText("La luz de Triana");
+    await screen.findByRole("heading", { name: "La luz de Triana" });
     await waitFor(() => expect(EventSourceFalso.creadas).toHaveLength(1));
     const primera = EventSourceFalso.ultima();
     act(() => {
@@ -101,7 +101,7 @@ describe("el avance (SPEC2 §4.2)", () => {
       }),
     );
     montar();
-    await screen.findByText("La luz de Triana");
+    await screen.findByRole("heading", { name: "La luz de Triana" });
     await waitFor(() => expect(EventSourceFalso.creadas).toHaveLength(1));
 
     await usuario.click(screen.getByRole("button", { name: "Detener" }));
@@ -123,7 +123,7 @@ describe("el avance (SPEC2 §4.2)", () => {
 
   it("RF-24: tras `terminada` con `detenida = false` dice «Terminada» y ofrece «Leer la novela»", async () => {
     montar();
-    await screen.findByText("La luz de Triana");
+    await screen.findByRole("heading", { name: "La luz de Triana" });
     await waitFor(() => expect(EventSourceFalso.creadas).toHaveLength(1));
     servidor.use(
       http.get(`${API}/obras/:id/progreso/ahora`, () =>
@@ -138,7 +138,7 @@ describe("el avance (SPEC2 §4.2)", () => {
     expect(screen.getByText("Sin tareas abiertas ahora mismo.")).toBeInTheDocument();
   });
 
-  it("404: el mensaje del servidor con enlace al encargo", async () => {
+  it("404: el mensaje del servidor con enlace al taller", async () => {
     servidor.use(
       http.get(`${API}/obras/:id`, () => HttpResponse.json({ detail: "No hay ninguna obra no-existe" }, { status: 404 })),
       http.get(`${API}/obras/:id/progreso/ahora`, () =>
@@ -148,7 +148,7 @@ describe("el avance (SPEC2 §4.2)", () => {
     montar("no-existe");
     const aviso = await screen.findByRole("alert");
     expect(aviso).toHaveTextContent("No hay ninguna obra no-existe");
-    expect(within(aviso).getByRole("link", { name: "Ir al encargo" })).toBeInTheDocument();
+    expect(within(aviso).getByRole("link", { name: "Ir al taller" })).toBeInTheDocument();
     expect(EventSourceFalso.creadas).toHaveLength(0);
   });
 });

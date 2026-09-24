@@ -65,7 +65,7 @@ export function PantallaDelAvance() {
             </AvisoDeFallo>
           ) : (
             <AvisoDeFallo fallo={falloDeCarga}>
-              <Link to="/">Ir al encargo</Link>
+              <Link to="/">Ir al taller</Link>
             </AvisoDeFallo>
           )}
         </main>
