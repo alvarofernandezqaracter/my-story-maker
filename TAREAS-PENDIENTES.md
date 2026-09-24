@@ -59,7 +59,7 @@ de Claude Code, la API de diez rutas y la batería de 274 pruebas.
 | T11 | Validador formal del sistema en TLA+ | 5d |
 | T12 | Langfuse | 6 |
 | T13 | Juicio semántico, cinco briefs y tuning | 5b y evaluación |
-| T14 | Lectura interactiva y cambio del lector | 2 · después del backend |
+| T14 | Lo que le falta al frontend, y el cambio del lector | 2 · después del backend |
 | T15 | Entregables del repositorio | — · al final |
 
 ---
@@ -156,7 +156,8 @@ explícito, no el efecto lateral de terminar de escribir.
 
 **Por qué en el backend y no con la web.** La rúbrica lo pide como invariante
 —la versión anterior se conserva siempre— y T11 tiene que demostrarlo con el
-model checker. La web de T14 solo lo enseña.
+model checker. **Enseñarlo es trabajo de T14**, no de aquí: publicar una versión
+desde la interfaz y marcar qué capítulos cambiaron están anotados allí.
 
 ### T6 · `CLAUDE.md`, skill, comandos y MCP de navegador
 
@@ -213,7 +214,8 @@ publicar una versión: si algo falla, no se publica.
 **Depende de** T3, T5 y T7.
 
 **Ojo.** El validador visual con navegador MCP que la rúbrica mete en esta misma
-lista **no cabe aquí**: necesita que exista la lectura web. Va en T14.
+lista **no cabe aquí**: necesita que exista la lectura web. Va en T14. Enseñar
+por qué una versión no pasó la puerta también es de T14, y allí está anotado.
 
 ### T10 · Validador formal de la historia en Lean 4
 
@@ -304,6 +306,40 @@ no, lo registra como fallo y lo devuelve a quien corresponda.
 
 **Depende de** T3 —los hechos saben en qué capítulos viven—, T5 —las versiones—
 y T6 —el MCP de navegador configurado—.
+
+#### Lo que ya está hecho, y lo que por tanto queda
+
+El frontend se construyó antes, en una pasada aparte, con `specs/SPEC2.md` y
+`specs/PLAN-FRONTEND.md`: tres pantallas —encargar una obra conversando con el
+Entrevistador, ver la producción en vivo y leer el manuscrito con su índice de
+capítulos—. **Esa base no se rehace.** T14 se monta encima.
+
+Lo que aquella pasada dejó fuera a propósito, y que T14 tiene que traer. Cada
+línea sale de comparar la rúbrica con lo que SPEC2 §11 y §12 declaran fuera de
+su v1, así que **la lista se vuelve a contrastar al abrir T14**: para entonces
+puede haber cambiado lo que el backend sirve.
+
+| Falta | Qué lo bloqueaba |
+| --- | --- |
+| Ficha de personajes y lugares con enlace a su capítulo | Nada: el backend ya lo sirve desde T3. SPEC2 dejó fuera esa pantalla, no el dato |
+| Portada con la dedicatoria | Nada |
+| Que el lector marque un trozo o un hecho y pida un cambio | SPEC2 v1 no modifica ningún artefacto |
+| Marcar qué capítulos cambiaron respecto de la versión anterior | T5 |
+| Publicar una versión como acto explícito | T5 |
+| Decir por qué una versión no pasó la puerta de publicación | T9 |
+| Ver las críticas de un capítulo, que es por donde vuelve el fallo del demostrador formal | T10, y SPEC2 dejó la pantalla fuera |
+| PDF descargable | Decisión abierta de SPEC2 §12, sin resolver |
+| Validador visual con el navegador | El plan del frontend paseó por el navegador a mano; aquí tiene que emitir un fallo |
+
+#### T14 no es solo frontend
+
+«El sistema localiza los capítulos que usan ese hecho y **regenera solo esos**»
+es trabajo del servidor, y **ninguna tarea de esta lista lo especifica**: T11
+solo promete describirlo en el verificador formal y dar por hecho que T14 lo
+implementa. Al abrir T14 hay que decidir antes si esa regeneración se
+especifica como una enmienda a `SPEC1` —que es lo que parece— o dentro de la
+spec del frontend. Tratarla como un detalle de pantalla es el error que va a
+doler.
 
 ### T15 · Entregables del repositorio
 
