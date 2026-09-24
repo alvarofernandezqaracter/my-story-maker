@@ -207,7 +207,11 @@ Valores cerrados de la capa de producción. Los vocabularios de forma textual y 
 
 **Al agotarse:** `detener_obra`, `critica_abierta`, `seguir`. Es lo que declara cada paso del guion para cuando su tarea agota los intentos (§4): detener la obra, dejar una `Crítica` «no comprobado» y seguir, o seguir sin más.
 
-**Gancho:** `validar_capitulo`, `policy`. Los hooks que lleva el subagente de un paso del guion (§4): el primero mira la forma de lo que entrega y el segundo, que no traiga nada de lo que el comprador vetó.
+**Gancho:** `validar_capitulo`, `policy`. Los hooks que lleva el subagente de un paso del guion (§4): el primero mira la forma de lo que entrega y el segundo, que no traiga nada vetado.
+
+**Nivel de veto:** `global`, `palabra_del_comprador`, `tema_del_comprador`. De qué lista sale cada cosa que busca `policy` (§4): la global de la instalación, o los vetos del brief, que son palabra o tema según tengan una palabra o varias.
+
+**Decisión de policy:** `devuelto_al_agente`, `intento_fallido`. Lo que hizo `policy` con una coincidencia: devolverla al agente durante la sesión para que corrija, o dar el intento por fallido en el veredicto final.
 **Tipo de contradicción:** `edad_contra_tono`, cuando el tono pedido no corresponde a la edad del destinatario, y `texto_contra_campo`, cuando un texto pegado en la entrevista dice otra cosa que un campo que la persona escribió. Lo detecta el Entrevistador y no lo resuelve: lo devuelve como pregunta, y la persona puede darlo por asumido.
 
 **Tipo de EventoEstado:** `aparece`, `muere`, `viaja_a`, `adquiere`, `pierde`, `aprende` (cambio epistémico), `revela_a`, `cambia_relacion`, `cambia_estado_civil_o_rango`, `transcurre_tiempo`.
@@ -220,6 +224,8 @@ flowchart TD
   PROC --> AGO[al agotarse: detener obra /<br/>critica abierta / seguir]
   PROC --> CON[tipo de contradiccion: edad contra tono /<br/>texto contra campo]
   PROC --> GAN[gancho: validar capitulo /<br/>policy]
+  PROC --> NIV[nivel de veto: global /<br/>palabra del comprador / tema del comprador]
+  PROC --> DPO[decision de policy: devuelto al agente /<br/>intento fallido]
 ```
 
 ```mermaid
@@ -566,9 +572,13 @@ Los tres pasos que escriben prosa —3 `redactar`, 5 `revisar` y 7, la costura�
 | Hook | Qué mira | Qué no mira |
 | --- | --- | --- |
 | `validar_capitulo` | Que la salida sea el objeto JSON con su lista de artefactos, que cada uno traiga tipo y cuerpo, que el rol solo escriba los tipos que su contrato le deja, que venga el artefacto principal del esquema de la tarea con todos sus campos, y que ningún `Borrador` venga sin texto | Nada del contenido: ni nombres, ni longitud, ni calidad. Es una lista de comprobaciones a la que se suman otras sin tocar el enganche |
-| `policy` | Que el texto de cada `Borrador` y cada `Párrafo` no contenga ninguna de las palabras o temas que el comprador vetó en el brief, comparados tal cual | Variantes: otra mayúscula, un acento o un plural no casan, y un tema vetado solo casa si aparece escrito igual |
+| `policy` | Que el texto de cada `Borrador` y cada `Párrafo` no contenga nada de tres listas: la global de insultos y términos ofensivos, que el sistema trae de serie, y las palabras y los temas que el comprador vetó en el brief. Compara palabra a palabra después de normalizar las dos partes: da igual la mayúscula, el acento o la diéresis, el plural, la vocal de género o una letra alargada, y una palabra no casa dentro de otra | El sentido: un tema dicho con otras palabras no casa, porque se busca como frase. Tampoco lo escrito con separadores, cifras o símbolos por medio. Y dos palabras que solo difieren en género o número se confunden |
 
-Los hooks viajan en la orden del ejecutor, con `--settings`, y no rompen el aislamiento: el subagente sigue arrancando en su directorio vacío y sin nada del repositorio. Lo que el hook necesita saber —la lista de vetos y la reserva de la vuelta— va en el entorno del proceso, no en disco, y la lista de vetos no entra en ninguna ventana: al agente solo le llega lo que encontró en su propio texto. El hook no escribe en el almacén; dice su veredicto por su salida.
+Los hooks viajan en la orden del ejecutor, con `--settings`, y no rompen el aislamiento: el subagente sigue arrancando en su directorio vacío y sin nada del repositorio. Lo que el hook necesita saber —las listas de lo vetado, cada término con su nivel, y la reserva de la vuelta— va en el entorno del proceso, no en disco, y las listas no entran en ninguna ventana: al agente solo le llega lo que encontró en su propio texto, tal como lo escribió. El hook no escribe en el almacén; dice su veredicto por su salida.
+
+**De dónde salen las listas.** La global vive en su propia tabla y la siembra una migración: funciona sin que nadie haga nada y es corta a propósito, porque en una novela de época una palabra con sentido histórico o inocente bloquearía prosa legítima. Ampliarla es añadir otra migración; ninguna ruta de la API la edita. Las del comprador no se copian: se leen de los vetos del brief, guardados en la `Obra`.
+
+**El registro de `policy`.** Cada coincidencia queda escrita en un registro de solo añadir: la obra, la `Traza` del intento, qué se hizo con ella —devolverla al agente en la sesión o dar el intento por fallido—, de qué lista sale, el término de la lista y lo que casó tal como estaba escrito. Lo escribe el almacén al cerrar la `Traza`, en la misma transacción, con lo que el ejecutor dejó en su veredicto; la coincidencia de la sesión la reconstruye el ejecutor aplicando la misma comprobación al mensaje del agente que el hook bloqueó. No se caduca ni se releva, como la `Traza`, y se sirve por la API. Cuando los intentos se agotan y la obra se detiene, su ficha dice por qué.
 
 **Una vuelta por intento.** Un hook bloquea solo la primera vez: si ya bloqueó uno en ese turno, el siguiente deja terminar. Tampoco bloquea si la vuelta no cabe en la reserva del paso (§3). Al terminar, el ejecutor aplica las mismas comprobaciones a lo que el agente entregó al final, y ese es el veredicto que cuenta: si no pasa, el intento ha fallado y se aplican los reintentos del paso y su `al_agotarse`, que en los tres es `detener_obra`. Lo que cada hook dijo durante la sesión y el veredicto final quedan en la `Traza` del intento, también cuando falla, y se sirven con ella.
 
@@ -623,6 +633,7 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `Compromiso` | Planificador y redactor | Se cierra al pagarse | Siempre, cola abierta | Economía narrativa |
 | `Crítica` | Verificador, Editor de estilo, Arquitecto de arcos, Juez; y el backend, cuando rechaza un artefacto malformado o cuando una comprobación agota sus intentos | Se resuelve en revisión | Solo al agente que revisa | Convergencia del bucle |
 | `Decisión` | Cualquier agente de la obra; el Entrevistador no escribe nada | Inmutable | Canon comprimido | Coherencia de diseño |
+| Registro de `policy` | El almacén, al cerrar la `Traza` de un intento con hooks | Nadie: solo se añade | Nunca: se sirve al editor por la API | Es él mismo la constancia de lo que la política encontró (`validators.md` §7) |
 | `Versión` | El backend, con el alta y con cada orden de rehacer del editor | Solo la marca de terminada, una vez; publicarla es añadir al registro de publicaciones | Nunca: decide qué filas ve cada lectura | Conservación de la versión anterior (`validators.md` §8) |
 
 Dos reglas que la tabla implica y conviene explicitar: ninguna entidad del mundo se modifica por escritura directa del redactor, solo mediante eventos emitidos al cerrar un capítulo; y ningún agente valida su propia salida.
@@ -663,7 +674,8 @@ backend/
                        directorio vacio fuera del repositorio y sin MCP, con
                        los hooks de su paso en la orden
     ganchos.py         los dos hooks Stop de los subagentes de prosa: el
-                       programa que revisa lo entregado, sin tocar el almacen
+                       programa que revisa lo entregado, sin tocar el almacen,
+                       con la comparacion normalizada de lo vetado
     tareas/            una carpeta por tipo de tarea del censo (§2), con su
                        contrato, su prompt, su esquema y, si le toca criba, sus
                        contratos de verificacion por dimension
