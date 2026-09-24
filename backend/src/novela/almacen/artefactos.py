@@ -286,6 +286,20 @@ class Almacen:
                 self._lectores.append(conexion)
         return conexion
 
+    def soltar_lector(self) -> None:
+        """Cierra el lector del hilo que llama, si lo abrio.
+
+        Lo llama quien abre hilos de vida corta, como los de una tanda: sin
+        soltarlo, cada hilo dejaria su conexion abierta hasta cerrar el almacen.
+        """
+        conexion: sqlite3.Connection | None = getattr(self._locales, "conexion", None)
+        if conexion is None:
+            return
+        self._locales.conexion = None
+        with self._turno_de_escritura:
+            self._lectores.remove(conexion)
+        conexion.close()
+
     def cerrar(self) -> None:
         self._escritor.close()
         for lector in self._lectores:

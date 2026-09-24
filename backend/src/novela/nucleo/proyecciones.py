@@ -202,13 +202,28 @@ def _texto_producido(p: Peticion) -> Filas:
     if p.escena:
         vigente = p.almacen.borrador_vigente(p.id_obra, p.escena)
         return _cuerpos([vigente]) if vigente else []
-    borradores = p.almacen.listar("Borrador", p.id_obra, capitulo=p.capitulo)
+    borradores = _borradores_en_orden_de_escena(p)
     return _cuerpos([b for b in borradores if b.estado != "descartado"])
 
 
 def _texto_aceptado_del_capitulo(p: Peticion) -> Filas:
-    borradores = p.almacen.listar("Borrador", p.id_obra, capitulo=p.capitulo)
+    borradores = _borradores_en_orden_de_escena(p)
     return _cuerpos([b for b in borradores if b.estado == "aceptado"])
+
+
+def _borradores_en_orden_de_escena(p: Peticion) -> list[Artefacto]:
+    """Los borradores del capitulo en el orden de sus escenas, no en el de
+    creacion: las escenas de una tanda se redactan a la vez y dos pueden nacer
+    en el mismo segundo (D-51). Entre versiones de una misma escena manda la
+    de creacion, que es la que ya traian."""
+    orden = {
+        escena.id: posicion
+        for posicion, escena in enumerate(
+            p.almacen.listar("Escena", p.id_obra, capitulo=p.capitulo, orden="orden")
+        )
+    }
+    borradores = p.almacen.listar("Borrador", p.id_obra, capitulo=p.capitulo)
+    return sorted(borradores, key=lambda b: orden.get(b.escena or "", len(orden)))
 
 
 def _criticas_a_atender(p: Peticion) -> Filas:

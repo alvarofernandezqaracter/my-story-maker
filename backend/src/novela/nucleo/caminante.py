@@ -16,8 +16,8 @@ siguiente empieza en el paso 1. Cuantas veces se intenta cada tarea y que pasa
 al agotarse lo declara su paso en el guion; aqui solo se lee.
 """
 
+import threading
 from collections.abc import Sequence
-from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -36,6 +36,12 @@ from novela.nucleo.proyecciones import Ventana, ensamblar
 class ProduccionDetenida(Exception):
     """El editor ha dado la orden de detener, o una tarea cuyo paso declara
     `detener_obra` agoto sus intentos."""
+
+
+# Una tanda a la vez en toda la instalacion. El techo es de la instalacion y no
+# de la obra (SPEC1 §11): si hay dos obras caminando —relanzar las caidas al
+# arrancar lo hace—, sus tandas se turnan en vez de sumarse (D-51).
+_UNA_TANDA_A_LA_VEZ = threading.Lock()
 
 
 # Lo que una tarea devolvio y todavia no se ha escrito: el encargo y sus
@@ -141,10 +147,11 @@ class Caminante:
         self.catalogo = catalogo
         self.indice = indice
         self._tanda = 0
-        # Los hilos duran lo que el caminante y se reutilizan de tanda en tanda:
-        # cada hilo abre su propio lector del almacen, y un hilo nuevo por
-        # tanda seria una conexion nueva por tanda.
-        self._hilos: ThreadPoolExecutor | None = None
+        # Lo pone la primera tarea de una tanda que detiene la obra. Las demas
+        # de su tanda ya no intentan otra vez ni vuelven a detenerla: si el
+        # editor reanuda mientras terminan, su orden no se deshace (D-51).
+        self._detenida = threading.Event()
+        self._turno_de_detener = threading.Lock()
 
     # --- La obra entera ----------------------------------------------------
 
@@ -474,22 +481,26 @@ class Caminante:
     ) -> list[Resultado]:
         """Manda los encargos en tandas. Con `aplazados`, lo que devuelvan no se
         escribe: se deja ahi para que su punto de guardado lo escriba de una vez."""
+        # Cuando se abre una tanda no queda ninguna de antes corriendo: la que
+        # detuvo la obra cerro entera antes de subir la excepcion.
+        self._detenida.clear()
         resultados: list[Resultado] = []
         for tanda in presupuesto.repartir_en_tandas(encargos):
-            self._tanda += 1
-            if informe is not None:
-                informe.recorrido.extend(
-                    Apunte(
-                        paso=encargo.paso,
-                        tarea=encargo.tarea,
-                        rol=encargo.rol,
-                        tanda=self._tanda,
-                        escena=encargo.escena,
-                        dimension=encargo.dimension,
+            with _UNA_TANDA_A_LA_VEZ:
+                self._tanda += 1
+                if informe is not None:
+                    informe.recorrido.extend(
+                        Apunte(
+                            paso=encargo.paso,
+                            tarea=encargo.tarea,
+                            rol=encargo.rol,
+                            tanda=self._tanda,
+                            escena=encargo.escena,
+                            dimension=encargo.dimension,
+                        )
+                        for encargo in tanda
                     )
-                    for encargo in tanda
-                )
-            resultados.extend(self._mandar_tanda(tanda, aplazados))
+                resultados.extend(self._mandar_tanda(tanda, aplazados))
         return resultados
 
     def _mandar_tanda(
@@ -505,20 +516,42 @@ class Caminante:
         """
         if len(tanda) == 1 or not getattr(self.ejecutor, "simultaneo", False):
             return [self._mandar(encargo, aplazados) for encargo in tanda]
-        if self._hilos is None:
-            self._hilos = ThreadPoolExecutor(
-                max_workers=presupuesto.anchura_maxima(), thread_name_prefix="tanda"
-            )
         propios: list[Aplazados] = [[] for _ in tanda]
-        futuros = [
-            self._hilos.submit(self._mandar, encargo, None if aplazados is None else propio)
-            for encargo, propio in zip(tanda, propios, strict=True)
+        resultados: list[Resultado | None] = [None] * len(tanda)
+        errores: list[BaseException | None] = [None] * len(tanda)
+
+        def correr(posicion: int) -> None:
+            try:
+                resultados[posicion] = self._mandar(
+                    tanda[posicion], None if aplazados is None else propios[posicion]
+                )
+            except BaseException as error:  # noqa: BLE001
+                errores[posicion] = error
+            finally:
+                # El hilo muere al cerrar la tanda y su lector con el.
+                self.almacen.soltar_lector()
+
+        # Hilos de la tanda y no un reparto que dure mas que ella: si el proceso
+        # se apaga a mitad, no se queda esperando a subagentes cuyo resultado ya
+        # no tiene donde guardarse, igual que el hilo de produccion.
+        hilos = [
+            threading.Thread(
+                target=correr, args=(posicion,), name=f"tanda-{self._tanda}-{posicion}",
+                daemon=True,
+            )
+            for posicion in range(len(tanda))
         ]
-        wait(futuros)
+        for hilo in hilos:
+            hilo.start()
+        for hilo in hilos:
+            hilo.join()
         if aplazados is not None:
             for propio in propios:
                 aplazados.extend(propio)
-        return [futuro.result() for futuro in futuros]
+        for error in errores:
+            if error is not None:
+                raise error
+        return [resultado for resultado in resultados if resultado is not None]
 
     def _mandar(self, encargo: Encargo, aplazados: Aplazados | None = None) -> Resultado:
         """Ensambla, coteja, manda y guarda lo que vuelva.
@@ -549,6 +582,8 @@ class Caminante:
         ultimo_error: Exception | None = None
         id_traza = ""
         for intento in range(1, encargo.reintentos + 1):
+            if self._detenida.is_set():
+                raise ProduccionDetenida("otra tarea de la tanda detuvo la obra")
             id_traza = self.almacen.abrir_traza(
                 encargo.id_obra,
                 rol=encargo.rol,
@@ -618,9 +653,13 @@ class Caminante:
             else:
                 aplazados.append((encargo, [critica]))
             return Resultado(salida=f"no comprobado: {motivo}")
-        self.almacen.detener(
-            encargo.id_obra, f"{motivo} (intento {encargo.reintentos}, traza {id_traza})"
-        )
+        with self._turno_de_detener:
+            primera = not self._detenida.is_set()
+            self._detenida.set()
+        if primera:
+            self.almacen.detener(
+                encargo.id_obra, f"{motivo} (intento {encargo.reintentos}, traza {id_traza})"
+            )
         raise ProduccionDetenida(f"la tarea {encargo.tarea!r} agoto sus intentos: {error}")
 
     def _partir_y_mandar(
