@@ -1,0 +1,21 @@
+# Contrato de verificacion de `coherencia_de_voz`.
+#
+# Tres partes y ninguna mas: el predicado en una frase, la proyeccion minima
+# sobre la que se evalua y la forma exacta de la `Critica` si falla. Lo que
+# sobra en la proyeccion es lo que produce falsos positivos.
+
+dimension = "coherencia_de_voz"
+rol = "juez_de_rubrica"
+metodo_de_verificacion = "inverificable"
+alcance = "local"
+criba = "pulido"
+
+predicado = "Las replicas del personaje suenan a la misma persona que en capitulos anteriores."
+proyeccion_minima = ["texto_producido", "voces_del_elenco"]
+
+[critica]
+severidad = "menor"
+evidencia_aceptada = "Las dos replicas comparadas, la de antes y la de ahora."
+ruidosa = true
+rubrica = "1 no se reconoce al personaje; 3 se reconoce con esfuerzo; 5 se reconoce sin dudar."
+nota = "No admite predicado: se puntua con rubrica y se marca como ruido. Por si sola no dispara regeneracion."

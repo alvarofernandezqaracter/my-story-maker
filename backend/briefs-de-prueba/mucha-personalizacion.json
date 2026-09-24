@@ -1,0 +1,47 @@
+{
+  "proposito": "mucha_personalizacion",
+  "para_que": "El caso difícil de la personalización: seis recuerdos, muchos rasgos y vetos que chocan de frente con la época —un asedio con bombas en el que no se puede escribir «bomba»—. Sirve para ver si lo personal cabe en la historia sin pegotes, si algún hecho personal se queda sin aparecer y si la política de lo vetado aguanta la presión sin detener la obra.",
+  "se_espera": [
+    {"comprobacion": "puerta.esquema", "resultado": "pasa", "por_que": "Más material de entrada no cambia la forma de lo que devuelve cada rol"},
+    {"comprobacion": "puerta.nombres", "resultado": "pasa", "por_que": "Carmen, Paco y Nala son nombres cortos y estables"},
+    {"comprobacion": "puerta.longitud", "resultado": "puede_fallar", "por_que": "Meter seis recuerdos en tres capítulos empuja a capítulos largos"},
+    {"comprobacion": "puerta.elementos_personalizados", "resultado": "puede_fallar", "por_que": "Con seis recuerdos, algún hecho personal puede quedar sin mención en tres capítulos; es lo que este brief quiere medir"},
+    {"comprobacion": "puerta.cronologia", "resultado": "pasa", "por_que": "La premisa no fuerza fechas imposibles"},
+    {"comprobacion": "gancho.validar_capitulo", "resultado": "pasa", "por_que": "Veredicto final correcto aunque bloquee en la sesión"},
+    {"comprobacion": "gancho.policy", "resultado": "puede_fallar", "por_que": "Un asedio de 1810 invita a escribir «bomba» y «cañonazo»: se espera que el hook devuelva la escena al agente al menos una vez y que el veredicto final pase; si insiste, la obra se detiene y la ficha dice por qué"},
+    {"comprobacion": "juez.personalizacion_integrada", "resultado": "se_puntua", "por_que": "Es el criterio que este brief pone a prueba: la nota dirá si seis recuerdos caben con naturalidad"},
+    {"comprobacion": "juez.funciona_como_novela", "resultado": "se_puntua", "por_que": "Riesgo de que la trama se convierta en una lista de recuerdos; se espera nota más baja que en el normal"},
+    {"comprobacion": "juez.fidelidad_a_la_epoca", "resultado": "se_puntua", "por_que": "Los recuerdos traen cosas de hoy —una Vespa, una radio—, exentas por ser personales; el juez tiene que ver la época a pesar de ellas"}
+  ],
+  "brief": {
+    "titulo": "Lo que se oye desde la Caleta",
+    "epoca": "Cádiz, durante el sitio francés, 1810-1812",
+    "premisa": "Una vendedora de pescado del barrio de la Viña esconde a un impresor de las Cortes mientras la ciudad resiste el asedio",
+    "capitulos_objetivo": 3,
+    "politicas_globales": {"pov": "tercera_limitada", "nivel_de_arcaismo": "bajo"},
+    "arcos": ["Carmen pasa de desconfiar de los políticos a arriesgarse por uno"],
+    "elenco_declarado": [],
+    "destinatario": {
+      "nombre": "Carmen",
+      "edad": 67,
+      "tono": "nostálgico y con humor",
+      "dedicatoria": "Para mi madre, Carmen, que convierte cualquier cola en una tertulia",
+      "rasgos": [
+        "habla con todo el mundo",
+        "canta coplas cuando está nerviosa",
+        "no soporta que se desperdicie comida",
+        "cuenta las historias empezando por el final",
+        "tiene miedo al mar aunque vive junto a él"
+      ],
+      "recuerdos": [
+        "su perra Nala le robaba los calcetines y los enterraba en la maceta del geranio",
+        "se casó con Paco en la iglesia de la Palma un día de levante que les voló el velo",
+        "de joven iba a trabajar en una Vespa azul que siempre se calaba en la cuesta",
+        "escuchaba la radio de transistores en la cocina mientras hacía el puchero de los domingos",
+        "le daba miedo el mar desde que un temporal se llevó la barca de su abuelo",
+        "hacía tortillitas de camarones para todo el vecindario en Carnaval"
+      ],
+      "vetos": ["bomba", "cañonazo", "muerte de un hijo"]
+    }
+  }
+}

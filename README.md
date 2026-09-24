@@ -1,179 +1,202 @@
 # my-story-maker
 
-Sistema de agentes creador de novelas históricas.
+Un generador de novelas históricas escrito por agentes de inteligencia
+artificial. Tú escribes un encargo corto —la época, de qué va la historia y, si
+quieres, a quién se la regalas— y el sistema escribe la novela entera, capítulo a
+capítulo, revisándose a sí mismo por el camino. Al final la lees en el navegador
+o la descargas en PDF.
 
-El diseño completo está en [`docs/spec/SPEC.md`](docs/spec/SPEC.md) y es la
-fuente de verdad: si el código y el spec cuentan cosas distintas, manda el spec.
-Este README solo dice cómo se arranca.
+## Qué hace, en pocas palabras
 
-## Cómo se escribe una novela
+- **El encargo se llama *brief*.** Es una ficha con el título, la época, la
+  premisa y cuántos capítulos quieres. Si la novela es un regalo, lleva también
+  al *destinatario*: su nombre, su edad, el tono que le gusta, la dedicatoria,
+  algún recuerdo suyo y las palabras que no quiere leer. La novela sigue siendo
+  histórica; el destinatario aparece dentro de ella.
+- **Lo escriben agentes.** Un *agente* es un programa de IA con un solo trabajo:
+  uno planifica, otro redacta, otro busca documentación de la época, otro
+  critica lo redactado… Ninguno revisa su propio trabajo. Aquí cada agente es
+  una sesión de [Claude Code](https://claude.com/claude-code), la herramienta de
+  Anthropic, lanzada sin nadie delante.
+- **Nadie tiene que intervenir por el camino.** Lanzas el encargo y te olvidas.
+  Si el equipo se apaga a mitad, la novela sigue desde el último capítulo
+  terminado en cuanto vuelves a arrancar.
+- **Todo se guarda en un único fichero de base de datos** (SQLite, una base de
+  datos que es un solo fichero y no necesita servidor). No hay carpetas de
+  trabajo que limpiar.
 
-No con un comando. Se abre **Claude Code** en este repositorio y se lanza:
+El repositorio tiene dos partes: el **backend**, el servidor que guarda la obra
+y dirige a los agentes (en Python), y el **frontend**, la página web desde la
+que se encarga y se lee (en React). La web nunca toca la base de datos: todo se
+lo pide al servidor.
 
+## Qué necesitas instalado
+
+| Programa | Para qué | Cómo comprobar que lo tienes |
+| --- | --- | --- |
+| Python 3.13 | El servidor | `python --version` |
+| Node.js (el proyecto se desarrolla con la 24) | La página web | `node --version` |
+| Claude Code, con tu sesión iniciada | Es quien ejecuta a los agentes. El servidor no usa ninguna clave de API: lanza la orden `claude` de tu equipo | `claude --version` |
+| Lean 4, con su instalador `elan` (opcional) | Comprueba que la cronología de la novela no se contradice antes de publicarla. Sin él la novela se publica igual, marcada como «sin comprobar». Se instala siguiendo <https://lean-lang.org/install/>; la versión la elige solo | `lake --version` |
+
+En Windows, las órdenes de este documento están pensadas para **Git Bash** (la
+consola que viene con Git). En PowerShell algunas cambian.
+
+## Instalación, desde cero
+
+Todas las órdenes se lanzan desde la carpeta raíz del repositorio.
+
+**1. El servidor.** Crea su entorno de Python —una carpeta `.venv` con sus
+propias librerías, para no mezclarlas con las del sistema— e instala el
+backend dentro:
+
+```sh
+cd backend
+python -m venv .venv
+.venv/Scripts/python -m pip install -e ".[dev]"   # en Linux o macOS: .venv/bin/python
+cd ..
 ```
-/orquestar-novela
+
+**2. La página web.** Descarga sus librerías:
+
+```sh
+cd frontend
+npm install
+cd ..
 ```
 
-La sesión te pide los cinco campos del brief —época y lugar, premisa, tono,
-capítulos y palabras por capítulo— y a partir de ahí orquesta: un investigador
-levanta el dossier de época, un arquitecto monta la escaleta y las fichas, y
-luego, capítulo a capítulo, un escritor redacta, tres validadores puntúan a la
-vez, el gate decide y un cronista vuelca lo aprobado en el canon. Al terminar,
-un editor global propone los retoques finales.
+**3. La configuración.** Copia la plantilla de variables de entorno —ajustes
+que el programa lee al arrancar en lugar de llevarlos escritos en el código— y
+rellena lo que vayas a usar:
 
-También entiende «prepara la novela», «sigue escribiendo», «reanuda»,
-«desbloquea el capítulo 4» o «ciérrala».
-
-**Quien orquesta es la sesión, no un programa.** La máquina de estados, el
-cálculo del gate y las once comprobaciones están escritos como instrucciones en
-[`.claude/skills/orquestar-novela/`](.claude/skills/orquestar-novela/), en
-Markdown y sin una línea de código. Los ocho subagentes están en
-[`.claude/agents/`](.claude/agents/) y cada uno arranca leyendo su encargo de
-`agentes/`, que es la única fuente de verdad de los prompts.
-
-El canon queda en la carpeta de la novela, dentro de `biblioteca/`: los JSON del estado, el paquete de contexto con
-el que se escribió cada capítulo, un Markdown por intento y `retoques.md`. Es
-salida y no se versiona.
-
-## Y para mirar lo que ha escrito
-
-Ahí sí hay Python, y no escribe nada: mira.
-
-### Requisitos
-
-Python 3.11 o superior (aquí corre sobre 3.13). Todo sale de la biblioteca
-estándar, así que **un repositorio recién clonado no necesita `pip install`**.
-Las trazas necesitan `langfuse` y son opcionales.
-
-### La interfaz web
-
-```bash
-python -m novela ui           # http://127.0.0.1:8787
+```sh
+cp .env.example .env
 ```
 
-Levanta un servidor local —`http.server`, nada que instalar— y abre el
-navegador. Son tres salas:
+Cada variable de [`.env.example`](.env.example) explica qué es y de dónde se
+saca. El fichero `.env` es tuyo y nunca se sube al repositorio: ahí van tus
+claves. El backend lo lee por su cuenta al arrancar.
 
-- **Brief.** Los cinco campos del canon, en lectura. Una escena en three.js
-  dibuja un cuadernillo por capítulo: el grosor son las palabras, el color el
-  estado en el canon y la luz la pone el tono, con el candil parpadeando encima
-  de la mesa.
-- **Escritorio.** El pipeline de estados, una tarjeta por subagente, la tabla de
-  intentos con el escalón de VD-08 y la operación entera del gate, la auditoría
-  de esa operación, la cronología de la novela por día de ficción, el reparto,
-  el dossier de época con su verificación, los últimos ficheros escritos y el
-  panel de trazas.
-- **Lectura.** Los capítulos aprobados sobre vitela, con capitular y florones,
-  índice lateral, las notas del validador, el resumen del cronista, los hilos
-  que abrió o cerró y la deuda narrativa que queda viva. `←` y `→` cambian de
-  capítulo y `f` entra en modo inmersión. Desde la ficha se abre el paquete de
-  contexto con el que se escribió.
+## Cómo se arranca
 
-**La página mira y no toca.** En el canon escribe la sesión de Claude Code que
-orquesta y nadie más, así que en vez de botones la página da el comando exacto
-que toca pegar. Lo que sí hace, y es lo que más justifica abrirla, es rehacer la
-cuenta del gate con la fórmula del spec y avisar si no coincide con la que
-escribió el orquestador: la suma la hace un modelo y eso es lo más frágil del
+```sh
+cd frontend
+npm run dev
+```
+
+Esta sola orden arranca el servidor en el puerto 8000 y la web en
+<http://localhost:5173>. Para pararlo todo, `Ctrl+C` en esa consola.
+
+La web abre en el **taller**: un tablero, como el de un gestor de proyectos, con
+todas tus obras repartidas en cuatro columnas según su situación —en producción,
+detenida, terminada y publicada—. Pulsa una para entrar en ella; dentro, un
+lateral salta entre su avance, sus tareas, la lectura y sus versiones. Una obra
+detenida dice en su tarjeta por qué se detuvo.
+
+> **Ojo, que gasta.** Al arrancar, el servidor retoma solo cualquier novela que
+> se quedara a medias. Cada novela en marcha lanza agentes, y los agentes
+> cuestan dinero.
+
+Si solo quieres el servidor, sin la web:
+
+```sh
+cd backend
+.venv/Scripts/python -m uvicorn novela.api.principal:app --host 127.0.0.1 --port 8000
+```
+
+La base de datos se crea sola la primera vez, como `backend/novela.sqlite3`.
+
+## Un brief de ejemplo, de principio a fin
+
+[`ejemplos/brief-de-ejemplo.json`](ejemplos/brief-de-ejemplo.json) es un
+encargo pequeño, de un solo capítulo, pensado solo para ver que todo funciona:
+una aventura en el Toledo del siglo XVI dedicada a una niña inventada. Lleva un
+recuerdo suyo de hoy —unas llaves en la nevera— para ver cómo entra en la
+historia sin que el sistema lo trate como un error de época.
+
+**Lanzarlo gasta dinero**: pone a trabajar a los agentes de verdad.
+
+**1. Arranca el sistema** como se explica arriba y deja esa consola abierta.
+
+**2. Lanza el encargo.** En otra consola, desde la raíz del repositorio:
+
+```sh
+curl -X POST http://127.0.0.1:8000/obras \
+  -H "Content-Type: application/json" \
+  --data-binary @ejemplos/brief-de-ejemplo.json
+```
+
+La respuesta trae el identificador de la obra, algo como
+`{"id_obra": "obr_…", "estado": "en produccion"}`. Apúntalo: a partir de aquí
+lo llamamos `ID`. Es la única orden que hay que dar; lo demás lo hace el
 sistema.
 
-Lo que el canon no guarda —la cuota diaria, las escenas, el focalizador, el
-gancho final, el coste y las citas de las incidencias— aparece como «sin datos
-todavía» y está listado con su motivo en un panel. Es aposta: preferimos el
-hueco a un número inventado.
+**3. Mírala avanzar** en <http://localhost:5173/obras/ID>, o desde la consola:
 
-El puerto sale de `interfaz.puerto`, y `--puerto N` lo pisa para un arranque
-suelto. La escena baja three.js de un CDN, y es lo único del repo que necesita
-red. Si no llega, la interfaz funciona igual.
-
-En Windows, `ui.bat` hace lo mismo buscando el intérprete por su cuenta, sin
-fiarse del `PATH`.
-
-### Ver qué hizo cada subagente
-
-A [Langfuse](https://langfuse.com) va qué se le pidió a cada subagente, qué
-contestó, con qué modelo y cuánto costó. Es la pregunta que el canon no
-contesta: **por qué el modelo contestó lo que contestó**.
-
-```bash
-pip install "my-story-maker[trazas]"
-cp .env.ejemplo .env          # y pon ahí tus claves de Langfuse
+```sh
+curl http://127.0.0.1:8000/obras/ID/progreso/ahora
 ```
 
-Con eso puesto, el hook de [`.claude/settings.json`](.claude/settings.json)
-traza **cada llamada en el momento en que ocurre**, con su prompt, su modelo,
-sus tokens y su latencia reales. No hay que lanzar nada: ocurre solo mientras la
-novela se escribe. Y no puede romper nada — un hook que revienta ensuciaría la
-sesión del orquestador, así que devuelve 0 siempre y deja además su línea en un
-diario local.
+**4. Léela** cuando termine, en <http://localhost:5173/obras/ID/manuscrito>. O
+descárgala en PDF:
 
-El hook trae el gasto y ninguna nota. La otra mitad la trae esto:
-
-```bash
-python -m novela trazar   # del canon: las notas, el veredicto del gate y VD-08
+```sh
+curl -o novela.pdf http://127.0.0.1:8000/obras/ID/pdf
 ```
 
-Levanta el árbol entero desde el canon de la novela con **todas las puntuaciones** —las
-tres notas de cada intento, la media, el veredicto y una extra que dice si la
-suma del gate cuadra con la fórmula— y va marcado como reconstruido, porque no
-trae tokens ni coste. Hace falta porque lo que el orquestador decide solo no es
-una llamada a nadie: el hook no lo ve.
+**5. Publícala**, si quieres, desde la pantalla de versiones
+(<http://localhost:5173/obras/ID/versiones>) o con:
 
-Una traza por unidad de trabajo —la preparación, **cada capítulo** y el cierre—,
-agrupadas en una sesión por novela. Las tres notas del validador y la media
-viajan como puntuaciones, así que la calidad del libro se mira en una gráfica en
-lugar de releyendo capítulos.
-
-Se apagan con `trazas.activas` a `false`. Y no hacen falta para nada: sin el
-paquete, sin credencial o con Langfuse caído, la capa se calla y la novela se
-escribe igual.
-
-### En qué se fue el gasto
-
-```bash
-python -m novela informe-trazas --salida informe.md
+```sh
+curl -X POST http://127.0.0.1:8000/obras/ID/versiones/1/publicar
 ```
 
-Lee de vuelta las trazas de una novela y las agrega: gasto por rol, por capítulo
-y por modelo, reparto de caché, llamadas más caras y más lentas, y el cruce del
-coste de cada capítulo con sus notas y sus intentos. **El código cuenta y el
-modelo juzga**: lo que se lee después se acumula en
-[`docs/spec/TRAZAS.md`](docs/spec/TRAZAS.md), y la skill `analizar-trazas` lleva
-el cuestionario para que todas las pasadas pregunten lo mismo.
+Antes de publicar, el sistema pasa sus comprobaciones finales. Si alguna falla,
+no publica y dice cuál y en qué capítulo.
 
-## Comandos
+**Por la web, sin consola.** Con «+ Nueva obra», arriba a la derecha
+(<http://localhost:5173/encargo>), se encarga la misma novela conversando: escribes lo que tengas —o pegas una carta, una anécdota— y
+un agente, el Entrevistador, te pregunta lo que falta. En cuanto el encargo está
+completo, la novela se lanza sola. Es más cómodo, pero cada vuelta de la
+conversación también lanza un agente; el fichero de arriba se lanza de una vez.
 
-| Comando | Qué hace |
-|---|---|
-| `ui [--puerto N]` | Abre la interfaz web. Mira y no escribe |
-| `trazar [--modelo M]` | Manda a Langfuse las notas y los veredictos del canon |
-| `informe-trazas [--sesion S] [--salida F] [--json]` | Agrega el gasto de una novela |
-| `hook-traza` | Lo llama el hook, no una persona |
-| `ui.bat` | `ui` en Windows, buscando el intérprete por su cuenta |
+**Si quieres pararla** a medias:
 
-Opción global: `--config <ruta>`.
-
-## Qué hay en cada sitio
-
-| Carpeta | Qué contiene |
-|---|---|
-| `.claude/skills/orquestar-novela/` | La máquina de estados como instrucciones, y tres referencias |
-| `.claude/agents/` | Los ocho subagentes: seis roles con el validador partido en tres |
-| `agentes/` | Un `.md` por rol, con su encargo y sus modos de fallo. Única fuente de los prompts |
-| `skills/` | Las skills de §10, que cada subagente carga al arrancar |
-| `novela/` | El Python que mira: canon, interfaz, trazas e informe |
-| `web/` | La interfaz: las tres salas, la escena three.js y la ambientación |
-| `biblioteca/` | Las novelas, una carpeta cada una con su canon. Es salida y no se versiona |
-| `tests/` | Tests del Python de `novela/`, sin red |
-| `docs/spec/` | Los dos specs: el sistema y el análisis de trazas |
-
-## Tests
-
-```bash
-python -m unittest discover -s tests -t .
+```sh
+curl -X POST http://127.0.0.1:8000/obras/ID/detener \
+  -H "Content-Type: application/json" -d '{"motivo": "prueba"}'
+curl -X POST http://127.0.0.1:8000/obras/ID/reanudar     # sigue donde se quedó
 ```
 
-Ochenta y nueve, sin red y sin coste. Cubren el lector del canon, la auditoría
-del gate, la API de la interfaz, el árbol de trazas reconstruido y el hook.
+Con el servidor en marcha, <http://127.0.0.1:8000/docs> enseña todas las
+operaciones que ofrece, con sus campos, y deja probarlas desde el navegador.
 
-**La orquestación en sí no tiene tests**, y no es un olvido: lo que hace es una
-conversación. Es el precio de este diseño y está escrito en §21 del spec.
+## Dónde está cada cosa
+
+| Carpeta o fichero | Qué hay |
+| --- | --- |
+| [`backend/`](backend/) | El servidor, sus pruebas y los modelos formales del flujo |
+| [`frontend/`](frontend/) | La página web |
+| [`docs/`](docs/) | Cómo es el sistema: el vocabulario de la novela, la arquitectura y cómo se comprueba cada cosa. [`docs/proceso.md`](docs/proceso.md) reúne la documentación de cómo se ha construido |
+| [`specs/`](specs/) | Qué tiene que hacer cada parte y por qué |
+| [`ejemplos/`](ejemplos/) | El brief de ejemplo |
+| [`presentacion/`](presentacion/) | La presentación del proyecto |
+| [`AGENTS.md`](AGENTS.md) | Las reglas del proyecto, para quien lo desarrolla |
+| [`CLAUDE.md`](CLAUDE.md) | Lo que Claude Code necesita saber para desarrollar aquí |
+
+## Para quien lo desarrolla
+
+Las pruebas del servidor se lanzan desde `backend/` y no gastan nada:
+
+```sh
+cd backend
+.venv/Scripts/python -m pytest
+```
+
+Las que ponen a trabajar agentes de verdad llevan la marca `gasta` y quedan
+fuera por defecto. Las de la web, desde `frontend/`, con `npm run comprobar`; y
+`npm run validar-visual` abre la lectura en un navegador sin ventana y comprueba
+que la portada, el índice y la ficha de personajes se ven.
+
+Cómo se hace un cambio —primero la spec, luego el código, luego los
+documentos— está en [`AGENTS.md`](AGENTS.md).

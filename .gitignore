@@ -1,16 +1,32 @@
-__pycache__/
-*.py[cod]
+# Entorno de Python y artefactos de construcción
 .venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+
+# Variables de entorno con claves: se copia de .env.example, que sí se sube
 .env
-config.real.json
 
-# Las novelas no se versionan: las escribe el orquestador y son salida, no
-# fuente. Cada una vive en su carpeta de biblioteca/, con su canon, sus
-# borradores y sus retoques. Este repositorio es el sistema que las escribe y no
-# la estanteria donde se guardan.
-biblioteca/
+# Frontend
+node_modules/
+dist/
 
-# Salida suelta en la raiz: no es fuente de nada. El informe de trazas se
-# regenera con un comando, y ademas lleva dentro el gasto de una pasada
-# concreta: lo que se versiona es lo que se aprende de el, en docs/spec/TRAZAS.md
-/informe*.md
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Almacen de artefactos
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Salida del servidor MCP de navegador (.claude/mcp.json)
+.playwright-mcp/
+
+# Lo que construye lake en el proyecto de Lean de la cronologia (SPEC1 4.16)
+.lake/
+
+# Ficheros de trabajo de TLC (backend/formal/tla): no son del repositorio
+states/
+*_TTrace_*.tla
+*_TTrace_*.bin

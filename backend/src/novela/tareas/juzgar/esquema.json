@@ -1,0 +1,16 @@
+{
+  "tipo": "Critica",
+  "cuerpo": {
+    "objeto": "esc_0007",
+    "dimension": "coherencia_de_voz",
+    "severidad": "menor",
+    "ruidosa": true,
+    "nota": 3,
+    "evidencia": "«a fe mia» en el capitulo 2 frente a «pues claro» aqui",
+    "accion_sugerida": "Devolver la muletilla declarada en su ficha",
+    "detectada_por": {
+      "rol": "juez_de_rubrica",
+      "contrato": "coherencia_de_voz"
+    }
+  }
+}

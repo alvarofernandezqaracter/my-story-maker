@@ -1,0 +1,24 @@
+# Contrato de la tarea `juzgar`.
+#
+# Un rol, una tarea: declarar un rol es anadir una carpeta con todo lo suyo
+# dentro. Lo que este contrato declara es lo que el backend impone, no lo que
+# el prompt pide.
+
+tarea = "juzgar"
+rol = "juez_de_rubrica"
+alcance = "escena y capitulo"
+cuando = "En la criba de pulido, solo en lo no formulable como predicado"
+
+# Sin ninguna herramienta salvo las que aqui se conceden.
+herramientas = []
+
+# Que ve y que no ve (architecture.md 3).
+entrada = ["contrato_de_verificacion", "texto_producido"]
+no_ve = ["el canon", "el estado", "las criticas de otros"]
+
+# Que deja escrito. Lo que no este aqui, el backend no se lo deja escribir.
+escribe = ["Critica", "Decision"]
+
+# Que rechaza de lo que recibe: campos obligatorios del artefacto de entrada.
+[rechaza]
+contrato_de_verificacion = ["dimension", "rubrica"]

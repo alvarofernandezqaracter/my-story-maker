@@ -1,0 +1,18 @@
+# Contrato de verificacion de `progresion_de_arcos`.
+#
+# Tres partes y ninguna mas: el predicado en una frase, la proyeccion minima
+# sobre la que se evalua y la forma exacta de la `Critica` si falla. Lo que
+# sobra en la proyeccion es lo que produce falsos positivos.
+
+dimension = "progresion_de_arcos"
+rol = "arquitecto_de_arcos"
+metodo_de_verificacion = "inspeccion"
+alcance = "obra"
+criba = "global"
+
+predicado = "Cada personaje con arco declarado muestra cambios medibles repartidos por la obra."
+proyeccion_minima = ["arcos", "resumenes_de_capitulos"]
+
+[critica]
+severidad = "mayor"
+evidencia_aceptada = "El arco declarado y los capitulos en que no avanza."

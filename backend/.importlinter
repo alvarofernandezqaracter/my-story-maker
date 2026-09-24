@@ -1,0 +1,133 @@
+# Contratos de importacion: la frontera se comprueba sin ejecutar nada.
+# Salen de validators.md 6 y son el paso 1 del orden de adopcion (validators.md 12).
+
+[importlinter]
+root_packages =
+    novela
+include_external_packages = True
+
+[importlinter:contract:capas]
+name = El apilado es api sobre nucleo sobre almacen
+type = layers
+layers =
+    novela.api
+    novela.nucleo
+    novela.almacen
+
+[importlinter:contract:tareas-independientes]
+name = Ninguna carpeta de tareas importa otra: se comunican por artefactos
+type = independence
+modules =
+    novela.tareas.*
+
+[importlinter:contract:persistencia-solo-en-almacen]
+name = Solo almacen abre la base de datos
+type = forbidden
+# Lo prohibido es abrirla, no llegar a ella: `nucleo` pide artefactos a
+# `almacen` y es `almacen` quien toca sqlite3.
+allow_indirect_imports = True
+source_modules =
+    novela.api
+    novela.nucleo
+    novela.tareas
+    novela.ajustes
+    novela.vocabularios
+    novela.ejecutor
+    novela.ganchos
+    novela.validadores
+    novela.demostrador
+    novela.juez_de_la_novela
+    novela.observabilidad
+forbidden_modules =
+    sqlite3
+    sqlite_vec
+    fastembed
+
+[importlinter:contract:nucleo-no-importa-tareas]
+name = nucleo no importa ninguna tarea ni decide nada del dominio
+type = forbidden
+source_modules =
+    novela.nucleo
+forbidden_modules =
+    novela.tareas
+
+[importlinter:contract:tipos-solo-en-el-borde]
+name = El unico sitio con tipos declarados es el borde HTTP
+type = forbidden
+source_modules =
+    novela.nucleo
+    novela.almacen
+    novela.tareas
+    novela.ajustes
+    novela.vocabularios
+    novela.ejecutor
+    novela.ganchos
+    novela.validadores
+    novela.demostrador
+    novela.juez_de_la_novela
+    novela.observabilidad
+forbidden_modules =
+    pydantic
+    fastapi
+
+[importlinter:contract:ganchos-sin-almacen]
+name = Los hooks no tocan el almacen ni el guion: informan por su salida y registra el ejecutor
+type = forbidden
+source_modules =
+    novela.ganchos
+forbidden_modules =
+    novela.almacen
+    novela.nucleo
+    novela.api
+    novela.ejecutor
+
+[importlinter:contract:validadores-puros]
+name = Los validadores son funciones puras: no leen el almacen ni las tareas
+type = forbidden
+source_modules =
+    novela.validadores
+forbidden_modules =
+    novela.almacen
+    novela.nucleo
+    novela.api
+    novela.ejecutor
+    novela.ganchos
+    novela.tareas
+
+[importlinter:contract:demostrador-sin-almacen]
+name = El demostrador recibe la cronologia ya leida: no toca el almacen
+type = forbidden
+source_modules =
+    novela.demostrador
+forbidden_modules =
+    novela.almacen
+    novela.nucleo
+    novela.api
+    novela.ejecutor
+    novela.ganchos
+    novela.tareas
+
+[importlinter:contract:juez-de-la-novela-fuera]
+name = El juez de la novela no lee tareas, ni la API, ni Langfuse
+type = forbidden
+# Lo prohibido es que las lea el propio juez: el ejecutor que lo lanza pasa por los hooks, que
+# leen el esquema de su tarea, y eso no le da al juez ningun prompt de `tareas/`.
+allow_indirect_imports = True
+source_modules =
+    novela.juez_de_la_novela
+forbidden_modules =
+    novela.tareas
+    novela.api
+    langfuse
+[importlinter:contract:observabilidad-sin-almacen]
+name = La observabilidad recibe lo ya leido: no toca el almacen ni las tareas
+type = forbidden
+source_modules =
+    novela.observabilidad
+forbidden_modules =
+    novela.almacen
+    novela.nucleo
+    novela.api
+    novela.ejecutor
+    novela.ganchos
+    novela.tareas

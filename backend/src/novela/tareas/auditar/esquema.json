@@ -1,0 +1,14 @@
+{
+  "tipo": "Critica",
+  "cuerpo": {
+    "objeto": "obr_0a91",
+    "dimension": "economia_narrativa",
+    "severidad": "bloqueante",
+    "evidencia": "cmp_0012 plantado en el capitulo 1 y sin pagar al cierre",
+    "accion_sugerida": "Pagarlo en el ultimo capitulo o declararlo abandonado",
+    "detectada_por": {
+      "rol": "arquitecto_de_arcos",
+      "contrato": "economia_narrativa"
+    }
+  }
+}

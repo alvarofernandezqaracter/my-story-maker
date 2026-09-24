@@ -1,0 +1,24 @@
+# Contrato de la tarea `revisar`.
+#
+# Un rol, una tarea: declarar un rol es anadir una carpeta con todo lo suyo
+# dentro. Lo que este contrato declara es lo que el backend impone, no lo que
+# el prompt pide.
+
+tarea = "revisar"
+rol = "revisor"
+alcance = "escena o capitulo"
+cuando = "Con criticas mayores pendientes"
+
+# Sin ninguna herramienta salvo las que aqui se conceden.
+herramientas = []
+
+# Que ve y que no ve (architecture.md 3).
+entrada = ["borrador_vigente", "criticas_a_atender", "contrato_de_escena"]
+no_ve = ["las criticas de otras unidades", "la trama futura"]
+
+# Que deja escrito. Lo que no este aqui, el backend no se lo deja escribir.
+escribe = ["Revision", "Borrador", "Capitulo", "Escena", "Decision"]
+
+# Que rechaza de lo que recibe: campos obligatorios del artefacto de entrada.
+[rechaza]
+criticas_a_atender = ["evidencia", "dimension"]

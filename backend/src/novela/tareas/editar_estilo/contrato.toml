@@ -1,0 +1,24 @@
+# Contrato de la tarea `editar_estilo`.
+#
+# Un rol, una tarea: declarar un rol es anadir una carpeta con todo lo suyo
+# dentro. Lo que este contrato declara es lo que el backend impone, no lo que
+# el prompt pide.
+
+tarea = "editar_estilo"
+rol = "editor_de_estilo"
+alcance = "parrafo y capitulo"
+cuando = "Al coser el capitulo y en la criba de pulido"
+
+# Sin ninguna herramienta salvo las que aqui se conceden.
+herramientas = []
+
+# Que ve y que no ve (architecture.md 3).
+entrada = ["texto_producido", "registro_linguistico", "lexico_vetado", "ecos_del_registro"]
+no_ve = ["el canon", "el estado en N"]
+
+# Que deja escrito. Lo que no este aqui, el backend no se lo deja escribir.
+escribe = ["Critica", "Borrador", "Parrafo", "Decision"]
+
+# Que rechaza de lo que recibe: campos obligatorios del artefacto de entrada.
+[rechaza]
+texto_producido = ["texto"]

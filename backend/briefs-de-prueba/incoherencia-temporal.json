@@ -1,0 +1,28 @@
+{
+  "proposito": "incoherencia_temporal",
+  "para_que": "Provocar una incoherencia temporal que solo ve Lean. La premisa y la política de fechas obligan a que Martina y su tío Gaspar estén el mismo día exacto, el 12 de marzo de 1605, en Valladolid por la mañana y en Madrid por la tarde, a unos doscientos kilómetros. Si el Contable fecha los dos sucesos con ese día y los mismos presentes, `un_solo_lugar` no se demuestra. Los cuatro validadores programáticos no tienen con qué verlo, y el Verificador de continuidad juzga cada escena antes de que existan los eventos del capítulo. Es la versión de verdad del caso sembrado de SPEC1 RF-156.",
+  "se_espera": [
+    {"comprobacion": "puerta.esquema", "resultado": "pasa", "por_que": "El brief no empuja a ningún rol fuera de su esquema"},
+    {"comprobacion": "puerta.nombres", "resultado": "pasa", "por_que": "Martina y Gaspar son nombres estables"},
+    {"comprobacion": "puerta.longitud", "resultado": "pasa", "por_que": "Premisa de tamaño normal"},
+    {"comprobacion": "puerta.elementos_personalizados", "resultado": "pasa", "por_que": "Sin destinatario no hay hechos personales, para que nada distinto de la cronología falle"},
+    {"comprobacion": "puerta.cronologia", "resultado": "falla", "por_que": "Dos `EventoEstado` del 1605-03-12 en dos lugares con los mismos presentes: Lean no demuestra `un_solo_lugar`, la versión no se publica y el fallo queda como crítica de `continuidad_de_estado`. Si pasa, o el Contable no fechó al día —y la incoherencia queda fuera del alcance de Lean— o el sistema corrigió la premisa; las dos cosas se miran en la traza"},
+    {"comprobacion": "gancho.validar_capitulo", "resultado": "pasa", "por_que": "Veredicto final correcto aunque bloquee en la sesión"},
+    {"comprobacion": "gancho.policy", "resultado": "pasa", "por_que": "Sin vetos del comprador"},
+    {"comprobacion": "juez.personalizacion_integrada", "resultado": "no_se_puntua", "por_que": "Sin destinatario"},
+    {"comprobacion": "juez.funciona_como_novela", "resultado": "se_puntua", "por_que": "El juez puede o no notar el viaje imposible; que lo note o no es un dato, no el propósito"},
+    {"comprobacion": "juez.fidelidad_a_la_epoca", "resultado": "se_puntua", "por_que": "Valladolid como corte en 1605 está bien documentada"}
+  ],
+  "brief": {
+    "titulo": "Dos bautizos el mismo día",
+    "epoca": "Valladolid y Madrid, marzo de 1605, con la corte de Felipe III en Valladolid",
+    "premisa": "El 12 de marzo de 1605 por la mañana, Martina y su tío Gaspar, músicos de capilla, tocan en Valladolid en una ceremonia de la corte; ese mismo 12 de marzo de 1605 por la tarde los dos tocan en Madrid en la boda de un banquero genovés, porque Gaspar ha cobrado por adelantado las dos cosas y no puede devolver ninguna",
+    "capitulos_objetivo": 3,
+    "politicas_globales": {
+      "pov": "tercera_limitada",
+      "fechas": "cada suceso con su día exacto, año, mes y día; los dos del 12 de marzo de 1605 se cuentan en capítulos distintos"
+    },
+    "arcos": ["Gaspar aprende que no se puede estar en dos sitios a la vez"],
+    "elenco_declarado": ["Martina", "Gaspar"]
+  }
+}

@@ -1,0 +1,18 @@
+# Contrato de verificacion de `obra_cerrada_sin_defectos_abiertos`.
+#
+# Tres partes y ninguna mas: el predicado en una frase, la proyeccion minima
+# sobre la que se evalua y la forma exacta de la `Critica` si falla. Lo que
+# sobra en la proyeccion es lo que produce falsos positivos.
+
+dimension = "obra_cerrada_sin_defectos_abiertos"
+rol = "arquitecto_de_arcos"
+metodo_de_verificacion = "demostracion"
+alcance = "obra"
+criba = "global"
+
+predicado = "La obra esta cerrada y no le queda ninguna critica bloqueante abierta."
+proyeccion_minima = ["criticas_a_atender", "cola_de_compromisos"]
+
+[critica]
+severidad = "bloqueante"
+evidencia_aceptada = "La critica bloqueante que sigue abierta, con su capitulo."
