@@ -35,7 +35,7 @@ Existe una tercera capa, la de producción, que observa a estas dos y está defi
 
 La unidad operativa del sistema es la **escena**, no el capítulo: es el nivel más pequeño en el que se puede declarar un contrato completo y verificable.
 
-**Obra.** Raíz. Atributos: título, época y ámbito geográfico, premisa, tesis temática, elenco principal, políticas globales (POV dominante, tiempo verbal, nivel de arcaísmo, extensión objetivo). Relación: `se_compone_de` 1..\* `Parte`.
+**Obra.** Raíz. Atributos: título, época y ámbito geográfico, premisa, tesis temática (opcional), elenco principal (opcional: si el editor no lo declara, lo decide el Constructor de mundo), políticas globales (POV dominante, tiempo verbal, nivel de arcaísmo, extensión objetivo). Relación: `se_compone_de` 1..\* `Parte`.
 
 **Parte / Acto.** Agrupación estructural con función dramática (planteamiento, complicación, crisis, resolución). Atributos: función, arco global que cubre, capítulos que contiene. Opcional en obras cortas.
 

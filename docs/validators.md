@@ -405,6 +405,7 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | La política de cada paso es la que fija la spec | Lectura de `guion.toml` contra la tabla de SPEC1 RF-97, además enumerada en una prueba | `inspeccion` |
 | Cada política de agotamiento hace lo que declara | Avería sembrada en una tarea de cada política | `prueba` |
 | Lo que falta en el brief lo dice el borde, con su ruta completa | Pasada con un borrador al que le faltan campos | `prueba` |
+| La tesis, el elenco y los arcos son opcionales: sin ellos la obra se da de alta y la entrevista no los pide (SPEC1 D-50) | Alta y pasada con un brief sin los tres, y el cuerpo de la obra que queda | `prueba` |
 | Ninguna pasada de entrevista cambia lo que la persona escribió | Pasada con los campos escritos y un texto que dice otra cosa | `prueba` |
 | De un texto pegado solo entra lo que trae cita literal, y un recuerdo es su cita | Hechos con cita inventada, y el `Recuerdo` de la obra lanzada cotejado con el texto pegado | `prueba` |
 | Una contradicción sin evidencia citable no bloquea el alta, y una asumida tampoco | Contradicciones rotas a propósito, y la misma asumida en la pasada siguiente | `prueba` |
@@ -445,6 +446,9 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | El cliente no se desfasa del contrato (SPEC2 RI-02, OBJ-05) | La prueba del contrato de §6 | `prueba` |
 | La interfaz se pone en pie con una sola orden (SPEC2 RNF-06) | `npm run dev` con el backend parado deja los dos en pie | `demostracion` |
 | La interfaz está en español (SPEC2 RNF-05) | Lectura de las pantallas y `lang="es"` | `inspeccion` |
+| La ficha marca lo opcional y lo que no se toca no se manda (SPEC2 RF-09) | Encargo simulado con solo lo obligatorio: las etiquetas y el cuerpo de la pasada | `prueba` |
+| Las tareas hechas salen agrupadas por capítulo con lo esencial, y «pasó los hooks» sale del veredicto final de la `Traza` (SPEC2 RF-26, RF-27, RI-08) | Trazas simuladas con hooks que pasan, que no pasan, sin hooks y una en curso | `prueba` |
+| Las pantallas de una obra se alcanzan unas desde otras con un clic (SPEC2 RF-30) | Recorrido simulado por el menú desde el avance | `prueba` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha, el lugar y los presentes que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |

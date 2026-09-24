@@ -50,6 +50,8 @@ frontend/src/
                   y lanza la obra
     avance/       la obra mientras se produce: capítulo en curso, tareas
                   abiertas y tokens frente al techo; detener y reanudar
+    tareas/       las tareas ya hechas, por capítulo, con su duración y el
+                  veredicto de los hooks
     manuscrito/   leer lo aceptado, por capítulo y escena
   compartido/     cliente de API generado del contrato y componentes comunes
 ```

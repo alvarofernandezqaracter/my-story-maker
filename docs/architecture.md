@@ -97,7 +97,7 @@ Qué artefacto consume cada rol y qué artefacto deja escrito. La salida de un a
 
 | Agente | Entrada | Salida |
 | --- | --- | --- |
-| Constructor de mundo | `Obra` con su premisa y su marco, elenco declarado por el editor, `Fuente` ya recogidas, y —si la obra va dedicada— el destinatario con sus `Recuerdo` | Fichas de `Personaje`, `Lugar`, `Objeto` y `Facción`. Las que salen de la vida del destinatario llevan licencia `personal` y su nombre real |
+| Constructor de mundo | `Obra` con su premisa y su marco, el elenco si el editor lo declaró —si no, decide él quién existe—, `Fuente` ya recogidas, y —si la obra va dedicada— el destinatario con sus `Recuerdo` | Fichas de `Personaje`, `Lugar`, `Objeto` y `Facción`. Las que salen de la vida del destinatario llevan licencia `personal` y su nombre real |
 | Documentalista | Marco de la escena —fecha, lugar, ámbito—, afirmaciones históricas pendientes de respaldo y lo que devuelven la búsqueda externa y el índice documental para ese marco | `Fuente`, `Concepto`, `Práctica` y `Registro lingüístico`, filtrados por esa fecha y ese lugar |
 | Arquitecto de arcos | Resúmenes de los capítulos cerrados, arcos declarados, cola de `Compromiso`, `funcion_estructural` de las escenas en orden | `Crítica` de alcance global |
 | Planificador | Canon, estado en N-1, compromisos abiertos, arcos, y —si la obra va dedicada— el destinatario con sus `Recuerdo` | `Plan`: esqueleto de `Capítulo`, contrato de cada `Escena`, `Compromiso` asignados y el papel del destinatario en la obra |
@@ -705,8 +705,8 @@ común, sino que `almacen/` sea la única puerta de escritura y que la forma del
 artefacto la imponga el rechazo del agente siguiente.
 
 **Frontend: agrupación por funcionalidad.** Una carpeta por funcionalidad
-—encargar una obra, ver su avance, leer el manuscrito— con sus componentes y
-sus llamadas dentro, y `compartido/` para el cliente de API y lo transversal.
+—encargar una obra, ver su avance, ver las tareas hechas, leer el
+manuscrito— con sus componentes y sus llamadas dentro, y `compartido/` para el cliente de API y lo transversal.
 Las funcionalidades no se importan entre sí y solo `compartido/api/` habla con
 el servidor; lo vigilan las reglas de ESLint y una prueba de estructura. El
 cliente de API no se escribe: se genera del contrato OpenAPI que el `backend/`
@@ -719,7 +719,7 @@ frontend/
   package.json
   scripts/       genera el cliente desde el contrato; arranca backend y Vite
   src/
-    features/    encargo, avance, manuscrito
+    features/    encargo, avance, tareas, manuscrito
     compartido/  cliente de API generado del contrato, y componentes comunes
   pruebas/       contra un servidor simulado: ninguna gasta
 ```
@@ -737,6 +737,12 @@ primero con la foto de `GET /obras/{id}/progreso/ahora` y solo después se
 engancha a `GET /obras/{id}/progreso`; si el flujo se corta, el cliente se
 reengancha solo y lo dice. Todo eso vive en un solo fichero de
 `compartido/api/`, de modo que pasar a sondeo no toca ninguna pantalla.
+
+**Las tres pantallas de una obra comparten menú.** Avance, Tareas y Lectura
+llevan arriba el mismo menú, que salta de una a otra con un clic; cada una
+conserva su dirección. La de tareas lista lo que sirve `GET /obras/{id}/trazas`
+agrupado por capítulo, con la duración y el veredicto final de los hooks tal
+como vienen en cada `Traza`.
 
 ### Qué se pierde sin cálculo determinista
 
