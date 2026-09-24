@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from novela.vocabularios import (
     COMPROBACION_FORMAL,
+    SITUACION_DE_LA_OBRA,
     TIPO_DE_CONTRADICCION,
     VALIDADOR_DE_LA_PUERTA,
 )
@@ -81,11 +82,25 @@ class ObraCreada(BaseModel):
     estado: str
 
 
+# Donde esta una obra (SPEC1 RF-205). La calcula el backend y viaja cerrada:
+# la interfaz la pinta, no la deduce (D-89).
+SituacionDeLaObra = Literal["en_produccion", "detenida", "terminada", "publicada"]
+assert get_args(SituacionDeLaObra) == SITUACION_DE_LA_OBRA, (
+    "SituacionDeLaObra se ha separado de SITUACION_DE_LA_OBRA"
+)
+
+
 class FichaDeObra(BaseModel):
     """Estado de la obra, capitulo en curso y recuento de cerrados y marcados."""
 
     id_obra: str
     titulo: str
+    situacion: SituacionDeLaObra = Field(
+        description=(
+            "Donde esta la obra: detenida, en produccion, publicada o terminada, "
+            "decidido en ese orden (RF-205)"
+        )
+    )
     detenida: bool
     capitulo_en_curso: int | None
     capitulos_cerrados: int
@@ -105,6 +120,14 @@ class FichaDeObra(BaseModel):
     dedicatoria: str | None = Field(
         default=None, description="La dedicatoria tal como viene en el brief (RF-177)"
     )
+
+
+class ObraDelTaller(FichaDeObra):
+    """Una obra en el listado del taller: su ficha y lo que pide su brief (RF-204)."""
+
+    epoca: str = Field(description="Epoca y ambito geografico, tal como vienen en el brief")
+    capitulos_objetivo: int = Field(description="Cuantos capitulos pide el brief")
+    creada_en: str = Field(description="Cuando se dio de alta la obra")
 
 
 class UnidadDelManuscrito(BaseModel):

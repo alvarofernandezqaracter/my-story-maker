@@ -173,6 +173,11 @@ INVARIANTE_DE_LA_CRONOLOGIA: tuple[str, ...] = (
 # demostro, Lean no pudo demostrarla, o Lean no esta en la maquina y no se hizo.
 COMPROBACION_FORMAL: tuple[str, ...] = ("demostrada", "fallida", "sin_comprobacion")
 
+# Donde esta una obra, tal como la ve el taller (SPEC1 RF-205). Se decide en este
+# orden: detenida, en produccion si su version en curso no ha terminado,
+# publicada si la version en curso es la publicada, y si no, terminada.
+SITUACION_DE_LA_OBRA: tuple[str, ...] = ("en_produccion", "detenida", "terminada", "publicada")
+
 # Las tres memorias (architecture.md 3). Cada artefacto declara a cual pertenece
 # porque es lo que permite al Archivero retirar la de capitulo sin decidir nada.
 MEMORIA: tuple[str, ...] = ("tarea", "capitulo", "obra")

@@ -9,7 +9,7 @@ muestra lo pide aqui.
 import threading
 from collections.abc import AsyncIterable, AsyncIterator, Iterator
 from contextlib import asynccontextmanager
-from typing import Annotated, Any, Literal, get_origin
+from typing import Annotated, Any, Literal, cast, get_origin
 
 from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -50,6 +50,7 @@ from novela.api.modelos import (
     HechoExtraido,
     Manuscrito,
     ObraCreada,
+    ObraDelTaller,
     Orden,
     PasadaDeEntrevista,
     Pasaje,
@@ -60,6 +61,7 @@ from novela.api.modelos import (
     Publicacion,
     PuertaDePublicacion,
     RechazoDePublicacion,
+    SituacionDeLaObra,
     Suceso,
     TrazaServida,
     UnidadDelManuscrito,
@@ -471,9 +473,9 @@ def crear_aplicacion(
 
     # --- RI-02. Ficha y avance ---------------------------------------------
 
-    @app.get("/obras/{id_obra}")
-    def ver_obra(id_obra: IdObra, casa: ProduccionDep) -> FichaDeObra:
-        obra = _obra_o_404(casa, id_obra)
+    def _ficha(casa: Produccion, obra: Artefacto) -> FichaDeObra:
+        """La ficha de una obra. La sirven igual su ruta y el listado (RF-204)."""
+        id_obra = obra.id
         destinatario = obra.cuerpo.get("destinatario")
         if not isinstance(destinatario, dict):
             destinatario = {}
@@ -485,6 +487,7 @@ def crear_aplicacion(
         return FichaDeObra(
             id_obra=id_obra,
             titulo=str(obra.cuerpo.get("titulo", "")),
+            situacion=cast(SituacionDeLaObra, versiones.situacion(casa.almacen, id_obra)),
             detenida=casa.almacen.esta_detenida(id_obra),
             capitulo_en_curso=min((c.capitulo or 0 for c in en_curso), default=None),
             capitulos_cerrados=len(cerrados),
@@ -496,6 +499,25 @@ def crear_aplicacion(
             destinatario=destinatario.get("nombre"),
             dedicatoria=destinatario.get("dedicatoria"),
         )
+
+    # --- RI-20. El taller: todas las obras con su situacion ----------------
+
+    @app.get("/obras")
+    def listar_obras(casa: ProduccionDep) -> list[ObraDelTaller]:
+        """Todas las obras, de la mas reciente a la mas antigua (RF-204)."""
+        return [
+            ObraDelTaller(
+                **_ficha(casa, obra).model_dump(),
+                epoca=str(obra.cuerpo.get("epoca", "")),
+                capitulos_objetivo=casa.capitulos_objetivo(obra),
+                creada_en=obra.creado_en,
+            )
+            for obra in casa.almacen.listar_obras()
+        ]
+
+    @app.get("/obras/{id_obra}")
+    def ver_obra(id_obra: IdObra, casa: ProduccionDep) -> FichaDeObra:
+        return _ficha(casa, _obra_o_404(casa, id_obra))
 
     # --- RI-03. Leer -------------------------------------------------------
 

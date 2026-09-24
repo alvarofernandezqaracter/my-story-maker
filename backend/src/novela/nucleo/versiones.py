@@ -389,6 +389,25 @@ def publicar(
     return almacen.publicar_version(id_obra, numero), resultado["comprobacion_formal"]
 
 
+def situacion(almacen: Almacen, id_obra: str) -> str:
+    """Donde esta la obra, de `SITUACION_DE_LA_OBRA` (SPEC1 RF-205).
+
+    Se calcula aqui y no en la interfaz porque sale de tres hechos que solo el
+    backend tiene juntos, y el orden en que se miran es parte de la regla (D-89):
+    una obra detenida lo esta aunque su version no haya terminado, y una
+    publicada a la que se le pide rehacer vuelve a estar en produccion.
+    """
+    if almacen.esta_detenida(id_obra):
+        return "detenida"
+    en_curso = almacen.version_en_curso(id_obra)
+    version = almacen.leer_version(id_obra, en_curso)
+    if version is None or version["terminada_en"] is None:
+        return "en_produccion"
+    if almacen.version_publicada(id_obra) == en_curso:
+        return "publicada"
+    return "terminada"
+
+
 def de_referencia(almacen: Almacen, id_obra: str) -> int:
     """La que se sirve sin pedir version: la publicada, y si no, la ultima (D-43)."""
     publicada = almacen.version_publicada(id_obra)

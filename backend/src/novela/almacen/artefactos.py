@@ -568,8 +568,12 @@ class Almacen:
         return self.leer("Obra", id_obra)
 
     def listar_obras(self) -> list[Artefacto]:
+        """De la mas reciente a la mas antigua (SPEC1 RF-204). El alta tiene
+        resolucion de segundos: dos del mismo segundo se desempatan por el orden
+        en que se insertaron."""
         filas = self._lector.execute(
-            "SELECT * FROM artefacto_obra WHERE caducado_en IS NULL ORDER BY creado_en DESC"
+            "SELECT * FROM artefacto_obra WHERE caducado_en IS NULL "
+            "ORDER BY creado_en DESC, rowid DESC"
         )
         return [_fila_a_artefacto(f) for f in filas]
 

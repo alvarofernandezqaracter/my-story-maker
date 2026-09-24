@@ -5,9 +5,23 @@ openapi: 3.1.0
 info:
   title: Generador de novela historica por agentes
   summary: Lanza una obra desde un brief e inspecciona lo que los agentes producen
-  version: 0.11.0
+  version: 0.12.0
 paths:
   /obras:
+    get:
+      summary: Listar Obras
+      description: Todas las obras, de la mas reciente a la mas antigua (RF-204).
+      operationId: listar_obras_obras_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ObraDelTaller'
+                type: array
+                title: Response Listar Obras Obras Get
     post:
       summary: Lanzar Obra
       operationId: lanzar_obra_obras_post
@@ -1513,6 +1527,16 @@ components:
         titulo:
           type: string
           title: Titulo
+        situacion:
+          type: string
+          enum:
+          - en_produccion
+          - detenida
+          - terminada
+          - publicada
+          title: Situacion
+          description: 'Donde esta la obra: detenida, en produccion, publicada o terminada,
+            decidido en ese orden (RF-205)'
         detenida:
           type: boolean
           title: Detenida
@@ -1563,6 +1587,7 @@ components:
       required:
       - id_obra
       - titulo
+      - situacion
       - detenida
       - capitulo_en_curso
       - capitulos_cerrados
@@ -1695,6 +1720,100 @@ components:
       - id_obra
       - estado
       title: ObraCreada
+    ObraDelTaller:
+      properties:
+        id_obra:
+          type: string
+          title: Id Obra
+        titulo:
+          type: string
+          title: Titulo
+        situacion:
+          type: string
+          enum:
+          - en_produccion
+          - detenida
+          - terminada
+          - publicada
+          title: Situacion
+          description: 'Donde esta la obra: detenida, en produccion, publicada o terminada,
+            decidido en ese orden (RF-205)'
+        detenida:
+          type: boolean
+          title: Detenida
+        capitulo_en_curso:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capitulo En Curso
+        capitulos_cerrados:
+          type: integer
+          title: Capitulos Cerrados
+        capitulos_marcados:
+          type: integer
+          title: Capitulos Marcados
+        criticas_abiertas:
+          type: integer
+          title: Criticas Abiertas
+        version_en_curso:
+          type: integer
+          title: Version En Curso
+          description: La ultima version, la unica que se produce
+        version_publicada:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Version Publicada
+          description: La de la ultima publicacion, si la hay
+        motivo_de_la_detencion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Motivo De La Detencion
+          description: 'Por que esta detenida: la tarea, lo que fallo y su traza.
+            Vacio si no (RI-17)'
+        destinatario:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Destinatario
+          description: Nombre del destinatario, para la portada (RF-177)
+        dedicatoria:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dedicatoria
+          description: La dedicatoria tal como viene en el brief (RF-177)
+        epoca:
+          type: string
+          title: Epoca
+          description: Epoca y ambito geografico, tal como vienen en el brief
+        capitulos_objetivo:
+          type: integer
+          title: Capitulos Objetivo
+          description: Cuantos capitulos pide el brief
+        creada_en:
+          type: string
+          title: Creada En
+          description: Cuando se dio de alta la obra
+      type: object
+      required:
+      - id_obra
+      - titulo
+      - situacion
+      - detenida
+      - capitulo_en_curso
+      - capitulos_cerrados
+      - capitulos_marcados
+      - criticas_abiertas
+      - version_en_curso
+      - version_publicada
+      - epoca
+      - capitulos_objetivo
+      - creada_en
+      title: ObraDelTaller
+      description: 'Una obra en el listado del taller: su ficha y lo que pide su brief
+        (RF-204).'
     Orden:
       properties:
         motivo:
