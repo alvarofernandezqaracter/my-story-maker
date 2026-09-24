@@ -93,6 +93,10 @@ python -m venv .venv
 - `backend/openapi.yaml` no se edita a mano. Si la prueba del contrato falla una
   vez y lo deja cambiado, el borde se ha movido: se mira el diff y se commitea
   junto al cambio que lo movió (RNF-09).
+- Langfuse se enciende con las claves del `.env` de la raíz; sin ellas no se
+  manda nada. La batería lo apaga siempre (`tests/conftest.py`), así que
+  `python -m pytest` no manda nada aunque el `.env` tenga claves. Los
+  evaluadores viven solo en Langfuse: no se commitea ninguno.
 - Nada de lo que el sistema produce va a disco: todo vive en SQLite (RD-08). Una
   carpeta de trabajo o un volcado para inspeccionar es un defecto, no una ayuda.
 

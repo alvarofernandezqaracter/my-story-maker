@@ -37,6 +37,7 @@ source_modules =
     novela.validadores
     novela.demostrador
     novela.juez_de_la_novela
+    novela.observabilidad
 forbidden_modules =
     sqlite3
     sqlite_vec
@@ -64,6 +65,7 @@ source_modules =
     novela.validadores
     novela.demostrador
     novela.juez_de_la_novela
+    novela.observabilidad
 forbidden_modules =
     pydantic
     fastapi
@@ -117,3 +119,15 @@ forbidden_modules =
     novela.tareas
     novela.api
     langfuse
+[importlinter:contract:observabilidad-sin-almacen]
+name = La observabilidad recibe lo ya leido: no toca el almacen ni las tareas
+type = forbidden
+source_modules =
+    novela.observabilidad
+forbidden_modules =
+    novela.almacen
+    novela.nucleo
+    novela.api
+    novela.ejecutor
+    novela.ganchos
+    novela.tareas

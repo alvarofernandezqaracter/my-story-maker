@@ -1252,6 +1252,45 @@ class Almacen:
         )
         return [_fila_a_artefacto(f) for f in filas]
 
+    def sumar_trazas(
+        self, id_obra: str, *, version: int | None = None, capitulo: int | None = None
+    ) -> dict[str, Any]:
+        """Tareas, tokens, coste y latencia sumados de las `Traza` de la obra, de
+        una version o de un capitulo de esa version (SPEC1 RF-186).
+
+        La `Traza` lleva la version en que se abrio, asi que la suma de una
+        version es lo que costo producirla, sin lo que comparte con la anterior.
+        """
+        condiciones = ["id_obra = :id_obra"]
+        parametros: dict[str, Any] = {"id_obra": id_obra}
+        for columna, valor in (("version_de_obra", version), ("capitulo", capitulo)):
+            if valor is not None:
+                condiciones.append(f"{columna} = :{columna}")
+                parametros[columna] = valor
+        fila = self._lector.execute(
+            "SELECT COUNT(*) AS tareas, "
+            "COALESCE(SUM(tokens_de_entrada_medidos), 0) AS tokens_de_entrada, "
+            "COALESCE(SUM(tokens_de_salida), 0) AS tokens_de_salida, "
+            "COALESCE(SUM(coste), 0) AS coste, "
+            "COALESCE(SUM(latencia_ms), 0) AS latencia_ms "
+            f"FROM artefacto_traza WHERE {' AND '.join(condiciones)}",
+            parametros,
+        ).fetchone()
+        return _totales(fila)
+
+    def sumar_pasadas(self, id_entrevista: str) -> dict[str, Any]:
+        """Lo mismo, de las pasadas de una entrevista (RF-79, RF-186)."""
+        fila = self._lector.execute(
+            "SELECT COUNT(*) AS tareas, "
+            "COALESCE(SUM(tokens_de_entrada_medidos), 0) AS tokens_de_entrada, "
+            "COALESCE(SUM(tokens_de_salida), 0) AS tokens_de_salida, "
+            "COALESCE(SUM(coste), 0) AS coste, "
+            "COALESCE(SUM(latencia_ms), 0) AS latencia_ms "
+            "FROM pasada_de_entrevista WHERE id_entrevista = ?",
+            (id_entrevista,),
+        ).fetchone()
+        return _totales(fila)
+
     # --- Control de la ejecucion ------------------------------------------
 
     def detener(self, id_obra: str, motivo: str) -> None:
@@ -1604,6 +1643,28 @@ def _marcar(
         )
         caducados += cursor.rowcount
     return caducados
+
+
+def _totales(fila: sqlite3.Row) -> dict[str, Any]:
+    return {
+        "tareas": int(fila["tareas"]),
+        "tokens_de_entrada": int(fila["tokens_de_entrada"]),
+        "tokens_de_salida": int(fila["tokens_de_salida"]),
+        "coste": float(fila["coste"]),
+        "latencia_ms": int(fila["latencia_ms"]),
+    }
+
+
+def sumar_totales(*partes: dict[str, Any]) -> dict[str, Any]:
+    """Suma campo a campo varios totales de `sumar_trazas` o `sumar_pasadas`."""
+    suma: dict[str, Any] = {
+        "tareas": 0, "tokens_de_entrada": 0, "tokens_de_salida": 0, "coste": 0.0,
+        "latencia_ms": 0,
+    }
+    for parte in partes:
+        for clave in suma:
+            suma[clave] += parte.get(clave, 0)
+    return suma
 
 
 def abrir_almacen(ruta: Path | str) -> Almacen:

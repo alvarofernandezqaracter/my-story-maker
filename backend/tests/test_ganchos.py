@@ -181,7 +181,9 @@ def test_la_orden_de_un_paso_sin_prosa_no_lleva_settings(numero: int) -> None:
     orden = ejecutor._orden(encargo, _ventana())
     assert "--settings" not in orden
     assert "Stop hook feedback" not in orden[orden.index("--system-prompt") + 1]
-    assert ejecutor._entorno(encargo, _ventana()) is None
+    entorno = ejecutor._entorno(encargo, _ventana())
+    assert ganchos.VARIABLE_DE_VETOS not in entorno
+    assert ganchos.VARIABLE_DE_RESERVA not in entorno
 
 
 def test_los_vetos_viajan_por_el_entorno_y_no_por_disco_ni_por_la_ventana() -> None:
