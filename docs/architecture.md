@@ -162,7 +162,7 @@ Sin esta estructura no se puede medir si el bucle de revisión converge o gira e
 
 **Entrevista.** El espacio anterior a la obra en el que se completa el brief. Se identifica por su `id_entrevista`, igual que una obra por su `id_obra`, y guarda, pasada por pasada, lo que entró, lo que salió, cuántos hechos y contradicciones se descartaron y la traza de la pasada. No se borra ni se modifica. Anota una sola vez la obra que lanzó, y esa obra anota de qué entrevista sale.
 
-**Versión.** Una redacción entera de la obra, con su propio mundo. Atributos: número, versión de la que sale, capítulos que cambiaron respecto de ella, cuándo nació y cuándo terminó. La obra nace con la versión 1; cada «rehaz desde el capítulo N» abre la siguiente, que comparte con la anterior los capítulos 1 a N-1 y reescribe de N al final. Las versiones van en fila: la nueva sale siempre de la última y solo cuando la última ha terminado, y una versión termina cuando consta su auditoría de cierre. No la escribe ningún rol, sino el backend al recibir la orden del editor, y nunca se borra. **Publicar** una versión terminada es otra orden: cada publicación se añade a un registro que no se borra, y la publicada es la de la última publicación. Terminar no publica.
+**Versión.** Una redacción entera de la obra, con su propio mundo. Atributos: número, versión de la que sale, capítulos que cambiaron respecto de ella, cuándo nació y cuándo terminó. La obra nace con la versión 1; cada «rehaz desde el capítulo N» abre la siguiente, que comparte con la anterior los capítulos 1 a N-1 y reescribe de N al final. Las versiones van en fila: la nueva sale siempre de la última y solo cuando la última ha terminado, y una versión termina cuando consta su auditoría de cierre. No la escribe ningún rol, sino el backend al recibir la orden del editor, y nunca se borra. **Publicar** una versión terminada es otra orden, que solo se cumple si la versión pasa la puerta de publicación (§4): cada publicación se añade a un registro que no se borra, y la publicada es la de la última publicación. Terminar no publica.
 
 ```mermaid
 flowchart TD
@@ -207,7 +207,9 @@ Valores cerrados de la capa de producción. Los vocabularios de forma textual y 
 
 **Al agotarse:** `detener_obra`, `critica_abierta`, `seguir`. Es lo que declara cada paso del guion para cuando su tarea agota los intentos (§4): detener la obra, dejar una `Crítica` «no comprobado» y seguir, o seguir sin más.
 
-**Gancho:** `validar_capitulo`, `policy`. Los hooks que lleva el subagente de un paso del guion (§4): el primero mira la forma de lo que entrega y el segundo, que no traiga nada de lo que el comprador vetó.
+**Gancho:** `validar_capitulo`, `policy`. Los hooks que lleva el subagente de un paso del guion (§4): el primero mira la forma de lo que entrega y que los nombres de la biblia vengan escritos tal cual, y el segundo, que no traiga nada de lo que el comprador vetó.
+
+**Validador de la puerta:** `esquema`, `nombres`, `longitud`, `elementos_personalizados`. Qué comprobación da cada fallo de la puerta de publicación (§4).
 **Tipo de contradicción:** `edad_contra_tono`, cuando el tono pedido no corresponde a la edad del destinatario, y `texto_contra_campo`, cuando un texto pegado en la entrevista dice otra cosa que un campo que la persona escribió. Lo detecta el Entrevistador y no lo resuelve: lo devuelve como pregunta, y la persona puede darlo por asumido.
 
 **Tipo de EventoEstado:** `aparece`, `muere`, `viaja_a`, `adquiere`, `pierde`, `aprende` (cambio epistémico), `revela_a`, `cambia_relacion`, `cambia_estado_civil_o_rango`, `transcurre_tiempo`.
@@ -220,6 +222,7 @@ flowchart TD
   PROC --> AGO[al agotarse: detener obra /<br/>critica abierta / seguir]
   PROC --> CON[tipo de contradiccion: edad contra tono /<br/>texto contra campo]
   PROC --> GAN[gancho: validar capitulo /<br/>policy]
+  PROC --> PUE[validador de la puerta: esquema /<br/>nombres / longitud / elementos personalizados]
 ```
 
 ```mermaid
@@ -543,7 +546,16 @@ Lo único que se pierde es el trabajo del capítulo que estaba abierto. Salvar p
 
 Con la obra terminada, el editor puede ordenar **«rehaz desde el capítulo N»**. En una sola transacción nace la versión siguiente, que anota como cambiados los capítulos de N al último; lo que colgaba de ellos recibe la marca de relevo; sus fragmentos salen del índice; y la constancia de auditoría baja a N-1 para que la versión nueva se audite al cerrar. Después la producción arranca por el camino de siempre: vuelve al último capítulo cerrado, que es el N-1, y sigue desde N. Se rehace hasta el final y no un capítulo suelto porque lo que viene detrás se escribió sobre el mundo del capítulo rehecho. Rehacer no se admite mientras la obra produce ni sobre una versión sin terminar.
 
-**Publicar** una versión terminada es una orden aparte y pasa por un solo sitio del código, que es donde entra cualquier comprobación previa a publicar. Sin pedir versión, la API sirve la versión de referencia: la publicada si la hay y, si no, la última; y el manuscrito dice cuál sirve y si está publicada. Rehacer y publicar son decisiones editoriales, no mantenimiento: nada obliga a darlas.
+**Publicar** una versión terminada es una orden aparte y pasa por un solo sitio del código, que es donde está la **puerta de publicación**: cuatro comprobaciones deterministas sobre lo que ve esa versión, sin agentes y sin gastar.
+
+| Validador | Qué comprueba |
+| --- | --- |
+| `esquema` | Que toda salida de un rol que la versión conserva traiga todos los campos que el esquema de su tarea declara para su tipo |
+| `nombres` | Que los nombres de la biblia —el del destinatario y los de personajes, lugares, objetos y facciones, con sus tratamientos— se escriban tal cual, y que el del destinatario aparezca en algún capítulo |
+| `longitud` | Que cada capítulo tenga entre 1 000 y 4 000 palabras de texto aceptado. El rango está en el guion y es el mismo para todas las obras |
+| `elementos_personalizados` | Que todo hecho de la biblia con licencia `personal`, lo que sale de la vida del destinatario, se use en algún capítulo según sus menciones |
+
+Si alguno falla, la versión no se publica y la orden responde con la lista de fallos, cada uno con su validador y su capítulo. La puerta no regenera nada: rehacer sigue siendo una orden del editor. Su resultado no se guarda: se deriva cada vez que se pide, y se puede pedir antes de publicar. Sin pedir versión, la API sirve la versión de referencia: la publicada si la hay y, si no, la última; y el manuscrito dice cuál sirve y si está publicada. Rehacer y publicar son decisiones editoriales, no mantenimiento: nada obliga a darlas.
 
 ### Cuántas veces se intenta cada paso
 
@@ -565,10 +577,10 @@ Los tres pasos que escriben prosa —3 `redactar`, 5 `revisar` y 7, la costura�
 
 | Hook | Qué mira | Qué no mira |
 | --- | --- | --- |
-| `validar_capitulo` | Que la salida sea el objeto JSON con su lista de artefactos, que cada uno traiga tipo y cuerpo, que el rol solo escriba los tipos que su contrato le deja, que venga el artefacto principal del esquema de la tarea con todos sus campos, y que ningún `Borrador` venga sin texto | Nada del contenido: ni nombres, ni longitud, ni calidad. Es una lista de comprobaciones a la que se suman otras sin tocar el enganche |
+| `validar_capitulo` | Que la salida sea el objeto JSON con su lista de artefactos, que cada uno traiga tipo y cuerpo, que el rol solo escriba los tipos que su contrato le deja, que venga el artefacto principal del esquema de la tarea con todos sus campos, que ningún `Borrador` venga sin texto, y que en el texto de cada `Borrador` y cada `Párrafo` no haya un nombre de la biblia mal escrito: una palabra con mayúscula que solo difiere de un nombre en acentos, en una letra cambiada o en una letra de más o de menos en los nombres largos | Ni longitud, ni calidad. Una variante que también sale en minúscula en el texto, o una letra de más en un nombre corto, pasa: se prefiere no verla antes que detener la obra por una palabra corriente. Es una lista de comprobaciones a la que se suman otras sin tocar el enganche |
 | `policy` | Que el texto de cada `Borrador` y cada `Párrafo` no contenga ninguna de las palabras o temas que el comprador vetó en el brief, comparados tal cual | Variantes: otra mayúscula, un acento o un plural no casan, y un tema vetado solo casa si aparece escrito igual |
 
-Los hooks viajan en la orden del ejecutor, con `--settings`, y no rompen el aislamiento: el subagente sigue arrancando en su directorio vacío y sin nada del repositorio. Lo que el hook necesita saber —la lista de vetos y la reserva de la vuelta— va en el entorno del proceso, no en disco, y la lista de vetos no entra en ninguna ventana: al agente solo le llega lo que encontró en su propio texto. El hook no escribe en el almacén; dice su veredicto por su salida.
+Los hooks viajan en la orden del ejecutor, con `--settings`, y no rompen el aislamiento: el subagente sigue arrancando en su directorio vacío y sin nada del repositorio. Lo que el hook necesita saber —la lista de vetos, los nombres de la biblia y la reserva de la vuelta— va en el entorno del proceso, no en disco, y ni los vetos ni los nombres entran en ninguna ventana: al agente solo le llega lo que encontró en su propio texto. El hook no escribe en el almacén; dice su veredicto por su salida.
 
 **Una vuelta por intento.** Un hook bloquea solo la primera vez: si ya bloqueó uno en ese turno, el siguiente deja terminar. Tampoco bloquea si la vuelta no cabe en la reserva del paso (§3). Al terminar, el ejecutor aplica las mismas comprobaciones a lo que el agente entregó al final, y ese es el veredicto que cuenta: si no pasa, el intento ha fallado y se aplican los reintentos del paso y su `al_agotarse`, que en los tres es `detener_obra`. Lo que cada hook dijo durante la sesión y el veredicto final quedan en la `Traza` del intento, también cuando falla, y se sirven con ella.
 
@@ -623,7 +635,7 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `Compromiso` | Planificador y redactor | Se cierra al pagarse | Siempre, cola abierta | Economía narrativa |
 | `Crítica` | Verificador, Editor de estilo, Arquitecto de arcos, Juez; y el backend, cuando rechaza un artefacto malformado o cuando una comprobación agota sus intentos | Se resuelve en revisión | Solo al agente que revisa | Convergencia del bucle |
 | `Decisión` | Cualquier agente de la obra; el Entrevistador no escribe nada | Inmutable | Canon comprimido | Coherencia de diseño |
-| `Versión` | El backend, con el alta y con cada orden de rehacer del editor | Solo la marca de terminada, una vez; publicarla es añadir al registro de publicaciones | Nunca: decide qué filas ve cada lectura | Conservación de la versión anterior (`validators.md` §8) |
+| `Versión` | El backend, con el alta y con cada orden de rehacer del editor | Solo la marca de terminada, una vez; publicarla es añadir al registro de publicaciones, y solo si pasa la puerta | Nunca: decide qué filas ve cada lectura | Conservación de la versión anterior (`validators.md` §8) |
 
 Dos reglas que la tabla implica y conviene explicitar: ninguna entidad del mundo se modifica por escritura directa del redactor, solo mediante eventos emitidos al cerrar un capítulo; y ningún agente valida su propia salida.
 
@@ -664,6 +676,8 @@ backend/
                        los hooks de su paso en la orden
     ganchos.py         los dos hooks Stop de los subagentes de prosa: el
                        programa que revisa lo entregado, sin tocar el almacen
+    validadores.py     los validadores programaticos: funciones puras que usan
+                       el hook de forma y la puerta de publicacion
     tareas/            una carpeta por tipo de tarea del censo (§2), con su
                        contrato, su prompt, su esquema y, si le toca criba, sus
                        contratos de verificacion por dimension
@@ -674,7 +688,8 @@ backend/
                        enrutado por severidad y los topes de vueltas (§5), el
                        presupuesto de contexto (§3), los permisos por rol (§6),
                        la ventana y el filtro de la pasada de entrevista (§4)
-                       y el orden de rehacer y el unico camino de publicar (§4)
+                       y el orden de rehacer y el unico camino de publicar,
+                       con su puerta (§4)
     almacen/           unica puerta de lectura y escritura, incluido el indice
                        de recuperacion por parecido
     api/               un procedimiento por caso de uso del editor

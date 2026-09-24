@@ -192,6 +192,7 @@ la que más protege.
 | En `frontend/`, solo `compartido/api/` llama al servidor, las funcionalidades no se importan entre sí y nada lee disco ni importa del backend | Regla de fronteras de ESLint, más una prueba de estructura para lo que ESLint no ve: ninguna carpeta `services`, `models` ni `domain`, un solo fichero que importa `openapi-fetch` y el almacenamiento del navegador en un solo fichero |
 | El único sitio con tipos declarados es el borde HTTP | Comprobación de tipos sobre `api/` |
 | Los hooks no tocan el almacén ni el guion: informan por su salida y registra el ejecutor | Contrato de importación sobre `ganchos` |
+| Los validadores programáticos son funciones puras: no leen el almacén, ni las tareas, ni el guion | Contrato de importación sobre `validadores` |
 
 ### Dónde no se comprueban tipos, y por qué
 
@@ -240,6 +241,7 @@ manda.
 | La persistencia | Cada migración sobre una copia de una obra de prueba; el bloqueo por escrituras concurrentes se ejercita con una tanda de verdad, no se supone |
 | La entrevista | Con un ejecutor fingido que contesta lo que contestaría el Entrevistador: un hecho sin cita literal se descarta, lo que la persona escribió no cambia, lo que falta sale con su ruta, una contradicción sin evidencia no bloquea y una asumida tampoco, la pasada que completa el brief lanza la obra, y la huella de cada pasada no se borra ni se modifica |
 | Los dos hooks | El programa del hook se prueba dándole la entrada JSON que le daría Claude Code, también lanzado como proceso: bloquea con código 2 lo malformado y lo vetado, deja terminar lo bueno, bloquea una sola vez por turno, no bloquea si la vuelta no cabe en la reserva y su motivo está acotado. La orden del ejecutor lleva los dos hooks `Stop` en los pasos 3, 5 y 7 y ninguno en los demás, con los vetos en el entorno y no en la ventana; y un Redactor fingido que insiste en lo vetado agota sus intentos y detiene la obra con el veredicto en cada `Traza`. Que el CLI de verdad dispara el hook en `--print` y el agente corrige se confirma con un sondeo mínimo, fuera de la batería |
+| La puerta de publicación | Cada validador con un caso que pasa y otro que falla: un capítulo fuera del rango de palabras, un «Inés» donde la biblia dice «Ines» frente a un «Pero» que no se toma por «Pedro», un cuerpo al que le falta un campo de su esquema y un hecho `personal` sin mención. Un rango del guion roto no carga. El hook de forma bloquea el nombre mal escrito con los nombres llegados por el entorno y el ejecutor repite la comprobación. Una obra entera con un ejecutor fingido y un defecto sembrado por validador no se publica, la respuesta dice cuál falló y en qué capítulo, el registro de publicaciones sigue vacío y la puerta servida aparte dice lo mismo; sin el defecto, se publica |
 | La frontera con la interfaz | El contrato OpenAPI versionado frente al que genera el código: si el borde cambia, la prueba lo vuelve a volcar y falla una vez, para que el movimiento pase por el diff. Comprueba además que toda operación declare la forma de lo que devuelve, porque un contrato con respuestas sin tipar no sirve para generar cliente. En el otro lado, `frontend/` genera su cliente desde ese mismo fichero y su prueba del contrato hace lo mismo: regenera, compara con lo commiteado y, si difiere, lo reescribe y falla una vez. Un campo renombrado rompe además la compilación de la pantalla que lo usa |
 | La interfaz | Cada requisito de SPEC2 con su prueba contra un servidor simulado y un flujo de progreso falso, sin gastar: lo que lleva cada pasada, lo que sobrevive a recargar, el salto al avance al lanzarse, el reenganche del flujo, las órdenes de detener y reanudar, la agrupación del manuscrito y cada formato de error |
 | Que las pruebas afirmen algo | Pruebas de mutación sobre `nucleo/` y sobre los permisos por rol, en periodo y no en cada commit, porque son lentas |
@@ -287,7 +289,25 @@ arranque sin más herramientas que las que su contrato le concede (SPEC1, D-08).
 | Solo el Documentalista sale del sistema | `prueba` | Ningún otro rol tiene herramienta con la que salir; se comprueba enumerándolas |
 | El Entrevistador no escribe nada | `prueba` | Su contrato no declara ninguna escritura, la tabla de gobierno no le asigna ninguna, y lo que devuelva como artefacto se cuenta y no se guarda |
 | Una sola pasada de entrevista abierta a la vez | `prueba` | Se lanzan varias a la vez contra un ejecutor que cuenta las que tiene abiertas, y el pico es uno. Por eso su coste cabe en el margen del techo |
-| Lo que entrega un subagente de prosa está bien formado y no trae nada vetado | `prueba` | Dos hooks `Stop` en su orden, que no le dejan terminar sin corregir, y el ejecutor repite las mismas comprobaciones sobre lo entregado al final. Un hook, no el prompt: el agente puede no hacer caso de una petición, pero no puede terminar sin pasar |
+| Lo que entrega un subagente de prosa está bien formado, escribe los nombres de la biblia tal cual y no trae nada vetado | `prueba` | Dos hooks `Stop` en su orden, que no le dejan terminar sin corregir, y el ejecutor repite las mismas comprobaciones sobre lo entregado al final. Un hook, no el prompt: el agente puede no hacer caso de una petición, pero no puede terminar sin pasar |
+
+### La puerta de publicación
+
+Antes de publicar una versión pasan cuatro validadores deterministas sobre lo
+que esa versión ve. No los hace ningún agente: son funciones puras que comparan
+datos ya escritos, así que sobre la obra son `analisis`, y su propio código se
+cierra por `prueba`. Si uno falla la versión no se publica, y cada fallo sale
+con su validador, su capítulo y un detalle que se puede citar.
+
+| Validador | Predicado | Dato de partida | Lo que no ve |
+| --- | --- | --- | --- |
+| `esquema` | Toda salida de un rol que la versión conserva trae los campos que el esquema de su tarea declara para su tipo | El cuerpo guardado y el `esquema.json` de la tarea | Que el valor de cada campo sea bueno: solo que está |
+| `nombres` | Ninguna palabra con mayúscula del texto aceptado es un nombre de la biblia mal escrito, y el del destinatario aparece tal cual | El texto aceptado y los nombres y tratamientos de las fichas | Una variante que también sale en minúscula en el texto, una letra de más o de menos en un nombre de menos de siete, o un nombre cambiado por otro que no se le parece |
+| `longitud` | Cada capítulo tiene entre el mínimo y el máximo de palabras del guion | El texto aceptado del capítulo | Si la longitud le sienta bien al capítulo |
+| `elementos_personalizados` | Todo hecho `personal` tiene al menos una mención en un capítulo | Las menciones que anota el Archivero | Una mención que el Archivero no anotó: es el hueco de las menciones de §10, y aquí sale como un elemento que falta |
+
+El de nombres corre además dentro del hook `validar_capitulo`, porque quien
+escribe lo puede corregir en el acto. Los otros tres solo en la puerta.
 
 ### Medir a los verificadores
 
@@ -342,6 +362,7 @@ la comprobación que la vigila.
 | Contaminación del mundo | Un dato falso entra en el canon y envenena el contexto de todos los capítulos siguientes | El mundo solo cambia por `EventoEstado` del Contable y solo al cerrar capítulo. Se comprueba intentando escribir el mundo desde cualquier otro rol |
 | Fuga de material | Un rol manda fuera lo que el sistema tiene dentro | Ningún rol salvo el Documentalista tiene herramienta con la que salir |
 | Lo vetado se cuela en la prosa | El Redactor, el Revisor o el Editor de estilo escriben una palabra o un tema que el comprador vetó en el brief | El hook `policy` no deja terminar al subagente y, si insiste, el intento falla y la obra se detiene. Se comprueba con un Redactor fingido que insiste y con un sondeo real. **Lo que no ve:** la comparación es literal, así que una mayúscula, un acento, un plural o el mismo tema dicho con otras palabras pasan |
+| Un nombre de la biblia mal escrito | Quien escribe pone «Inés» donde la biblia dice «Ines», o cambia una letra de un apellido | El hook de forma no le deja terminar y la puerta no publica la versión. **Lo que no ve:** las variantes que las reglas dejan pasar a propósito para no detener la obra por una palabra corriente |
 
 Lo que se encuentra en una de estas comprobaciones se queda como caso sembrado
 para siempre: un ataque descubierto y no reincorporado al conjunto de casos es
@@ -423,6 +444,10 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | Terminar no publica, y solo se publica o se rehace una versión terminada | Lectura del manuscrito sin publicar, y publicar y rehacer una obra detenida sin terminar | `prueba` |
 | Sin pedir versión se lee la publicada, o la última si no hay ninguna | Publicar la 1, rehacer, publicar la 2 y volver a publicar la 1, leyendo el manuscrito tras cada paso | `prueba` |
 | Publicar pasa por un solo sitio del código | Búsqueda de quién llama a la escritura de publicaciones del almacén: solo `nucleo/versiones.py` | `inspeccion` |
+| Una versión que no pasa la puerta no se publica, y la respuesta dice qué validador falló y en qué capítulo (SPEC1 RF-146, RI-18) | Obra fingida con un defecto sembrado por validador, y la misma sin defecto | `prueba` |
+| Cada validador de la puerta acierta en su caso bueno y en su caso malo (SPEC1 RF-140 a RF-144) | Un caso que pasa y otro que falla por validador; el rango roto del guion no carga | `prueba` |
+| La puerta se puede consultar sin publicar y no guarda nada (SPEC1 RF-147, RD-30) | La puerta servida aparte da lo mismo que el rechazo, y el registro de publicaciones sigue vacío; ninguna migración nueva | `prueba` |
+| El hook de forma para un nombre de la biblia mal escrito, con los nombres llegados por el entorno (SPEC1 RF-145) | El programa del hook con la entrada de Claude Code, el veredicto del ejecutor y la orden interceptada | `prueba` |
 | Descartar un capítulo a medias se lleva también lo que escribió sin capítulo | `Evento` escrito por una tarea del capítulo descartado | `prueba` |
 | Los pasos que escriben prosa llevan sus dos hooks y ningún otro paso los lleva | Lectura del guion y de la orden del ejecutor paso a paso; un hook fuera de vocabulario o sin reserva no carga | `prueba` |
 | Los hooks viajan en la orden sin romper el aislamiento ni escribir en disco | Orden interceptada y el hook lanzado como proceso sobre un directorio que sigue vacío | `prueba` |
