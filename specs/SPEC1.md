@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.4.0
+version: 1.5.0
 estado: aplicada
 fecha: 2026-09-24
 ambito: backend/
@@ -184,7 +184,7 @@ flowchart LR
 | RF-10 | El guion del capítulo —paso, rol, proyección, tope de ventana y concurrencia— es un artefacto declarativo, no código. La pieza que lo camina lee cuál es el paso siguiente y lo ejecuta | `inspeccion` |
 | RF-11 | Cada paso encarga una tarea a un rol con la proyección mínima de ese rol (`architecture.md` §3) y nada más. Lo que sobra en la proyección produce falsos positivos y es un defecto | `inspeccion` |
 | RF-12 | Ningún rol invoca a otro ni recibe objetos en memoria: el testigo se pasa siempre por artefacto escrito en el almacén | `analisis` |
-| RF-13 | La anchura de una tanda se calcula: `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)`, redondeado a la baja; en un paso con hooks, el tope lleva sumada la reserva de la vuelta (RF-128). Si hay más tareas, se hacen tandas sucesivas y se espera a que cierre una antes de abrir la siguiente | `analisis` |
+| RF-13 | La anchura de una tanda se calcula: `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)`, redondeado a la baja; en un paso con hooks, el tope lleva sumada la reserva de la vuelta (RF-128). Si hay más tareas, se hacen tandas sucesivas y se espera a que cierre una antes de abrir la siguiente. Las tareas de una tanda corren a la vez, y lo que devuelven se recoge en el orden del guion, no en el de llegada (D-51) | `analisis` |
 | RF-14 | Antes de enviar, cuenta los tokens de la ventana. Si no cabe en el tope del rol, **parte la unidad** (capítulo → escena → párrafo) y nunca recorta la proyección | `prueba` |
 | RF-15 | Las únicas bifurcaciones son el enrutado por severidad y el tope de vueltas. Ningún agente enruta ni manda sobre otro | `inspeccion` |
 | RF-16 | El destinatario y sus recuerdos entran en la ventana del Constructor de mundo y del Planificador, y en ninguna otra ventana de la obra, declarados como material propio y no colados dentro del cuerpo de la `Obra`. Lo que los demás roles necesitan de él ya está en las fichas del mundo que el Constructor escribió | `inspeccion` |
@@ -735,10 +735,13 @@ ese contrato se publica en OpenAPI: es el único acuerdo entre `backend/` y
 | D-13 | **Un recuerdo del destinatario es un `Recuerdo`, no una `Fuente` de tipo nuevo.** Nace con el alta de la obra y ningún rol del censo lo escribe | El invariante «solo el Documentalista escribe `Fuente`» es lo que hace que un dato histórico sin respaldo sea detectable como alucinación. Meter ahí las anécdotas del comprador obligaría a abrir esa puerta a un segundo escritor y el invariante dejaría de significar nada. Son además cosas distintas: una `Fuente` es evidencia de una época y un `Recuerdo` es evidencia de una persona, sin fiabilidad ni tipo documental que declarar. El precio es un segundo sitio donde mirar de dónde sale un dato |
 | D-14 | **El papel del destinatario en la obra lo decide el Planificador y lo deja escrito en el `Plan`.** No es un campo del brief | Preguntárselo al editor es una pregunta más antes de tener una novela, y puede pedir un papel que no case con la premisa. Dejarlo implícito haría inverificable la personalización, porque el validador no sabría dónde mirar: escribirlo en el `Plan` da las dos cosas, libertad narrativa y un sitio fijo donde comprobarlo |
 | D-50 | **La tesis temática y el elenco declarado son opcionales en el brief, igual que los arcos.** Si no vienen, nadie los rellena por el editor: el Planificador trabaja sin tesis declarada y el Constructor de mundo decide quién existe. La entrevista no los pide ni los recuerda: no salen en `faltan` | Obligarlos convierte en trámite una pregunta que el editor puede no saber contestar al encargar, y cada pasada de más cuesta. Ningún validador los comprueba —la regla de corte de `AGENTS.md` ya los dejaba en el límite— y los dos roles que los leen saben trabajar sin ellos. Se descarta que el Entrevistador los invente: solo puede proponer lo que cite literal de un texto pegado (RF-74) |
+| D-51 | **Las tareas de una tanda corren a la vez, en hilos del propio proceso, y solo si quien las ejecuta lo declara.** El ejecutor de subagentes lo declara; los fingidos de las pruebas no, y con ellos la tanda se sigue mandando en serie. Si una tarea detiene la obra, las que ya estaban abiertas en su tanda terminan y lo que dejen se descarta al volver al punto de guardado (§4.10) | El caminante calculaba la anchura de RF-13 y luego mandaba la tanda tarea a tarea: el techo se respetaba porque nunca se usaba, y un capítulo de cuatro escenas costaba una hora de reloj esperando a subagentes que no dependen unos de otros. Hilos y no procesos ni `asyncio`, porque cada tarea ya es un subproceso y lo único que hace el hilo es esperarlo; el almacén ya tenía un escritor serializado y un lector por hilo, así que sigue habiendo un solo escritor (RNF-05). Recoger en el orden del guion es lo que mantiene el recorrido reproducible (RNF-04). Que lo declare el ejecutor es porque los fingidos contestan según el orden en que les llegan los encargos: en paralelo, sus casos sembrados caerían en otra escena. Un subagente no se corta a medias: cortarlo dejaría una `Traza` abierta sin veredicto, y lo que escriba ya se descarta al reanudar |
 | D-05 | v1 no usa herramientas externas de cálculo | La decisión sigue abierta. Mientras lo esté, coherencia temporal, fatiga léxica y léxico vetado van como `analisis` contra el dato ya escrito, y lo que las vigila es la reincidencia por dimensión |
 
 Las decisiones D-20 a D-24, las de la entrevista, están en §4.8, junto a los
 requisitos que justifican.
+
+D-51 no cambia `architecture.md`, que ya describía la tanda así en §3 —«se abren seis, se espera a que cierren y se abren las siguientes»—: era el código el que no la cumplía. Pone al día en la fase 3 la matriz de cobertura de `validators.md` §8.
 
 D-50 pone al día en la fase 3 el atributo `Obra` de `definitions.md`, que marca
 la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
