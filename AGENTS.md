@@ -22,7 +22,7 @@ ambos es la misma desde el principio.
 | Carpeta | Qué contendrá | Pila |
 | --- | --- | --- |
 | `backend/` | El servidor: guarda y sirve artefactos, camina el guion encargando tareas a los agentes y expone por HTTP lo que el editor necesita ver | Python + FastAPI |
-| `frontend/` | La interfaz web: encargar una obra conversando con el Entrevistador, ver cómo avanza, ver las tareas ya hechas y leer el manuscrito, con un menú que salta entre las pantallas de cada obra. Se pone en pie con `npm run dev`, que arranca también el backend | Vite + React + TypeScript |
+| `frontend/` | La interfaz web: encargar una obra conversando con el Entrevistador, ver cómo avanza, ver las tareas ya hechas, leer el manuscrito —con su portada, la ficha de personajes y lugares, las críticas de cada capítulo, el cambio de nombre de un hecho y la descarga en PDF— y ver las versiones para publicarlas, con un menú que salta entre las pantallas de cada obra. Se pone en pie con `npm run dev`, que arranca también el backend, y `npm run validar-visual` mira la lectura con un navegador | Vite + React + TypeScript |
 | `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura | Markdown |
 | `specs/` | Las specs vivas —el contexto específico—: `SPEC1.md` para el backend y `SPEC2.md` para el frontend, con qué tiene que hacer cada uno y por qué | Markdown |
 | `.claude/` | El andamiaje de desarrollo con Claude Code: las skills, los comandos `/ciclo` y `/verificar`, el subagente `verificador` y, en `mcp.json`, el servidor de navegador que se carga a propósito con `--mcp-config`. Su guía de uso es `CLAUDE.md`, en la raíz | Markdown + JSON |

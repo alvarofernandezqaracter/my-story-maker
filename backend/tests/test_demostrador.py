@@ -201,6 +201,37 @@ def test_el_suceso_muere_lleva_su_sujeto(almacen: Almacen) -> None:
     assert sucesos[0]["presentes"][0]["nacimiento"] == "1551"
 
 
+class _AlmacenConCambio:
+    """Un cambio del lector renombro a `per_viejo` (ahora `per_nuevo`) y a
+    `lug_viejo` (ahora `lug_nuevo`): el capitulo 1 es compartido y lleva los
+    `id` viejos; el 3 se reescribio y lleva los nuevos."""
+
+    def fichas_sustituidas(self, id_obra: str, version: int) -> dict[str, str]:
+        return {"per_viejo": "per_nuevo", "lug_viejo": "lug_nuevo"}
+
+    def listar(self, tipo: str, id_obra: str, version: int) -> list[Artefacto]:
+        muere = Artefacto("EventoEstado", {"tipo_de_evento": "muere", "sujeto": "per_viejo"},
+                          id_obra=id_obra, capitulo=1)
+        muere.id = "eve_1"
+        return [muere]
+
+    def cronologia(self, id_obra: str, version: int) -> list[dict[str, Any]]:
+        return [
+            {"id": "eve_1", "capitulo": 1, "lugar": "lug_viejo",
+             "presentes": [{"id": "per_viejo", "nacimiento": "1551"}]},
+            {"id": "eve_3", "capitulo": 3, "lugar": "lug_nuevo",
+             "presentes": [{"id": "per_nuevo", "nacimiento": "1551"}]},
+        ]
+
+
+def test_el_volcado_lleva_cada_ficha_cambiada_por_el_lector_a_la_vigente() -> None:
+    sucesos = versiones.sucesos_de_la_cronologia(_AlmacenConCambio(), "obr_1", 2)  # type: ignore[arg-type]
+    assert [s["muere"] for s in sucesos] == ["per_nuevo", None]
+    assert [s["lugar"] for s in sucesos] == ["lug_nuevo", "lug_nuevo"]
+    presentes = [[p["id"] for p in s["presentes"]] for s in sucesos]
+    assert presentes == [["per_nuevo"], ["per_nuevo"]]
+
+
 # --- La puerta y la critica: el caso que solo Lean ve (RF-156) ----------------
 
 

@@ -74,6 +74,26 @@ def rehacer_desde(
     return nueva
 
 
+def cambiar_hecho(
+    almacen: Almacen,
+    indice: IndiceDeLaObra | None,
+    id_obra: str,
+    hecho: str,
+    valor: str,
+) -> tuple[int, list[int]]:
+    """El cambio del lector: abre la version que reescribe solo los capitulos
+    que mencionan el hecho, con su nombre nuevo (SPEC1 RF-170 a RF-173).
+
+    Que capitulos son lo dicen las menciones de la ultima version, no el texto.
+    Lo relevado sale del indice, como al rehacer. Arrancar la produccion es cosa
+    de quien llama, por el camino de siempre (RF-175).
+    """
+    nueva, capitulos = almacen.abrir_version_por_cambio(id_obra, hecho, valor)
+    if indice is not None:
+        indice.retirar_capitulos(id_obra, capitulos)
+    return nueva, capitulos
+
+
 # --- La puerta de publicacion (SPEC1 4.15) ---------------------------------
 
 
@@ -180,14 +200,38 @@ def sucesos_de_la_cronologia(
     La vista de RF-86 no dice el sujeto de cada `EventoEstado`; para el suceso
     `muere` se lee de su cuerpo, tal como lo escribio el Contable. Se copia, no
     se interpreta.
+
+    Un cambio del lector deja la misma ficha con dos `id`: el viejo en los
+    capitulos compartidos y el nuevo en los reescritos. Presentes, lugar y quien
+    muere se llevan a la ficha vigente por `sustituye` (RF-177), para que Lean
+    no los tome por dos personas o dos lugares.
     """
+    sustituidas = almacen.fichas_sustituidas(id_obra, numero)
+
+    def vigente(identificador: Any) -> Any:
+        vistos: set[str] = set()
+        while isinstance(identificador, str) and identificador in sustituidas:
+            if identificador in vistos:
+                break
+            vistos.add(identificador)
+            identificador = sustituidas[identificador]
+        return identificador
+
     muertes = {
         evento.id: evento.cuerpo.get("sujeto")
         for evento in almacen.listar("EventoEstado", id_obra, version=numero)
         if evento.cuerpo.get("tipo_de_evento") == "muere"
     }
     return [
-        suceso | {"muere": muertes.get(suceso["id"])}
+        suceso
+        | {
+            "lugar": vigente(suceso.get("lugar")),
+            "presentes": [
+                presente | {"id": vigente(presente.get("id"))}
+                for presente in suceso.get("presentes") or []
+            ],
+            "muere": vigente(muertes.get(suceso["id"])),
+        }
         for suceso in almacen.cronologia(id_obra, version=numero)
     ]
 

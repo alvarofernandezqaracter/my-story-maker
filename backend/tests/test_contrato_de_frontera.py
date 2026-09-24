@@ -44,7 +44,8 @@ def test_toda_operacion_declara_la_forma_de_lo_que_devuelve() -> None:
             respuestas = operacion["responses"]
             correcta = next(c for c in respuestas if c.startswith("2"))
             contenido: dict[str, Any] = respuestas[correcta].get("content", {})
-            if not contenido.get("application/json", {}).get("schema"):
+            # JSON casi siempre; el PDF declara su tipo y su forma binaria.
+            if not any(forma.get("schema") for forma in contenido.values()):
                 sin_forma.append(f"{verbo.upper()} {ruta}")
     assert not sin_forma, f"operaciones sin respuesta tipada: {sin_forma}"
 

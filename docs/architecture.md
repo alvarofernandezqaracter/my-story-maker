@@ -162,7 +162,7 @@ Sin esta estructura no se puede medir si el bucle de revisión converge o gira e
 
 **Entrevista.** El espacio anterior a la obra en el que se completa el brief. Se identifica por su `id_entrevista`, igual que una obra por su `id_obra`, y guarda, pasada por pasada, lo que entró, lo que salió, cuántos hechos y contradicciones se descartaron y la traza de la pasada. No se borra ni se modifica. Anota una sola vez la obra que lanzó, y esa obra anota de qué entrevista sale.
 
-**Versión.** Una redacción entera de la obra, con su propio mundo. Atributos: número, versión de la que sale, capítulos que cambiaron respecto de ella, cuándo nació y cuándo terminó. La obra nace con la versión 1; cada «rehaz desde el capítulo N» abre la siguiente, que comparte con la anterior los capítulos 1 a N-1 y reescribe de N al final. Las versiones van en fila: la nueva sale siempre de la última y solo cuando la última ha terminado, y una versión termina cuando consta su auditoría de cierre. No la escribe ningún rol, sino el backend al recibir la orden del editor, y nunca se borra. **Publicar** una versión terminada es otra orden, que solo se cumple si la versión pasa la puerta de publicación (§4): cada publicación se añade a un registro que no se borra, y la publicada es la de la última publicación. Terminar no publica.
+**Versión.** Una redacción entera de la obra, con su propio mundo. Atributos: número, versión de la que sale, capítulos que cambiaron respecto de ella, cuándo nació y cuándo terminó. La obra nace con la versión 1; cada «rehaz desde el capítulo N» abre la siguiente, que comparte con la anterior los capítulos 1 a N-1 y reescribe de N al final, y cada cambio del lector —un hecho de la biblia con un nombre nuevo— abre la siguiente reescribiendo solo los capítulos que mencionan ese hecho (§4). Las versiones van en fila: la nueva sale siempre de la última y solo cuando la última ha terminado, y una versión termina cuando consta su auditoría de cierre. No la escribe ningún rol, sino el backend al recibir la orden, y nunca se borra. **Publicar** una versión terminada es otra orden, que solo se cumple si la versión pasa la puerta de publicación (§4): cada publicación se añade a un registro que no se borra, y la publicada es la de la última publicación. Terminar no publica.
 
 ```mermaid
 flowchart TD
@@ -375,7 +375,7 @@ Corolario práctico: el estado epistémico de cada personaje es una proyección 
 
 Por la misma razón hay otras dos cosas que tampoco se guardan. **La cronología** se compone al pedirla con los `EventoEstado` —fecha, lugar y presentes—, los `Evento` del mundo y la fecha de nacimiento de cada `Personaje`, en orden de fecha escrita y sin calcular nada. Y **en qué capítulos se usa cada hecho** se deriva de las `Mención` que el Archivero anota al cerrar. Las dos las sirve la API en rutas de lectura.
 
-**Cada versión tiene su propio mundo.** Toda fila del almacén lleva la versión en que se escribió y, si otra la sustituyó, la versión que la relevó. Rehacer desde N pone esa marca de relevo, junto con la de caducado, a todo lo que cuelga de un capítulo N o posterior: lo que lleva ese capítulo —eventos, menciones, resúmenes, borradores, críticas, fuentes— y lo que no lo lleva pero lo escribió una tarea de ese capítulo según su `Traza`, como un `Evento` que añadió el Planificador. El estado materializado se releva igual en vez de borrarse, porque quien lo pliega es el Contable y no se recalcula solo. Una versión ve lo escrito en ella o antes que ni ella ni una anterior hayan relevado, así que la versión vieja sigue siendo coherente consigo misma y la producción, que siempre es de la última, sigue leyendo solo lo vivo. Lo escrito antes del capítulo 1 —la biblia de partida, los `Recuerdo` y la `Obra`— es común a todas las versiones.
+**Cada versión tiene su propio mundo.** Toda fila del almacén lleva la versión en que se escribió y, si otra la sustituyó, la versión que la relevó. Rehacer desde N pone esa marca de relevo, junto con la de caducado, a todo lo que cuelga de un capítulo N o posterior: lo que lleva ese capítulo —eventos, menciones, resúmenes, borradores, críticas, fuentes— y lo que no lo lleva pero lo escribió una tarea de ese capítulo según su `Traza`, como un `Evento` que añadió el Planificador. El estado materializado se releva igual en vez de borrarse, porque quien lo pliega es el Contable y no se recalcula solo. Una versión ve lo escrito en ella o antes que ni ella ni una anterior hayan relevado, así que la versión vieja sigue siendo coherente consigo misma y la producción, que siempre es de la última, sigue leyendo solo lo vivo. Lo escrito antes del capítulo 1 —la biblia de partida, los `Recuerdo` y la `Obra`— es común a todas las versiones, salvo la ficha a la que un lector cambió el nombre: esa se releva con la versión que nace del cambio, y la nueva solo la ven esa versión y las siguientes.
 
 ```mermaid
 flowchart LR
@@ -545,8 +545,8 @@ Una obra puede cortarse en cualquier momento: el editor la detiene, una tarea ag
 **Reanudar es volver al punto de guardado, y siempre por el mismo camino.** Arrancar una obra, reanudarla por orden del editor y relanzarla tras una caída empiezan igual:
 
 1. Las `Traza` que quedaron abiertas se cierran como interrumpidas. Una tarea cortada no ha fallado, así que no cuenta como intento.
-2. Todo lo que cuelga de capítulos posteriores al último cerrado se caduca, sin borrar. Eso incluye los borradores ya aceptados, las `Fuente` recogidas y lo que, sin llevar capítulo, escribió una tarea de esos capítulos, como un `Evento` que añadió el Planificador. A un inmutable se le admite la marca de caducado, pero solo esa, solo una vez y sin poder quitarla: marcar no es modificar. Sus fragmentos salen del índice y su estado materializado se descarta.
-3. Si al último capítulo cerrado le falta algo en el índice, se completa, porque el índice es derivado.
+2. Todo lo que cuelga de capítulos sin cierre vivo se caduca, sin borrar: los posteriores al último cerrado y, en una versión que reescribe capítulos sueltos, los que reescribe y no han cerrado. Eso incluye los borradores ya aceptados, las `Fuente` recogidas y lo que, sin llevar capítulo, escribió una tarea de esos capítulos, como un `Evento` que añadió el Planificador. A un inmutable se le admite la marca de caducado, pero solo esa, solo una vez y sin poder quitarla: marcar no es modificar. Sus fragmentos salen del índice y su estado materializado se descarta.
+3. Si a algún capítulo cerrado le falta algo en el índice, se completa, porque el índice es derivado.
 4. El capítulo siguiente empieza en el paso 1.
 
 Lo único que se pierde es el trabajo del capítulo que estaba abierto. Salvar parte de ese trabajo, por ejemplo las fuentes, dejaría una segunda forma de que algo de antes del corte entre en lo de después.
@@ -572,6 +572,37 @@ Con la obra terminada, el editor puede ordenar **«rehaz desde el capítulo N»*
 **La cronología, en Lean.** La cronología de la versión —cada `EventoEstado` y cada `Evento` del mundo con su fecha, su lugar y sus presentes, y quién muere en cada uno— se vuelca a un módulo de Lean 4 que importa los invariantes del proyecto versionado en `backend/src/novela/lean/`. Las fechas pasan a intervalos de días, así que con una fecha parcial solo falla lo que falla para cualquier día del intervalo. Hay un teorema por invariante y por suceso, y Lean los demuestra con `decide` al ejecutar `lake build` en un directorio temporal que se borra al terminar. Cada teorema que no se demuestra es un fallo `cronologia` del capítulo de su suceso. Si Lean no está en la máquina, la cronología no se comprueba, la versión se publica igual y tanto la puerta como la respuesta de publicar dicen `sin_comprobacion`: que falte la herramienta no tumba una versión. Con Lean presente, lo que no se demuestra no se publica.
 
 Si alguno falla, la versión no se publica y la orden responde con la lista de fallos, cada uno con su validador y su capítulo. Los fallos de la cronología vuelven además como `Crítica` bloqueante de su capítulo, una por suceso e invariante, escrita por el backend; volver a pedir la publicación no las repite. La puerta no regenera nada: rehacer sigue siendo una orden del editor. Su resultado no se guarda: se deriva cada vez que se pide, y se puede pedir antes de publicar. Sin pedir versión, la API sirve la versión de referencia: la publicada si la hay y, si no, la última; y el manuscrito dice cuál sirve y si está publicada. Rehacer y publicar son decisiones editoriales, no mantenimiento: nada obliga a darlas.
+
+### El cambio del lector
+
+El otro tipo de versión nueva no sale de un capítulo sino de un dato. Quien lee
+elige un hecho de la biblia —un personaje, un lugar, un objeto, una facción o un
+evento— y le da un nombre nuevo: «el perro se llama Nala». Con la última versión
+terminada y sin producción en marcha, en una sola transacción nace la versión
+siguiente, que anota como cambiados **solo los capítulos que mencionan el hecho**
+según sus menciones, contiguos o no; lo que cuelga de cada uno recibe la marca de
+relevo, sus fragmentos salen del índice y la constancia de auditoría baja al
+anterior al primero. En esa misma transacción la ficha vieja se releva y nace la
+nueva, con el nombre cambiado y una referencia a la vieja; la escribe el backend,
+no un rol, porque no es un cambio del mundo a lo largo de la historia sino una
+corrección de lo que el mundo era desde el principio, pedida por una persona como
+se pide el brief. La versión anterior sigue viendo el nombre viejo. El cambio
+queda en un registro de solo añadir. Si ningún capítulo menciona el hecho, no
+nace versión.
+
+La producción arranca por el camino de siempre: salta los capítulos que siguen
+cerrados, reescribe los relevados en orden y termina con su auditoría de cierre.
+Los que reescribe reciben el nombre nuevo por los materiales que ya leen —el
+canon, las voces del elenco, el índice de la biblia—, sin nada añadido a su
+ventana. No hace falta reescribir hasta el final, como al rehacer, porque el
+mundo se refiere a cada hecho por su `id` y no por su nombre: un capítulo que no
+lo menciona sigue siendo cierto. El precio es que el capítulo reescrito se vuelve
+a planificar y podría contar algo distinto de lo que los compartidos dan por
+hecho, cosa que ve la auditoría de cierre, y que la lista es tan completa como
+las menciones. Se publica, como cualquier otra, solo si pasa la puerta.
+
+La lectura se descarga además en PDF: el servidor lo fabrica al vuelo desde la
+versión que se pida, con portada, índice y capítulos, y no lo guarda.
 
 ### Cuántas veces se intenta cada paso
 
@@ -639,7 +670,7 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | Entidad | La crea | La modifica | Entra en contexto | Vigilada por |
 | --- | --- | --- | --- | --- |
 | `Obra` | Usuario, con el brief o con la pasada de entrevista que lo completa | Usuario | Siempre, comprimida | — |
-| `Personaje` | Constructor de mundo | Solo por `EventoEstado` del Contable | Si está en el elenco de la escena | Continuidad, voz |
+| `Personaje` | Constructor de mundo; el backend, con una ficha nueva en la versión que nace de un cambio del lector | Solo por `EventoEstado` del Contable | Si está en el elenco de la escena | Continuidad, voz |
 | `Lugar` | Constructor de mundo | Constructor, por ampliación | Si es marco de la escena | Coherencia temporal |
 | `Evento` | Planificador o documentalista | Inmutable si es `canon` | Si precede causalmente a la escena | Anacronismo, causalidad |
 | `Objeto` | Constructor de mundo | Solo por `EventoEstado` del Contable | Si aparece o lo posee el elenco | Continuidad, anacronismo material |
@@ -656,7 +687,12 @@ Esta tabla es lo que conecta la ontología con el harness: quién crea cada enti
 | `Crítica` | Verificador, Editor de estilo, Arquitecto de arcos, Juez; y el backend, cuando rechaza un artefacto malformado o cuando una comprobación agota sus intentos | Se resuelve en revisión | Solo al agente que revisa | Convergencia del bucle |
 | `Decisión` | Cualquier agente de la obra; el Entrevistador no escribe nada | Inmutable | Canon comprimido | Coherencia de diseño |
 | Registro de `policy` | El almacén, al cerrar la `Traza` de un intento con hooks | Nadie: solo se añade | Nunca: se sirve al editor por la API | Es él mismo la constancia de lo que la política encontró (`validators.md` §7) |
-| `Versión` | El backend, con el alta y con cada orden de rehacer del editor | Solo la marca de terminada, una vez; publicarla es añadir al registro de publicaciones, y solo si pasa la puerta | Nunca: decide qué filas ve cada lectura | Conservación de la versión anterior (`validators.md` §8) |
+| `Versión` | El backend, con el alta, con cada orden de rehacer del editor y con cada cambio del lector | Solo la marca de terminada, una vez; publicarla es añadir al registro de publicaciones, y solo si pasa la puerta | Nunca: decide qué filas ve cada lectura | Conservación de la versión anterior (`validators.md` §8) |
+| Registro de cambios del lector | El backend, con la versión que nace de un cambio | Nadie: solo se añade | Nunca: se sirve con cada versión por la API | Es la constancia de qué nombre cambió y en qué versión |
+
+Cualquier ficha de la biblia —no solo el `Personaje`— puede recibir una ficha
+nueva por un cambio del lector: la vieja se releva con la versión que nace, como
+cualquier fila, y la versión anterior la sigue viendo.
 
 Dos reglas que la tabla implica y conviene explicitar: ninguna entidad del mundo se modifica por escritura directa del redactor, solo mediante eventos emitidos al cerrar un capítulo; y ningún agente valida su propia salida.
 
@@ -719,7 +755,8 @@ backend/
                        con su puerta (§4)
     almacen/           unica puerta de lectura y escritura, incluido el indice
                        de recuperacion por parecido
-    api/               un procedimiento por caso de uso del editor
+    api/               un procedimiento por caso de uso del editor, y el PDF
+                       del manuscrito, que se fabrica en memoria al pedirlo
   tests/               las pruebas y los casos sembrados, fuera de tareas/
 ```
 
@@ -748,7 +785,7 @@ artefacto la imponga el rechazo del agente siguiente.
 
 **Frontend: agrupación por funcionalidad.** Una carpeta por funcionalidad
 —encargar una obra, ver su avance, ver las tareas hechas, leer el
-manuscrito— con sus componentes y sus llamadas dentro, y `compartido/` para el cliente de API y lo transversal.
+manuscrito, ver las versiones— con sus componentes y sus llamadas dentro, y `compartido/` para el cliente de API y lo transversal.
 Las funcionalidades no se importan entre sí y solo `compartido/api/` habla con
 el servidor; lo vigilan las reglas de ESLint y una prueba de estructura. El
 cliente de API no se escribe: se genera del contrato OpenAPI que el `backend/`
@@ -759,9 +796,10 @@ ejecuciones y muestra artefactos.
 ```
 frontend/
   package.json
-  scripts/       genera el cliente desde el contrato; arranca backend y Vite
+  scripts/       genera el cliente desde el contrato; arranca backend y Vite;
+                 el validador visual de la lectura, con Playwright
   src/
-    features/    encargo, avance, tareas, manuscrito
+    features/    encargo, avance, tareas, manuscrito, versiones
     compartido/  cliente de API generado del contrato, y componentes comunes
   pruebas/       contra un servidor simulado: ninguna gasta
 ```
@@ -780,11 +818,27 @@ engancha a `GET /obras/{id}/progreso`; si el flujo se corta, el cliente se
 reengancha solo y lo dice. Todo eso vive en un solo fichero de
 `compartido/api/`, de modo que pasar a sondeo no toca ninguna pantalla.
 
-**Las tres pantallas de una obra comparten menú.** Avance, Tareas y Lectura
-llevan arriba el mismo menú, que salta de una a otra con un clic; cada una
-conserva su dirección. La de tareas lista lo que sirve `GET /obras/{id}/trazas`
+**Las pantallas de una obra comparten menú.** Avance, Tareas, Lectura y
+Versiones llevan arriba el mismo menú, que salta de una a otra con un clic; cada
+una conserva su dirección. La de tareas lista lo que sirve `GET /obras/{id}/trazas`
 agrupado por capítulo, con la duración y el veredicto final de los hooks tal
 como vienen en cada `Traza`.
+
+**La lectura es interactiva.** Abre con una portada —título, para quién y la
+dedicatoria—; trae la ficha de personajes y lugares de la versión que se lee,
+cada uno con un enlace a los capítulos en que aparece, y desde ella se pide el
+cambio de un nombre; el índice marca los capítulos que esa versión cambió; cada
+capítulo enseña sus críticas al pulsar; se puede elegir qué versión leer y
+descargarla en PDF. La pantalla de Versiones dice de dónde sale cada una,
+comprueba la puerta y publica; los fallos de la puerta se pintan tal como los
+nombra el servidor, sin enumerar los validadores en el cliente.
+
+**El validador visual mira la lectura con un navegador.** `npm run
+validar-visual` levanta un backend sembrado con el ejecutor fingido y la
+interfaz, abre la lectura en Chromium sin cabeza a dos anchos y coteja portada,
+índice y ficha con lo que sirve la API. Cada fallo sale como una línea JSON que
+dice si vuelve a `frontend` o a `backend`, y la orden falla. Usa el mismo
+Playwright que el servidor MCP de navegador del desarrollo.
 
 ### Qué se pierde sin cálculo determinista
 

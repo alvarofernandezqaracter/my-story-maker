@@ -361,7 +361,7 @@ materia prima de la que sale la ficha `personal` y no la ficha misma.
 | D-26 | **El uso es un artefacto aparte, no un campo de la ficha.** Tampoco un campo del `Resumen de capítulo` | Un campo en la ficha que crece capítulo a capítulo choca con la inmutabilidad de `canon` y `personal` y con «el mundo solo cambia por `EventoEstado`». Dentro del resumen, saber dónde se usa un hecho obliga a recorrer todos los resúmenes, y eso crece con la obra. Con un artefacto de solo añadir la pregunta es una consulta por `id`, y «en qué capítulos» se deriva igual que el estado. El índice de la biblia que recibe el Archivero lee cuatro campos por ficha sin interpretarlos: es proyección, no decisión. Crece con la biblia, no con la prosa, y es mucho más corto que el canon que ya reciben el Planificador y el Verificador |
 | D-27 | **La cronología se deriva al consultar.** No es un artefacto del Contable ni una caché | Todo lo que lleva ya está escrito: la fecha, el lugar y los presentes en el `EventoEstado`, el suceso histórico en el `Evento` y el nacimiento en la ficha. Guardarlo otra vez sería un segundo sitio que mantener al día, y «el estado no se almacena, se deriva». Ordenar por la fecha escrita no es aritmética de calendario: no reabre D-05 |
 | D-28 | **`presentes` en el `EventoEstado` y fechas ISO parciales.** El formato lo piden el prompt y el esquema del rol que escribe; el almacén no lo comprueba en esta versión | Sin presencia por suceso no se puede afirmar que un personaje no está en dos sitios a la vez, y sin un formato de fecha fijo el volcado formal tendría que interpretar texto libre. La parcial admite lo que de verdad se sabe de una época —a veces solo el año— sin inventar el día. Comprobar el formato al escribir es trabajo del volcado formal, que es quien lo consume |
-| D-29 | **Alcance: registrar, derivar y servir.** Queda fuera la propagación de cambios del lector; el validador de elementos personalizados es de §4.15 y el volcado al demostrador formal, de §4.16 | Son los consumidores de esto y cada uno tiene su propia pasada del ciclo. Servirlo por la API ya ahora es lo que permite a la interfaz enlazar cada ficha con sus capítulos sin volver a mover la frontera |
+| D-29 | **Alcance: registrar, derivar y servir.** La propagación de cambios del lector es de §4.18, el validador de elementos personalizados de §4.15 y el volcado al demostrador formal de §4.16 | Son los consumidores de esto y cada uno tiene su propia pasada del ciclo. Servirlo por la API ya ahora es lo que permite a la interfaz enlazar cada ficha con sus capítulos sin volver a mover la frontera |
 
 **Lo que queda fuera.** La comprobación de que el Archivero no se ha dejado
 ningún hecho sin anotar, y la validación del formato de fecha al escribir
@@ -402,7 +402,7 @@ reintenta y qué pasa cuando se agota.
 | ID | Requisito | Verificación |
 | --- | --- | --- |
 | RF-90 | **Punto de guardado.** Cerrar el capítulo N es una sola transacción: los `EventoEstado` y el estado en N del Contable, lo que escribe el Archivero, la marca `cerrado` del capítulo y la retirada de su memoria de capítulo. Lo que `plegar` y `destilar` devuelven no se escribe hasta que las dos tareas han terminado. Si un artefacto sale malformado, se rechaza dentro de esa misma transacción, igual que en RF-23. Antes del commit no existe nada del cierre; después existe entero | `prueba` |
-| RF-91 | **Reanudar es volver al último punto de guardado.** Cada vez que se camina una obra, sea el arranque, un `reanudar` o un relanzamiento tras una caída, primero se hace lo mismo: las `Traza` que quedaron abiertas se cierran como interrumpidas; todo lo que cuelga de capítulos posteriores al último cerrado se caduca, sin borrar (RD-07); sus fragmentos salen del índice y su estado materializado se descarta; y el índice del último capítulo cerrado se completa si le falta algo. Después, el capítulo siguiente empieza en el paso 1 | `prueba` |
+| RF-91 | **Reanudar es volver al último punto de guardado.** Cada vez que se camina una obra, sea el arranque, un `reanudar` o un relanzamiento tras una caída, primero se hace lo mismo: las `Traza` que quedaron abiertas se cierran como interrumpidas; todo lo que cuelga de capítulos sin cierre vivo —los posteriores al último cerrado y, en una versión que reescribe capítulos sueltos, los que reescribe (RF-176)— se caduca, sin borrar (RD-07); sus fragmentos salen del índice y su estado materializado se descarta; y el índice del último capítulo cerrado se completa si le falta algo. Después, el capítulo siguiente empieza en el paso 1 | `prueba` |
 | RF-92 | **Ni duplica ni pierde.** Tras un corte en cualquier punto, cada capítulo cerrado tiene exactamente un `Capitulo` vivo, un juego de `EventoEstado`, un estado en N y un `Resumen de capítulo`. El manuscrito servido es el mismo que antes del corte más lo que se cierre después. Lo que se pierde es solo el trabajo del capítulo que estaba abierto | `prueba` |
 | RF-93 | **Relanzar tras una caída no pide ninguna orden.** Al arrancar, el backend relanza toda obra que no esté detenida y que no haya terminado. «Terminada» quiere decir que consta la auditoría de cierre (RF-94). Así OBJ-07 sigue valiendo aunque la máquina se reinicie | `prueba` |
 | RF-94 | **La auditoría tiene también su punto de guardado.** Las críticas de `auditar` se escriben en una sola transacción junto con la constancia de hasta qué capítulo se ha auditado. Al reanudar, si el último capítulo cerrado tenía auditoría pendiente y no consta, se audita antes de abrir el siguiente. Cuando la auditoría de cadencia cae en el último capítulo, coincide con la de cierre y corre una sola vez | `prueba` |
@@ -512,7 +512,7 @@ versión terminada es una orden aparte, que se da o no se da.
 | --- | --- | --- |
 | RF-110 | **Una obra tiene versiones numeradas desde 1.** El alta crea la 1 en la misma transacción que la `Obra`. Cada versión guarda su número, la versión de la que sale, **qué capítulos cambiaron respecto de ella** y cuándo nació y cuándo terminó. Una versión termina cuando consta su auditoría de cierre (RF-94). Nada de eso se borra ni se modifica, salvo la marca de terminada, que se pone una vez | `prueba` |
 | RF-111 | **Rehacer desde el capítulo N es una orden del editor**, `POST /obras/{id}/versiones` con `desde_capitulo`. Solo se admite si la última versión ha terminado y no hay producción en marcha para la obra, y N va de 1 al último capítulo. Crea la versión siguiente, que anota como cambiados los capítulos de N al último, retira de su mundo lo que colgaba de esos capítulos (RF-112), saca sus fragmentos del índice y arranca la producción, que empieza en el capítulo N por el camino de siempre (RF-91). No es mantenimiento: es una decisión editorial, y nada obliga a darla (RNF-08) | `prueba` |
-| RF-112 | **El mundo de una versión.** Todo artefacto lleva la versión en la que se escribió. Al rehacer desde N, lo que cuelga de un capítulo N o posterior —lo que lleva ese capítulo y lo que no lleva capítulo pero lo escribió una tarea de ese capítulo, según su `Traza`— recibe **la marca de relevado** con el número de la versión nueva, junto con la de caducado: solo una vez y sin poder quitarla, como en D-32. La `Traza` no se releva: es el registro. Lo escrito antes del capítulo 1, la biblia de partida del Constructor de mundo, el `Recuerdo` y la `Obra`, es común a todas las versiones | `prueba` |
+| RF-112 | **El mundo de una versión.** Todo artefacto lleva la versión en la que se escribió. Al rehacer desde N, lo que cuelga de un capítulo N o posterior —lo que lleva ese capítulo y lo que no lleva capítulo pero lo escribió una tarea de ese capítulo, según su `Traza`— recibe **la marca de relevado** con el número de la versión nueva, junto con la de caducado: solo una vez y sin poder quitarla, como en D-32. La `Traza` no se releva: es el registro. Lo escrito antes del capítulo 1, la biblia de partida del Constructor de mundo, el `Recuerdo` y la `Obra`, es común a todas las versiones, salvo el hecho al que un lector cambia el nombre (§4.18, RF-173) | `prueba` |
 | RF-113 | **Qué ve cada versión.** La versión V ve lo escrito en V o antes que no haya relevado V o una anterior, y que no esté caducado por otro motivo. La última versión ve exactamente lo que no está caducado, así que la producción no cambia: sigue leyendo solo lo vivo | `prueba` |
 | RF-114 | **La versión anterior se conserva siempre.** Rehacer y producir la versión nueva no cambia nada de lo que se sirve de una versión anterior: su manuscrito, sus capítulos, sus críticas, su estado plegado, sus hechos con su uso y su cronología son los mismos antes y después | `prueba` |
 | RF-115 | **El estado en N es de su versión.** La caché del estado materializado lleva la versión que lo plegó. Rehacer desde N no la borra: la releva, igual que a los artefactos. Descartar un capítulo a medias (RF-91) sí borra, y solo lo de la versión en curso | `prueba` |
@@ -535,9 +535,9 @@ regenera: ahora se relevan con su capítulo. Y RF-25 deja de borrar el estado de
 los capítulos que se rehacen: lo releva (RF-115).
 
 **Qué queda fuera.** Qué cambia en la entrada de los capítulos que se
-reescriben: hoy rehacer vuelve a producir sobre el mismo brief y la misma
-biblia de partida, y meter un cambio del lector es trabajo de la lectura
-interactiva. Rehacer la biblia de partida. Buscar pasajes en una
+reescriben: rehacer vuelve a producir sobre el mismo brief y la misma biblia de
+partida; cambiar el nombre de un hecho es el otro tipo de versión, de §4.18.
+Rehacer la biblia de partida entera. Buscar pasajes en una
 versión que no es la en curso. Borrar o archivar versiones, que no se hace
 nunca (RD-07). OBJ-07 no cambia: cuenta las órdenes hasta la obra cerrada, y
 rehacer y publicar llegan después.
@@ -781,7 +781,7 @@ instalado para que lo segundo sea la excepción.
 
 | ID | Requisito | Verificación |
 | --- | --- | --- |
-| RF-150 | **El volcado.** `novela/demostrador.py` traduce la cronología que ve la versión —la vista de RF-86, más el sujeto de cada `EventoEstado` `muere`, leído de su cuerpo— a un módulo de Lean, sin abrir la base ni llamar a ningún modelo. Copia lo escrito y no calcula nada: una fecha ISO parcial pasa a un intervalo de días `AAAAMMDD` —`1587` es del 1 de enero al 31 de diciembre—, cada personaje y cada lugar a su posición en una tabla, y lo que no consta a un valor que no choca con nada. Escribe un teorema por invariante y por suceso, y uno final que reúne los cuatro sobre la cronología entera | `prueba` |
+| RF-150 | **El volcado.** `novela/demostrador.py` traduce la cronología que ve la versión —la vista de RF-86, más el sujeto de cada `EventoEstado` `muere`, leído de su cuerpo— a un módulo de Lean, sin abrir la base ni llamar a ningún modelo. Copia lo escrito y no calcula nada: una fecha ISO parcial pasa a un intervalo de días `AAAAMMDD` —`1587` es del 1 de enero al 31 de diciembre—, cada personaje y cada lugar a su posición en una tabla, y lo que no consta a un valor que no choca con nada. Escribe un teorema por invariante y por suceso, y uno final que reúne los cuatro sobre la cronología entera. Un presente, un lugar o quien muere que apunta a una ficha relevada por un cambio del lector se vuelca como la ficha que la sustituye (RF-177), para que la misma persona o el mismo lugar no cuenten como dos | `prueba` |
 | RF-151 | **Los cuatro invariantes**, definidos una vez en el proyecto de Lean versionado en `novela/lean/`, con su `lean-toolchain` fijada y sin Mathlib: **orden temporal** —un suceso de un capítulo anterior no ocurre después de uno de un capítulo posterior—; **edad coherente** —todo presente había nacido y no pasa de 120 años—; **un solo lugar** —dos sucesos del mismo día exacto en lugares distintos no comparten presentes—; y **no reaparece** —quien muere en un suceso no está presente en ninguno posterior, por capítulo o por fecha—. Se demuestran con `decide` sobre los datos del volcado | `prueba` |
 | RF-152 | **En la puerta.** `validador_de_la_puerta` gana el valor `cronologia`. La puerta (RF-146, RF-147) pasa el volcado por Lean, y cada teorema que Lean no demuestra es un fallo `cronologia` con el capítulo del suceso y un detalle que dice qué invariante, qué suceso, sus datos y el mensaje de Lean. Un error que no cae en ningún teorema, o Lean que no termina en 300 segundos, es un fallo sin capítulo. El resultado de la puerta dice además `comprobacion_formal`, de un vocabulario cerrado: `demostrada`, `fallida` o `sin_comprobacion` | `prueba` |
 | RF-153 | **La ejecución.** Cada comprobación copia el proyecto de `novela/lean/` a un directorio temporal, escribe allí el módulo generado, ejecuta `lake build` y lee su salida. El directorio se borra al terminar, falle o no: el módulo no se guarda ni en el repositorio ni en una carpeta de trabajo (D-62) | `prueba` |
@@ -830,6 +830,76 @@ Lean dentro de la puerta y su crítica; §7, `demostrador.py` y `lean/` en el
 importación nuevo, lo que Lean no ve y el caso que solo Lean pilla.
 `definitions.md` y `domain-knowledge.md` no cambian: la cronología ya era una
 vista y el formato de fecha ya estaba fijado.
+### 4.18 El cambio del lector y el PDF
+
+**El problema.** Quien lee la novela encuentra un dato que quiere distinto —«el
+perro se llama Nala»— y hasta aquí la única forma de conseguirlo era rehacer
+desde un capítulo hasta el final (RF-111) sobre la misma biblia de partida: ni
+el dato cambiaba, porque la biblia de partida era común a todas las versiones,
+ni se reescribía solo lo que lo usa. Y el manuscrito solo se podía leer en la
+web: no había forma de llevárselo.
+
+**La decisión, en una frase.** El lector elige un hecho de la biblia y le da un
+nombre nuevo; nace la versión siguiente, en la que el hecho lleva ese nombre y
+se reescriben **solo los capítulos que lo mencionan**, por el camino normal de
+producción; la anterior se conserva intacta y sirve para marcar qué cambió. Y el
+servidor fabrica al vuelo el PDF de cualquier versión, sin guardarlo.
+
+```mermaid
+flowchart LR
+  L([Hecho y nombre nuevo]) --> A{Ultima version terminada<br/>y sin produccion?}
+  A -- no --> R([409, no se crea nada])
+  A -- si --> M{Algun capitulo<br/>lo menciona en V?}
+  M -- no --> R
+  M -- si --> V["V+1: releva esos capitulos<br/>y la ficha vieja; ficha nueva"]
+  V --> P[Produccion: salta lo cerrado,<br/>reescribe lo relevado]
+  P --> F[Auditoria de cierre]
+  F --> G([Se publica solo si pasa la puerta])
+```
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-170 | **El cambio es una orden**, `POST /obras/{id}/cambios` con `hecho` —el `id` de un hecho de la biblia (RF-87) que ve la última versión— y `valor`, su nombre nuevo, no vacío y distinto del que tiene. Se admite con las mismas condiciones que rehacer (D-40): la última versión ha terminado y no hay producción en marcha. Un hecho que no ve la última versión es un 404; un valor vacío o igual al actual, un 422; una versión sin terminar o una obra produciendo, un 409. Devuelve la versión nueva y no espera a que termine | `prueba` |
+| RF-171 | **Qué se reescribe.** Los capítulos en que se usa el hecho en la última versión V según sus `Mencion` (RF-84), que pueden no ser contiguos, y ninguno más. Si ningún capítulo lo usa, no se abre ninguna versión: 409 diciéndolo (D-73) | `prueba` |
+| RF-172 | **Nace V+1 en una sola transacción**, con base V y esos capítulos como `capitulos cambiados` (RF-110). Lo que cuelga de cada uno —con la misma regla de RF-112, capítulo a capítulo en lugar de «de N al final»— y su estado materializado reciben la marca de relevo con V+1; sus fragmentos salen del índice; y la constancia de auditoría baja al capítulo anterior al primero que se reescribe. Lo demás se comparte sin copiar | `prueba` |
+| RF-173 | **El hecho cambiado se versiona.** En la misma transacción, la ficha vieja recibe la marca de relevo con V+1 y nace la ficha nueva, escrita por el backend y no por un rol: el mismo cuerpo con el nombre —la descripción en un `Evento`— cambiado, cada tratamiento igual al nombre viejo cambiado también, y `sustituye` con el `id` de la vieja. V sigue viendo la vieja y V+1 la nueva (RF-113). El cambio queda en un registro propio de solo añadir, fuera de las tablas de artefactos —obra, versión, hecho, ficha nueva, nombre anterior, nombre nuevo y cuándo—, que crea la migración 11 (D-72) | `prueba` |
+| RF-174 | **Lo que reciben los que reescriben** sale del almacén, por los materiales que ya declaran sus pasos: el Planificador ve la ficha nueva en el canon, el Redactor en las voces del elenco y el Archivero en el índice de la biblia. No hay material nuevo ni instrucción añadida en ninguna ventana | `prueba` |
+| RF-175 | **La versión regenerada se produce por el camino de siempre.** Caminar la obra salta los capítulos que siguen cerrados y reescribe los relevados en orden, cada uno desde el paso 1 con los reintentos y la política de su paso (§4.10); termina con su auditoría de cierre (RF-94, RF-110) y solo se publica por la puerta (RF-146). Mientras no se publique, la publicada anterior sigue siéndolo (D-43) | `prueba` |
+| RF-176 | **Volver al punto de guardado mira todos los capítulos sin cerrar.** Lo que RF-91 caduca es lo que cuelga de todo capítulo sin cierre vivo, no solo de los posteriores al último cerrado, y el índice que se completa es el de todos los cerrados. En una obra sin cambio del lector es lo mismo de antes; en una versión que reescribe capítulos sueltos, un corte a medias de uno de ellos no deja nada suyo vivo ni toca los cerrados de detrás | `prueba` |
+| RF-177 | **Lecturas.** `GET /obras/{id}/versiones` trae de cada versión su `cambio` —hecho, nombre anterior y nombre nuevo— o vacío si nació del alta o de rehacer. La cronología de una versión resuelve un presente que apunta a una ficha relevada por un cambio del lector a la ficha que la sustituye, por `sustituye`, sin interpretar nada más. La ficha de la obra trae el nombre del destinatario y la dedicatoria, vacíos si no hay destinatario, para la portada | `prueba` |
+| RF-178 | **El PDF.** `GET /obras/{id}/pdf`, con `version` como las demás lecturas (RF-117), devuelve `application/pdf` como descarga: portada con el título, el destinatario y la dedicatoria si los hay, índice de capítulos con su página y el texto aceptado de la versión por capítulo y escena. Se fabrica en memoria al pedirlo y **no se escribe en disco ni se guarda** (RD-08). Acentos, `ñ`, `¿`, `¡` y comillas angulares salen tal cual; lo que las fuentes de serie no tienen —la raya, las comillas curvas, los puntos suspensivos de un carácter— se sustituye por su equivalente más cercano (D-75). Una versión que no existe es un 404 | `prueba` |
+| RF-179 | **La versión anterior se conserva también aquí** (RF-114): después del cambio y de producir V+1, todo lo que se sirve de V —manuscrito, capítulos, críticas, estado, hechos con la ficha vieja y su nombre, y cronología— es idéntico a antes, y los capítulos que V+1 no reescribe son las mismas filas en las dos | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-71 | **Un segundo tipo de versión nueva, junto a rehacer desde N, no en su lugar.** Rehacer sigue yendo de N al final (D-42); el cambio del lector reescribe solo los capítulos que mencionan el hecho | D-42 protege que lo posterior a un capítulo rehecho se escribió sobre su mundo. Cambiar el nombre de un hecho no cambia el mundo: los `EventoEstado`, sus presentes, el estado en N y las menciones se refieren al hecho por su `id`, nunca por su nombre, así que un capítulo que no lo menciona sigue siendo cierto con el nombre nuevo. Rehacer del primer uso al final reescribiría capítulos que el lector no pidió tocar y gastaría en ellos. El precio se declara: el capítulo reescrito se vuelve a planificar y podría contar algo distinto de lo que los compartidos dan por hecho —lo ve la auditoría de cierre, y rehacer desde N sigue a mano del editor—, y la lista de capítulos es tan completa como lo sean las menciones (`validators.md` §10) |
+| D-72 | **El hecho se versiona con una ficha nueva que escribe el backend**, no con un `EventoEstado` ni con una tarea de un rol. RF-112 deja de ser absoluto: la biblia de partida es común a las versiones salvo el hecho que un lector cambió | Un `EventoEstado` cuenta cómo cambia el mundo a lo largo de la historia; el cambio del lector corrige lo que el mundo era desde el principio, y solo en la versión nueva. Es entrada de una persona, como el brief, y nace como la `Obra` y el `Recuerdo` (D-13): escrita por el backend en la transacción de la orden. Encargárselo al Constructor de mundo costaría una tarea y le dejaría reescribir más de lo pedido. Relevar la vieja y escribir la nueva deja a cada versión con su valor por la misma regla de visibilidad (RF-113). La nueva lleva otro `id` porque el `id` es la clave de la fila; `sustituye` es la referencia que permite resolver los presentes de los capítulos compartidos, que se escribieron con el viejo |
+| D-73 | **Si ningún capítulo usa el hecho, no nace versión** | Una versión sin capítulos reescritos tendría el nombre nuevo en la biblia y en ningún texto: un número más sin cambio visible, y terminarla sin producir nada exigiría un camino de terminación aparte. Un hecho `personal` sin mención ya lo señala la puerta (RF-144), y cambiarle el nombre no lo arregla |
+| D-74 | **El lector cambia un solo dato: el nombre de un hecho de la lista de hechos.** Ni fragmentos de texto libre ni otros atributos de la ficha | Lo decidió el dueño. Es el valor que la lista de hechos sirve y el que la puerta de nombres sabe comprobar en el texto (RF-142). Subrayar texto libre obligaría a interpretar qué hecho toca el fragmento, que es juzgar el texto (§2.1) |
+| D-75 | **El PDF lo fabrica el servidor al vuelo con `fpdf2` y sus fuentes de serie** | Lo decidió el dueño, y RD-08 prohíbe guardarlo: se genera en memoria en cada petición, como la puerta (D-59). `fpdf2` es Python puro, estable y sin dependencias nativas. Sus fuentes de serie cubren Latin-1, que es todo el castellano escrito salvo la tipografía fina; embeber una fuente propia obligaría a llevar un fichero de fuente en el repositorio. El precio es que la raya de diálogo sale como guion |
+
+**Qué retira.** De §4.12, que meter un cambio del lector y rehacer la biblia de
+partida quedaran fuera: el nombre de un hecho ya se cambia por versión, y RF-112
+remite aquí. De RF-91, que solo se caducara lo posterior al último cerrado. Y de
+SPEC2 §12, la decisión abierta sobre la descarga del manuscrito.
+
+**Qué queda fuera.** Cambiar cualquier otro atributo de una ficha, varios hechos
+en una sola orden o un fragmento de texto libre (D-74). Comprobar que el nombre
+viejo ya no aparece en la versión nueva, que depende de las menciones (D-71).
+Dar al Planificador del capítulo reescrito su plan anterior como guía. Guardar o
+cachear el PDF, u otros formatos de descarga. La pantalla, que es de SPEC2 §4.5
+en adelante.
+
+**De dónde sale.** RF-84, RF-87, RF-91, RF-110 a RF-117 y RF-146; D-13, D-40,
+D-42, D-43 y D-59; RD-07 y RD-08; `validators.md` §10 (el hueco de las
+menciones).
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md`: §4, el
+cambio del lector como segundo tipo de versión y el punto de guardado con
+capítulos sueltos; §6, la ficha nueva en la tabla de gobierno; §7, el PDF en
+`api/`. `validators.md`: §6, las pruebas; §8, los métodos de RF-170 a RF-179.
+`definitions.md` y `domain-knowledge.md` no cambian: la ficha sigue siendo la
+misma entidad y la versión es de producción.
 
 ## §5 Requisitos de datos
 
@@ -864,6 +934,11 @@ vista y el formato de fecha ya estaba fijado.
 La cronología en Lean (§4.16) no añade tabla ni migración: el módulo de cada
 comprobación vive en un directorio temporal que se borra (RF-153, D-62), y sus
 críticas van a la tabla de `Critica` que ya existe (RF-154).
+Los datos de §4.18 no llevan identificador propio en esta tabla: el registro
+del cambio del lector tiene tabla propia, de solo añadir, fuera de las de
+artefactos, que crea la migración 11 y no se borra, ni se modifica, ni se
+releva; la ficha nueva es una fila más de la tabla de su tipo, con sus columnas
+de versión (RF-173); y el PDF no tiene tabla ni fichero (RF-178).
 
 Un único ejemplo, que fija el estilo del cuerpo de todo artefacto. Los demás no
 se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe.
@@ -913,6 +988,12 @@ La cronología en Lean (§4.16) no añade rutas: el resultado de la puerta
 (RI-18, RI-19) trae `comprobacion_formal` y el validador `cronologia`
 (RF-152), y la respuesta de publicar (RI-12) trae también
 `comprobacion_formal` (RF-155).
+El borde de §4.18 tampoco lleva identificador propio aquí:
+`POST /obras/{id}/cambios` cambia el nombre de un hecho y devuelve la versión
+nueva sin esperar a que termine (RF-170, RF-171); `GET /obras/{id}/versiones`
+trae el `cambio` de cada versión y `GET /obras/{id}` el destinatario y la
+dedicatoria (RF-177); y `GET /obras/{id}/pdf`, con `?version=` como RI-14,
+descarga el PDF (RF-178).
 
 Tres reglas de frontera. La interfaz web nunca lee ficheros ni la base de datos.
 El contrato HTTP se valida en el borde con modelos declarados —es el único sitio
@@ -980,6 +1061,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.15 Validadores y puerta, RD-30, RI-18, RI-19 | `validators.md` §3 (contrato de verificación) y §7 (guardarraíles); RF-08, RF-23, RF-84, RF-116, RF-123; D-43, D-46 |
 | §4.16 La cronología en Lean | `architecture.md` §7 (qué se pierde sin cálculo determinista) y §8; `validators.md` §3 y §4; RF-85, RF-86, RF-146, RF-147; D-28, D-59 |
 | §7 No funcionales | `architecture.md` §3 (presupuesto); `validators.md` §6 |
+| §4.18 Cambio del lector y PDF | §4.9 (menciones), §4.10 (punto de guardado) y §4.12 (versiones); D-13, D-40, D-42; RD-08; `validators.md` §10 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1040,6 +1122,14 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    validadores de §4.15 con un personaje en dos lugares el mismo día no se
    publica, y el fallo queda como crítica de su capítulo. Sin Lean, la misma
    obra se publica y la respuesta dice `sin_comprobacion`.
+13. **El cambio del lector.** Sin gastar: en una obra terminada de tres
+   capítulos en la que un hecho solo se menciona en el 1 y el 3, cambiarle el
+   nombre abre la versión 2 con los capítulos 1 y 3 como cambiados; la 2 comparte
+   el capítulo 2 —las mismas filas— y reescribe los otros dos con la ficha nueva
+   en su canon; la 1 sirve lo mismo que antes, ficha vieja incluida. Un hecho sin
+   menciones, una versión sin terminar y un nombre igual se rechazan sin crear
+   nada. Un corte a medias del capítulo 3 de la 2 no deja nada suyo vivo al
+   reanudar. El PDF de cada versión sale con acentos y `ñ` y sin tocar el disco.
 
 ## §11 Fuera del alcance de v1
 
@@ -1055,9 +1145,9 @@ puerta de publicación (§4.16, D-64).
 
 También queda fuera, del filtro de lo vetado, lo que enumera §4.14: el tema
 dicho con otras palabras y lo escrito para esquivar la lista. De la entrevista
-queda fuera lo que enumera §4.8; de las versiones, lo que enumera §4.12; y de
-la puerta de publicación, lo que enumera §4.15; y de la cronología en Lean,
-lo que enumera §4.16.
+queda fuera lo que enumera §4.8; de las versiones, lo que enumera §4.12; de
+la puerta de publicación, lo que enumera §4.15; de la cronología en Lean, lo
+que enumera §4.16; y del cambio del lector y el PDF, lo que enumera §4.18.
 
 ## §12 Decisiones abiertas
 

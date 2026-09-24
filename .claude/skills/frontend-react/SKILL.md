@@ -52,7 +52,10 @@ frontend/src/
                   abiertas y tokens frente al techo; detener y reanudar
     tareas/       las tareas ya hechas, por capítulo, con su duración y el
                   veredicto de los hooks
-    manuscrito/   leer lo aceptado, por capítulo y escena
+    manuscrito/   leer lo aceptado, por capítulo y escena, con la portada, la
+                  ficha de personajes y lugares y el cambio de un nombre, las
+                  críticas de cada capítulo y la descarga en PDF
+    versiones/    las versiones de la obra, la puerta y publicar
   compartido/     cliente de API generado del contrato y componentes comunes
 ```
 

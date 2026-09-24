@@ -611,6 +611,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/cambios:
+    post:
+      summary: Cambiar Hecho
+      description: 'El cambio del lector: el hecho toma su nombre nuevo en una version
+        que
+
+        reescribe solo los capitulos que lo mencionan (RF-170, RF-171). La
+
+        anterior se conserva entera. No espera a que termine.'
+      operationId: cambiar_hecho_obras__id_obra__cambios_post
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PeticionDeCambio'
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionAbierta'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /obras/{id_obra}/versiones/{numero}/publicar:
     post:
       summary: Publicar
@@ -691,6 +729,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PuertaDePublicacion'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /obras/{id_obra}/pdf:
+    get:
+      summary: Descargar Pdf
+      description: 'Portada, indice y texto aceptado de la version, fabricado en memoria
+
+        (RF-178). Nada toca el disco (RD-08).'
+      operationId: descargar_pdf_obras__id_obra__pdf_get
+      parameters:
+      - name: id_obra
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Identificador de la obra
+          title: Id Obra
+        description: Identificador de la obra
+      - name: version
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          description: Version que se lee. Sin ella, la publicada, y si no hay, la
+            ultima
+          title: Version
+        description: Version que se lee. Sin ella, la publicada, y si no hay, la ultima
+      responses:
+        '200':
+          description: El PDF de la version, como descarga. No se guarda
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
         '422':
           description: Validation Error
           content:
@@ -1053,6 +1133,28 @@ components:
         Si falta un campo obligatorio, la obra se rechaza nombrando el campo y sin
 
         crear nada. Un brief incompleto es un caso normal, no un error del sistema.'
+    CambioDelLector:
+      properties:
+        hecho:
+          type: string
+          title: Hecho
+        tipo:
+          type: string
+          title: Tipo
+        anterior:
+          type: string
+          title: Anterior
+        nuevo:
+          type: string
+          title: Nuevo
+      type: object
+      required:
+      - hecho
+      - tipo
+      - anterior
+      - nuevo
+      title: CambioDelLector
+      description: De que cambio del lector nace una version (RF-177).
     CapituloInspeccionado:
       properties:
         capitulo:
@@ -1445,6 +1547,18 @@ components:
           title: Motivo De La Detencion
           description: 'Por que esta detenida: la tarea, lo que fallo y su traza.
             Vacio si no (RI-17)'
+        destinatario:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Destinatario
+          description: Nombre del destinatario, para la portada (RF-177)
+        dedicatoria:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dedicatoria
+          description: La dedicatoria tal como viene en el brief (RF-177)
       type: object
       required:
       - id_obra
@@ -1686,6 +1800,24 @@ components:
       - escena
       title: Pasaje
       description: Un trozo del manuscrito aceptado, localizado por parecido.
+    PeticionDeCambio:
+      properties:
+        hecho:
+          type: string
+          minLength: 1
+          title: Hecho
+          description: '`id` del hecho, de la lista de hechos'
+        valor:
+          type: string
+          title: Valor
+          description: El nombre nuevo del hecho
+      type: object
+      required:
+      - hecho
+      - valor
+      title: PeticionDeCambio
+      description: 'El cambio del lector: un hecho de la biblia y su nombre nuevo
+        (D-74).'
     PeticionDeEntrevista:
       properties:
         borrador:
@@ -2103,6 +2235,12 @@ components:
           type: boolean
           title: Publicada
           description: Si es la de la ultima publicacion
+        cambio:
+          anyOf:
+          - $ref: '#/components/schemas/CambioDelLector'
+          - type: 'null'
+          description: Si nace de un cambio del lector, cual; vacio si del alta o
+            de rehacer
       type: object
       required:
       - numero

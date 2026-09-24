@@ -13,7 +13,7 @@ from typing import Annotated, Any, Literal, get_origin
 
 from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from pydantic import BaseModel, ValidationError
 
@@ -27,6 +27,7 @@ from novela.ajustes import (
 from novela.almacen import Almacen, Artefacto
 from novela.almacen.artefactos import (
     EscrituraProhibida,
+    HechoSinMenciones,
     VersionNoAdmitida,
     abrir_almacen,
     ahora,
@@ -51,6 +52,7 @@ from novela.api.modelos import (
     Orden,
     PasadaDeEntrevista,
     Pasaje,
+    PeticionDeCambio,
     PeticionDeEntrevista,
     PeticionDeRehacer,
     Progreso,
@@ -63,6 +65,7 @@ from novela.api.modelos import (
     VersionAbierta,
     VersionDeLaObra,
 )
+from novela.api.pdf import CapituloDelPdf, manuscrito_en_pdf
 from novela.demostrador import DemostradorLean
 from novela.ejecutor import EjecutorDeSubagentes, SubagenteFallo
 from novela.nucleo import entrevista, versiones
@@ -427,6 +430,9 @@ def crear_aplicacion(
     @app.get("/obras/{id_obra}")
     def ver_obra(id_obra: IdObra, casa: ProduccionDep) -> FichaDeObra:
         obra = _obra_o_404(casa, id_obra)
+        destinatario = obra.cuerpo.get("destinatario")
+        if not isinstance(destinatario, dict):
+            destinatario = {}
         capitulos = casa.almacen.listar("Capitulo", id_obra)
         cerrados = [c for c in capitulos if c.estado == "cerrado"]
         abiertas = casa.almacen.listar_criticas_abiertas(id_obra)
@@ -443,6 +449,8 @@ def crear_aplicacion(
             version_en_curso=casa.almacen.version_en_curso(id_obra),
             version_publicada=casa.almacen.version_publicada(id_obra),
             motivo_de_la_detencion=casa.almacen.motivo_de_la_detencion(id_obra),
+            destinatario=destinatario.get("nombre"),
+            dedicatoria=destinatario.get("dedicatoria"),
         )
 
     # --- RI-03. Leer -------------------------------------------------------
@@ -712,6 +720,38 @@ def crear_aplicacion(
             estado="en produccion",
         )
 
+    @app.post("/obras/{id_obra}/cambios", status_code=status.HTTP_202_ACCEPTED)
+    def cambiar_hecho(
+        id_obra: IdObra, peticion: PeticionDeCambio, casa: ProduccionDep
+    ) -> VersionAbierta:
+        """El cambio del lector: el hecho toma su nombre nuevo en una version que
+        reescribe solo los capitulos que lo mencionan (RF-170, RF-171). La
+        anterior se conserva entera. No espera a que termine."""
+        obra = _obra_o_404(casa, id_obra)
+        hilo = casa.hilos.get(id_obra)
+        if hilo is not None and hilo.is_alive():
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"La obra {id_obra} esta produciendo: se cambia cuando termine",
+            )
+        try:
+            nueva, capitulos = versiones.cambiar_hecho(
+                casa.almacen, casa.indice, id_obra, peticion.hecho, peticion.valor
+            )
+        except KeyError as error:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, error.args[0]) from error
+        except ValueError as error:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from error
+        except (HechoSinMenciones, VersionNoAdmitida) as error:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(error)) from error
+        casa.arrancar(id_obra, casa.capitulos_objetivo(obra))
+        return VersionAbierta(
+            id_obra=id_obra,
+            version=nueva,
+            capitulos_cambiados=capitulos,
+            estado="en produccion",
+        )
+
     @app.post(
         "/obras/{id_obra}/versiones/{numero}/publicar",
         response_model=Publicacion,
@@ -777,6 +817,51 @@ def crear_aplicacion(
                 status.HTTP_404_NOT_FOUND, f"La obra {id_obra} no tiene version {numero}"
             ) from error
         return PuertaDePublicacion.model_validate(resultado)
+
+    # --- RF-178. El manuscrito en PDF, al vuelo ------------------------------
+
+    @app.get(
+        "/obras/{id_obra}/pdf",
+        response_class=Response,
+        responses={
+            200: {
+                "content": {
+                    "application/pdf": {"schema": {"type": "string", "format": "binary"}}
+                },
+                "description": "El PDF de la version, como descarga. No se guarda",
+            }
+        },
+    )
+    def descargar_pdf(
+        id_obra: IdObra, casa: ProduccionDep, version: VersionPedida = None
+    ) -> Response:
+        """Portada, indice y texto aceptado de la version, fabricado en memoria
+        (RF-178). Nada toca el disco (RD-08)."""
+        obra = _obra_o_404(casa, id_obra)
+        numero = _version(casa, id_obra, version)
+        destinatario = obra.cuerpo.get("destinatario")
+        if not isinstance(destinatario, dict):
+            destinatario = {}
+        por_capitulo: dict[int, list[str]] = {}
+        for borrador in casa.almacen.manuscrito_aceptado(id_obra, version=numero):
+            por_capitulo.setdefault(borrador.capitulo or 0, []).append(
+                str(borrador.cuerpo.get("texto", ""))
+            )
+        titulo = str(obra.cuerpo.get("titulo", ""))
+        contenido = manuscrito_en_pdf(
+            titulo,
+            destinatario.get("nombre"),
+            destinatario.get("dedicatoria"),
+            [CapituloDelPdf(n, escenas) for n, escenas in sorted(por_capitulo.items())],
+            version=numero,
+        )
+        nombre = "".join(c if c.isascii() and c.isalnum() else "-" for c in titulo).strip("-")
+        fichero = f"{nombre or id_obra}-v{numero}.pdf"
+        return Response(
+            content=contenido,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{fichero}"'},
+        )
 
     # --- RI-08. Ver la ejecucion en vivo -----------------------------------
 
@@ -879,7 +964,8 @@ def crear_aplicacion(
 
 def operaciones_de_escritura(app: FastAPI) -> list[str]:
     """Las rutas por las que el editor escribe algo: entrevistar, lanzar,
-    detener, reanudar, rehacer y publicar. Ninguna es de mantenimiento."""
+    detener, reanudar, rehacer, cambiar un hecho y publicar. Ninguna es de
+    mantenimiento."""
     escrituras: list[str] = []
     for ruta in app.routes:
         metodos: Iterator[str] = iter(getattr(ruta, "methods", []) or [])

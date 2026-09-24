@@ -11,7 +11,8 @@
     "prestart": "npm run build",
     "start": "node scripts/arrancar.mjs preview",
     "comprobar": "tsc -b && eslint . && vitest run",
-    "contrato": "node scripts/generar-contrato.mjs"
+    "contrato": "node scripts/generar-contrato.mjs",
+    "validar-visual": "node scripts/validar-visual.mjs"
   },
   "dependencies": {
     "openapi-fetch": "^0.17.0",
@@ -37,6 +38,7 @@
     "jsdom": "^30.1.1",
     "msw": "^2.15.0",
     "openapi-typescript": "^7.13.0",
+    "playwright": "1.64.0-alpha-1789764292000",
     "typescript": "~5.9",
     "typescript-eslint": "^8.70.1",
     "vite": "^8.3.0",
