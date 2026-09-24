@@ -1,6 +1,6 @@
 # Verificación: con qué se comprueba cada cosa
 
-2026-09-23
+2026-09-24
 
 ## Qué contiene este documento
 
@@ -168,6 +168,18 @@ se marca aparte como ruidosa y **no dispara regeneración por sí sola**. Si
 reincide en el mismo personaje a lo largo de varios capítulos, eso sí es señal,
 y la señal es la reincidencia, no la puntuación de un capítulo suelto.
 
+**La novela entera tampoco admite predicado**, y la juzga alguien de fuera. El
+juez de la novela es un evaluador externo, no un rol del censo
+(`architecture.md` §2): sobre una versión terminada puntúa de 1 a 5 tres
+criterios —`personalizacion_integrada`, `funciona_como_novela`,
+`fidelidad_a_la_epoca`—, cada uno con su justificación y citas literales de lo
+que leyó. Sigue siendo `inverificable` en el sentido de §2: su nota no enruta
+nada. Lo que cambia es que se usa como medida del sistema entero —la media por
+criterio sobre los briefs de prueba— y que su ruido se mide aparte, repitiendo
+el juicio sobre la misma versión: una mejora que no supera ese ruido no cuenta
+como mejora. Su rúbrica vive solo en Langfuse, por la regla de §7: el material
+con el que se juzga a un agente no vive donde el agente puede leerlo.
+
 ## 6. Verificación del código
 
 El código no escribe la novela: guarda artefactos, ensambla proyecciones,
@@ -194,6 +206,7 @@ la que más protege.
 | Los hooks no tocan el almacén ni el guion: informan por su salida y registra el ejecutor | Contrato de importación sobre `ganchos` |
 | Los validadores programáticos son funciones puras: no leen el almacén, ni las tareas, ni el guion | Contrato de importación sobre `validadores` |
 | El demostrador formal recibe la cronología ya leída: no toca el almacén, ni el guion, ni las tareas | Contrato de importación sobre `demostrador` |
+| El juez de la novela no lee `tareas/` ni la API ni trae Langfuse: su rúbrica le llega por parámetro | Contrato de importación sobre `juez_de_la_novela` |
 
 ### Dónde no se comprueban tipos, y por qué
 
@@ -247,6 +260,8 @@ manda.
 | La cronología en Lean | El volcado y la lectura de la salida de Lean, sin Lean: fechas ISO parciales a intervalos, un teorema por invariante y suceso en su línea, lo que no es fecha se dice y un error que no cae en ningún teorema no se pierde. Con Lean, y saltadas limpias si no está: una cronología coherente se demuestra; una rota a propósito solo en un invariante, por cada uno de los cuatro, falla solo en ese; el directorio temporal no queda en disco. Una obra entera limpia para los otros cuatro validadores con un personaje en dos lugares el mismo día no se publica, deja críticas de su capítulo y no las repite al volver a pedirlo; sin Lean, la misma obra se publica marcada `sin_comprobacion` |
 | El cambio del lector | Una obra de tres capítulos con un ejecutor fingido que firma la prosa con la versión y solo anota las menciones en el 1 y el 3: cambiar el nombre de un hecho abre la versión 2 con esos dos capítulos, planifica solo esos dos con la ficha nueva en el canon, comparte las filas del 2 y deja todo lo que sirve la versión 1 idéntico, ficha vieja incluida. La ficha nueva no lleva rol, la vieja queda relevada y la cronología de un capítulo compartido sigue a la sustituta. Un hecho inexistente, un nombre igual o vacío, un hecho sin menciones y una versión sin terminar se rechazan sin crear nada, y el registro de cambios no admite borrado ni cambio. Una caída a medias de un capítulo suelto no deja nada suyo vivo al volver al punto de guardado, no toca los cerrados de detrás y la versión termina igual |
 | El PDF | La descarga de una obra fingida con destinatario: tipo, descarga, portada, índice y acentos en los flujos del PDF, ningún fichero nuevo en disco y 404 para una versión que no existe; la sustitución de lo que Latin-1 no tiene, carácter a carácter |
+| El juez de la novela | Con una observabilidad fingida que sirve una rúbrica de prueba y un juez fingido, sobre una obra fingida terminada: sin rúbrica no se abre ningún subagente y el motivo nombra el prompt; la rúbrica llega como instrucción de sistema, con Sonnet, sin herramientas ni MCP ni hooks; un veredicto bueno cuelga un score por criterio con la versión de la rúbrica y los capítulos leídos, y no escribe nada en el almacén; uno con una cita que no está en lo que leyó, una nota fuera de rango o un criterio de menos o de más no cuelga ninguno, y el segundo intento vale si el primero no; la ventana mete capítulos enteros por prioridad, dice cuáles no leyó y no se lanza si no cabe ni sin capítulos; sin destinatario la personalización no se pide; con una traza abierta en la instalación o una versión sin terminar no se lanza. Ninguna lanza el juez de verdad |
+| Los briefs de prueba | Cada fichero de `backend/briefs-de-prueba/` valida contra el modelo de `POST /obras` y dice qué espera de cada validador de la puerta, de cada hook y de cada criterio del juez —leídos de los vocabularios, sin clavar cuántos son—; lo que espera del juez es lo que el juez pediría; hay uno de cada propósito; el de incoherencia temporal solo espera fallo de `cronologia`, y el de inyección pide un término de la lista global y trata de cerrar la marca de los datos. Ninguno se lanza |
 | La frontera con la interfaz | El contrato OpenAPI versionado frente al que genera el código: si el borde cambia, la prueba lo vuelve a volcar y falla una vez, para que el movimiento pase por el diff. Comprueba además que toda operación declare la forma de lo que devuelve, porque un contrato con respuestas sin tipar no sirve para generar cliente. En el otro lado, `frontend/` genera su cliente desde ese mismo fichero y su prueba del contrato hace lo mismo: regenera, compara con lo commiteado y, si difiere, lo reescribe y falla una vez. Un campo renombrado rompe además la compilación de la pantalla que lo usa |
 | La interfaz | Cada requisito de SPEC2 con su prueba contra un servidor simulado y un flujo de progreso falso, sin gastar: lo que lleva cada pasada, lo que sobrevive a recargar, el salto al avance al lanzarse, el reenganche del flujo, las órdenes de detener y reanudar, la agrupación del manuscrito y cada formato de error |
 | La lectura interactiva | La portada con y sin destinatario, los capítulos cambiados en el índice, la ficha agrupada con sus enlaces y la biblia pedida de la versión leída, la versión elegida en la dirección y en el enlace del PDF, las críticas pedidas al pulsar, el cambio de nombre con su respuesta y su rechazo, y la pantalla de versiones con la puerta genérica —también con un validador que la interfaz no conoce— y el 409 al publicar; todo contra el servidor simulado |
@@ -385,6 +400,32 @@ pasar TLC.
 fijado cuando la versión termina: así cubre los cuatro validadores de hoy y el
 formal de la historia sin depender de ninguno.
 
+### El juez de la novela, desde fuera
+
+Los validadores de la puerta miran lo que se puede comprobar sin juzgar; el
+Juez de rúbrica, una réplica contra otra. Nadie del censo juzga la novela
+terminada, y no se añade un rol para eso: quien juzga el sistema no puede ser
+parte de él ni leer desde dentro con qué se le juzga.
+
+| Qué | Cómo |
+| --- | --- |
+| Cuándo se lanza | A mano, sobre una versión terminada y sin producción en marcha en la instalación. No desde el guion ni desde la API, y su nota no regenera, no revisa ni bloquea nada |
+| Qué recibe | El encargo sin vetos, los criterios que se puntúan, los hechos `personal` con sus capítulos, todos los `Resumen de capítulo` y capítulos enteros por prioridad mientras quepan en 60 000 tokens, con los que no se leyeron nombrados |
+| Con qué | Un subagente de Claude Code por el ejecutor de siempre, en un directorio vacío, sin herramientas, sin MCP y sin hooks, con Sonnet —otro modelo que el que escribió— y la rúbrica de Langfuse como instrucción de sistema |
+| Cuándo vale lo que dice | Una nota entera de 1 a 5, una justificación y citas literales por cada criterio que se puntúa, ni uno más ni uno menos. Si algo falla, no vale nada del veredicto: se reintenta una vez y, si sigue, no se cuelga ninguna nota |
+| Dónde queda | Un score por criterio en la traza de esa versión en Langfuse, con la versión de la rúbrica y los capítulos leídos en el comentario. En SQLite, nada |
+| Lo que no ve | Los capítulos que no le cupieron, de los que solo lee el resumen; y cualquier cosa que su rúbrica no le pida mirar |
+
+**Los briefs de prueba** son la entrada fija de la evaluación del sistema
+entero. Viven en `backend/briefs-de-prueba/`, uno por fichero, cada uno con su
+propósito —`normal`, `mucha_personalizacion`, `sin_destinatario`, `inyeccion`,
+`incoherencia_temporal`—, para qué está y qué se espera de cada validador de la
+puerta, de cada hook y de cada criterio del juez. Esa es la columna «esperado»
+de la tabla de qué pasó en cada brief; la columna «observado» sale de correrlos,
+que gasta y no es de la batería. El de incoherencia temporal pone a dos
+personajes el mismo día exacto en dos ciudades: es la versión de verdad del
+caso sembrado que solo Lean ve.
+
 ### Medir a los verificadores
 
 | Qué se verifica | Método | Cómo | Qué delata |
@@ -398,7 +439,7 @@ formal de la historia sin depender de ninguno.
 | Que las críticas son utilizables | `analisis` | Proporción descartada por falta de `evidencia` | Agentes que opinan en vez de comprobar |
 | Que los artefactos están bien formados | `analisis` | Recuento de rechazos por campo ausente, por capítulo | Un rol con demasiado alcance o con pocos ejemplos |
 | Que lo recuperado sirve | `analisis` | Proporción de fragmentos devueltos que el agente acaba usando | Consultas que llenan la ventana sin aportar nada |
-| Que el sistema aguanta lo difícil | `prueba` | Briefs adversarios: época mal documentada, personajes homónimos, saltos temporales largos | Dimensiones que solo fallan bajo presión |
+| Que el sistema aguanta lo difícil | `prueba` | Los briefs de prueba de `backend/briefs-de-prueba/` —época mal documentada, mucha personalización, inyección, incoherencia temporal—, cada uno con lo que se espera de cada comprobación | Dimensiones que solo fallan bajo presión |
 | Que el Entrevistador detecta las contradicciones | `prueba` | Casos sembrados, uno por tipo de `tipo_de_contradiccion`, y los mismos casos sin contradicción. La detección en sí es `inspeccion`: el agente lee el brief y los textos y cita la evidencia. Los casos están por escribir y, hasta que existan, la detección no está medida | Una entrevista que lanza obras con un tono que no corresponde a la edad, o que bloquea las que están bien |
 | Que cabe en el presupuesto | `analisis` | Pico de contexto de entrada concurrente frente al techo de 100 000 | Verificación que se come la generación |
 
@@ -438,6 +479,7 @@ la comprobación que la vigila.
 | Contaminación del mundo | Un dato falso entra en el canon y envenena el contexto de todos los capítulos siguientes | El mundo solo cambia por `EventoEstado` del Contable y solo al cerrar capítulo. Se comprueba intentando escribir el mundo desde cualquier otro rol |
 | Fuga de material | Un rol manda fuera lo que el sistema tiene dentro | Ningún rol salvo el Documentalista tiene herramienta con la que salir |
 | Lo vetado se cuela en la prosa | El Redactor, el Revisor o el Editor de estilo escriben un insulto de la lista global, o una palabra o un tema que el comprador vetó en el brief, también con otra mayúscula, sin acento o en plural | El hook `policy` compara normalizado y por palabras enteras, no deja terminar al subagente y, si insiste, el intento falla y la obra se detiene; cada coincidencia queda en el registro. Se comprueba con las variantes sembradas y con un Redactor fingido que insiste. **Lo que no ve:** el mismo tema dicho con otras palabras, y lo escrito con separadores, cifras o símbolos por medio —«m i e r d a», «m1erda»— |
+| El sistema aprende la vara con que se le mide | La rúbrica del juez de la novela queda al alcance de algo que el sistema lee —el repositorio, una ventana, un prompt de `tareas/`— y la producción empieza a escribir para complacer al juez | La rúbrica vive solo en Langfuse y llega al juez por parámetro; el módulo del juez no puede importar `tareas/` ni la API, y sin rúbrica no se juzga. Se comprueba con el contrato de importación y buscando el texto de la rúbrica en el historial del repositorio |
 | Un nombre de la biblia mal escrito | Quien escribe pone «Inés» donde la biblia dice «Ines», o cambia una letra de un apellido | El hook de forma no le deja terminar y la puerta no publica la versión. **Lo que no ve:** las variantes que las reglas dejan pasar a propósito para no detener la obra por una palabra corriente |
 
 Lo que se encuentra en una de estas comprobaciones se queda como caso sembrado
@@ -586,6 +628,15 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | La regeneración por cambio del lector está especificada y su reanudación descarta todo capítulo no cerrado (SPEC1 RF-164, RF-165) | El modelo la incluye y TLC la recorre; el código es de §4.18, que la implementa | `prueba` |
 | Dos órdenes que arrancan a la vez no dejan dos caminantes (SPEC1 RF-166) | Dos arranques simultáneos con la ventana entre leer y registrar ensanchada | `prueba` |
 | TLC corre desde la batería sin gastar y se salta limpio sin Java (SPEC1 RF-168) | La propia prueba, con y sin `NOVELA_TLA2TOOLS` | `prueba` |
+| El juez de la novela es externo: no escribe nada, no está en el guion ni en la API y solo juzga una versión terminada (SPEC1 RF-193, RD-34) | Obra fingida terminada: trazas del almacén antes y después; versión sin terminar e inexistente | `prueba` |
+| Sin rúbrica de Langfuse no se juzga, y no hay rúbrica por defecto (SPEC1 RF-194) | Observabilidad fingida sin prompt y con prompt vacío: ningún subagente abierto | `prueba` |
+| Sin destinatario la personalización no se puntúa (SPEC1 RF-195) | Ventana y criterios de una obra con y sin destinatario | `prueba` |
+| El juez recibe capítulos enteros por prioridad, dice cuáles no leyó y no se lanza si no cabe (SPEC1 RF-196) | Cinco capítulos con sitio para tres, y unos resúmenes que no caben | `prueba` |
+| El juez va por el ejecutor aislado, con Sonnet, sin herramientas y solo sin producción en marcha (SPEC1 RF-197, RNF-12) | Orden interceptada del ejecutor real, y una traza abierta en otra obra | `prueba` |
+| Solo un veredicto entero y con citas literales cuelga notas, una por criterio y con la versión de la rúbrica (SPEC1 RF-198, RF-199) | Juez fingido con veredicto bueno, con citas inventadas, con notas fuera de rango y con criterios de menos o de más | `prueba` |
+| El juez recibe la observabilidad por parámetro y no lee `tareas/` ni la API (SPEC1 RF-200) | Contrato de importación | `analisis` |
+| Los briefs de prueba los aceptaría `POST /obras` y lo que esperan nombra comprobaciones que existen (SPEC1 RF-201, RD-35) | Carga de cada fichero contra el modelo del brief y los vocabularios | `prueba` |
+| El texto de la rúbrica no está en el repositorio (SPEC1 RF-202, RNF-13) | Búsqueda de frases de la rúbrica en el árbol y en `git log -p` | `inspeccion` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha, el lugar y los presentes que el Contable escribe son correctos | — | `inverificable` |
 | La novela merece leerse | — | `inverificable` |
@@ -611,6 +662,7 @@ es un defecto del documento.
 | --- | --- | --- |
 | Calidad literaria | No hay predicado posible, y el gusto del editor es el suelo, no un método | Rúbrica ruidosa marcada aparte; el editor lee el resultado |
 | Fiabilidad del Juez de rúbrica | El juez es él mismo un modelo estocástico | Su salida no dispara regeneración; lo que vale es la reincidencia, no la nota suelta |
+| Fiabilidad del juez de la novela | Es un modelo estocástico que, en una novela larga, lee solo una parte | Su nota no dispara nada; juzga otro modelo que el que escribe, cada cita tiene que ser literal, la ventana dice qué no leyó y su ruido se mide repitiendo el juicio sobre la misma versión (SPEC1 OBJ-11). La lectura humana de una novela con la misma rúbrica es el contraste |
 | Que el dato calculado sea falso | Coherencia temporal, fatiga léxica y léxico vetado se comprueban contra un dato que escribió el propio sistema, y nadie lo recalcula porque no se usan herramientas externas de cálculo | Reincidencia por dimensión. Las tres cambiarían de método si se cierra a favor la decisión abierta de `architecture.md` §8 |
 | Forma interna del artefacto | No se tipa por decisión de diseño | El rechazo del agente siguiente, contado por capítulo |
 | Reproducibilidad de la recuperación por parecido | Dos consultas pueden ordenar distinto entre versiones del modelo de huellas | Queda en la `Traza` qué se recuperó y qué se usó; el modelo de huellas se fija |

@@ -91,6 +91,8 @@ Reglas de integridad del censo:
 - El Archivero no escribe hechos del mundo ni prosa: resume el capítulo cerrado, anota qué hechos de la biblia nombra y retira lo que caduca. No decide nada sobre el texto. Anotar una `Mención` no toca la ficha del hecho, así que el mundo sigue cambiando solo por `EventoEstado`.
 - El Entrevistador no escribe ninguna entidad: devuelve una propuesta de brief. De un texto pegado solo vale lo que trae cita literal, y un recuerdo es esa misma cita, así que tampoco él escribe `Recuerdo`: el recuerdo es texto de la persona, no del agente.
 
+**Fuera del censo: el juez de la novela.** Junto a los doce hay un evaluador externo que no es un rol: no tiene carpeta en `tareas/`, no escribe nada en el almacén, no está en el guion ni en la API y no toma parte en la producción. Quien desarrolla lo lanza a mano, con `novela.juez_de_la_novela.juzgar_version`, sobre una versión terminada, y puntúa la novela entera con tres criterios —`personalizacion_integrada`, `funciona_como_novela` y `fidelidad_a_la_epoca`—, nota de 1 a 5 y justificación con citas literales por criterio. Cada nota va como score a la traza de esa versión en Langfuse, con la versión de la rúbrica que la dio. La rúbrica vive solo en Langfuse, nunca en el repositorio: el sistema evaluado no puede leer con qué vara se le mide, y sin ella el juicio no se lanza. Corre con otro modelo que los roles, Sonnet, para no juzgar lo que su mismo modelo escribió, y su nota no regenera, no revisa ni bloquea nada. El Juez de rúbrica del censo sigue siendo otra cosa: puntúa la coherencia de voz dentro de la producción.
+
 ### Entrada y salida de cada agente
 
 Qué artefacto consume cada rol y qué artefacto deja escrito. La salida de un agente es la entrada del siguiente y **el testigo se pasa siempre por artefacto escrito, nunca por llamada directa**: ningún rol invoca a otro ni le pasa objetos en memoria, lee lo que el anterior dejó en el almacén. Esta tabla fija el testigo; la de §3 fija la ventana desde la que cada rol lo mira.
@@ -221,6 +223,12 @@ Valores cerrados de la capa de producción. Los vocabularios de forma textual y 
 
 **Tipo de contradicción:** `edad_contra_tono`, cuando el tono pedido no corresponde a la edad del destinatario, y `texto_contra_campo`, cuando un texto pegado en la entrevista dice otra cosa que un campo que la persona escribió. Lo detecta el Entrevistador y no lo resuelve: lo devuelve como pregunta, y la persona puede darlo por asumido.
 
+**Criterio del juez de la novela:** `personalizacion_integrada`, `funciona_como_novela`, `fidelidad_a_la_epoca`. Lo que puntúa el evaluador externo sobre una versión terminada. Sin destinatario, el primero no se puntúa. No son dimensiones de calidad del dominio: miden el sistema desde fuera.
+
+**Resultado esperado:** `pasa`, `falla`, `puede_fallar`, `se_puntua`, `no_se_puntua`. Lo que un brief de prueba espera de cada comprobación al correrlo: los tres primeros para los validadores de la puerta y los hooks, los dos últimos para los criterios del juez de la novela.
+
+**Propósito del brief de prueba:** `normal`, `mucha_personalizacion`, `sin_destinatario`, `inyeccion`, `incoherencia_temporal`. Para qué está cada brief con que se prueba el sistema entero.
+
 **Tipo de EventoEstado:** `aparece`, `muere`, `viaja_a`, `adquiere`, `pierde`, `aprende` (cambio epistémico), `revela_a`, `cambia_relacion`, `cambia_estado_civil_o_rango`, `transcurre_tiempo`.
 
 ```mermaid
@@ -236,6 +244,9 @@ flowchart TD
   PROC --> PUE[validador de la puerta: esquema /<br/>nombres / longitud / elementos personalizados /<br/>cronologia]
   PROC --> INV[invariante de la cronologia: orden temporal /<br/>edad coherente / un solo lugar / no reaparece]
   PROC --> CFO[comprobacion formal: demostrada /<br/>fallida / sin comprobacion]
+  PROC --> JDN[criterio del juez de la novela: personalizacion integrada /<br/>funciona como novela / fidelidad a la epoca]
+  PROC --> RES[resultado esperado: pasa / falla / puede fallar /<br/>se puntua / no se puntua]
+  PROC --> PBP[proposito del brief de prueba: normal /<br/>mucha personalizacion / sin destinatario /<br/>inyeccion / incoherencia temporal]
 ```
 
 ```mermaid
@@ -447,6 +458,8 @@ manda, no la tarea entera.
 El reparto es la asignación de diseño, no una medida: calibrarlo contra las `Traza` reales es trabajo de implementación, y la `Traza` existe en parte para eso.
 
 El Entrevistador no entra en ninguna tanda: se ejecuta como mucho una pasada a la vez en la instalación, y abierta ocupa sus 8 000 más el coste fijo del subagente, que caben en el 20 % de margen de la regla siguiente. Por eso una entrevista no le quita nada a la tanda de una obra en curso. Si la pasada no cabe en su tope, se rechaza diciendo cuánto sobra: no se recorta ningún texto pegado.
+
+El juez de la novela (§2) tampoco entra en ninguna tanda, y no tiene fila en la tabla porque no es un rol. Su tope es de 60 000 tokens y solo se lanza cuando ninguna obra de la instalación tiene una tarea abierta: abierto ocupa sus 60 000 más el coste fijo, que caben en los 80 000 repartibles y dejan entero el margen de una pasada de entrevista. Una novela larga no cabe entera, así que recibe los `Resumen de capítulo` de todos los capítulos y el texto de capítulos enteros por prioridad —el primero, el último, los que usan un hecho `personal` y los demás en orden— mientras quepan; los que no caben se nombran en la ventana. Un capítulo entra entero o no entra: cortarlo fabricaría el defecto de ritmo que se quiere medir.
 
 **Segunda: la anchura de una tanda se calcula, no se elige.** Se reserva el 20 % del techo como margen para lo que no se puede prever y quedan 80 000 útiles. En una tanda caben `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)` agentes simultáneos.
 
@@ -753,6 +766,10 @@ backend/
                        directorio temporal
     lean/              el proyecto de Lean con los invariantes de la
                        cronologia: entrada versionada, que no se escribe
+    juez_de_la_novela.py  el evaluador externo que puntua una version
+                       terminada: arma su ventana, lo lanza por el ejecutor y
+                       cuelga sus notas en Langfuse. Su rubrica llega por
+                       parametro; no esta en el repositorio
     tareas/            una carpeta por tipo de tarea del censo (§2), con su
                        contrato, su prompt, su esquema y, si le toca criba, sus
                        contratos de verificacion por dimension
@@ -772,6 +789,9 @@ backend/
   formal/tla/          el flujo de produccion como maquina de estados en TLA+,
                        con el modelo pequeno que recorre TLC, el mapeo de cada
                        accion a su funcion y los contraejemplos guardados
+  briefs-de-prueba/    los briefs con que se prueba el sistema entero, cada uno
+                       con para que esta y que se espera de cada comprobacion:
+                       entrada del desarrollador, fuera de tareas/
   tests/               las pruebas y los casos sembrados, fuera de tareas/
 ```
 
