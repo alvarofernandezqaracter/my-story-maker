@@ -204,6 +204,8 @@ Valores cerrados de la capa de producción. Los vocabularios de forma textual y 
 **Estado de crítica:** `abierta`, `atendida`, `rechazada`, `descartada`. Es el que hace filtrable el registro de defectos y el que permite contar lo que mide la convergencia del bucle: una crítica se descarta sin evidencia, se atiende o se rechaza con motivo en la `Revisión`, y la que no llega a ninguna de esas tres se queda abierta y cierra el capítulo marcado.
 
 **Al agotarse:** `detener_obra`, `critica_abierta`, `seguir`. Es lo que declara cada paso del guion para cuando su tarea agota los intentos (§4): detener la obra, dejar una `Crítica` «no comprobado» y seguir, o seguir sin más.
+
+**Gancho:** `validar_capitulo`, `policy`. Los hooks que lleva el subagente de un paso del guion (§4): el primero mira la forma de lo que entrega y el segundo, que no traiga nada de lo que el comprador vetó.
 **Tipo de contradicción:** `edad_contra_tono`, cuando el tono pedido no corresponde a la edad del destinatario, y `texto_contra_campo`, cuando un texto pegado en la entrevista dice otra cosa que un campo que la persona escribió. Lo detecta el Entrevistador y no lo resuelve: lo devuelve como pregunta, y la persona puede darlo por asumido.
 
 **Tipo de EventoEstado:** `aparece`, `muere`, `viaja_a`, `adquiere`, `pierde`, `aprende` (cambio epistémico), `revela_a`, `cambia_relacion`, `cambia_estado_civil_o_rango`, `transcurre_tiempo`.
@@ -215,6 +217,7 @@ flowchart TD
   PROC --> CRI[estado de critica: abierta / atendida /<br/>rechazada / descartada]
   PROC --> AGO[al agotarse: detener obra /<br/>critica abierta / seguir]
   PROC --> CON[tipo de contradiccion: edad contra tono /<br/>texto contra campo]
+  PROC --> GAN[gancho: validar capitulo /<br/>policy]
 ```
 
 ```mermaid
@@ -405,7 +408,7 @@ El verificador que ve la prosa anterior se ancla en ella y deja pasar los fallos
 
 ### Presupuesto
 
-**El techo son 100 000 tokens de entrada simultáneos.** No es el gasto de una obra ni el de un capítulo, que suman mucho más paso tras paso: es lo que puede haber abierto **a la vez**. Y mide solo lo que entra: lo que los agentes devuelven se paga en coste y no ocupa techo, así que en el reparto de una tanda no se reserva nada para las respuestas. El agente que termina libera su parte, así que una cadena secuencial larga no agota el techo por larga que sea. Lo que lo agota es abrir demasiados frentes en paralelo. De ahí salen tres reglas.
+**El techo son 100 000 tokens de entrada simultáneos.** No es el gasto de una obra ni el de un capítulo, que suman mucho más paso tras paso: es lo que puede haber abierto **a la vez**. Y mide solo lo que entra: lo que los agentes devuelven se paga en coste y no ocupa techo, así que en el reparto de una tanda no se reserva nada para las respuestas, salvo la que un hook hace releer al pedir una corrección, que ya es entrada (ver más abajo). El agente que termina libera su parte, así que una cadena secuencial larga no agota el techo por larga que sea. Lo que lo agota es abrir demasiados frentes en paralelo. De ahí salen tres reglas.
 
 **Primera: cada rol tiene un tope de ventana.** No es una estimación, es un límite. Si la proyección mínima de una tarea no cabe en el tope de su rol, la tarea se parte en unidades menores —de capítulo a escena, de escena a párrafo— en lugar de recortar la proyección a ojo. Recortar la proyección es fabricar falsos negativos: el agente deja de ver justamente lo que tenía que comparar.
 
@@ -428,6 +431,8 @@ El Entrevistador no entra en ninguna tanda: se ejecuta como mucho una pasada a l
 **Segunda: la anchura de una tanda se calcula, no se elige.** Se reserva el 20 % del techo como margen para lo que no se puede prever y quedan 80 000 útiles. En una tanda caben `80 000 ÷ (tope del rol más caro de la tanda + coste fijo del subagente)` agentes simultáneos.
 
 Ese coste fijo no es una precaución: **un subagente no arranca vacío**. Antes de que entre nada del sistema arrastra su propia instrucción y las definiciones de las herramientas que tenga concedidas, y eso son tokens de entrada como cualquier otro. Medido con el subagente aislado del repositorio, con la instrucción del rol en lugar de la de serie y con las herramientas del rol más equipado, son 3 191 por tarea abierta, que se declaran redondeados a 3 500, un solo valor para todos los roles. Con verificadores a 8 000 de proyección, seis a la vez. Si hay veinte comprobaciones que hacer, son cuatro tandas: se abren seis, se espera a que cierren y se abren las siguientes, y la última lleva dos. Sin ese término el techo se respeta sobre el papel y se rompe en la máquina.
+
+Un paso cuyo subagente lleva hooks (§4) paga además su **reserva de la vuelta**. Cuando un hook no deja terminar, corregir no arranca en frío: la segunda llamada al modelo vuelve a leer el encargo, la respuesta anterior y el motivo, y eso es entrada. Cada paso declara esa reserva en el guion —4 000 tokens para `redactar` y `revisar`, 8 000 para la costura, que va sola— y la anchura de tanda la suma al tope del rol: caben cuatro Redactores a la vez y dos Revisores. El hook solo pide la vuelta si cabe en la reserva, así que el techo sigue siendo una garantía. La entrada que se mide de una tarea corregida es la de su última llamada, que es la mayor.
 
 El aislamiento es parte de la cuenta, no un detalle aparte. Un subagente lanzado desde el repositorio descubre por su cuenta el `CLAUDE.md` del desarrollo, con `AGENTS.md` dentro, y el coste fijo se multiplica varias veces sin que nada lo avise: es material que ninguna proyección declara y que ocupa techo igual. Por eso cada tarea corre en un directorio vacío, propio y fuera del repositorio, y sin servidores MCP.
 
@@ -534,7 +539,7 @@ Lo único que se pierde es el trabajo del capítulo que estaba abierto. Salvar p
 
 Cada paso del guion, y cada tarea de fuera del guion, declara junto a su rol y su concurrencia dos cosas más: `reintentos`, que es cuántas veces se intenta su tarea, y `al_agotarse`, que es qué pasa si ninguno de los intentos sale bien. Un paso que no las declara no carga, porque lo que pasa al agotarse no se improvisa sobre la marcha.
 
-Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo. Un artefacto malformado no es un intento fallido: es la `Crítica` bloqueante de siempre. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él.
+Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo, o cuando lo que el subagente entrega al final no pasa uno de los hooks de su paso. Un artefacto malformado no es un intento fallido: es la `Crítica` bloqueante de siempre. Cada encargo empieza a contar desde 1 y, como el capítulo a medias se rehace, el contador vuelve a empezar con él.
 
 | Al agotarse | Pasos | Qué pasa |
 | --- | --- | --- |
@@ -543,6 +548,19 @@ Un intento falla cuando el ejecutor devuelve un error o no contesta a tiempo. Un
 | `seguir` | `documentar` | La producción sigue y la constancia del intento queda en la `Traza`, igual que una búsqueda sin resultados |
 
 El tope de partida es dos intentos en todos los pasos. Detener siempre dejaría parada una obra que podría terminar, porque una comprobación que falla no produce testigo para nadie.
+
+### Los hooks de los subagentes de prosa
+
+Los tres pasos que escriben prosa —3 `redactar`, 5 `revisar` y 7, la costura— declaran en el guion dos **hooks** para su subagente. Son hooks `Stop` de Claude Code: un pequeño programa del propio backend, `novela.ganchos`, que el CLI lanza cuando el agente va a dar su trabajo por terminado. Si lo entregado no pasa, el agente no puede terminar: recibe el motivo y tiene que corregir y volver a entregar.
+
+| Hook | Qué mira | Qué no mira |
+| --- | --- | --- |
+| `validar_capitulo` | Que la salida sea el objeto JSON con su lista de artefactos, que cada uno traiga tipo y cuerpo, que el rol solo escriba los tipos que su contrato le deja, que venga el artefacto principal del esquema de la tarea con todos sus campos, y que ningún `Borrador` venga sin texto | Nada del contenido: ni nombres, ni longitud, ni calidad. Es una lista de comprobaciones a la que se suman otras sin tocar el enganche |
+| `policy` | Que el texto de cada `Borrador` y cada `Párrafo` no contenga ninguna de las palabras o temas que el comprador vetó en el brief, comparados tal cual | Variantes: otra mayúscula, un acento o un plural no casan, y un tema vetado solo casa si aparece escrito igual |
+
+Los hooks viajan en la orden del ejecutor, con `--settings`, y no rompen el aislamiento: el subagente sigue arrancando en su directorio vacío y sin nada del repositorio. Lo que el hook necesita saber —la lista de vetos y la reserva de la vuelta— va en el entorno del proceso, no en disco, y la lista de vetos no entra en ninguna ventana: al agente solo le llega lo que encontró en su propio texto. El hook no escribe en el almacén; dice su veredicto por su salida.
+
+**Una vuelta por intento.** Un hook bloquea solo la primera vez: si ya bloqueó uno en ese turno, el siguiente deja terminar. Tampoco bloquea si la vuelta no cabe en la reserva del paso (§3). Al terminar, el ejecutor aplica las mismas comprobaciones a lo que el agente entregó al final, y ese es el veredicto que cuenta: si no pasa, el intento ha fallado y se aplican los reintentos del paso y su `al_agotarse`, que en los tres es `detener_obra`. Lo que cada hook dijo durante la sesión y el veredicto final quedan en la `Traza` del intento, también cuando falla, y se sirven con ella.
 
 ## 5. Bucle de control de calidad
 
@@ -631,7 +649,10 @@ backend/
                        k de recuperacion, topes de vueltas, cadencia de auditar
     vocabularios.py    los valores cerrados, en un solo sitio
     ejecutor.py        lanza el subagente de Claude Code de cada tarea, en un
-                       directorio vacio fuera del repositorio y sin MCP
+                       directorio vacio fuera del repositorio y sin MCP, con
+                       los hooks de su paso en la orden
+    ganchos.py         los dos hooks Stop de los subagentes de prosa: el
+                       programa que revisa lo entregado, sin tocar el almacen
     tareas/            una carpeta por tipo de tarea del censo (§2), con su
                        contrato, su prompt, su esquema y, si le toca criba, sus
                        contratos de verificacion por dimension
