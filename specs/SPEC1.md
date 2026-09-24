@@ -533,7 +533,7 @@ flowchart LR
 | D-46 | **Lo que el hook necesita le llega por la orden y el entorno, no por ficheros.** El nombre del hook y de la tarea van en su línea de orden; los vetos y la reserva, en variables de entorno del subagente; el esquema, del catálogo versionado | Escribir la lista de vetos en el directorio de la tarea contradiría D-35 —nace vacío y muere vacío— y RD-08. El hook no escribe en la base: informa por su salida y quien registra es el ejecutor, así que el almacén sigue con un solo escritor (RNF-05) |
 | D-47 | **Una vuelta en la sesión y, si no basta, un intento fallido.** No se inventa otra política: lo que pasa después lo deciden `reintentos` y `al_agotarse` | Un hook no guarda estado entre llamadas y la única memoria que Claude Code le da es si ya bloqueó en ese turno, así que «una vuelta» es lo único que puede contar sin escribir nada. Más vueltas harían crecer la entrada sin tope, y el propio CLI corta un hook a los diez bloqueos seguidos. El intento siguiente arranca en frío, así que el total queda acotado por los reintentos del paso |
 | D-48 | **`validar_capitulo` va en los tres pasos de prosa y solo mira la forma.** Nombres escritos como en la biblia, longitud del capítulo y la puerta de publicación son de la tarea de validadores programáticos, que añadirá sus comprobaciones a la misma lista | Es lo que se puede decidir sin gastar y sin interpretar el texto (§2.1). Engancharlo solo a la costura dejaría pasar una escena malformada hasta el final del capítulo; los tres pasos que escriben `Borrador` son los tres sitios donde se puede corregir en el acto |
-| D-49 | **`policy` nace aplicando ya los vetos del brief, comparados tal cual.** La lista global de términos ofensivos, la normalización y el registro de auditoría vienen después y amplían la fuente de la lista y la comparación, no el enganche | Nacer vacío dejaría el hook de adorno hasta que llegue la lista global, y los vetos ya están guardados. La comparación literal falla en las variantes —«perros» no casa con «perro»—, y un tema vetado solo casa si aparece escrito igual: es el precio declarado de no normalizar todavía |
+| D-49 | **`policy` nace aplicando ya los vetos del brief, comparados tal cual.** La lista global de términos ofensivos, la normalización y el registro de auditoría vienen después y amplían la fuente de la lista y la comparación, no el enganche | Nacer vacío dejaría el hook de adorno hasta que llegue la lista global, y los vetos ya están guardados. La comparación literal falla en las variantes —«perros» no casa con «perro»—, y un tema vetado solo casa si aparece escrito igual: es el precio declarado de no normalizar todavía. No es la dimensión de léxico vetado de la época, que sigue en el Editor de estilo: es una política del comprador, comprobada como se comprueba la forma de un artefacto (RF-23). Si una comparación de cadenas cuenta como herramienta de cálculo en el sentido de D-05 lo decide esa decisión abierta, que este cambio no cierra |
 
 **Cuánto contexto añade.** Nada si el agente entrega bien a la primera: la
 lista de vetos no entra en ninguna ventana (RF-16 sigue en pie) y la
@@ -562,8 +562,8 @@ RF-102; D-35 y RD-08.
 **Documentos que hay que poner al día en la fase 3.** `architecture.md`: §3, la
 reserva de la vuelta en el presupuesto; §4, los hooks en el guion y lo que pasa
 cuando no se pasan; §7, `ganchos.py` en el árbol. `validators.md`: §6, las
-pruebas; §7, los hooks entre los guardarraíles; §8, los métodos de RF-120 a
-RF-129; y §10, lo que la comparación literal no ve. `definitions.md` y
+pruebas; §7, los hooks entre los guardarraíles y lo vetado entre las amenazas,
+con lo que la comparación literal no ve; y §8, los métodos de RF-120 a RF-129. `definitions.md` y
 `domain-knowledge.md` no cambian: los vetos ya eran parte del destinatario.
 ## §5 Requisitos de datos
 
