@@ -1,7 +1,7 @@
 ---
 name: SPEC2
 titulo: Frontend v1 — Especificación de requisitos de software
-version: 1.2.0
+version: 1.3.0
 estado: aprobada
 fecha: 2026-09-24
 ambito: frontend/
@@ -32,12 +32,13 @@ publica.
 
 ### 1.2 Alcance del sistema especificado
 
-Dentro: la conversación que completa el encargo hasta lanzar la obra, la
-pantalla que enseña el avance mientras la obra se produce, la lista de las
+Dentro: el taller, que abre la interfaz con todas las obras de la instalación
+en un tablero por su situación; la conversación que completa el encargo hasta
+lanzar la obra, la pantalla que enseña el avance mientras la obra se produce, la lista de las
 tareas ya hechas, la lectura del manuscrito aceptado con su portada, su biblia,
 sus críticas por capítulo y su PDF, las versiones con su puerta, el cambio del
-lector, un menú que salta entre las pantallas de una obra, el cliente HTTP
-generado desde el contrato y el validador visual.
+lector, una barra fija arriba y un lateral que salta entre las pantallas de una
+obra, el cliente HTTP generado desde el contrato y el validador visual.
 
 Fuera: las pantallas de estado del mundo, cronología y búsqueda de pasajes; todo
 lo enumerado en §11.
@@ -175,7 +176,7 @@ flowchart LR
 
 | ID | Requisito | Verificación |
 | --- | --- | --- |
-| RF-30 | Las pantallas de una obra —Avance, Tareas, Lectura y Versiones— llevan arriba el mismo menú, que salta de una a otra con un clic y marca en cuál se está. Cada pantalla conserva su propia dirección, así que también se pueden abrir en pestañas del navegador | `prueba` |
+| RF-30 | Las pantallas de una obra —Avance, Tareas, Lectura y Versiones— llevan a la izquierda el mismo **lateral**, al estilo de un gestor de proyectos: arriba el título de la obra y su situación tal como la sirve el backend (SPEC1 RF-206), y debajo las cuatro pantallas, que saltan de una a otra con un clic y marcan en cuál se está. Cada pantalla conserva su propia dirección, así que también se pueden abrir en pestañas del navegador. En pantalla estrecha el lateral pasa a ser una tira arriba | `prueba` |
 
 ### 4.3 La lectura
 
@@ -250,6 +251,30 @@ ver por qué un capítulo está marcado, ni llevarse el libro.
 | D-23 | **El lector cambia un nombre desde la ficha de la biblia**, un hecho cada vez, y el servidor decide si se admite | Lo decidió el dueño (SPEC1 D-74): se elige un hecho de la lista y se le da su valor nuevo, sin subrayar texto libre. Repetir en la pantalla las condiciones del servidor —última versión terminada, menciones— sería una segunda verdad; el rechazo del servidor ya dice por qué |
 | D-24 | **El validador visual es un programa con Playwright, no un paseo con el navegador MCP**, y su fallo vuelve a quien corresponde por su salida, no como `Crítica` | Un paseo de un agente no es repetible ni deja un fallo que se pueda registrar; el programa sí, y corre sin gastar contra datos sembrados. El servidor MCP de `.claude/mcp.json` sigue para mirar a ojo, y el programa usa **la misma versión de Playwright que ese servidor**, así que el navegador que instala la orden de `CLAUDE.md` sirve a los dos. No es una `Crítica` porque una `Crítica` es de la novela, con dimensión y evidencia del texto; una página mal pintada es un defecto del código, y vuelve a quien edita `frontend/` —o `backend/` si el dato no se servía— igual que una prueba que no pasa |
 
+### 4.11 El taller: todas las obras en un tablero
+
+**El problema.** La interfaz abría en el encargo y solo sabía volver a una obra
+por su `id_obra`: quien encargaba una segunda novela perdía de vista la primera
+salvo que hubiera apuntado su dirección. Era la decisión abierta de §12, y el
+dueño la cierra pidiendo una interfaz al estilo de un gestor de proyectos: un
+tablero con todas las obras y, dentro de cada una, sus pantallas.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-80 | **La interfaz abre en el taller**, en `/`: un tablero con una columna por valor de `situacion_de_la_obra` (SPEC1 RF-205), en este orden —En producción, Detenida, Terminada y Publicada—, y cada obra que sirve `GET /obras` (SPEC1 RF-204) como una tarjeta en la columna de su situación. La columna la dice el servidor: la interfaz no combina `detenida`, versiones ni publicación para deducirla | `prueba` |
+| RF-81 | **La tarjeta** enseña el título, la época, el destinatario si lo hay, los capítulos cerrados sobre los que pide el brief con una barra, los capítulos marcados y las críticas abiertas si hay alguno, y la versión en curso y la publicada. Una obra detenida enseña en la tarjeta el motivo de la detención tal como lo sirve el servidor. Pulsarla lleva a su avance | `prueba` |
+| RF-82 | **Cada columna dice cuántas obras tiene**, y una vacía lo dice en vez de quedarse en blanco. Sin ninguna obra, el taller dice que no hay ninguna y ofrece encargar la primera. Un filtro por texto sobre el título y la época reparte solo las tarjetas que casan, sin volver a pedir nada | `prueba` |
+| RF-83 | **El taller se refresca solo** cada pocos segundos mientras la pestaña está visible, y deja de pedir mientras está oculta: una obra que se detiene o termina cambia de columna sin recargar. Si el servidor no contesta, lo dice y deja a la vista lo último que llegó (RF-60, RF-62) | `prueba` |
+| RF-84 | **Una barra fija arriba en todas las pantallas** lleva la marca, el enlace al taller y el de «Nueva obra», que abre el encargo en `/encargo`, y marca en cuál de los dos se está. Las tarjetas no se arrastran: mover una obra de columna sería decidir su situación, y eso no lo hace la interfaz (§2.1) | `prueba` |
+
+**Decisiones del bloque.**
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-25 | **El taller es la pantalla de inicio y el encargo pasa a `/encargo`** | Con más de una obra, lo primero que se quiere ver es cómo van, y encargar es una de las cosas que se hacen desde ahí. Una instalación vacía sigue llevando al encargo en un clic, con la llamada del taller vacío, así que la medida de §1.2 no empeora |
+| D-26 | **Sin arrastre**, al contrario que otros tableros | En un gestor de incidencias soltar una tarjeta en otra columna cambia su estado. Aquí la situación la decide el servidor con lo que ha pasado (SPEC1 D-89): dejar arrastrar sería ofrecer un gesto que no hace nada o, peor, que parece que hace algo |
+| D-27 | **El taller se sondea; el avance sigue empujado** | Un tablero de pocas obras que cambia cada pocos minutos no justifica un flujo abierto por obra, y el contrato no tiene uno para el listado. Cómo llega está encapsulado igual que el avance (RNF-04): cambiarlo no toca la pantalla |
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -271,6 +296,7 @@ ver por qué un capítulo está marcado, ni llevarse el libro.
 | RI-06 | `GET /obras/{id_obra}` · `/obras/{id_obra}/manuscrito` | §4.3 | `demostracion` |
 | RI-07 | `POST /obras/{id_obra}/detener` · `/obras/{id_obra}/reanudar` | RF-23 | `prueba` |
 | RI-08 | `GET /obras/{id_obra}/trazas` | RF-26 y RF-27, sin filtros | `prueba` |
+| RI-09 | `GET /obras` | El taller (RF-80 a RF-83), y la situación de la ficha para el lateral (RF-30) | `prueba` |
 
 Además, las lecturas y órdenes de §4.5 a §4.9 pasan por el mismo cliente:
 `GET /obras/{id_obra}/hechos`, `/versiones`, `/criticas` y `/manuscrito` con
@@ -303,7 +329,7 @@ servidos no obliga a pintarlos.
 | D-04 | **El avance llega por el flujo que el servidor empuja**, con una foto inicial y reenganche automático | El servidor ya lo sirve y es lo que hace que una obra de horas no parezca colgada. El sondeo es más simple pero repite trabajo y se nota lento. La foto inicial y el reenganche son el precio, y son dos requisitos, no una arquitectura |
 | D-05 | **El cliente se genera desde el contrato y hay una comprobación que falla si se desfasa** | Es el mismo trato que el backend ya se da a sí mismo (SPEC1 RNF-09 y D-11). Sin la comprobación, regenerar es un paso manual que se olvida, y un paso manual periódico es un defecto de diseño. Con ella, mover la frontera pasa por el diff en los dos lados |
 | D-06 | **TypeScript**, no JavaScript | No es una preferencia de estilo: es lo que hace que D-05 sirva de algo. Con tipos generados, un campo que el servidor renombra rompe al construir; sin ellos, rompe en la pantalla de alguien |
-| D-08 | **Un menú dentro de la obra, no pantallas a la vez** | Saltar con un clic basta para seguir una obra, y cada pantalla sigue teniendo su dirección para quien quiera varias pestañas. Poner dos pantallas juntas en la misma vista obliga a rehacerlas para que quepan. El menú no llega al encargo ni a otras obras: no hay listado de obras (§12) |
+| D-08 | **Un lateral dentro de la obra, no pantallas a la vez** | Saltar con un clic basta para seguir una obra, y cada pantalla sigue teniendo su dirección para quien quiera varias pestañas. Poner dos pantallas juntas en la misma vista obliga a rehacerlas para que quepan. El lateral no llega al encargo ni a otras obras: a las demás se vuelve por el taller, desde la barra de arriba (§4.11) |
 | D-09 | **La lista de tareas enseña lo esencial** | Se lee de un vistazo quién hizo qué y si salió bien. Los tokens y el coste siguen en el contrato para quien mida el gasto, y añadirlos más adelante no cambia nada de lo de arriba |
 
 ## §9 Trazabilidad
@@ -319,6 +345,7 @@ servidos no obliga a pintarlos.
 | §7 No funcionales | `AGENTS.md` (frontera y pila); skill `frontend-react` §2 y §3 |
 | §4.5 a §4.9 Portada, biblia, versiones, críticas, cambio del lector y PDF | SPEC1 RF-51, RF-87, RF-111 a RF-117, RF-146, RF-147 y §4.18; decisiones del dueño en el interrogatorio de la fase E |
 | §4.10 El validador visual | SPEC1 D-37 (el servidor de navegador); `validators.md` §6 |
+| §4.11 El taller | §12 (la decisión abierta que cierra); SPEC1 §4.22 (RF-204 a RF-206, D-89) |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -353,14 +380,18 @@ que fija este SRS es cuándo v1 está terminada:
    capítulos se reescriben, y un rechazo del servidor se lee tal cual.
 13. `npm run validar-visual` pasa contra el backend sembrado, y con la portada
    rota a propósito sale con un fallo que dice que vuelve a `frontend`.
+14. El taller reparte en sus cuatro columnas las obras que sirve el backend,
+   cada una en la de la situación que él dice; sin obras ofrece encargar la
+   primera; y pulsar una tarjeta lleva a su avance, donde el lateral enseña su
+   título y la misma situación.
 
 ## §11 Fuera del alcance de v1
 
 Las pantallas de estado plegado y cronología, y la búsqueda de pasajes por
 parecido: el servidor las sirve y la interfaz no las pinta. Autenticación y
-varios usuarios, porque el backend tampoco los tiene. Ver varias obras a la vez
-o un listado de obras producidas: v1 trabaja sobre la obra que se acaba de
-lanzar o sobre un `id_obra` que se conoce. Edición directa de nada: la
+varios usuarios, porque el backend tampoco los tiene. Ver las pantallas de
+varias obras a la vez: el taller las lista todas, pero cada pantalla es de una.
+Borrar o archivar obras desde el taller, que el backend no ofrece. Edición directa de nada: la
 interfaz no modifica ningún artefacto; da órdenes —lanzar, detener, reanudar,
 publicar y cambiar un nombre— y el servidor decide. Rehacer desde un capítulo
 desde la pantalla. Cambiar otra cosa que el nombre de un hecho, o subrayar texto
@@ -374,9 +405,12 @@ Ninguna bloquea la fase 2.
       TanStack Query es el candidato obvio, pero la primera pantalla no lo
       necesita para escribirse y decidirlo antes de tener tres pantallas es
       decidirlo a ciegas.
-- [ ] Cómo se vuelve a una obra pasada sin recordar su `id_obra`. Hoy no hay
-      listado de obras en el contrato; añadirlo es tocar el backend, así que
-      queda para cuando haya más de una obra que mirar.
+
+Y una cerrada por el dueño:
+
+- [x] Cómo se vuelve a una obra pasada sin recordar su `id_obra` → por el
+      taller, que las lista todas (§4.11), con `GET /obras` en el backend
+      (SPEC1 §4.22).
 
 ## §13 Docs que se ponen al día en la fase 3
 
@@ -391,3 +425,9 @@ De §4.5 a §4.10: `architecture.md` §7, el árbol de `features/` gana
 validador visual. La skill `frontend-react`: su §2 nombra `versiones`.
 `validators.md`: el método de RF-70 a RF-79 en §8 y el validador visual en §6.
 `AGENTS.md`: la fila de `frontend/`.
+
+De §4.11: `architecture.md` §7, el árbol de `features/` gana `taller`, el
+frontend abre en el tablero y las pantallas de una obra llevan lateral. La
+skill `frontend-react`: su §2 nombra `taller`. `validators.md`: el método de
+RF-30 y RF-80 a RF-84 y RI-09 en §8. `AGENTS.md`: la fila de `frontend/` nombra
+el taller.

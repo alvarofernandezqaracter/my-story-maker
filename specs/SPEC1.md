@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.10.0
+version: 1.11.0
 estado: aplicada
 fecha: 2026-09-24
 ambito: backend/
@@ -1172,6 +1172,50 @@ de la novela. `AGENTS.md`: `backend/briefs-de-prueba/` en «Estructura del
 repositorio». `definitions.md` y `domain-knowledge.md` no cambian: los criterios
 son de evaluación del sistema, no dimensiones de calidad del dominio.
 
+### 4.22 El listado de obras y su situación
+
+**El problema.** El backend solo sabe servir una obra si se le da su `id_obra`.
+Quien encarga más de una novela no tiene cómo volver a la que encargó ayer sin
+haber apuntado el identificador, y la interfaz no puede enseñar un taller con
+todas las obras de la instalación porque el contrato no las lista. Era la
+decisión abierta de SPEC2 §12 —«cómo se vuelve a una obra pasada sin recordar su
+`id_obra`»—, y el dueño la cierra: la interfaz pasa a abrir con un tablero de
+todas las obras, al estilo de un gestor de proyectos, y para eso el backend
+tiene que listarlas.
+
+**La decisión, en una frase.** `GET /obras` lista todas las obras de la
+instalación, de la más reciente a la más antigua, cada una con su ficha y con
+**su situación**, un valor de un vocabulario cerrado que calcula el backend.
+
+La situación la calcula el servidor y no la interfaz porque sale de tres hechos
+que solo él tiene juntos —si la obra está detenida, si su versión en curso ha
+terminado y cuál está publicada— y SPEC2 §2.1 prohíbe que la interfaz decida nada
+del dominio: una columna del tablero calculada en el navegador sería una segunda
+verdad.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-204 | **`GET /obras` lista todas las obras** de la instalación, de la más reciente a la más antigua por su alta. Cada elemento lleva los mismos campos que la ficha de `GET /obras/{id}` (RI-02, RI-17, RF-177), calculados por el mismo código, y además su `situacion` (RF-205), la época y los capítulos que pide el brief, y cuándo se dio de alta. Sin obras, lista vacía: no es un error. No filtra, no pagina y no escribe nada | `prueba` |
+| RF-205 | **La situación de una obra es un vocabulario cerrado**, `situacion_de_la_obra`, con cuatro valores que se deciden en este orden: `detenida` si la obra está detenida (RF-04, RF-137); si no, `en_produccion` si su versión en curso no ha terminado (RF-110); si no, `publicada` si la versión en curso es la publicada (RF-116); y si no, `terminada`: la versión en curso ha terminado y no está publicada. Una obra publicada a la que se le pide rehacer vuelve a `en_produccion` hasta que la versión nueva termina | `prueba` |
+| RF-206 | **La ficha de una obra trae también su situación**, con el mismo cálculo que el listado. Quien abre una obra por su dirección ve la misma palabra que en el tablero | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-89 | **La situación la calcula el backend y viaja como vocabulario cerrado**, no como tres booleanos que la interfaz combine | Combinarlos en la interfaz es reimplementar una regla del dominio fuera del servidor (SPEC2 §2.1), y la regla tiene un orden —detenida antes que en producción, publicada antes que terminada— que dos sitios acabarían aplicando distinto. Como vocabulario cerrado es además lo que se pinta tal cual (SPEC2 RD-03) |
+| D-90 | **Un listado sin filtros ni paginación** | Es una instalación local de una sola persona con pocas obras; filtrar y paginar son para cuando haya un problema que resolver, y añadirlos después no cambia la forma de cada elemento. Filtrar por situación lo hace la interfaz al repartir en columnas, que es pintar, no decidir |
+
+**Qué queda fuera.** Borrar o archivar obras: no hay ninguna operación de
+mantenimiento que el editor deba ejecutar (RI-09, RNF-08). Ordenar por otra cosa
+que el alta. Ver varias obras produciéndose a la vez como algo que el sistema
+ofrezca, que sigue fuera por §11: listar no es producir.
+
+**De dónde sale.** SPEC2 §12 (la decisión abierta que cierra), RF-04, RF-110,
+RF-116, RF-137 y RF-177; RI-02 y RI-17.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md`: el
+vocabulario `situacion_de_la_obra` junto al resto de vocabularios de proceso, y
+§7, el listado en el borde. `validators.md`: §8, los métodos de RF-204 a RF-206.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -1257,6 +1301,7 @@ se enumeran aquí: su esquema vive junto al contrato de la tarea que los escribe
 | RI-17 | `GET /obras/{id}` | Saber por qué se detuvo una obra | La ficha trae además el motivo de la detención, vacío si no está detenida (RF-137) |
 | RI-18 | `POST /obras/{id}/versiones/{n}/publicar` | Saber por qué no se publicó | RF-146. Si la puerta falla, 409 con `detail` y `puerta`: el mismo resultado que RI-19. Una versión sin terminar sigue siendo 409 solo con `detail` |
 | RI-19 | `GET /obras/{id}/versiones/{n}/puerta` | Ver la puerta antes de publicar | RF-147. Si pasa, si la versión ha terminado y la lista de fallos, cada uno con su validador, su capítulo y su detalle |
+| RI-20 | `GET /obras` | Volver a cualquier obra y ver todas de un vistazo | RF-204 y RF-205. Cada obra con su ficha y su situación, de la más reciente a la más antigua. `GET /obras/{id}` trae también la situación (RF-206) |
 
 La cronología en Lean (§4.16) no añade rutas: el resultado de la puerta
 (RI-18, RI-19) trae `comprobacion_formal` y el validador `cronologia`
@@ -1347,6 +1392,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.20 La producción en Langfuse, RD-31, RNF-10, RNF-11, OBJ-09 | RF-52, RF-79, RF-93, RF-110, RF-126, RF-146, RF-147; D-03, D-08, D-35; RD-08; RNF-03, RNF-08; `validators.md` §7 |
 | §4.19 Dónde va un artefacto y el testigo del Planificador | `architecture.md` §4 (ciclo de vida del capítulo); §4.17 (el modelo); RF-23, RF-35, RF-90, RF-92, RF-97, RF-98; D-30, D-34 |
 | §4.21 El juez de la novela y los briefs de prueba, RD-34, RD-35, RNF-12, RNF-13 | `validators.md` §5, §7 y §9; RF-01, RF-100 a RF-102, RF-156; D-03, D-08; RNF-01 |
+| §4.22 El listado de obras, RI-20 | SPEC2 §12; RF-04, RF-110, RF-116, RF-137, RF-177; RI-02, RI-17 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1439,6 +1485,12 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    una versión sin terminar, no se lanza. Los briefs de prueba validan contra el
    modelo de `POST /obras` y sus comprobaciones esperadas existen. Correrlos es
    la segunda mitad de la tarea.
+17. **El listado de obras.** Sin gastar: sin obras, `GET /obras` devuelve una
+   lista vacía; con varias, salen todas de la más reciente a la más antigua, y
+   cada una lleva la misma ficha que `GET /obras/{id}`. Una obra recién lanzada
+   sale `en_produccion`, una detenida `detenida`, una terminada sin publicar
+   `terminada` y la misma, al publicarse, `publicada`; y la ficha de cada una
+   dice la misma situación que el listado.
 
 ## §11 Fuera del alcance de v1
 
