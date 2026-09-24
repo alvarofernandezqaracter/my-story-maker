@@ -41,6 +41,8 @@ capítulo que no sea el último.
 - En el modelo: `Descartar` marca lo vivo de todo capítulo no cerrado.
 - En el código: nada todavía. Mientras no exista la regeneración del lector,
   los dos criterios coinciden en todo estado alcanzable y el código de hoy
-  cumple RF-165. Implementarlo va con la regeneración, en §4.18 (**pendiente
-  de T14**), que además tiene que relevar por conjunto de capítulos y no por
-  «desde N».
+  cumple RF-165. Implementarlo va con la regeneración, en §4.18: **llega con
+  T14 al fusionar**, como su RF-176 (`volver_al_punto_de_guardado` con
+  `capitulos_cerrados` y `descartar_sin_cerrar`), que además releva por
+  conjunto de capítulos y no por «desde N». El modelo de hoy ya describe esa
+  versión y TLC no encuentra error con ella.

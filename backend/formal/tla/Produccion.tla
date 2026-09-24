@@ -111,7 +111,10 @@ Acabar ==
 (* capitulo escribe antes de cerrar, y n dice cuantas producciones vivas   *)
 (* del capitulo habia al escribirlo, contando esta: 2 es un duplicado.     *)
 (* "cierre" es lo que entra de una vez al cerrarlo: EventoEstado, estado   *)
-(* en N, Resumen, Mencion y la marca cerrado (RF-90).                      *)
+(* en N, Resumen, Mencion y la marca cerrado (RF-90). "ficha" es la ficha  *)
+(* de un hecho de la biblia: no cuelga de ningun capitulo (cap = 0), la    *)
+(* escribe poblar_mundo y, al cambiarla el lector, el backend escribe la   *)
+(* nueva en la version nueva y releva la vieja (D-72 de T14).              *)
 (* Lo que se descarta al volver al punto de guardado queda caducado y sin  *)
 (* relevo: ninguna version lo ve nunca. RD-07 lo guarda, pero ninguna      *)
 (* propiedad lo mira, asi que el modelo lo olvida en vez de guardarlo.     *)
@@ -136,7 +139,7 @@ Usos(v, h) == {r.cap : r \in {x \in Visible(v) : x.tipo = "cierre" /\ h \in x.me
 (* rehacer desde N deja; la regeneracion del lector (pendiente de T14) lo  *)
 (* rompe y tiene que implementar esto.                                     *)
 (***************************************************************************)
-Descartar(E) == {r \in E : r.cad \/ CerradoVivo(r.cap)}
+Descartar(E) == {r \in E : r.cad \/ r.cap = 0 \/ CerradoVivo(r.cap)}
 
 (***************************************************************************)
 (* El caminante: el hilo que trabaja, con el proceso en pie.              *)
@@ -184,9 +187,14 @@ Intento ==
                             {[cap |-> cam.k, tipo |-> "trabajo",
                               n |-> Cardinality(TrabajoVivo(cam.k)) + 1,
                               nac |-> nv, rel |-> 0, cad |-> FALSE, men |-> {}]}
+                  ELSE IF cam.tarea = "poblar" THEN TRUE
                   ELSE UNCHANGED escrito
                /\ cam' = Despues(cam)
                /\ poblado' = (poblado \/ cam.tarea = "poblar")
+               /\ cam.tarea = "poblar" =>
+                     escrito' = escrito \cup
+                        {[cap |-> 0, tipo |-> "ficha", n |-> 1, nac |-> nv, rel |-> 0,
+                          cad |-> FALSE, men |-> {h}] : h \in Hechos}
                /\ UNCHANGED << detenida, esperan >>
             \/ \* el intento falla y quedan intentos
                /\ cam.intento < R
@@ -295,27 +303,34 @@ Reanudar ==
 (* y almacen.abrir_version). Solo con la ultima terminada y sin produccion  *)
 (* en marcha (D-40). Lo que colgaba de S se releva; la constancia de        *)
 (* auditoria baja para que la nueva se audite al cerrar. Despues arranca.   *)
-AbrirVersion(S) ==
+(* Con un hecho H cambiado, ademas, su ficha viva se releva y nace la nueva *)
+(* en la version nueva, en la misma transaccion (D-72 de T14).              *)
+Relevar(S, H, E) ==
+    {IF ~r.cad /\ (r.cap \in S \/ (r.tipo = "ficha" /\ r.men \cap H # {}))
+     THEN [r EXCEPT !.cad = TRUE, !.rel = nv + 1] ELSE r : r \in E}
+AbrirVersion(S, H) ==
     /\ proceso = "arriba" /\ ~Produciendo
     /\ nv < MaxV /\ terminada[nv]
+    /\ S # {}
     /\ nv' = nv + 1
-    /\ escrito' = {IF ~r.cad /\ r.cap \in S
-                   THEN [r EXCEPT !.cad = TRUE, !.rel = nv + 1] ELSE r : r \in escrito}
-    /\ auditada' = IF S = {} THEN C - 1 ELSE Min(S) - 1
+    /\ escrito' = Relevar(S, H, escrito) \cup
+                    {[cap |-> 0, tipo |-> "ficha", n |-> nv + 1, nac |-> nv + 1, rel |-> 0,
+                      cad |-> FALSE, men |-> {h}] : h \in H}
+    /\ auditada' = Min(S) - 1
     /\ detenida' = FALSE
     /\ Arrancar
     /\ UNCHANGED << proceso, poblado, terminada, veredicto, foto, publicada,
                     publicadas, caidas, reanudaciones, fallos >>
 
 (* Rehacer desde el capitulo N hasta el final (RF-111, D-42).               *)
-Rehacer(n) == AbrirVersion(n..C)
+Rehacer(n) == AbrirVersion(n..C, {})
 
 (* Regeneracion por cambio del lector (RF-164; la implementa SPEC1 4.18,    *)
-(* pendiente de T14): el lector cambia el valor de un hecho y se reescriben *)
-(* los capitulos que lo usan en la ultima version, contiguos o no. Si       *)
-(* ninguno lo usa, lo decide T14: rechazarlo es no cambiar nada, y abrir    *)
-(* una version sin capitulos cambiados es la rama S = {} de AbrirVersion.   *)
-CambioLector(h) == AbrirVersion(Usos(nv, h))
+(* que llega con T14): el lector cambia el valor de un hecho, su ficha se   *)
+(* sustituye en la version nueva y se reescriben los capitulos que lo usan  *)
+(* en la ultima version, contiguos o no. Si ninguno lo usa, se rechaza y no *)
+(* nace version (D-73 de T14): en el modelo, la accion no esta habilitada.  *)
+CambioLector(h) == AbrirVersion(Usos(nv, h), {h})
 
 (* Publicar (versiones.publicar, el unico sitio, RF-116 y RF-146). La       *)
 (* puerta abarca los cuatro validadores de hoy y el formal de T10: si no    *)
@@ -367,7 +382,7 @@ Spec == Init /\ [][Next]_vars /\ Fairness
 (***************************************************************************)
 (* Propiedades.                                                           *)
 (***************************************************************************)
-Registro == [cap : Caps, tipo : {"trabajo", "cierre"}, n : Nat, nac : Versiones,
+Registro == [cap : 0..C, tipo : {"trabajo", "cierre", "ficha"}, n : Nat, nac : Versiones,
              rel : 0..MaxV, cad : BOOLEAN, men : SUBSET Hechos]
 TypeOK ==
     /\ proceso \in {"arriba", "caido"}

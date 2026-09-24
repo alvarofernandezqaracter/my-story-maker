@@ -62,8 +62,8 @@ Rutas relativas a `backend/src/novela/`.
 | `Init` | Alta: la obra, su versión 1 y el primer caminante | `api/aplicacion.py:crear_aplicacion.lanzar_obra` → `almacen/artefactos.py:Almacen.crear_obra` (con `_dar_de_alta`) y `api/aplicacion.py:Produccion.arrancar` |
 | `Arrancar` | Arrancar: leer el hilo anterior y registrar el nuevo, que hace `join` del anterior, bajo cerrojo. Los hilos forman una cola: `cam` es el que trabaja y `esperan` cuenta los demás | `api/aplicacion.py:Produccion.arrancar` (`_turno_de_arranque`) |
 | `Acabar` | El hilo que trabaja acaba y el siguiente de la cola empieza | Fin de `caminar` dentro de `Produccion.arrancar` (`Thread.join`) |
-| `Volver` | Volver al punto de guardado. Lo descartado se olvida en vez de guardarse caducado, porque ninguna versión lo ve | `nucleo/caminante.py:Caminante.volver_al_punto_de_guardado` → `almacen/artefactos.py:Almacen.cerrar_trazas_interrumpidas`, `ultimo_capitulo_cerrado`, `descartar_desde` (`_marcar_desde`) e `indice.py:Indice.retirar_desde`. **Pendiente de T14**: el modelo descarta lo de todo capítulo no cerrado (RF-165); el código, lo posterior al último cerrado, que es lo mismo mientras no haya regeneración del lector |
-| `Intento` con `tarea = "poblar"` | `poblar_mundo` si no hay biblia | `nucleo/caminante.py:Caminante.caminar_obra` → `_fuera_del_guion("poblar_mundo")` |
+| `Volver` | Volver al punto de guardado. Lo descartado se olvida en vez de guardarse caducado, porque ninguna versión lo ve | `nucleo/caminante.py:Caminante.volver_al_punto_de_guardado` → `almacen/artefactos.py:Almacen.cerrar_trazas_interrumpidas`, `ultimo_capitulo_cerrado`, `descartar_desde` (`_marcar_desde`) e `indice.py:Indice.retirar_desde`. El modelo descarta lo de todo capítulo no cerrado (RF-165). En esta rama el código descarta lo posterior al último cerrado, que es lo mismo mientras no haya regeneración del lector. **Llega con T14 al fusionar** (su RF-176): `volver_al_punto_de_guardado` con `Almacen.capitulos_cerrados` y `Almacen.descartar_sin_cerrar` en lugar de `descartar_desde`, que es lo que el modelo describe |
+| `Intento` con `tarea = "poblar"` | `poblar_mundo` si no hay biblia: nacen las fichas de los hechos | `nucleo/caminante.py:Caminante.caminar_obra` → `_fuera_del_guion("poblar_mundo")` |
 | `Elegir` | Lo cerrado no se repite | `nucleo/caminante.py:Caminante.caminar_obra` (bucle) y `_ya_cerrado` |
 | `Intento` | Un intento de la tarea en curso, y lo que manda su `al_agotarse` | `nucleo/caminante.py:Caminante._mandar` (bucle de intentos) y `_agotado`; tope y política de `nucleo/guion.toml` leídos por `nucleo/guion.py:_politica` |
 | `Intento`, rama `detenida` | La orden de detener se nota antes de mandar | `nucleo/caminante.py:Caminante._parar_si_detenida` y `ProduccionDetenida` recogida en `caminar_obra` |
@@ -82,8 +82,8 @@ Rutas relativas a `backend/src/novela/`.
 | `Reanudar` | Orden del editor | `api/aplicacion.py:crear_aplicacion.reanudar` → `Almacen.reanudar` y `Produccion.arrancar` |
 | `AbrirVersion(S)` | Versión nueva que reescribe `S`, relevando lo que colgaba de `S` | `almacen/artefactos.py:Almacen.abrir_version` (`_marcar_desde` con `relevo`) |
 | `Rehacer(n)` | Rehacer desde N | `api/aplicacion.py:crear_aplicacion.rehacer` → `nucleo/versiones.py:rehacer_desde` → `Almacen.abrir_version`; después `Produccion.arrancar` |
-| `CambioLector(h)` | Regeneración por cambio del lector | **Pendiente de T14** (SPEC1 §4.18). Tiene que abrir la versión con `S` = los capítulos de las `Mencion` del hecho en la última versión (`Almacen.capitulos_de_uso`), relevar solo lo de `S`, dejar la constancia de auditoría por debajo del primer capítulo de `S` (por debajo del último si `S` está vacío) y arrancar. Qué hace con `S` vacío y el nombre de la ruta los decide T14: el modelo admite rechazar (no cambia nada) y abrir una versión sin capítulos cambiados |
-| `Publicar(v)` | Publicar pasando por la puerta | `api/aplicacion.py:crear_aplicacion.publicar` → `nucleo/versiones.py:publicar` → `nucleo/versiones.py:puerta` → `Almacen.publicar_version` |
+| `CambioLector(h)` | Regeneración por cambio del lector: `S` son los capítulos de las `Mencion` del hecho en la última versión; se relevan lo de `S` y la ficha vieja, nace la ficha nueva en la versión nueva, la constancia de auditoría baja por debajo del primer capítulo de `S` y arranca la producción | **Llega con T14 al fusionar** (SPEC1 §4.18): `POST /obras/{id}/cambios` → `nucleo/versiones.py:cambiar_hecho` → `almacen/artefactos.py:Almacen.abrir_version_por_cambio`; `S` sale de `Almacen.capitulos_de_uso`. La ficha nueva lleva `sustituye` y la escribe el backend en la misma transacción (D-72 de T14). Si ningún capítulo usa el hecho responde 409 y no nace versión (D-73 de T14): en el modelo la acción no está habilitada con `S` vacío. El 404 de un hecho que no existe y el 422 de un nombre vacío o igual no cambian el estado y no se modelan |
+| `Publicar(v)` | Publicar pasando por la puerta | `api/aplicacion.py:crear_aplicacion.publicar` → `nucleo/versiones.py:publicar` → `nucleo/versiones.py:puerta` → `Almacen.publicar_version`. **Llega con T10 al fusionar**: `puerta(..., demostrador=None)` suma el validador `cronologia` con Lean y `publicar` devuelve `(publicada_en, comprobacion)`. Para el modelo, `comprobada` y `sin_comprobacion` (Lean no instalado) son «pasa», y `fallida` es «no pasa»: no se publica y se escriben las críticas de `_criticas_de_la_cronologia`, que el modelo no distingue |
 | `Visible(v)`, `Vivas` | Lo que ve cada versión; lo vivo es lo que lee la producción | `almacen/artefactos.py:_visible` |
 | `Usos(v, h)` | En qué capítulos se usa un hecho | `almacen/artefactos.py:Almacen.capitulos_de_uso` |
 | `Produciendo` | ¿Hay producción en marcha? (el último hilo registrado vive) | `hilo.is_alive()` en `api/aplicacion.py:crear_aplicacion.rehacer` |
@@ -106,6 +106,9 @@ Rutas relativas a `backend/src/novela/`.
   historia de T10 —también cuando Lean no está y la versión se publica marcada
   «sin comprobación formal», que para el flujo es «pasa»—.
 - **Varias obras.** El modelo es de una (§11).
+- **La ficha por dentro.** Una ficha es un registro sin capítulo con el hecho
+  que describe; su valor no se modela, solo que la de la versión nueva
+  sustituye a la vieja sin que la vieja deje de verse en su versión.
 - **La identidad de cada producción.** Un artefacto `trabajo` lleva en `n`
   cuántas producciones vivas de su capítulo había al escribirlo; `n = 2` es
   justo el duplicado que `NiDuplica` prohíbe.
@@ -115,8 +118,13 @@ Rutas relativas a `backend/src/novela/`.
 `Produccion.cfg` es el modelo que TLC recorre entero y el que lanza la prueba:
 tres capítulos, dos versiones, `R = 2`, un hecho, una caída, un reanudar y un
 fallo no previsto. En la máquina de desarrollo, con cuatro núcleos, son
-1 444 626 estados generados, 395 733 distintos y un diámetro de 59, en menos de
-dos minutos.
+1 596 100 estados generados, 437 197 distintos y una profundidad de 59, en unos
+tres minutos.
+
+Que el modelo no pase por no llegar a nada se comprobó aparte, con invariantes
+testigo que tienen que fallar: TLC encuentra una versión del lector que se
+produce, sufre una caída y termina, y otra que se publica, las dos a
+profundidad 39.
 
 Con tres versiones el modelo pasa de varios millones de estados distintos y
 TLC tarda más de lo que una batería aguanta: no se da por comprobado.
@@ -129,4 +137,4 @@ Cada uno, con su traza literal y su explicación, en `contraejemplos/`:
 | --- | --- | --- |
 | 01 | `UnaSolaProduccion`: dos `reanudar` a la vez dejaban dos caminantes | Cerrojo en `Produccion.arrancar` (RF-166) |
 | 02 | `AcabaTerminadaODetenida`: un fallo no previsto dejaba la obra sin hilo, sin detener y sin terminar | `caminar_obra` detiene la obra con su motivo (RF-167) |
-| 03 | `NiDuplica`: con la regeneración del lector, una caída duplicaba el capítulo reescrito | Requisito para T14: descartar lo de todo capítulo no cerrado (RF-165) |
+| 03 | `NiDuplica`: con la regeneración del lector, una caída duplicaba el capítulo reescrito | Requisito para §4.18: descartar lo de todo capítulo no cerrado (RF-165), que T14 implementa como su RF-176 |
