@@ -87,6 +87,12 @@ npm run dev
 Esta sola orden arranca el servidor en el puerto 8000 y la web en
 <http://localhost:5173>. Para pararlo todo, `Ctrl+C` en esa consola.
 
+La web abre en el **taller**: un tablero, como el de un gestor de proyectos, con
+todas tus obras repartidas en cuatro columnas según su situación —en producción,
+detenida, terminada y publicada—. Pulsa una para entrar en ella; dentro, un
+lateral salta entre su avance, sus tareas, la lectura y sus versiones. Una obra
+detenida dice en su tarjeta por qué se detuvo.
+
 > **Ojo, que gasta.** Al arrancar, el servidor retoma solo cualquier novela que
 > se quedara a medias. Cada novela en marcha lanza agentes, y los agentes
 > cuestan dinero.
@@ -148,8 +154,8 @@ curl -X POST http://127.0.0.1:8000/obras/ID/versiones/1/publicar
 Antes de publicar, el sistema pasa sus comprobaciones finales. Si alguna falla,
 no publica y dice cuál y en qué capítulo.
 
-**Por la web, sin consola.** En <http://localhost:5173> se encarga la misma
-novela conversando: escribes lo que tengas —o pegas una carta, una anécdota— y
+**Por la web, sin consola.** Con «+ Nueva obra», arriba a la derecha
+(<http://localhost:5173/encargo>), se encarga la misma novela conversando: escribes lo que tengas —o pegas una carta, una anécdota— y
 un agente, el Entrevistador, te pregunta lo que falta. En cuanto el encargo está
 completo, la novela se lanza sola. Es más cómodo, pero cada vuelta de la
 conversación también lanza un agente; el fichero de arriba se lanza de una vez.

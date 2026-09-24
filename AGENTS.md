@@ -3,15 +3,18 @@
 Generador de novelas históricas por agentes: convierte un brief de editor en un
 manuscrito verificado.
 
-## Alcance de esta rama (importante)
+## Alcance del repositorio (importante)
 
-Esta rama es `v2`, un arranque desde cero. Contiene `docs/`, las specs y los
-planes en `specs/`, el `backend/` implementado según los suyos y el `frontend/`
-con su primera versión: encargar una obra, verla avanzar, ver lo hecho y leerla.
+Este repositorio es un arranque desde cero, la `v2`, y es lo que hay en `main`.
+Contiene `docs/`, las specs y los planes en `specs/`, el `backend/` implementado
+según los suyos y el `frontend/`: el taller con todas las obras, encargar una
+obra, verla avanzar, ver lo hecho y leerla.
 
-- Considera como fuente de verdad únicamente lo que existe en esta rama. Ignora
-  `main` y cualquier historial, convención o código anterior: no aplica aquí.
-- Si algo no está en `docs/` ni en esta rama, no existe todavía. No lo asumas:
+- Considera como fuente de verdad únicamente lo que existe hoy en el árbol. El
+  historial de git anterior al commit «chore(v2): arranque desde cero» es de un
+  proyecto anterior, con otro diseño: ni su código ni sus convenciones aplican
+  aquí, aunque siga siendo alcanzable desde `main`.
+- Si algo no está en `docs/` ni en el árbol, no existe todavía. No lo asumas:
   pregúntalo o propónlo explícitamente.
 
 ## Estructura del repositorio
@@ -22,7 +25,7 @@ ambos es la misma desde el principio.
 | Carpeta | Qué contendrá | Pila |
 | --- | --- | --- |
 | `backend/` | El servidor: guarda y sirve artefactos, camina el guion encargando tareas a los agentes y expone por HTTP lo que el editor necesita ver. En `backend/formal/tla/`, el flujo de producción como máquina de estados, con el modelo que recorre TLC y el mapeo de cada acción a su función; en `backend/src/novela/lean/`, el proyecto de Lean con los invariantes de la cronología que la puerta de publicación demuestra; en `backend/briefs-de-prueba/`, los briefs con que se prueba el sistema entero, cada uno con lo que se espera de él; y en `backend/src/novela/juez_de_la_novela.py`, el evaluador externo que puntúa una versión terminada con una rúbrica que vive en Langfuse y no en el repositorio; junto a él, `lanzador_de_briefs.py`, que corre esos briefs de uno en uno hasta el juicio y solo con `--si-gasto` | Python + FastAPI; TLA+; Lean 4 |
-| `frontend/` | La interfaz web: encargar una obra conversando con el Entrevistador, ver cómo avanza, ver las tareas ya hechas, leer el manuscrito —con su portada, la ficha de personajes y lugares, las críticas de cada capítulo, el cambio de nombre de un hecho y la descarga en PDF— y ver las versiones para publicarlas, con un menú que salta entre las pantallas de cada obra. Se pone en pie con `npm run dev`, que arranca también el backend, y `npm run validar-visual` mira la lectura con un navegador | Vite + React + TypeScript |
+| `frontend/` | La interfaz web: el taller, que abre con todas las obras en un tablero por su situación; encargar una obra conversando con el Entrevistador, ver cómo avanza, ver las tareas ya hechas, leer el manuscrito —con su portada, la ficha de personajes y lugares, las críticas de cada capítulo, el cambio de nombre de un hecho y la descarga en PDF— y ver las versiones para publicarlas, con una barra fija arriba y un lateral que salta entre las pantallas de cada obra. Se pone en pie con `npm run dev`, que arranca también el backend, y `npm run validar-visual` mira la lectura con un navegador | Vite + React + TypeScript |
 | `docs/` | Documentación de referencia —el contexto general—: ontología, diagramas y arquitectura. Y la de proceso, que cuenta cómo se ha construido: `proceso.md` la reúne y enlaza, `explainers/`, el registro de iteraciones y el red-team log | Markdown |
 | `specs/` | Las specs vivas —el contexto específico—: `SPEC1.md` para el backend y `SPEC2.md` para el frontend, con qué tiene que hacer cada uno y por qué | Markdown |
 | `.env` | Fuera de git. Las claves de Langfuse de la instalación —`LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` y `LANGFUSE_HOST`—, que el `backend/` lee solo al arrancar sin exportarlas. Sin ellas no se manda nada a Langfuse y la novela se escribe igual; ningún subagente de tarea las recibe | Texto |

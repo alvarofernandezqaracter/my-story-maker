@@ -46,6 +46,8 @@ Una carpeta por funcionalidad, con sus componentes y sus llamadas dentro:
 ```
 frontend/src/
   features/
+    taller/       la pantalla de inicio: todas las obras en un tablero, una
+                  columna por la situación que dice el servidor
     encargo/      la conversación con el Entrevistador que completa el brief
                   y lanza la obra
     avance/       la obra mientras se produce: capítulo en curso, tareas

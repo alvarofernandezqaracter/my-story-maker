@@ -221,6 +221,8 @@ Valores cerrados de la capa de producción. Los vocabularios de forma textual y 
 
 **Comprobación formal:** `demostrada`, `fallida`, `sin_comprobacion`. Cómo quedó la cronología en Lean al pasar la puerta: la demostró, no pudo demostrarla, o Lean no está en la máquina y no se comprobó (§4).
 
+**Situación de la obra:** `en_produccion`, `detenida`, `terminada`, `publicada`. Dónde está una obra entera, tal como la enseña el taller. La decide el backend en este orden: `detenida` si la obra está detenida; si no, `en_produccion` si su versión en curso no ha terminado; si no, `publicada` si la versión en curso es la publicada; y si no, `terminada`. Una obra publicada a la que se le pide rehacer vuelve a `en_produccion` (§4). Viaja cerrada para que la interfaz la pinte y no la deduzca.
+
 **Tipo de contradicción:** `edad_contra_tono`, cuando el tono pedido no corresponde a la edad del destinatario, y `texto_contra_campo`, cuando un texto pegado en la entrevista dice otra cosa que un campo que la persona escribió. Lo detecta el Entrevistador y no lo resuelve: lo devuelve como pregunta, y la persona puede darlo por asumido.
 
 **Criterio del juez de la novela:** `personalizacion_integrada`, `funciona_como_novela`, `fidelidad_a_la_epoca`. Lo que puntúa el evaluador externo sobre una versión terminada. Sin destinatario, el primero no se puntúa. No son dimensiones de calidad del dominio: miden el sistema desde fuera.
@@ -244,6 +246,7 @@ flowchart TD
   PROC --> PUE[validador de la puerta: esquema /<br/>nombres / longitud / elementos personalizados /<br/>cronologia]
   PROC --> INV[invariante de la cronologia: orden temporal /<br/>edad coherente / un solo lugar / no reaparece]
   PROC --> CFO[comprobacion formal: demostrada /<br/>fallida / sin comprobacion]
+  PROC --> SIT[situacion de la obra: en produccion /<br/>detenida / terminada / publicada]
   PROC --> JDN[criterio del juez de la novela: personalizacion integrada /<br/>funciona como novela / fidelidad a la epoca]
   PROC --> RES[resultado esperado: pasa / falla / puede fallar /<br/>se puntua / no se puntua]
   PROC --> PBP[proposito del brief de prueba: normal /<br/>mucha personalizacion / sin destinatario /<br/>inyeccion / incoherencia temporal]
@@ -859,8 +862,9 @@ frontend/
   scripts/       genera el cliente desde el contrato; arranca backend y Vite;
                  el validador visual de la lectura, con Playwright
   src/
-    features/    encargo, avance, tareas, manuscrito, versiones
-    compartido/  cliente de API generado del contrato, y componentes comunes
+    features/    taller, encargo, avance, tareas, manuscrito, versiones
+    compartido/  cliente de API generado del contrato, y componentes comunes:
+                 la barra, el lateral de la obra y la etiqueta de cada situación
   pruebas/       contra un servidor simulado: ninguna gasta
 ```
 
@@ -878,9 +882,20 @@ engancha a `GET /obras/{id}/progreso`; si el flujo se corta, el cliente se
 reengancha solo y lo dice. Todo eso vive en un solo fichero de
 `compartido/api/`, de modo que pasar a sondeo no toca ninguna pantalla.
 
-**Las pantallas de una obra comparten menú.** Avance, Tareas, Lectura y
-Versiones llevan arriba el mismo menú, que salta de una a otra con un clic; cada
-una conserva su dirección. La de tareas lista lo que sirve `GET /obras/{id}/trazas`
+**La interfaz abre en el taller.** En `/`, un tablero al estilo de un gestor de
+proyectos con todas las obras que sirve `GET /obras`, una columna por situación
+de la obra —en producción, detenida, terminada y publicada— y cada obra como una
+tarjeta en la columna que dice el servidor: la interfaz no combina campos para
+deducirla. La tarjeta lleva a su avance, las tarjetas no se arrastran y el
+tablero se vuelve a pedir cada pocos segundos mientras la pestaña está visible.
+Una barra fija arriba en todas las pantallas lleva al taller y al encargo de una
+obra nueva, en `/encargo`.
+
+**Las pantallas de una obra comparten lateral.** Avance, Tareas, Lectura y
+Versiones llevan a la izquierda el mismo lateral, con el título de la obra y su
+situación arriba, que salta de una pantalla a otra con un clic; cada una
+conserva su dirección, y en estrecho el lateral pasa a ser una tira bajo la
+barra. La de tareas lista lo que sirve `GET /obras/{id}/trazas`
 agrupado por capítulo, con la duración y el veredicto final de los hooks tal
 como vienen en cada `Traza`.
 
