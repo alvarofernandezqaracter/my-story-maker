@@ -17,6 +17,7 @@ al agotarse lo declara su paso en el guion; aqui solo se lee.
 """
 
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -63,7 +64,13 @@ class Resultado:
 
 class Ejecutor(Protocol):
     """Quien lanza la tarea. En seco devuelve artefactos preparados; de verdad
-    lanza un subagente de Claude Code."""
+    lanza un subagente de Claude Code.
+
+    Si admite varias tareas a la vez lo declara con `simultaneo = True`, y
+    entonces cada tanda corre entera a la vez (SPEC1 D-51). Sin declararlo, la
+    tanda se manda en serie: los ejecutores fingidos contestan segun el orden
+    en que les llegan los encargos.
+    """
 
     def ejecutar(self, encargo: Encargo, ventana: Ventana) -> Resultado: ...
 
@@ -134,6 +141,10 @@ class Caminante:
         self.catalogo = catalogo
         self.indice = indice
         self._tanda = 0
+        # Los hilos duran lo que el caminante y se reutilizan de tanda en tanda:
+        # cada hilo abre su propio lector del almacen, y un hilo nuevo por
+        # tanda seria una conexion nueva por tanda.
+        self._hilos: ThreadPoolExecutor | None = None
 
     # --- La obra entera ----------------------------------------------------
 
@@ -466,20 +477,48 @@ class Caminante:
         resultados: list[Resultado] = []
         for tanda in presupuesto.repartir_en_tandas(encargos):
             self._tanda += 1
-            for encargo in tanda:
-                if informe is not None:
-                    informe.recorrido.append(
-                        Apunte(
-                            paso=encargo.paso,
-                            tarea=encargo.tarea,
-                            rol=encargo.rol,
-                            tanda=self._tanda,
-                            escena=encargo.escena,
-                            dimension=encargo.dimension,
-                        )
+            if informe is not None:
+                informe.recorrido.extend(
+                    Apunte(
+                        paso=encargo.paso,
+                        tarea=encargo.tarea,
+                        rol=encargo.rol,
+                        tanda=self._tanda,
+                        escena=encargo.escena,
+                        dimension=encargo.dimension,
                     )
-                resultados.append(self._mandar(encargo, aplazados))
+                    for encargo in tanda
+                )
+            resultados.extend(self._mandar_tanda(tanda, aplazados))
         return resultados
+
+    def _mandar_tanda(
+        self, tanda: Sequence[Encargo], aplazados: Aplazados | None
+    ) -> list[Resultado]:
+        """Las tareas de una tanda corren a la vez y la tanda cierra cuando
+        cierran todas (SPEC1 RF-13, D-51).
+
+        Lo que devuelven se recoge en el orden del guion y no en el de llegada:
+        es lo que deja el recorrido igual de una vez a otra (RNF-04). Si una
+        detiene la obra, las demas ya estan abiertas y terminan; lo que dejen se
+        descarta al volver al punto de guardado.
+        """
+        if len(tanda) == 1 or not getattr(self.ejecutor, "simultaneo", False):
+            return [self._mandar(encargo, aplazados) for encargo in tanda]
+        if self._hilos is None:
+            self._hilos = ThreadPoolExecutor(
+                max_workers=presupuesto.anchura_maxima(), thread_name_prefix="tanda"
+            )
+        propios: list[Aplazados] = [[] for _ in tanda]
+        futuros = [
+            self._hilos.submit(self._mandar, encargo, None if aplazados is None else propio)
+            for encargo, propio in zip(tanda, propios, strict=True)
+        ]
+        wait(futuros)
+        if aplazados is not None:
+            for propio in propios:
+                aplazados.extend(propio)
+        return [futuro.result() for futuro in futuros]
 
     def _mandar(self, encargo: Encargo, aplazados: Aplazados | None = None) -> Resultado:
         """Ensambla, coteja, manda y guarda lo que vuelva.

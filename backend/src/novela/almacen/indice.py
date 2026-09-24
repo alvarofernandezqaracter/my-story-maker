@@ -21,6 +21,7 @@ descartado no puede recuperarse nunca como eco.
 """
 
 import json
+import threading
 from dataclasses import dataclass
 from typing import Any
 
@@ -136,17 +137,21 @@ class Indice:
     def __init__(self, almacen: Almacen) -> None:
         self.almacen = almacen
         self._modelo: Any = None
+        # Las tareas de una tanda consultan a la vez (D-51): el modelo se carga
+        # una sola vez y las huellas se calculan de una en una.
+        self._turno_del_modelo = threading.Lock()
 
     # --- Huellas -----------------------------------------------------------
 
     def _huellas(self, textos: list[str]) -> list[list[float]]:
         """Se calculan en la propia maquina: ni indexar ni consultar sale al
         exterior."""
-        if self._modelo is None:
-            from fastembed import TextEmbedding
+        with self._turno_del_modelo:
+            if self._modelo is None:
+                from fastembed import TextEmbedding
 
-            self._modelo = TextEmbedding(MODELO_DE_HUELLAS)
-        return [list(map(float, huella)) for huella in self._modelo.embed(textos)]
+                self._modelo = TextEmbedding(MODELO_DE_HUELLAS)
+            return [list(map(float, huella)) for huella in self._modelo.embed(textos)]
 
     # --- Escritura del indice ---------------------------------------------
 

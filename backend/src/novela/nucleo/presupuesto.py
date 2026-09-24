@@ -22,6 +22,7 @@ from novela.ajustes import (
     COSTE_FIJO_DEL_SUBAGENTE_EN_TOKENS,
     K_POR_ROL,
     TECHO_DE_CONTEXTO_CONCURRENTE,
+    TOPE_DE_VENTANA_POR_ROL,
     tokens_repartibles,
 )
 from novela.nucleo.guion import Encargo
@@ -72,6 +73,15 @@ def anchura_de_tanda(encargos: Sequence[Encargo]) -> int:
         return 0
     mas_caro = max(coste_de_abrir_encargo(encargo) for encargo in encargos)
     return max(1, tokens_repartibles() // mas_caro)
+
+
+def anchura_maxima() -> int:
+    """La tanda mas ancha que puede salir: la del rol con el tope mas pequeno.
+
+    Es cuantos hilos necesita el caminante para que ninguna tanda espere a un
+    hilo libre; cuantas tareas corren de verdad lo sigue diciendo cada tanda.
+    """
+    return max(1, tokens_repartibles() // coste_de_abrir(min(TOPE_DE_VENTANA_POR_ROL.values())))
 
 
 def repartir_en_tandas(encargos: Sequence[Encargo]) -> list[list[Encargo]]:

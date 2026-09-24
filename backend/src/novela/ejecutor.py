@@ -40,7 +40,7 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, ClassVar, Protocol
 
 from novela import ganchos
 from novela.ajustes import (
@@ -108,6 +108,10 @@ class CatalogoDeTareas(Protocol):
 @dataclass
 class EjecutorDeSubagentes:
     """Lanza `claude` en modo no interactivo, una vez por encargo."""
+
+    # Cada encargo es un subproceso propio en su directorio vacio: nada se
+    # comparte entre dos a la vez, asi que la tanda puede ir entera (D-51).
+    simultaneo: ClassVar[bool] = True
 
     catalogo: CatalogoDeTareas | None = None
     modelo: str = MODELO_DE_LOS_SUBAGENTES
