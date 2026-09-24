@@ -635,7 +635,8 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | El juez va por el ejecutor aislado, con Sonnet, sin herramientas y solo sin producción en marcha (SPEC1 RF-197, RNF-12) | Orden interceptada del ejecutor real, y una traza abierta en otra obra | `prueba` |
 | Solo un veredicto entero y con citas literales cuelga notas, una por criterio y con la versión de la rúbrica (SPEC1 RF-198, RF-199) | Juez fingido con veredicto bueno, con citas inventadas, con notas fuera de rango y con criterios de menos o de más | `prueba` |
 | El juez recibe la observabilidad por parámetro y no lee `tareas/` ni la API (SPEC1 RF-200) | Contrato de importación | `analisis` |
-| Los briefs de prueba los aceptaría `POST /obras` y lo que esperan nombra comprobaciones que existen (SPEC1 RF-201, RD-35) | Carga de cada fichero contra el modelo del brief y los vocabularios | `prueba` |
+| Los briefs de prueba los aceptaría `POST /obras` y lo que esperan nombra comprobaciones que existen (SPEC1 RF-201) | Carga de cada fichero contra el modelo del brief y los vocabularios | `prueba` |
+| Los briefs de prueba son entrada del desarrollador: nada del sistema los lee sin que alguien los lance, ni los escribe (SPEC1 RD-35) | Búsqueda en `backend/src/` de quién nombra `briefs-de-prueba`: nadie | `inspeccion` |
 | El texto de la rúbrica no está en el repositorio (SPEC1 RF-202, RNF-13) | Búsqueda de frases de la rúbrica en el árbol y en `git log -p` | `inspeccion` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
 | La fecha, el lugar y los presentes que el Contable escribe son correctos | — | `inverificable` |
