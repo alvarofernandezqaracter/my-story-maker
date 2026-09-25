@@ -158,8 +158,12 @@ def _entrega_el_tipo_de_su_esquema(
     entrega: Entrega, tarea: str, datos: DatosDeLaObra
 ) -> list[str]:
     esquema = json.loads(esquema_de_tarea(tarea))
-    tipo = esquema["tipo"]
-    campos = list(esquema.get("cuerpo", {}))
+    # Un ejemplo, o una lista: el tipo que se entrega es el del primero, y sus
+    # campos obligatorios son los que traen todos sus ejemplos (SPEC1 RF-208).
+    ejemplos = esquema if isinstance(esquema, list) else [esquema]
+    tipo = ejemplos[0]["tipo"]
+    obligatorios = validadores.campos_por_tipo(esquema).get(tipo, set())
+    campos = [campo for campo in ejemplos[0].get("cuerpo", {}) if campo in obligatorios]
     candidatos = [
         artefacto["cuerpo"]
         for artefacto in _artefactos(entrega)

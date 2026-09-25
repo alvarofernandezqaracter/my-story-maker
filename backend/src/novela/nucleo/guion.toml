@@ -31,8 +31,9 @@ palabras_maximas = 4000
 #   critica_abierta  las comprobaciones: queda una Critica «no comprobado»
 #   seguir           documentar: sin fuente la produccion sigue (D-09)
 #
-# Los pasos que escriben prosa declaran ademas `ganchos` —los hooks `Stop` que
-# lleva su subagente, con los valores de `vocabularios.GANCHOS`— y
+# Los pasos que escriben prosa, y los dos que escriben datos al cerrar el
+# capitulo, declaran ademas `ganchos` —los hooks `Stop` que lleva su subagente,
+# con los valores de `vocabularios.GANCHOS`— y
 # `reserva_de_la_vuelta`: lo que puede costar de entrada la vuelta de correccion
 # cuando un hook bloquea, que se suma al tope del rol al calcular la tanda
 # (SPEC1 4.13). Un paso con ganchos y sin reserva no carga.
@@ -130,16 +131,27 @@ proyeccion = ["contrato_de_verificacion"]
 numero = 9
 reintentos = 2
 al_agotarse = "detener_obra"
+# Solo la forma: un evento sin fecha se devuelve al Contable en la sesion
+# (SPEC1 RF-209). Sin `policy`: no escribe prosa.
+ganchos = ["validar_capitulo"]
+reserva_de_la_vuelta = 6000
 tarea = "plegar"
 rol = "contable_de_estado"
 concurrencia = "solo"
 unidad = "capitulo"
-proyeccion = ["estado_en_n_menos_1", "texto_aceptado_del_capitulo", "vocabulario_de_eventos"]
+proyeccion = [
+    "estado_en_n_menos_1",
+    "texto_aceptado_del_capitulo",
+    "vocabulario_de_eventos",
+    "marco_temporal_del_capitulo",
+]
 
 [[paso]]
 numero = 10
 reintentos = 2
 al_agotarse = "detener_obra"
+ganchos = ["validar_capitulo"]
+reserva_de_la_vuelta = 6000
 tarea = "destilar"
 rol = "archivero"
 concurrencia = "solo"
