@@ -376,6 +376,34 @@ def _decisiones(p: Peticion) -> Filas:
     return _cuerpos(p.almacen.listar("Decision", p.id_obra))
 
 
+def _marco_temporal_del_capitulo(p: Peticion) -> dict[str, Any]:
+    """Donde y cuando cae el capitulo, para que el Contable no invente el ano
+    (SPEC1 RF-210). Del plan solo entra el `marco` de cada escena (D-94); la
+    fecha de cierre anterior la escribio el propio Contable."""
+    obra = p.almacen.leer_obra(p.id_obra)
+    capitulo = p.capitulo or 1
+    anteriores = [
+        evento.cuerpo.get("fecha_resultante")
+        for evento in p.almacen.listar("EventoEstado", p.id_obra)
+        if evento.capitulo is not None and evento.capitulo < capitulo
+    ]
+    fechas = [fecha for fecha in anteriores if isinstance(fecha, str) and fecha]
+    campos_del_marco = ("lugar", "instante", "duracion")
+    escenas: Filas = []
+    for escena in p.almacen.listar("Escena", p.id_obra, capitulo=capitulo, orden="orden"):
+        marco = escena.cuerpo.get("marco")
+        marco = marco if isinstance(marco, dict) else {}
+        escenas.append(
+            {"id": escena.id}
+            | {clave: marco[clave] for clave in campos_del_marco if clave in marco}
+        )
+    return {
+        "epoca": obra.cuerpo.get("epoca") if obra else None,
+        "fecha_de_cierre_anterior": max(fechas) if fechas else None,
+        "escenas": escenas,
+    }
+
+
 def _vocabulario_de_eventos(p: Peticion) -> list[str]:
     return list(TIPO_DE_EVENTO_ESTADO)
 
@@ -432,6 +460,7 @@ MATERIALES: dict[str, Constructor] = {
     "lexico_vetado": _registro_linguistico,
     "afirmaciones_pendientes_de_respaldo": _afirmaciones_pendientes_de_respaldo,
     "vocabulario_de_eventos": _vocabulario_de_eventos,
+    "marco_temporal_del_capitulo": _marco_temporal_del_capitulo,
     "plan_del_capitulo": _plan_del_capitulo,
     "funcion_estructural_de_las_escenas": _funcion_estructural_de_las_escenas,
     "log_de_estado": _log_de_estado,

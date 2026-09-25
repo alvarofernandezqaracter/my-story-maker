@@ -99,14 +99,32 @@ def _hook(
 # --- RF-120: que pasos los llevan ---------------------------------------------
 
 
-def test_los_llevan_los_tres_pasos_de_prosa_y_ninguno_mas() -> None:
-    con_ganchos = {paso.numero for paso in guion.PASOS if paso.ganchos}
-    assert con_ganchos == {3, 5, 7}
-    for paso in guion.PASOS:
-        if paso.ganchos:
-            assert set(paso.ganchos) == set(GANCHOS)
-            assert paso.reserva_de_la_vuelta > 0
+def test_los_llevan_los_tres_pasos_de_prosa_y_los_dos_de_datos() -> None:
+    con_ganchos = {paso.numero: set(paso.ganchos) for paso in guion.PASOS if paso.ganchos}
+    # Los de prosa, los dos; el Contable y el Archivero, solo la forma (RF-209).
+    assert con_ganchos == {
+        3: set(GANCHOS), 5: set(GANCHOS), 7: set(GANCHOS),
+        9: {"validar_capitulo"}, 10: {"validar_capitulo"},
+    }
+    assert all(paso.reserva_de_la_vuelta > 0 for paso in guion.PASOS if paso.ganchos)
     assert not any(paso.ganchos for paso in guion.FUERA_DEL_GUION.values())
+
+
+def test_el_hook_devuelve_al_contable_un_evento_sin_fecha() -> None:
+    """SPEC1 RF-209: todo `EventoEstado` trae sus campos obligatorios, y el
+    `objeto` que un paso del tiempo no tiene no se le pide (RF-208)."""
+    base = {"tipo_de_evento": "transcurre_tiempo", "sujeto": "per_1", "capitulo": 8,
+            "fecha_resultante": "1584-03", "lugar_resultante": "lug_1",
+            "presentes": ["per_1"], "evidencia": "«paso el invierno»"}
+    sin_fecha = {k: v for k, v in base.items() if k != "fecha_resultante"}
+    entrega = {"artefactos": [{"tipo": "EventoEstado", "cuerpo": base},
+                              {"tipo": "EventoEstado", "cuerpo": sin_fecha}]}
+    datos = ganchos.DatosDeLaObra(nombres=())
+    fallos = ganchos._entrega_el_tipo_de_su_esquema(entrega, "plegar", datos)
+    assert fallos == ["al `EventoEstado` le faltan `fecha_resultante`"]
+    assert ganchos._entrega_el_tipo_de_su_esquema(
+        {"artefactos": [{"tipo": "EventoEstado", "cuerpo": base}]}, "plegar", datos
+    ) == []
 
 
 def test_las_cribas_del_mismo_rol_que_cose_no_los_llevan() -> None:
@@ -172,7 +190,19 @@ def test_la_orden_de_un_paso_de_prosa_lleva_los_dos_hooks_stop(numero: int) -> N
     assert "Stop hook feedback" in sistema and ganchos.PREFIJO in sistema
 
 
-@pytest.mark.parametrize("numero", [1, 2, 4, 6, 8, 9, 10])
+@pytest.mark.parametrize("numero", [9, 10])
+def test_la_orden_de_un_paso_de_datos_lleva_solo_validar_capitulo(numero: int) -> None:
+    """RF-209: el Contable y el Archivero llevan el hook del esquema, no el de
+    la politica, que mira prosa."""
+    encargo = _encargo_del_paso(numero)
+    orden = EjecutorDeSubagentes()._orden(encargo, _ventana())
+    ajustes = json.loads(orden[orden.index("--settings") + 1])
+    ordenes = [h["command"] for grupo in ajustes["hooks"]["Stop"] for h in grupo["hooks"]]
+    assert len(ordenes) == 1
+    assert f"-m novela.ganchos validar_capitulo {encargo.tarea}" in ordenes[0]
+
+
+@pytest.mark.parametrize("numero", [1, 2, 4, 6, 8])
 def test_la_orden_de_un_paso_sin_prosa_no_lleva_settings(numero: int) -> None:
     encargo = guion.expandir(
         guion.paso(numero), id_obra="obr_1", capitulo=1, escenas=("esc_1",)

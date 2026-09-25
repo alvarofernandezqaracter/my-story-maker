@@ -249,8 +249,9 @@ def test_la_consulta_de_uso_va_por_indice(almacen: Almacen, id_obra: str) -> Non
 
 
 def test_el_contable_escribe_los_presentes_y_la_fecha_iso() -> None:
-    ejemplo = json.loads(esquema_de_tarea("plegar"))
-    assert "presentes" in ejemplo["cuerpo"]
+    # Un ejemplo por forma de evento (SPEC1 RF-208), y todos llevan presentes.
+    ejemplos = json.loads(esquema_de_tarea("plegar"))
+    assert ejemplos and all("presentes" in ejemplo["cuerpo"] for ejemplo in ejemplos)
     prompt = prompt_de_tarea("plegar")
     assert "presentes" in prompt
     assert "AAAA-MM-DD" in prompt

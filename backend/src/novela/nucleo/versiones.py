@@ -104,7 +104,12 @@ def _fallo(validador: str, capitulo: int | None, detalle: str) -> dict[str, Any]
 def _esquema(
     almacen: Almacen, id_obra: str, numero: int, esquemas: Esquemas
 ) -> list[dict[str, Any]]:
-    """RF-141: cada salida de rol que conserva la version trae su esquema."""
+    """RF-141: cada salida de rol que conserva la version trae su esquema.
+
+    El capitulo que tiene el envoltorio cuenta como presente aunque el cuerpo no
+    lo repita: en un encargo de capitulo lo pone el backend (RF-181, RF-207). El
+    cuerpo no se toca; se mira con el envoltorio al lado.
+    """
     leidos: dict[str, Any] = {}
     fallos = []
     for artefacto in almacen.salidas_de_rol_de_la_version(id_obra, numero):
@@ -113,7 +118,10 @@ def _esquema(
             continue
         if tarea not in leidos:
             leidos[tarea] = json.loads(esquemas.esquema(tarea))
-        faltan = validadores.campos_que_faltan(leidos[tarea], artefacto.tipo, artefacto.cuerpo)
+        visto = dict(artefacto.cuerpo)
+        if artefacto.capitulo is not None:
+            visto.setdefault("capitulo", artefacto.capitulo)
+        faltan = validadores.campos_que_faltan(leidos[tarea], artefacto.tipo, visto)
         if faltan:
             fallos.append(
                 _fallo(
