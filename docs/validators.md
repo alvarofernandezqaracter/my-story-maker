@@ -352,7 +352,7 @@ por `prueba`.
 | --- | --- | --- | --- |
 | `orden_temporal` | Ningún suceso de un capítulo anterior ocurre después de uno de un capítulo posterior | Fecha resultante de cada `EventoEstado` y momento de cada `Evento`, con su capítulo | El orden dentro de un mismo capítulo, que no está registrado |
 | `edad_coherente` | Todo presente había nacido y no pasa de 120 años | Presentes de cada suceso y su `fechas.nacimiento` | Un presente sin fecha de nacimiento |
-| `un_solo_lugar` | Dos sucesos del mismo día exacto en lugares distintos no comparten presentes | Fecha, lugar y presentes de cada suceso | Dos sucesos fechados solo por mes o año, o sin lugar |
+| `un_solo_lugar` | Dos sucesos del mismo día exacto en lugares distintos no comparten presentes, salvo que ese día conste que ese presente llegó a uno de los dos con un `viaja_a` | Fecha, lugar y presentes de cada suceso, y quién llega en cada `viaja_a` | Dos sucesos fechados solo por mes o año, o sin lugar; y un viaje escrito pero imposible por la distancia, que sin distancias no se ve |
 | `no_reaparece` | Quien muere en un suceso no está presente en ninguno posterior, por capítulo o por fecha | Sujeto de cada `EventoEstado` `muere` y presentes de los demás | Una muerte que el Contable no emitió como `muere` |
 
 Lean solo mira lo que la cronología registra: un suceso que la prosa narra y
@@ -670,6 +670,7 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | El Contable y el Archivero llevan `validar_capitulo`, y el hook devuelve todo evento al que le falte un campo obligatorio (SPEC1 RF-209, D-93) | Los ganchos declarados por paso en el guion, y una entrega con un evento sin `fecha_resultante` frente a otra completa | `prueba` |
 | El Contable fecha dentro del marco temporal del capítulo: la época, la fecha de cierre anterior y el marco de cada escena, y nada más del plan (SPEC1 RF-210, D-94) | La ventana de `plegar` del capítulo 1 sin fecha anterior y con el marco de sus escenas en orden, sin objetivo ni elenco; la del capítulo 3 con la fecha más tardía de los anteriores; y el prompt que dice que manda el texto | `prueba` |
 | El ejecutor y el hook leen el objeto JSON donde esté, y el tipo sin tildes; un JSON roto sigue siendo un fallo que dice dónde se rompió (SPEC1 RF-211, RF-212, D-95) | Objetos con texto delante y detrás, entre vallas y sin ellas; uno cortado; una `Crítica` y una `Decisión` con tilde frente a un tipo inventado; y la misma lectura en el hook y en el ejecutor | `prueba` |
+| Estar en dos lugares el mismo día es coherente si ese día consta el viaje de esa persona a uno de los dos (SPEC1 RF-213, D-96) | Con Lean: del taller a la biblioteca con su `viaja_a`, que pasa, frente a un viaje de otro que no explica a quien no viajó, que falla; y el volcado que lleva quién llega | `prueba` |
 | El texto de la rúbrica no está en el repositorio (SPEC1 RF-202, RNF-13) | Búsqueda de frases de la rúbrica en el árbol y en `git log -p` | `inspeccion` |
 | El lanzador corre los briefs de uno en uno, no arranca nada sin `--si-gasto` y traduce a la misma clave lo que dicen la puerta, los ganchos y el juez (SPEC1 RF-203) | Almacén y veredictos fingidos, más el cotejo de que toda comprobación que un brief declara la sabe observar el lanzador | `prueba` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
