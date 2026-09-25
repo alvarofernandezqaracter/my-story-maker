@@ -37,9 +37,10 @@ PEDRO = {"id": "per_2", "nombre": "Pedro", "nacimiento": "1560-03"}
 
 
 def _suceso(id_: str, capitulo: int | None, momento: str | None, lugar: str | None,
-            presentes: list[dict[str, Any]], muere: str | None = None) -> dict[str, Any]:
+            presentes: list[dict[str, Any]], muere: str | None = None,
+            llega: str | None = None) -> dict[str, Any]:
     return {"id": id_, "capitulo": capitulo, "momento": momento, "lugar": lugar,
-            "presentes": presentes, "muere": muere}
+            "presentes": presentes, "muere": muere, "llega": llega}
 
 
 COHERENTE = [
@@ -165,6 +166,39 @@ def test_lean_no_demuestra_una_cronologia_rota(invariante: str) -> None:
 
 
 @con_lean
+def test_dos_lugares_el_mismo_dia_pasan_si_consta_el_viaje() -> None:
+    """SPEC1 RF-213: del taller a la biblioteca el mismo dia, con su `viaja_a`,
+    y lo que hace alli despues."""
+    cronologia = [
+        _suceso("evs_1", 1, "1584-05-10", "lug_1", [INES]),
+        _suceso("evs_2", 1, "1584-05-10", "lug_2", [INES, PEDRO], llega="per_1"),
+        _suceso("evs_3", 1, "1584-05-10", "lug_2", [INES, PEDRO]),
+    ]
+    resultado = DemostradorLean().comprobar(cronologia)
+    assert resultado["comprobacion"] == "demostrada", resultado["fallos"]
+
+
+@con_lean
+def test_el_viaje_de_otro_no_explica_a_quien_no_viajo() -> None:
+    """Pedro llega a lug_2; Ines, que estaba en lug_1 ese dia, no viajo."""
+    cronologia = [
+        _suceso("evs_1", 1, "1605-03-12", "lug_1", [INES]),
+        _suceso("evs_2", 1, "1605-03-12", "lug_2", [INES, PEDRO], llega="per_2"),
+    ]
+    resultado = DemostradorLean().comprobar(cronologia)
+    assert resultado["comprobacion"] == "fallida"
+    fallados = {f["detalle"].split(":")[0] for f in resultado["fallos"]}
+    assert fallados == {"un_solo_lugar"}
+    assert "sin que conste que viajase" in resultado["fallos"][0]["detalle"]
+
+
+def test_el_suceso_viaja_a_lleva_quien_llega_en_el_volcado() -> None:
+    volcado = volcar([_suceso("evs_1", 1, "1584-05-10", "lug_1", [INES], llega="per_1")])
+    assert "UnSoloLugar cronologia s1 b" in volcado.texto
+    assert "[⟨1, 15510101, 15511231⟩], 0, 1⟩" in volcado.texto
+
+
+@con_lean
 def test_el_directorio_de_lean_no_queda_en_disco(tmp_path: Path,
                                                  monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(demostrador.tempfile, "tempdir", str(tmp_path))
@@ -198,6 +232,7 @@ def test_el_suceso_muere_lleva_su_sujeto(almacen: Almacen) -> None:
     ])
     sucesos = versiones.sucesos_de_la_cronologia(almacen, id_obra, 1)
     assert [(s["suceso"], s["muere"]) for s in sucesos] == [("viaja_a", None), ("muere", ines)]
+    assert [s["llega"] for s in sucesos] == [ines, None], "RF-213"
     assert sucesos[0]["presentes"][0]["nacimiento"] == "1551"
 
 

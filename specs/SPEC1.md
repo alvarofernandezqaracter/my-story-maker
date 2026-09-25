@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.13.0
+version: 1.14.0
 estado: aplicada
 fecha: 2026-09-25
 ambito: backend/
@@ -788,8 +788,8 @@ instalado para que lo segundo sea la excepción.
 
 | ID | Requisito | Verificación |
 | --- | --- | --- |
-| RF-150 | **El volcado.** `novela/demostrador.py` traduce la cronología que ve la versión —la vista de RF-86, más el sujeto de cada `EventoEstado` `muere`, leído de su cuerpo— a un módulo de Lean, sin abrir la base ni llamar a ningún modelo. Copia lo escrito y no calcula nada: una fecha ISO parcial pasa a un intervalo de días `AAAAMMDD` —`1587` es del 1 de enero al 31 de diciembre—, cada personaje y cada lugar a su posición en una tabla, y lo que no consta a un valor que no choca con nada. Escribe un teorema por invariante y por suceso, y uno final que reúne los cuatro sobre la cronología entera. Un presente, un lugar o quien muere que apunta a una ficha relevada por un cambio del lector se vuelca como la ficha que la sustituye (RF-177), para que la misma persona o el mismo lugar no cuenten como dos | `prueba` |
-| RF-151 | **Los cuatro invariantes**, definidos una vez en el proyecto de Lean versionado en `novela/lean/`, con su `lean-toolchain` fijada y sin Mathlib: **orden temporal** —un suceso de un capítulo anterior no ocurre después de uno de un capítulo posterior—; **edad coherente** —todo presente había nacido y no pasa de 120 años—; **un solo lugar** —dos sucesos del mismo día exacto en lugares distintos no comparten presentes—; y **no reaparece** —quien muere en un suceso no está presente en ninguno posterior, por capítulo o por fecha—. Se demuestran con `decide` sobre los datos del volcado | `prueba` |
+| RF-150 | **El volcado.** `novela/demostrador.py` traduce la cronología que ve la versión —la vista de RF-86, más el sujeto de cada `EventoEstado` `muere` y el de cada `viaja_a`, leídos de su cuerpo— a un módulo de Lean, sin abrir la base ni llamar a ningún modelo. Copia lo escrito y no calcula nada: una fecha ISO parcial pasa a un intervalo de días `AAAAMMDD` —`1587` es del 1 de enero al 31 de diciembre—, cada personaje y cada lugar a su posición en una tabla, y lo que no consta a un valor que no choca con nada. Escribe un teorema por invariante y por suceso, y uno final que reúne los cuatro sobre la cronología entera. Un presente, un lugar o quien muere que apunta a una ficha relevada por un cambio del lector se vuelca como la ficha que la sustituye (RF-177), para que la misma persona o el mismo lugar no cuenten como dos | `prueba` |
+| RF-151 | **Los cuatro invariantes**, definidos una vez en el proyecto de Lean versionado en `novela/lean/`, con su `lean-toolchain` fijada y sin Mathlib: **orden temporal** —un suceso de un capítulo anterior no ocurre después de uno de un capítulo posterior—; **edad coherente** —todo presente había nacido y no pasa de 120 años—; **un solo lugar** —dos sucesos del mismo día exacto en lugares distintos no comparten presentes, salvo que ese día conste que ese presente llegó a uno de los dos (RF-213)—; y **no reaparece** —quien muere en un suceso no está presente en ninguno posterior, por capítulo o por fecha—. Se demuestran con `decide` sobre los datos del volcado | `prueba` |
 | RF-152 | **En la puerta.** `validador_de_la_puerta` gana el valor `cronologia`. La puerta (RF-146, RF-147) pasa el volcado por Lean, y cada teorema que Lean no demuestra es un fallo `cronologia` con el capítulo del suceso y un detalle que dice qué invariante, qué suceso, sus datos y el mensaje de Lean. Un error que no cae en ningún teorema, o Lean que no termina en 300 segundos, es un fallo sin capítulo. El resultado de la puerta dice además `comprobacion_formal`, de un vocabulario cerrado: `demostrada`, `fallida` o `sin_comprobacion` | `prueba` |
 | RF-153 | **La ejecución.** Cada comprobación copia el proyecto de `novela/lean/` a un directorio temporal, escribe allí el módulo generado, ejecuta `lake build` y lee su salida. El directorio se borra al terminar, falle o no: el módulo no se guarda ni en el repositorio ni en una carpeta de trabajo (D-62) | `prueba` |
 | RF-154 | **El fallo vuelve como crítica.** Cuando `publicar` rechaza una versión, cada fallo `cronologia` que señala un suceso se guarda como `Crítica` `bloqueante`, abierta, de esa versión y del capítulo del suceso, con objeto el `id` del suceso, dimensión `coherencia_temporal` —orden, edad y formato— o `continuidad_de_estado` —lugar y reaparición—, y como evidencia el detalle con el teorema y el mensaje de Lean. La escribe el backend, como las de RF-23 y RF-99. Mientras siga abierta, volver a pedir la publicación no la repite. Ver la puerta con RF-147 no escribe nada | `prueba` |
@@ -1342,6 +1342,44 @@ detenida en el Planificador del capítulo 1, y las 44 trazas fallidas de la 1.
 **Documentos que hay que poner al día en la fase 3.** `architecture.md` §4, el
 ejecutor de subagentes; `validators.md` §8, los métodos de RF-211 y RF-212.
 
+### 4.26 Un solo lugar, con el viaje que lo explica
+
+**El problema.** Con el Contable fechando ya dentro del marco (§4.24), el
+capítulo 1 de la versión 2 de `obr_7a0f5152` sale con fechas coherentes —el 10
+y el 11 de mayo de 1584— y aun así falla la cronología en sus doce sucesos. La
+copista está en el taller, `viaja_a` la biblioteca y allí adquiere unos apuntes,
+todo el 10 de mayo: RF-151 lo da por imposible, porque dos sucesos del mismo
+día en lugares distintos no pueden compartir presentes. Con fechas al día, que
+es la precisión que el Contable conoce, cualquier novela en la que alguien
+cruce una calle falla. La regla estaba pensada para el viaje imposible —el
+bautizo en Valladolid y el de Madrid el mismo día del brief
+`incoherencia-temporal`—, y lo que la distingue de cruzar una calle no es la
+fecha, sino que conste el viaje.
+
+**La decisión, en una frase.** Dos sucesos del mismo día en lugares distintos
+pueden compartir un presente si ese día consta que ese presente llegó a uno de
+los dos: un `viaja_a` suyo, del mismo día, con ese lugar resultante.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-213 | **El viaje que lo explica.** El volcado lleva de cada suceso, además de quién muere, quién llega: el sujeto de un `EventoEstado` `viaja_a`, o nadie. El invariante de un solo lugar se comprueba contra la cronología entera: dos sucesos del mismo día exacto, en lugares distintos y con un presente común, son coherentes si en la cronología hay un suceso de ese mismo día, en uno de esos dos lugares, en el que ese presente llega. Si no lo hay, falla como hasta ahora, y el detalle dice que no consta que viajase a ninguno de los dos | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-96 | **Lo que excusa es el viaje escrito, no la distancia** | El backend no sabe a cuántas leguas está un lugar de otro: la ficha dice su ubicación en texto libre, y calcular distancias es lo que D-05 deja fuera. Lo que sí está escrito es el `viaja_a` del Contable, que es quien transcribe lo que el texto cuenta. Si el texto hace andar a alguien del taller a la biblioteca, hay un viaje; si lo pone en Valladolid y en Madrid el mismo día sin moverlo, no lo hay y Lean lo ve, que es lo que el brief de la incoherencia temporal busca. El precio está dicho en «qué queda fuera» |
+
+**Qué queda fuera.** Un viaje escrito pero imposible —de Valladolid a Madrid
+en una mañana del siglo XVII— pasa: sin distancias no se puede ver, y lo mira
+el Verificador de continuidad, que lee el texto. Tampoco se ordenan los sucesos
+dentro del día.
+
+**De dónde sale.** RF-150, RF-151; D-05, D-27; §4.24; la versión 2 de
+`obr_7a0f5152`, cuyo capítulo 1 falla los doce sucesos por un desplazamiento
+dentro de Salamanca.
+
+**Documentos que hay que poner al día en la fase 3.** `validators.md` §3, los
+invariantes de la cronología, y §8, el método de RF-213.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -1522,6 +1560,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.23 Lo que la puerta del esquema da por presente | RF-23, RF-141, RF-181; D-32, D-59 |
 | §4.24 El Contable fecha dentro del marco del plan | §4.16; RF-25, RF-40, RF-85; D-05, D-27 |
 | §4.25 Lo que el ejecutor lee de lo que entrega un agente | RF-23, RF-126 |
+| §4.26 Un solo lugar, con el viaje que lo explica | §4.16, §4.24; RF-150, RF-151; D-05, D-27 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1635,6 +1674,9 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    texto delante y detrás se lee; uno sin vallas con texto alrededor, también;
    uno cortado falla diciendo dónde se rompió. Una `Crítica` con tilde se guarda
    como `Critica`, y un tipo que no existe sigue fallando.
+21. **Un solo lugar, con el viaje.** Con Lean: un presente en dos lugares el
+   mismo día pasa si ese día llega a uno de ellos con un `viaja_a`, y falla si
+   no consta ningún viaje suyo ese día.
 
 ## §11 Fuera del alcance de v1
 
