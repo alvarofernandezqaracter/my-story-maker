@@ -1,27 +1,100 @@
 .tareas-hechas__cabecera {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: var(--espacio-3);
+  gap: var(--espacio-4);
+  margin-bottom: var(--espacio-5);
+}
+
+.tareas-hechas__antetitulo {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--acento-tinta);
 }
 
 .tareas-hechas__cabecera h1 {
+  margin: var(--espacio-1) 0 var(--espacio-2);
+  font-family: var(--letra-titulos);
+  font-weight: 600;
+}
+
+.tareas-hechas__cabecera p {
   margin: 0;
-  font-size: 1.6rem;
+  color: var(--tinta-suave);
+}
+
+.tareas-hechas__resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--espacio-4);
+  margin: 0 0 var(--espacio-6);
+}
+
+.tareas-hechas__resumen div {
+  padding: var(--espacio-4) var(--espacio-5);
+  border-radius: var(--radio-grande);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  box-shadow: var(--sombra-1);
+}
+
+.tareas-hechas__resumen dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+}
+
+.tareas-hechas__resumen dd {
+  margin: var(--espacio-1) 0 0;
+  font-family: var(--letra-titulos);
+  font-size: 1.8rem;
+  font-weight: 600;
 }
 
 .tareas-hechas__vacia {
   color: var(--tinta-suave);
 }
 
+.grupo-de-tareas {
+  margin-bottom: var(--espacio-6);
+}
+
 .grupo-de-tareas h2 {
-  font-size: 1.05rem;
-  margin: var(--espacio-5) 0 var(--espacio-2);
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  margin: 0 0 var(--espacio-3);
+  font-family: var(--letra-titulos);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.grupo-de-tareas h2 .icono {
+  color: var(--acento);
+}
+
+.grupo-de-tareas__cuenta {
+  margin-left: var(--espacio-2);
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  font-family: var(--letra-interfaz);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tinta-suave);
 }
 
 .tabla-envoltorio {
   overflow-x: auto;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  box-shadow: var(--sombra-1);
 }
 
 .tabla-de-tareas {
@@ -33,24 +106,48 @@
 .tabla-de-tareas th,
 .tabla-de-tareas td {
   text-align: left;
-  padding: var(--espacio-2) var(--espacio-3);
+  padding: 0.65rem var(--espacio-4);
   border-bottom: 1px solid var(--borde);
 }
 
+.tabla-de-tareas tr:last-child td {
+  border-bottom: 0;
+}
+
+.tabla-de-tareas tbody tr:hover {
+  background: var(--superficie-2);
+}
+
 .tabla-de-tareas th {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-tenue);
+  background: var(--superficie-2);
+}
+
+.tabla-de-tareas__escena {
+  font-family: var(--letra-mono);
+  font-size: 0.78rem;
+  color: var(--tinta-tenue);
+}
+
+.tabla-de-tareas__duracion {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   color: var(--tinta-suave);
 }
 
-.veredicto--pasa {
-  color: var(--tinta);
+.agente {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-weight: 550;
 }
 
-.veredicto--no_pasa {
-  color: var(--error);
-  font-weight: 600;
-}
-
-.veredicto--sin_hooks {
-  color: var(--tinta-tenue);
+.agente__punto {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
 }

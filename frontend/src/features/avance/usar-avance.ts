@@ -117,8 +117,11 @@ export function useAvance(idObra: string) {
 
   let situacion: Situacion | null = null;
   if (foto) {
+    // Una obra que el servidor ya da por terminada o publicada no está en marcha
+    // aunque el flujo siga abierto (SPEC1 RF-205).
+    const acabada = foto.ficha.situacion === "terminada" || foto.ficha.situacion === "publicada";
     if (foto.progreso.detenida) situacion = "detenida";
-    else situacion = flujoCerrado ? "terminada" : "en_marcha";
+    else situacion = flujoCerrado || acabada ? "terminada" : "en_marcha";
   }
 
   return {

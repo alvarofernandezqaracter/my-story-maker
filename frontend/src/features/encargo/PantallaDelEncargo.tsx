@@ -119,7 +119,14 @@ export function PantallaDelEncargo() {
     <>
       <Cabecera pantalla="Encargo" />
       <main className="pagina encargo">
-        <h1 className="encargo__titulo">Encarga una novela</h1>
+        <header className="encargo__cabecera">
+          <span className="encargo__antetitulo">Nuevo encargo</span>
+          <h1 className="encargo__titulo">Encarga una novela</h1>
+          <p className="encargo__entradilla">
+            Cuéntale al Entrevistador para quién es y qué te gustaría. Él completa la ficha, y un equipo de agentes
+            escribe la novela capítulo a capítulo.
+          </p>
+        </header>
 
         {origen === "recuperado" && pasada === null && (
           <p className="nota">Tu encargo está guardado. Envía para ver qué entiende el sistema.</p>
