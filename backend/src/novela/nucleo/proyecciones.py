@@ -406,6 +406,18 @@ def _marco_temporal_del_capitulo(p: Peticion) -> dict[str, Any]:
     }
 
 
+def _reparto_y_lugares(p: Peticion) -> dict[str, Filas]:
+    """El `id` y el nombre de cada personaje y lugar del canon, para que el
+    Contable no se invente un `id` (SPEC1 RF-218). Nada mas de las fichas."""
+    return {
+        clave: [
+            {"id": ficha.id, "nombre": ficha.cuerpo.get("nombre")}
+            for ficha in p.almacen.listar(tipo, p.id_obra)
+        ]
+        for clave, tipo in (("personajes", "Personaje"), ("lugares", "Lugar"))
+    }
+
+
 def _vocabulario_de_eventos(p: Peticion) -> list[str]:
     return list(TIPO_DE_EVENTO_ESTADO)
 
@@ -463,6 +475,7 @@ MATERIALES: dict[str, Constructor] = {
     "afirmaciones_pendientes_de_respaldo": _afirmaciones_pendientes_de_respaldo,
     "vocabulario_de_eventos": _vocabulario_de_eventos,
     "marco_temporal_del_capitulo": _marco_temporal_del_capitulo,
+    "reparto_y_lugares": _reparto_y_lugares,
     "plan_del_capitulo": _plan_del_capitulo,
     "funcion_estructural_de_las_escenas": _funcion_estructural_de_las_escenas,
     "log_de_estado": _log_de_estado,

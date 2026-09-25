@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.18.0
+version: 1.19.0
 estado: aplicada
 fecha: 2026-09-25
 ambito: backend/
@@ -1484,6 +1484,44 @@ materiales; RF-16; la versión 3 de `obr_7a0f5152`, detenida en el capítulo 10.
 **Documentos que hay que poner al día en la fase 3.** `architecture.md` §3, qué
 trae el canon; `validators.md` §8, el método de RF-217.
 
+### 4.30 El Contable escribe los `id` del canon
+
+**El problema.** La puerta de la versión 3 de `obr_7a0f5152` falla solo 13
+veces, todas `un_solo_lugar` del capítulo 6. Al mirar por qué, sale algo peor:
+el Contable se inventa los `id` de los personajes, y en cada capítulo otros
+—`per_0001` en el 1, `per_1a2b` en el 4, `per_fray_luis_01` en el 10—, cuando
+el canon los tiene como `per_e1e50fde` y el Planificador los usa bien. No los
+conoce: su ventana es el estado en N-1, el texto, el vocabulario y el marco
+temporal, y no ve el canon. Con un `id` distinto por capítulo, Lean no puede
+comparar a la misma persona entre capítulos, así que la cronología pasa porque
+nadie coincide con nadie, y el estado del mundo se parte en personajes que no
+existen. Los 13 fallos del capítulo 6 son lo otro: allí la protagonista cambia
+de sitio el mismo día y el Contable no escribe su `viaja_a`, que es lo que
+RF-213 necesita para excusarlo.
+
+**La decisión, en una frase.** El Contable recibe el reparto y los lugares del
+canon, con su `id` y su nombre, escribe esos `id` y no otros, y escribe un
+`viaja_a` cada vez que alguien cambia de lugar.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-218 | **El reparto y los lugares.** La proyección de `plegar` lleva un material más, `reparto_y_lugares`: el `id` y el nombre de cada `Personaje` y de cada `Lugar` del canon, y nada más de sus fichas. El prompt del Contable dice que el `sujeto`, los `presentes` y el lugar resultante se escriben con esos `id`, que un personaje que no está en el reparto no va en `presentes`, y que cada vez que un personaje pasa de un lugar a otro, aunque sea el mismo día, se escribe su `viaja_a` | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-100 | **Nombres e `id`, no el canon entero, y sin figurantes** | «No ve el canon completo» sigue en pie: lo que entra es la tabla con la que se escribe un `id`, no los atributos de las fichas, igual que el índice de la biblia del Archivero (RF-82). Es corta y no crece por capítulo, porque personajes y lugares solo los escribe el Constructor de mundo. Un figurante sin ficha —un portero— no puede tener un `id` del canon; inventarle uno es lo que rompía la comparación, y dejarlo fuera de `presentes` no le quita nada a una comprobación que solo mira a personajes con ficha |
+
+**Qué queda fuera.** Que el hook compruebe los `id` contra el canon: sería
+pasarle al hook otra lista más, y primero se mide si el material basta. Los
+capítulos ya cerrados con `id` inventados se quedan así: se arreglan
+rehaciendo desde ellos.
+
+**De dónde sale.** RF-82, RF-85, RF-213; D-94; la versión 3 de
+`obr_7a0f5152`, con un `id` distinto para la protagonista en cada capítulo.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md` §3, lo
+que ve el Contable de estado; `validators.md` §8, el método de RF-218.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -1668,6 +1706,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.27 Lo que el volcado no puede leer como referencia | §4.16; RF-150; D-27 |
 | §4.28 La escena de un artefacto también la pone el backend | RF-181 |
 | §4.29 Las fuentes no son canon | RF-16; `architecture.md` §3 |
+| §4.30 El Contable escribe los `id` del canon | §4.24, §4.26; RF-82, RF-85, RF-213; D-94 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1792,6 +1831,10 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    escena y el capítulo sigue; la de un encargo de escena lleva la del encargo.
 24. **El canon sin fuentes.** Sin gastar: con fuentes en el almacén, el material
    `canon` no trae ninguna y `fuentes_recogidas` las trae todas.
+25. **El reparto del Contable.** Sin gastar: la ventana de `plegar` lleva el
+   `id` y el nombre de cada personaje y lugar del canon, sin sus demás
+   atributos, y el prompt dice que no inventa `id` y que cada cambio de lugar
+   es un `viaja_a`.
 
 ## §11 Fuera del alcance de v1
 

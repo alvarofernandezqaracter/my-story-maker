@@ -153,6 +153,7 @@ proyeccion = [
     "texto_aceptado_del_capitulo",
     "vocabulario_de_eventos",
     "marco_temporal_del_capitulo",
+    "reparto_y_lugares",
 ]
 
 [[paso]]

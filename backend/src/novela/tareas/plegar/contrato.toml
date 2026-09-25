@@ -18,6 +18,7 @@ entrada = [
     "texto_aceptado_del_capitulo",
     "vocabulario_de_eventos",
     "marco_temporal_del_capitulo",
+    "reparto_y_lugares",
 ]
 no_ve = ["el plan salvo el marco de sus escenas", "las criticas", "el canon completo"]
 
