@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.17.0
+version: 1.18.0
 estado: aplicada
 fecha: 2026-09-25
 ambito: backend/
@@ -1449,6 +1449,41 @@ capítulo 5 por una crítica a `esc_0007`.
 **Documentos que hay que poner al día en la fase 3.** `architecture.md` §4, el
 ciclo de vida del capítulo; `validators.md` §8, el método de RF-216.
 
+### 4.29 Las fuentes no son canon
+
+**El problema.** La versión 3 de `obr_7a0f5152` se detuvo al verificar el
+capítulo 10: la ventana de los tres verificadores de anacronismo no cabía en su
+tope de 8 000 y una escena no se puede partir en párrafos antes de la costura.
+Lo que la inflaba era el material `canon`, que traía todas las fichas de la
+capa Mundo salvo el `Recuerdo`, incluidas las `Fuente`. El Documentalista
+escribe fuentes en cada capítulo, así que el canon crecía con la obra: 20 700
+caracteres en el capítulo 10, un tercio de ellos fuentes de los capítulos 6, 9
+y 10. Es justo lo que prohíbe la regla de `architecture.md` §3 —nada cuyo tamaño
+crezca con la longitud de la obra entra en una ventana—, y la tabla de
+materiales ya decía dónde van las fuentes: en la documentación, no en el canon.
+
+**La decisión, en una frase.** El material `canon` deja fuera las `Fuente`,
+como ya dejaba el `Recuerdo`; quien necesita las fuentes las pide por su
+material, `fuentes_recogidas`.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-217 | **El canon sin fuentes.** El material `canon` trae las fichas de la capa Mundo salvo el `Recuerdo` y la `Fuente`. Las fuentes siguen llegando a quien las declara por su material propio, `fuentes_recogidas` (el Constructor de mundo y la cobertura documental), y a los roles de prosa por la documentación recuperada por escena | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-99 | **Se saca lo que crece, no se sube el tope** | Subir el tope de los verificadores habría aplazado el mismo fallo unos capítulos: el tamaño seguiría creciendo con la obra, y la regla que sostiene el presupuesto es que el capítulo 40 cueste lo mismo que el 4. Las fuentes no son hechos del mundo: son de dónde sale un hecho, y lo que el verificador de anacronismos compara son las fichas de época —prácticas, conceptos, objetos, registro—, que no crecen por capítulo |
+
+**Qué queda fuera.** Que `fuentes_recogidas` también crece con la obra: la leen
+dos tareas que no son de la cadencia del capítulo —poblar el mundo antes del
+primero y la auditoría cada N capítulos—, y ponerle tope es otra decisión.
+
+**De dónde sale.** `architecture.md` §3, la regla del tamaño y la tabla de
+materiales; RF-16; la versión 3 de `obr_7a0f5152`, detenida en el capítulo 10.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md` §3, qué
+trae el canon; `validators.md` §8, el método de RF-217.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -1632,6 +1667,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.26 Un solo lugar, con el viaje que lo explica | §4.16, §4.24; RF-150, RF-151; D-05, D-27 |
 | §4.27 Lo que el volcado no puede leer como referencia | §4.16; RF-150; D-27 |
 | §4.28 La escena de un artefacto también la pone el backend | RF-181 |
+| §4.29 Las fuentes no son canon | RF-16; `architecture.md` §3 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1754,6 +1790,8 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
 23. **La escena la pone el backend.** Sin gastar: una crítica de un encargo de
    capítulo que apunta a una escena que no es de ese capítulo se guarda sin
    escena y el capítulo sigue; la de un encargo de escena lleva la del encargo.
+24. **El canon sin fuentes.** Sin gastar: con fuentes en el almacén, el material
+   `canon` no trae ninguna y `fuentes_recogidas` las trae todas.
 
 ## §11 Fuera del alcance de v1
 
