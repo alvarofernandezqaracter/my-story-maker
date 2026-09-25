@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.16.0
+version: 1.17.0
 estado: aplicada
 fecha: 2026-09-25
 ambito: backend/
@@ -1419,6 +1419,36 @@ que devolvía un 500.
 **Documentos que hay que poner al día en la fase 3.** `validators.md` §3, lo
 que el volcado da por no consta, y §8, el método de RF-215.
 
+### 4.28 La escena de un artefacto también la pone el backend
+
+**El problema.** La versión 3 de `obr_7a0f5152` se detuvo en el capítulo 5 con
+un fallo del propio caminante, `KeyError: 'esc_0007'`. Un Verificador escribió
+una `Critica` que apuntaba a `esc_0007`, una escena que no existe: el rol se
+inventó el `id`. RF-181 pone el capítulo de lo que devuelve un encargo, pero la
+escena se respetaba tal como venía, y el caminante, al repartir las críticas
+mayores entre las escenas del capítulo, buscó una que no tenía. Un `id`
+inventado detuvo la obra entera.
+
+**La decisión, en una frase.** Como el capítulo, la escena de lo que devuelve
+un encargo la pone el backend: la del encargo si es de escena, y en uno de
+capítulo solo una escena de ese capítulo.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-216 | **La escena, del encargo o del capítulo.** En un encargo cuya unidad es la escena, todo artefacto que devuelve el rol lleva la escena del encargo, diga lo que diga su JSON. En uno cuya unidad es el capítulo, la escena que trae un artefacto se respeta solo si es una `Escena` de ese capítulo; si no, el artefacto queda del capítulo, sin escena. `planificar` queda fuera, porque sus escenas nacen en esa misma entrega. Una crítica que queda sin escena no entra en la revisión dirigida, que es por escena, y sigue abierta para la costura | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-98 | **Se quita la escena inventada, no se rechaza el artefacto** | La crítica puede tener razón aunque el `id` no la tenga: lo que dice del texto sigue valiendo para el capítulo, y rechazarla gastaría el intento de un verificador por un dato que el backend puede poner. Es lo mismo que RF-181 ya hace con el capítulo: dónde va lo pone quien lo sabe |
+
+**Qué queda fuera.** Adivinar a qué escena quería apuntar el rol.
+
+**De dónde sale.** RF-181; la versión 3 de `obr_7a0f5152`, detenida en el
+capítulo 5 por una crítica a `esc_0007`.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md` §4, el
+ciclo de vida del capítulo; `validators.md` §8, el método de RF-216.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -1601,6 +1631,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.25 Lo que el ejecutor lee de lo que entrega un agente | RF-23, RF-126 |
 | §4.26 Un solo lugar, con el viaje que lo explica | §4.16, §4.24; RF-150, RF-151; D-05, D-27 |
 | §4.27 Lo que el volcado no puede leer como referencia | §4.16; RF-150; D-27 |
+| §4.28 La escena de un artefacto también la pone el backend | RF-181 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1720,6 +1751,9 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    no consta ningún viaje suyo ese día.
 22. **Lo que no es un `id`.** Sin gastar: un `Evento` del mundo con el lugar
    escrito como objeto se vuelca como «no consta» y la puerta responde.
+23. **La escena la pone el backend.** Sin gastar: una crítica de un encargo de
+   capítulo que apunta a una escena que no es de ese capítulo se guarda sin
+   escena y el capítulo sigue; la de un encargo de escena lleva la del encargo.
 
 ## §11 Fuera del alcance de v1
 

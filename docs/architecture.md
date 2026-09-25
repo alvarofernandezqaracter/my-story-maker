@@ -552,6 +552,8 @@ stateDiagram-v2
 
 El `Capitulo` que recorre este ciclo lo abre el backend en cuanto el Planificador termina, si el Planificador no escribió el suyo, porque de él dependen el ciclo y la marca `cerrado`: el punto de guardado no puede depender de que un modelo se acuerde de escribirlo. En qué punto del ciclo está un `Capitulo`, una `Escena`, un `Plan` o un `Borrador` lo lleva el caminante y no el rol que los escribe, y a qué capítulo pertenece lo que devuelve una tarea de capítulo, de escena o de párrafo lo pone su encargo. El `estado` de una `Crítica` o de un `Compromiso` sí es del rol, porque dice algo del texto, y en una tarea de la obra entera, como `auditar`, cada artefacto dice a qué capítulo apunta.
 
+Dónde va lo que devuelve un encargo lo pone el backend, no el rol: el capítulo es el del encargo, y la escena también —la del encargo si es de escena; en uno de capítulo, solo una escena de ese capítulo, y si el rol trae otra el artefacto queda del capítulo—. Una crítica que apunta a una escena inventada no puede entrar en la revisión dirigida, que es por escena, así que queda para la costura en vez de detener la obra. El Planificador queda fuera: sus escenas nacen en esa misma entrega.
+
 El paso de `Aceptado` a `Cerrado` es el que actualiza el mundo: hasta que un capítulo no se cierra, sus eventos no existen para el resto del sistema. Eso es lo que permite regenerar un capítulo sin corromper los siguientes. Y es el mismo paso el que retira la memoria de capítulo: cerrar es a la vez publicar los hechos y olvidar el andamio.
 
 ### El capítulo cerrado es el punto de guardado

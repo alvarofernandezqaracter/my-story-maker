@@ -165,6 +165,55 @@ def test_en_un_encargo_de_la_obra_el_capitulo_del_artefacto_se_respeta(
     assert critica.estado == "abierta", "el estado de una critica es del rol"
 
 
+# --- RF-216: la escena la pone el backend ----------------------------------
+
+
+def _encargo(id_obra: str, unidad: str, tarea: str = "verificar",
+             escena: str | None = None) -> Encargo:
+    rol = "planificador" if tarea == "planificar" else "verificador_de_continuidad"
+    return Encargo(paso=6, tarea=tarea, rol=rol, unidad=unidad,
+                   proyeccion=(), id_obra=id_obra, capitulo=1, escena=escena)
+
+
+def test_una_escena_inventada_en_un_encargo_de_capitulo_se_quita(almacen: Almacen) -> None:
+    """Lo que detuvo una obra real: una critica a `esc_0007`, que no existia."""
+    id_obra = almacen.crear_obra(BRIEF)
+    [de_verdad] = almacen.guardar([Artefacto("Escena", {"pov": "per_1"}, id_obra=id_obra,
+                                             capitulo=1, orden=1, estado="planificado")])
+    caminante = Caminante(almacen, EjecutorFingido(), catalogo=CatalogoFingido())
+    inventada = Artefacto("Critica", {"objeto": "x"}, escena="esc_0007", estado="abierta")
+    buena = Artefacto("Critica", {"objeto": "y"}, escena=de_verdad, estado="abierta")
+
+    caminante._preparar(_encargo(id_obra, "capitulo"), Resultado(artefactos=[inventada, buena]),
+                        "trz_x", 1)
+
+    assert inventada.escena is None, "queda del capitulo, sin escena"
+    assert buena.escena == de_verdad, "una escena del capitulo se respeta"
+
+
+def test_en_un_encargo_de_escena_la_escena_es_la_del_encargo(almacen: Almacen) -> None:
+    id_obra = almacen.crear_obra(BRIEF)
+    caminante = Caminante(almacen, EjecutorFingido(), catalogo=CatalogoFingido())
+    critica = Artefacto("Critica", {"objeto": "x"}, escena="esc_0007", estado="abierta")
+
+    caminante._preparar(_encargo(id_obra, "escena", escena="esc_real"),
+                        Resultado(artefactos=[critica]), "trz_x", 1)
+
+    assert critica.escena == "esc_real"
+
+
+def test_el_planificador_crea_sus_escenas_y_no_se_le_quitan(almacen: Almacen) -> None:
+    """Sus escenas nacen en la misma entrega: aun no estan en el almacen."""
+    id_obra = almacen.crear_obra(BRIEF)
+    caminante = Caminante(almacen, EjecutorFingido(), catalogo=CatalogoFingido())
+    beat = Artefacto("Beat", {"texto": "x"}, escena="esc_nueva")
+
+    caminante._preparar(_encargo(id_obra, "capitulo", tarea="planificar"),
+                        Resultado(artefactos=[beat]), "trz_x", 1)
+
+    assert beat.escena == "esc_nueva"
+
+
 # --- RF-182: planificar sin escenas es un intento fallido -----------------
 
 
