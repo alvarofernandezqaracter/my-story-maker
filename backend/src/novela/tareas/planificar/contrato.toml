@@ -13,7 +13,16 @@ cuando = "Al abrir capitulo"
 herramientas = []
 
 # Que ve y que no ve (architecture.md 3).
-entrada = ["canon", "estado_en_n_menos_1", "compromisos_abiertos", "arcos", "ecos_de_estructura", "destinatario", "recuerdos_del_destinatario"]
+entrada = [
+    "canon",
+    "estado_en_n_menos_1",
+    "compromisos_abiertos",
+    "arcos",
+    "ecos_de_estructura",
+    "destinatario",
+    "recuerdos_del_destinatario",
+    "marco_temporal_del_capitulo",
+]
 no_ve = ["la prosa anterior"]
 
 # Que deja escrito. Lo que no este aqui, el backend no se lo deja escribir.

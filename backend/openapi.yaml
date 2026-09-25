@@ -5,7 +5,7 @@ openapi: 3.1.0
 info:
   title: Generador de novela historica por agentes
   summary: Lanza una obra desde un brief e inspecciona lo que los agentes producen
-  version: 0.15.0
+  version: 0.16.0
 paths:
   /obras:
     get:
