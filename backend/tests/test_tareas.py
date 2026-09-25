@@ -63,6 +63,14 @@ def test_lo_que_cada_tarea_escribe_es_lo_que_la_tabla_de_gobierno_le_asigna(
     assert set(contrato_de_tarea(tarea)["escribe"]) == escrituras_de(rol)
 
 
+def test_el_planificador_sabe_que_no_amplia_el_mundo() -> None:
+    """RF-35 lo impone el backend; el prompt lo dice para no gastar el intento:
+    el Planificador de una obra real se detuvo dos veces escribiendo un `Lugar`."""
+    assert "Lugar" not in escrituras_de("planificador")
+    prompt = prompt_de_tarea("planificar")
+    assert "No escribes `Lugar` ni `Personaje`" in prompt
+
+
 @pytest.mark.parametrize("tarea", sorted(TIPOS_DE_TAREA))
 def test_solo_el_documentalista_tiene_herramientas(tarea: str) -> None:
     herramientas = contrato_de_tarea(tarea)["herramientas"]
