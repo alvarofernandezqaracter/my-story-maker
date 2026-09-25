@@ -71,6 +71,13 @@ def test_el_planificador_sabe_que_no_amplia_el_mundo() -> None:
     assert "No escribes `Lugar` ni `Personaje`" in prompt
 
 
+def test_el_documentalista_sabe_escribir_un_periodo_y_un_lugar_fuera_del_canon() -> None:
+    """Un `Evento` suyo con momento `1570-1600` y el lugar descrito dejo sin
+    comprobar la cronologia de una obra real (SPEC1 RF-215)."""
+    prompt = prompt_de_tarea("documentar")
+    assert "Un periodo" in prompt and "el `lugar` va vacio" in prompt
+
+
 @pytest.mark.parametrize("tarea", sorted(TIPOS_DE_TAREA))
 def test_solo_el_documentalista_tiene_herramientas(tarea: str) -> None:
     herramientas = contrato_de_tarea(tarea)["herramientas"]
