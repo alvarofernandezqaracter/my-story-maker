@@ -24,5 +24,12 @@ Un `Evento` lleva `descripcion`, `momento` en ISO parcial —`AAAA`, `AAAA-MM` o
 `AAAA-MM-DD`—, `lugar` con el `id` del lugar y `participantes` con los `id` de
 los personajes que toman parte: es lo que la cronologia de la obra lee de el.
 
+El `lugar` del `marco` de una escena y el de un `Evento` es el `id` de un
+`Lugar` que ya esta en el canon. **No escribes `Lugar` ni `Personaje`**: el
+mundo lo amplia el Constructor de mundo, y el backend rechaza el intento entero
+si lo haces. Si la escena pasa en un rincon que el canon no tiene —una celda,
+un zaguan—, usas el `Lugar` del canon que lo contiene y dices el rincon en el
+objetivo o en el obstaculo.
+
 Escribes una `Escena` por escena, con su `orden` dentro del capitulo. No
 escribes prosa ni emites criticas.
