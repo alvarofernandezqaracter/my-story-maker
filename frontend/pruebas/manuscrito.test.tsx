@@ -36,20 +36,20 @@ describe("la lectura (SPEC2 §4.3)", () => {
     ]);
   });
 
-  it("RF-41: el capítulo marcado lleva el aviso y el otro no", async () => {
+  it("un capítulo marcado se lee igual que los demás: sin aviso de defectos", async () => {
     montar();
     const [primero, segundo] = await screen.findAllByRole("article");
-    expect(within(segundo!).getByRole("note")).toHaveTextContent("Este capítulo tiene defectos sin resolver");
+    expect(within(segundo!).queryByRole("note")).not.toBeInTheDocument();
     expect(within(primero!).queryByRole("note")).not.toBeInTheDocument();
   });
 
-  it("RF-42: la ficha sale como recuento: título, cerrados, marcados y críticas abiertas", async () => {
+  it("la portada trae el título y las cifras de lectura, no las de calidad", async () => {
     montar();
     expect(await screen.findByRole("heading", { level: 1, name: "La luz de Triana" })).toBeInTheDocument();
-    const recuento = screen.getByLabelText("Recuento de la obra");
-    expect(within(recuento).getByText("Capítulos cerrados").nextSibling).toHaveTextContent("1");
-    expect(within(recuento).getByText("Capítulos marcados").nextSibling).toHaveTextContent("1");
-    expect(within(recuento).getByText("Críticas abiertas").nextSibling).toHaveTextContent("3");
+    const cifras = screen.getByRole("list", { name: "La obra en cifras" });
+    expect(cifras).toHaveTextContent("2 capítulos");
+    expect(screen.queryByText(/marcados/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/críticas/i)).not.toBeInTheDocument();
   });
 
   it("sin texto aceptado lo dice y enlaza al avance; «Buscar texto nuevo» vuelve a pedirlo", async () => {

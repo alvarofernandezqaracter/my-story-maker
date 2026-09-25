@@ -17,16 +17,18 @@ export function agruparPorCapitulo(trazas: TrazaServida[]): GrupoDeTareas[] {
   return grupos;
 }
 
-export type Veredicto = "pasa" | "no_pasa" | "sin_hooks";
+/** «verificador_de_continuidad» -> «Verificador de continuidad». Solo cambia cómo se lee. */
+export function legible(nombre: string | null): string {
+  if (!nombre) return "—";
+  const texto = nombre.replace(/_/g, " ");
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
 
-type Final = { pasa?: unknown };
-
-// Se lee del veredicto `final` que ya trae la Traza (SPEC2 RF-27, SPEC1 RI-15):
-// pasa si todos los hooks dicen que pasa. Sin hooks, no se dice nada.
-export function veredictoDeLosHooks(traza: TrazaServida): Veredicto {
-  const final = traza.ganchos?.final;
-  if (!Array.isArray(final) || final.length === 0) return "sin_hooks";
-  return (final as Final[]).every((f) => f.pasa === true) ? "pasa" : "no_pasa";
+/** La suma de las latencias que manda el servidor, para el resumen de arriba. */
+export function tiempoTotal(trazas: TrazaServida[]): string {
+  const minutos = Math.round(trazas.reduce((s, t) => s + (t.latencia_ms ?? 0), 0) / 60000);
+  if (minutos < 60) return `${minutos} min`;
+  return `${Math.floor(minutos / 60)} h ${minutos % 60} min`;
 }
 
 /** La latencia que manda el servidor, en segundos redondeados para leerla. */

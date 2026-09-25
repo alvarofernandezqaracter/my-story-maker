@@ -42,7 +42,7 @@ describe("la pantalla de versiones (SPEC2 RF-73)", () => {
 
     const segunda = screen.getByRole("listitem", { name: "Versión 2" });
     expect(segunda).toHaveTextContent("rehecha desde el capítulo 2");
-    expect(within(segunda).getByRole("button", { name: "Publicar" })).toBeInTheDocument();
+    expect(await within(segunda).findByRole("button", { name: "Publicar" })).toBeInTheDocument();
 
     const primera = screen.getByRole("listitem", { name: "Versión 1" });
     expect(primera).toHaveTextContent("Nace con el alta de la obra.");
@@ -57,9 +57,8 @@ describe("la pantalla de versiones (SPEC2 RF-73)", () => {
   });
 });
 
-describe("publicar y la puerta (SPEC2 RF-74)", () => {
-  it("la puerta pinta cada fallo tal como viene, también el de un validador que la interfaz no conoce", async () => {
-    const usuario = userEvent.setup();
+describe("publicar (SPEC2 RF-74)", () => {
+  it("una versión terminada que no pasa la puerta no ofrece publicar ni enseña sus fallos", async () => {
     servidor.use(
       http.get(`${API}/obras/:id/versiones`, () => HttpResponse.json(TRES)),
       http.get(`${API}/obras/:id/versiones/:n/puerta`, () =>
@@ -67,27 +66,20 @@ describe("publicar y la puerta (SPEC2 RF-74)", () => {
           puerta({
             version: 2,
             pasa: false,
-            fallos: [
-              { validador: "longitud", capitulo: 2, detalle: "el capitulo tiene 200 palabras" },
-              // Un validador que llega de otra tarea: sale sin tocar la interfaz.
-              { validador: "demostrador_formal", capitulo: null, detalle: "Ines esta en dos sitios" } as never,
-            ],
+            fallos: [{ validador: "longitud", capitulo: 2, detalle: "el capitulo tiene 200 palabras" }],
           }),
         ),
       ),
     );
     montar();
     const segunda = await screen.findByRole("listitem", { name: "Versión 2" });
-    await usuario.click(within(segunda).getByRole("button", { name: "Comprobar la puerta" }));
-    const lista = await within(segunda).findByRole("list", { name: "Por qué no pasa la versión 2" });
-    const fallos = within(lista).getAllByRole("listitem").map((li) => li.textContent);
-    expect(fallos).toEqual([
-      "longitud · capítulo 2 · el capitulo tiene 200 palabras",
-      "demostrador_formal · de la obra · Ines esta en dos sitios",
-    ]);
+    expect(await within(segunda).findByText("Pendiente de publicar")).toBeInTheDocument();
+    expect(within(segunda).queryByRole("button", { name: "Publicar" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/200 palabras/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /puerta/i })).not.toBeInTheDocument();
   });
 
-  it("publicar una que no pasa enseña el rechazo y los fallos del 409", async () => {
+  it("si el servidor rechaza publicar por la puerta, no enseña los fallos", async () => {
     const usuario = userEvent.setup();
     servidor.use(
       http.get(`${API}/obras/:id/versiones`, () => HttpResponse.json(TRES)),
@@ -107,13 +99,10 @@ describe("publicar y la puerta (SPEC2 RF-74)", () => {
     );
     montar();
     const segunda = await screen.findByRole("listitem", { name: "Versión 2" });
-    await usuario.click(within(segunda).getByRole("button", { name: "Publicar" }));
-    expect(await within(segunda).findByRole("alert")).toHaveTextContent(
-      "la version 2 no pasa la puerta de publicacion: 1 fallo(s)",
-    );
-    expect(within(segunda).getByRole("list", { name: "Por qué no pasa la versión 2" })).toHaveTextContent(
-      "nombres · capítulo 3 · «Inés» donde la biblia escribe «Ines»",
-    );
+    await usuario.click(await within(segunda).findByRole("button", { name: "Publicar" }));
+    expect(await within(segunda).findByText("Pendiente de publicar")).toBeInTheDocument();
+    expect(screen.queryByText(/no pasa la puerta/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/biblia escribe/)).not.toBeInTheDocument();
   });
 
   it("publicar una que pasa lo dice y vuelve a pedir la lista", async () => {
@@ -138,29 +127,10 @@ describe("publicar y la puerta (SPEC2 RF-74)", () => {
     );
     montar();
     const segunda = await screen.findByRole("listitem", { name: "Versión 2" });
-    await usuario.click(within(segunda).getByRole("button", { name: "Publicar" }));
+    await usuario.click(await within(segunda).findByRole("button", { name: "Publicar" }));
     expect(await within(segunda).findByText("Publicada")).toBeInTheDocument();
     expect(within(screen.getByRole("listitem", { name: "Versión 1" })).queryByText("Publicada")).not.toBeInTheDocument();
     // Sin Lean en el servidor se publica igual, y se dice (SPEC1 RF-155).
     expect(within(segunda).getByText(/Sin comprobación formal/)).toBeInTheDocument();
-  });
-
-  it("una puerta que pasa sin Lean dice que no hubo comprobación formal, y con Lean no dice nada", async () => {
-    const usuario = userEvent.setup();
-    let comprobacion: "sin_comprobacion" | "demostrada" = "sin_comprobacion";
-    servidor.use(
-      http.get(`${API}/obras/:id/versiones`, () => HttpResponse.json(TRES)),
-      http.get(`${API}/obras/:id/versiones/:n/puerta`, () =>
-        HttpResponse.json(puerta({ version: 2, comprobacion_formal: comprobacion })),
-      ),
-    );
-    montar();
-    const segunda = await screen.findByRole("listitem", { name: "Versión 2" });
-    await usuario.click(within(segunda).getByRole("button", { name: "Comprobar la puerta" }));
-    expect(await within(segunda).findByText(/Sin comprobación formal/)).toBeInTheDocument();
-    comprobacion = "demostrada";
-    await usuario.click(within(segunda).getByRole("button", { name: "Comprobar la puerta" }));
-    await within(segunda).findByText(/Pasa la puerta/);
-    expect(within(segunda).queryByText(/Sin comprobación formal/)).not.toBeInTheDocument();
   });
 });

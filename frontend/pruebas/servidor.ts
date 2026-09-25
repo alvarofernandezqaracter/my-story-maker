@@ -34,6 +34,7 @@ export function ficha(cambios: Partial<FichaDeObra> = {}): FichaDeObra {
     version_publicada: null,
     destinatario: "Lucía",
     dedicatoria: "Para Lucía, que me enseñó a leer",
+    epoca: "Sevilla, 1587",
     ...cambios,
   };
 }
@@ -41,7 +42,6 @@ export function ficha(cambios: Partial<FichaDeObra> = {}): FichaDeObra {
 export function obraDelTaller(cambios: Partial<ObraDelTaller> = {}): ObraDelTaller {
   return {
     ...ficha(),
-    epoca: "Sevilla, 1587",
     capitulos_objetivo: 6,
     creada_en: "2026-09-24T10:00:00+00:00",
     ...cambios,
@@ -178,6 +178,9 @@ export const servidor = setupServer(
   http.get(`${API}/obras/:id/trazas`, () => HttpResponse.json([traza()])),
   http.get(`${API}/obras/:id/hechos`, () => HttpResponse.json(hechos())),
   http.get(`${API}/obras/:id/versiones`, () => HttpResponse.json([version()])),
+  http.get(`${API}/obras/:id/versiones/:n/puerta`, ({ params }) =>
+    HttpResponse.json(puerta({ version: Number(params.n) })),
+  ),
   http.get(`${API}/obras/:id/criticas`, () => HttpResponse.json([critica()])),
 );
 

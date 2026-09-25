@@ -498,6 +498,7 @@ def crear_aplicacion(
             motivo_de_la_detencion=casa.almacen.motivo_de_la_detencion(id_obra),
             destinatario=destinatario.get("nombre"),
             dedicatoria=destinatario.get("dedicatoria"),
+            epoca=str(obra.cuerpo.get("epoca", "")),
         )
 
     # --- RI-20. El taller: todas las obras con su situacion ----------------
@@ -508,7 +509,6 @@ def crear_aplicacion(
         return [
             ObraDelTaller(
                 **_ficha(casa, obra).model_dump(),
-                epoca=str(obra.cuerpo.get("epoca", "")),
                 capitulos_objetivo=casa.capitulos_objetivo(obra),
                 creada_en=obra.creado_en,
             )

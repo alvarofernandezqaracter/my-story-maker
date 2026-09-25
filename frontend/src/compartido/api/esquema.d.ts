@@ -811,6 +811,12 @@ export interface components {
              * @description La dedicatoria tal como viene en el brief (RF-177)
              */
             dedicatoria?: string | null;
+            /**
+             * Epoca
+             * @description Epoca y ambito geografico, tal como vienen en el brief
+             * @default
+             */
+            epoca: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -934,6 +940,7 @@ export interface components {
             /**
              * Epoca
              * @description Epoca y ambito geografico, tal como vienen en el brief
+             * @default
              */
             epoca: string;
             /**

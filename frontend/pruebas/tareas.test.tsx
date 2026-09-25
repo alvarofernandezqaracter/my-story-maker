@@ -79,20 +79,21 @@ describe("las tareas hechas (SPEC2 RF-26, RF-27)", () => {
     ]);
 
     const obra = within(grupos[0]!).getAllByRole("row")[1]!;
-    expect(obra).toHaveTextContent("constructor_de_mundo");
+    expect(obra).toHaveTextContent("Constructor de mundo");
     expect(obra).toHaveTextContent("1 min 35 s");
 
     const [, pasada, fallida] = within(grupos[1]!).getAllByRole("row");
     expect(pasada).toHaveTextContent("42 s");
-    expect(pasada).toHaveTextContent("Pasó");
-    expect(fallida).toHaveTextContent("No pasó");
+    // El veredicto de los hooks no se enseña: ni «Pasó» ni «No pasó».
+    expect(fallida).not.toHaveTextContent("No pasó");
+    expect(pasada).not.toHaveTextContent("Pasó");
 
     expect(within(grupos[2]!).getByText("En curso")).toBeInTheDocument();
   });
 
   it("no enseña tokens, coste ni intentos: solo lo esencial (D-09)", async () => {
     montar();
-    await screen.findByText("redactar_escena");
+    await screen.findByText("Redactar escena");
     expect(screen.queryByText(/token/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/coste/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/intento/i)).not.toBeInTheDocument();
@@ -106,7 +107,7 @@ describe("las tareas hechas (SPEC2 RF-26, RF-27)", () => {
     expect(await screen.findByText(/Todavía no se ha hecho ninguna tarea/)).toBeInTheDocument();
     lista = [traza()];
     await usuario.click(screen.getByRole("button", { name: "Actualizar la lista" }));
-    expect(await screen.findByText("redactar_escena")).toBeInTheDocument();
+    expect(await screen.findByText("Redactar escena")).toBeInTheDocument();
   });
 
   it("con el servidor caído dice qué pasa; con un 404, el mensaje del servidor", async () => {

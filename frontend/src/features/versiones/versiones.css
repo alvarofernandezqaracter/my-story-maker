@@ -1,70 +1,174 @@
-.versiones__lista {
-  list-style: none;
-  padding: 0;
+.versiones {
+  max-width: 60rem;
+}
+
+.lateral ~ .versiones {
+  max-width: none;
+}
+
+.versiones__cabecera {
+  margin-bottom: var(--espacio-6);
+  max-width: 44rem;
+}
+
+.versiones__antetitulo {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--acento-tinta);
+}
+
+.versiones__cabecera h1 {
+  margin: var(--espacio-1) 0 var(--espacio-2);
+  font-family: var(--letra-titulos);
+  font-weight: 600;
+}
+
+.versiones__cabecera p {
   margin: 0;
-  display: grid;
+  color: var(--tinta-suave);
+}
+
+.versiones__lista {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--espacio-6);
+  display: flex;
+  flex-direction: column;
   gap: var(--espacio-4);
+  max-width: 52rem;
+}
+
+.versiones__lista::before {
+  content: "";
+  position: absolute;
+  left: 0.95rem;
+  top: 1.2rem;
+  bottom: 1.2rem;
+  width: 2px;
+  background: linear-gradient(var(--acento), var(--borde));
+  border-radius: 2px;
 }
 
 .version {
-  background: var(--superficie);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  padding: var(--espacio-4);
+  position: relative;
 }
 
-.version[data-publicada="true"] {
+.version__hito {
+  position: absolute;
+  left: calc(var(--espacio-6) * -1);
+  top: 1.1rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--superficie);
+  border: 2px solid var(--borde-fuerte);
+  color: var(--tinta-suave);
+}
+
+.version[data-publicada="true"] .version__hito {
+  background: var(--acento);
   border-color: var(--acento);
+  color: #1b1b1b;
+}
+
+.version__tarjeta {
+  margin-left: var(--espacio-4);
+  padding: var(--espacio-4) var(--espacio-5);
+  border-radius: var(--radio-grande);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  box-shadow: var(--sombra-1);
+}
+
+.version[data-publicada="true"] .version__tarjeta {
+  border-color: color-mix(in srgb, var(--acento) 45%, var(--borde));
 }
 
 .version__cabeza {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--espacio-3);
-  align-items: baseline;
+  align-items: center;
+  gap: var(--espacio-2) var(--espacio-3);
 }
 
 .version__cabeza h2 {
   margin: 0;
-  font-size: 1.2rem;
-}
-
-.version__marca {
-  background: var(--acento-suave);
-  color: var(--acento-tinta);
-  border-radius: var(--radio);
-  padding: 0 var(--espacio-2);
+  font-family: var(--letra-titulos);
+  font-size: 1.3rem;
   font-weight: 600;
 }
 
-.version__estado,
+.version__marca {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--pizarra);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.version__estado {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--acento-suave);
+  color: var(--acento-tinta);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.version__estado[data-terminada="true"] {
+  background: var(--exito-suave);
+  color: var(--exito);
+}
+
+.version__fecha {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--tinta-tenue);
+}
+
+.version__origen,
 .version__cambiados {
+  margin: var(--espacio-3) 0 0;
   color: var(--tinta-suave);
+}
+
+.version__cambiados {
+  font-size: 0.9rem;
 }
 
 .version__acciones {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--espacio-3);
-  margin-top: var(--espacio-3);
+  margin-top: var(--espacio-4);
 }
 
-.puerta {
-  margin-top: var(--espacio-3);
+.version__pendiente {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--tinta-tenue);
+}
+
+.version__aviso {
+  margin: var(--espacio-3) 0 0;
   padding: var(--espacio-2) var(--espacio-3);
   border-radius: var(--radio);
+  background: var(--exito-suave);
+  color: var(--exito);
 }
 
-.puerta--pasa {
-  background: var(--superficie-2);
-}
-
-.puerta--no-pasa {
-  background: var(--error-suave);
-}
-
-.puerta ul {
-  margin: var(--espacio-2) 0 0;
-  padding-left: var(--espacio-5);
-  overflow-wrap: anywhere;
+.puerta__sin-comprobacion {
+  color: var(--tinta-suave);
 }

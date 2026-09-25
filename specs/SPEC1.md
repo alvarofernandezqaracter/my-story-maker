@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.14.0
+version: 1.15.0
 estado: aplicada
 fecha: 2026-09-25
 ambito: backend/
@@ -1289,10 +1289,19 @@ de él, salvo que el texto diga otra cosa.
 | ID | Requisito | Verificación |
 | --- | --- | --- |
 | RF-210 | **El marco temporal del capítulo.** La proyección de `plegar` lleva un material más, `marco_temporal_del_capitulo`: la `epoca` del brief; la `fecha_de_cierre_anterior`, la `fecha_resultante` más tardía entre los `EventoEstado` de capítulos anteriores, o nada en el capítulo 1; y `escenas`, una fila por escena del capítulo, en su orden, con su `id` y el `lugar`, el `instante` y la `duracion` de su `marco`, y nada más de la escena. El prompt del Contable dice que el año sale de ahí cuando el texto no lo da, que una fecha no retrocede respecto a la de cierre anterior salvo que el texto narre un recuerdo, y que el texto manda sobre el plan cuando se contradicen | `prueba` |
+| RF-214 | **El Planificador también parte de la fecha de cierre.** La proyección de `planificar` lleva el mismo material, `marco_temporal_del_capitulo`: al planificar el capítulo N sus escenas aún no existen, así que le llegan la `epoca` y la `fecha_de_cierre_anterior`. Su prompt dice que el `instante` de cada escena no es anterior a esa fecha: la cronología no admite que un capítulo posterior ocurra antes que uno anterior (RF-151) | `prueba` |
 
 | ID | Decisión | Por qué |
 | --- | --- | --- |
 | D-94 | **El Contable ve el marco de las escenas y nada más del plan** | «No ve el plan» era para que transcribiese lo que pasó y no lo que se planeó: un objetivo o una revelación del plan que el texto no cumple no debe acabar en el log. La fecha y el lugar son otra cosa: son el decorado que el Planificador fijó y el Redactor escribió, rara vez se repiten en la prosa, y sin ellos la única alternativa es inventar. Por eso entra solo `marco`, y no el objetivo, el elenco ni lo revelado. La fecha de cierre anterior la escribió el propio Contable, así que no es información nueva, solo memoria que el estado en N-1 no guardaba. Que el texto mande sobre el plan conserva lo que D-05 quería: el Contable calcula y escribe, y el Verificador compara |
+
+**Lo que se vio después.** Con el Contable anclado al plan, el error se mudó
+al plan: el Planificador del capítulo 4 de la versión 2 fechó sus escenas del 3
+al 11 de mayo, antes que el capítulo 1, y el Contable lo copió con fidelidad.
+El Planificador tampoco sabía dónde se había cerrado el capítulo anterior: su
+estado en N-1 dice dónde está cada quien, no cuándo. RF-214 le da el mismo
+material. No es una analepsis: RF-151 no las admite, y abrirlas sería otra
+decisión.
 
 **Qué queda fuera.** Que el backend corrija o rellene fechas: la fecha sigue
 siendo del Contable y la cronología sigue derivándose de lo que él escribió
@@ -1669,7 +1678,8 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    capítulo 1 lleva la época, ninguna fecha de cierre anterior y el marco de
    cada escena del capítulo en su orden, sin su objetivo ni su elenco; la del
    capítulo 2 lleva como fecha de cierre anterior la más tardía que el Contable
-   escribió en el 1.
+   escribió en el 1. La ventana de `planificar` lleva la época y esa misma
+   fecha de cierre, y su prompt dice que ninguna escena empieza antes.
 20. **La lectura de lo entregado.** Sin gastar: un objeto JSON entre vallas con
    texto delante y detrás se lee; uno sin vallas con texto alrededor, también;
    uno cortado falla diciendo dónde se rompió. Una `Crítica` con tilde se guarda

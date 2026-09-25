@@ -1,58 +1,110 @@
 /* Colores corporativos: naranja de acento y azul pizarra de tinta; los neutros
-   tiran a azul, no a gris. Sin fuentes externas: es una aplicación local. */
+   tiran a azul, no a gris. Las fuentes van empaquetadas con la aplicación
+   (@fontsource), así que funcionan sin conexión. */
 :root {
   color-scheme: light;
   --acento: #ff7932;
+  --acento-fuerte: #f0621a;
   --acento-suave: #fff0e7;
   --acento-tinta: #b34a0f;
-  --tinta: #233441;
+  --tinta: #1f2f3b;
   --tinta-suave: #4b5d6b;
-  --tinta-tenue: #6f808d;
-  --fondo: #f6f8fa;
+  --tinta-tenue: #7a8a96;
+  --fondo: #f5f7f9;
   --superficie: #ffffff;
-  --superficie-2: #edf1f4;
-  --borde: #d5dde3;
+  --superficie-2: #eef2f5;
+  --superficie-3: #e3e9ee;
+  --borde: #dde4ea;
+  --borde-fuerte: #c6d1da;
   --error: #b42318;
   --error-suave: #fdecea;
   --aviso-suave: #fff6dc;
   --aviso-tinta: #7a5500;
   --exito: #1a7a57;
   --exito-suave: #e2f3eb;
+  --pizarra: #233441;
+  --pizarra-2: #2e4556;
 
-  --letra-interfaz: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --letra-lectura: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  --degradado-marca: linear-gradient(135deg, #ff7932 0%, #ff9f5a 45%, #ffc48f 100%);
+  --degradado-pizarra: linear-gradient(135deg, #1a2833 0%, #233441 55%, #34506a 100%);
+
+  --sombra-1: 0 1px 2px rgb(20 35 48 / 0.06), 0 1px 3px rgb(20 35 48 / 0.08);
+  --sombra-2: 0 4px 12px rgb(20 35 48 / 0.08), 0 2px 4px rgb(20 35 48 / 0.05);
+  --sombra-3: 0 18px 40px rgb(20 35 48 / 0.16), 0 6px 12px rgb(20 35 48 / 0.08);
+
+  --letra-interfaz: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --letra-lectura: "Literata Variable", "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  --letra-titulos: "Fraunces Variable", "Literata Variable", Georgia, serif;
   --letra-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 
   --radio: 10px;
+  --radio-grande: 18px;
   --espacio-1: 0.25rem;
   --espacio-2: 0.5rem;
   --espacio-3: 0.75rem;
   --espacio-4: 1rem;
   --espacio-5: 1.5rem;
   --espacio-6: 2rem;
-  --ancho-lectura: 38rem;
-  --alto-cabecera: 3.5rem;
-  --ancho-lateral: 15rem;
+  --espacio-7: 3rem;
+  --espacio-8: 4.5rem;
+  --ancho-lectura: 40rem;
+  --alto-cabecera: 3.75rem;
+  --ancho-lateral: 16rem;
+  --transicion: 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+/* Oscuro: por el sistema, salvo que el lector haya elegido claro a mano; o
+   porque lo ha elegido a mano. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-tema="claro"]) {
     color-scheme: dark;
     --acento: #ff8a4c;
+    --acento-fuerte: #ff9d66;
     --acento-suave: #3a2a22;
     --acento-tinta: #ffb48a;
-    --tinta: #e3eaf0;
+    --tinta: #e6edf2;
     --tinta-suave: #b4c2cd;
     --tinta-tenue: #8698a6;
-    --fondo: #141d24;
-    --superficie: #1b2730;
-    --superficie-2: #23323d;
-    --borde: #33444f;
+    --fondo: #10181e;
+    --superficie: #17222a;
+    --superficie-2: #1f2d37;
+    --superficie-3: #283844;
+    --borde: #2c3c48;
+    --borde-fuerte: #3b4f5d;
     --error: #ff8a80;
     --error-suave: #3b1f1d;
     --aviso-suave: #3a3120;
     --aviso-tinta: #f2d18b;
     --exito: #7ed6ae;
     --exito-suave: #1c3a2e;
+    --sombra-1: 0 1px 2px rgb(0 0 0 / 0.3);
+    --sombra-2: 0 4px 14px rgb(0 0 0 / 0.35);
+    --sombra-3: 0 18px 44px rgb(0 0 0 / 0.5);
   }
+}
+
+:root[data-tema="oscuro"] {
+  color-scheme: dark;
+  --acento: #ff8a4c;
+  --acento-fuerte: #ff9d66;
+  --acento-suave: #3a2a22;
+  --acento-tinta: #ffb48a;
+  --tinta: #e6edf2;
+  --tinta-suave: #b4c2cd;
+  --tinta-tenue: #8698a6;
+  --fondo: #10181e;
+  --superficie: #17222a;
+  --superficie-2: #1f2d37;
+  --superficie-3: #283844;
+  --borde: #2c3c48;
+  --borde-fuerte: #3b4f5d;
+  --error: #ff8a80;
+  --error-suave: #3b1f1d;
+  --aviso-suave: #3a3120;
+  --aviso-tinta: #f2d18b;
+  --exito: #7ed6ae;
+  --exito-suave: #1c3a2e;
+  --sombra-1: 0 1px 2px rgb(0 0 0 / 0.3);
+  --sombra-2: 0 4px 14px rgb(0 0 0 / 0.35);
+  --sombra-3: 0 18px 44px rgb(0 0 0 / 0.5);
 }

@@ -5,9 +5,18 @@ import { AvisoDeFallo } from "../../compartido/componentes/AvisoDeFallo";
 import { Cabecera } from "../../compartido/componentes/Cabecera";
 import { MenuDeObra } from "../../compartido/componentes/MenuDeObra";
 import { Espera } from "../../compartido/componentes/Espera";
+import { Icono } from "../../compartido/componentes/Icono";
+import { Libro } from "../../compartido/componentes/Libro";
 import { TareasAbiertas } from "./TareasAbiertas";
 import { useAvance, type Situacion } from "./usar-avance";
 import "./avance.css";
+
+// El color de la etiqueta es el de la situación equivalente del taller.
+const COLOR_DE_SITUACION: Record<Situacion, string> = {
+  en_marcha: "en_produccion",
+  detenida: "detenida",
+  terminada: "terminada",
+};
 
 const SITUACION: Record<Situacion, string> = {
   en_marcha: "En marcha",
@@ -92,12 +101,20 @@ export function PantallaDelAvance() {
       <MenuDeObra idObra={idObra} />
       <main className="pagina avance">
         <header className="avance__cabecera">
-          <h1>{ficha.titulo}</h1>
+          <div className="avance__titular">
+            <Libro titulo={ficha.titulo} tamano="mini" />
+            <div>
+              <span className="avance__antetitulo">Avance de la obra</span>
+              <h1>{ficha.titulo}</h1>
+            </div>
+          </div>
           <div className="avance__estado">
             {situacion && (
-              <span className={`situacion situacion--${situacion}`}>{SITUACION[situacion]}</span>
+              <span className={`situacion situacion--${situacion}`} data-situacion={COLOR_DE_SITUACION[situacion]}>
+                {SITUACION[situacion]}
+              </span>
             )}
-            {conexion && (
+            {conexion && situacion !== "terminada" && (
               <Conexion
                 estado={conexion.estado}
                 intentos={conexion.intentos}
@@ -106,6 +123,18 @@ export function PantallaDelAvance() {
             )}
           </div>
         </header>
+
+        {situacion === "terminada" && (
+          <section className="avance__terminada" aria-label="Obra terminada">
+            <span className="avance__sello" aria-hidden="true">
+              <Icono nombre="hecho" tamano={26} />
+            </span>
+            <div>
+              <h2>La novela está terminada</h2>
+              <p>Los {ficha.capitulos_cerrados} capítulos están escritos. Ya se puede leer de principio a fin.</p>
+            </div>
+          </section>
+        )}
 
         <section className="avance__cifras" aria-label="Cifras de la obra">
           <div className="cifra">
@@ -120,6 +149,7 @@ export function PantallaDelAvance() {
           </div>
           <div className="cifra cifra--ancha">
             <span className="cifra__etiqueta">Tokens de entrada a la vez</span>
+            <span className="cifra__nota">Cuánto contexto usan ahora los agentes que trabajan en paralelo</span>
             <span className="cifra__valor" data-testid="tokens">
               {formato.format(progreso.tokens_de_entrada_concurrentes)} de {formato.format(progreso.techo)}
             </span>
@@ -142,6 +172,7 @@ export function PantallaDelAvance() {
             className={situacion === "terminada" ? "principal" : undefined}
             onClick={() => void navegar(`/obras/${encodeURIComponent(idObra)}/manuscrito`)}
           >
+            <Icono nombre="libro" />
             {situacion === "terminada" ? "Leer la novela" : "Leer lo que hay"}
           </button>
           {progreso.detenida ? (

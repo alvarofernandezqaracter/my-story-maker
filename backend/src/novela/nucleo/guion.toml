@@ -46,7 +46,16 @@ tarea = "planificar"
 rol = "planificador"
 concurrencia = "solo"
 unidad = "capitulo"
-proyeccion = ["canon", "estado_en_n_menos_1", "compromisos_abiertos", "arcos", "ecos_de_estructura", "destinatario", "recuerdos_del_destinatario"]
+proyeccion = [
+    "canon",
+    "estado_en_n_menos_1",
+    "compromisos_abiertos",
+    "arcos",
+    "ecos_de_estructura",
+    "destinatario",
+    "recuerdos_del_destinatario",
+    "marco_temporal_del_capitulo",
+]
 
 [[paso]]
 numero = 2

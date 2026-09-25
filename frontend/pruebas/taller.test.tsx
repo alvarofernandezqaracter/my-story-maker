@@ -67,7 +67,7 @@ describe("el taller (SPEC2 §4.11)", () => {
       ),
     );
     montar();
-    await screen.findByText("La que manda");
+    await screen.findByRole("link", { name: "La que manda, Publicada" });
     expect(within(columna(/^Publicada/)).getByText("La que manda")).toBeInTheDocument();
     expect(within(columna(/^En producción/)).getByText("Ninguna")).toBeInTheDocument();
   });
@@ -80,7 +80,8 @@ describe("el taller (SPEC2 §4.11)", () => {
     expect(tarjeta).toHaveTextContent("Para Lucía");
     expect(tarjeta).toHaveTextContent("2 / 6");
     expect(within(tarjeta).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "2");
-    expect(tarjeta).toHaveTextContent("1 marcados · 3 críticas abiertas");
+    expect(tarjeta).not.toHaveTextContent("críticas");
+    expect(tarjeta).not.toHaveTextContent("marcados");
     expect(tarjeta).toHaveTextContent("v1");
     expect(tarjeta).not.toHaveTextContent("publicada la");
     expect(screen.getByRole("link", { name: "Valladolid, Publicada" })).toHaveTextContent("v1 · publicada la v1");
@@ -170,7 +171,7 @@ describe("la barra y el lateral (SPEC2 RF-84, RF-30)", () => {
     montar();
     const principal = screen.getByRole("navigation", { name: "Principal" });
     expect(within(principal).getByRole("link", { name: "Taller" })).toHaveClass("activa");
-    await userEvent.click(screen.getByRole("link", { name: "+ Nueva obra" }));
+    await userEvent.click(screen.getByRole("link", { name: "Nueva obra" }));
     expect(await screen.findByRole("heading", { name: "El encargo" })).toBeInTheDocument();
   });
 

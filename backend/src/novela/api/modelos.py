@@ -120,12 +120,14 @@ class FichaDeObra(BaseModel):
     dedicatoria: str | None = Field(
         default=None, description="La dedicatoria tal como viene en el brief (RF-177)"
     )
+    epoca: str = Field(
+        default="", description="Epoca y ambito geografico, tal como vienen en el brief"
+    )
 
 
 class ObraDelTaller(FichaDeObra):
     """Una obra en el listado del taller: su ficha y lo que pide su brief (RF-204)."""
 
-    epoca: str = Field(description="Epoca y ambito geografico, tal como vienen en el brief")
     capitulos_objetivo: int = Field(description="Cuantos capitulos pide el brief")
     creada_en: str = Field(description="Cuando se dio de alta la obra")
 

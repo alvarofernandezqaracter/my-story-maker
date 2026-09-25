@@ -95,6 +95,23 @@ def test_la_fecha_de_cierre_anterior_es_la_mas_tardia_de_los_capitulos_previos(
     assert _ventana_de_plegar(almacen, id_obra, 3)["fecha_de_cierre_anterior"] == "1584-11-02"
 
 
+def test_el_planificador_recibe_la_epoca_y_la_fecha_de_cierre(almacen: Almacen) -> None:
+    """RF-214: al planificar el capitulo N sus escenas aun no existen."""
+    id_obra = almacen.crear_obra({"titulo": "T", "epoca": "Salamanca, 1584"})
+    almacen.anadir_eventos_de_estado(
+        [Artefacto("EventoEstado",
+                   {"tipo_de_evento": "transcurre_tiempo", "fecha_resultante": "1584-05-18"},
+                   id_obra=id_obra, capitulo=3)]
+    )
+    encargo = guion.expandir(guion.paso(1), id_obra=id_obra, capitulo=4, escenas=())[0]
+    assert encargo.tarea == "planificar"
+    marco = ensamblar(almacen, encargo).materiales["marco_temporal_del_capitulo"]
+    assert marco == {"epoca": "Salamanca, 1584", "fecha_de_cierre_anterior": "1584-05-18",
+                     "escenas": []}
+    prompt = prompt_de_tarea("planificar")
+    assert "no es anterior a la `fecha_de_cierre_anterior`" in prompt
+
+
 def test_el_prompt_del_contable_dice_de_donde_sale_el_ano() -> None:
     prompt = prompt_de_tarea("plegar")
     assert "marco temporal" in prompt
