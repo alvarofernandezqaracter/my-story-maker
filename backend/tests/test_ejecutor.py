@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from novela import ganchos
 from novela.ajustes import MODELO_DE_LOS_SUBAGENTES
 from novela.almacen import Almacen
 from novela.almacen.artefactos import abrir_almacen
@@ -164,6 +165,41 @@ def test_lo_que_viene_de_fuera_entra_como_dato_delimitado() -> None:
 def test_se_leen_los_artefactos_aunque_vengan_en_vallas_de_codigo() -> None:
     devuelto = _leer_json_del_agente('```json\n{"artefactos": []}\n```')
     assert devuelto == {"artefactos": []}
+
+
+@pytest.mark.parametrize(
+    "texto",
+    [
+        'No tengo busqueda web; registro la limitacion:\n\n```json\n{"artefactos": []}\n```',
+        '```json\n{"artefactos": []}\n```\n\nHe dejado constancia de lo que falta.',
+        'Aqui va: {"artefactos": []} y nada mas.',
+    ],
+)
+def test_el_objeto_se_lee_donde_este(texto: str) -> None:
+    """SPEC1 RF-211: el texto alrededor no va a ninguna parte."""
+    assert _leer_json_del_agente(texto) == {"artefactos": []}
+
+
+def test_un_json_cortado_falla_diciendo_donde_se_rompio() -> None:
+    with pytest.raises(SubagenteFallo, match=r"caracter \d+ de \d+.*acaba"):
+        _leer_json_del_agente('```json\n{"artefactos": [{"tipo": "Plan", "cuerpo": {"ti')
+
+
+def test_el_tipo_se_lee_sin_tildes_y_el_cuerpo_queda_como_vino() -> None:
+    """SPEC1 RF-212."""
+    devuelto = _leer_json_del_agente(
+        '{"artefactos": [{"tipo": "Crítica", "cuerpo": {"evidencia": "«aún»"}},'
+        ' {"tipo": "Decisión", "cuerpo": {}}, {"tipo": "Inventado", "cuerpo": {}}]}'
+    )
+    assert [a["tipo"] for a in devuelto["artefactos"]] == ["Critica", "Decision", "Inventado"]
+    assert devuelto["artefactos"][0]["cuerpo"] == {"evidencia": "«aún»"}
+
+
+def test_el_hook_y_el_ejecutor_leen_igual_una_critica_con_tilde() -> None:
+    """RF-126: la misma funcion, asi que el hook no puede rechazar lo que el
+    ejecutor acepta."""
+    texto = 'Van: ```json\n{"artefactos": [{"tipo": "Crítica", "cuerpo": {}}]}\n```'
+    assert ganchos.leer_entrega(texto) == _leer_json_del_agente(texto)
 
 
 def test_una_salida_que_no_es_json_se_declara_fallo() -> None:
