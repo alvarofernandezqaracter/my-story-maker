@@ -590,7 +590,7 @@ flowchart LR
 
 | ID | Requisito | Verificación |
 | --- | --- | --- |
-| RF-120 | Cada paso del guion declara en `guion.toml` qué hooks lleva su subagente, con un vocabulario cerrado de dos valores: `validar_capitulo` y `policy`. Los llevan los tres pasos que escriben prosa —3 `redactar`, 5 `revisar` y 7, la costura— y ningún otro; las cribas del paso 8, aunque las haga el mismo rol que cose, no. Un hook que no esté en el vocabulario no carga el guion | `prueba` |
+| RF-120 | Cada paso del guion declara en `guion.toml` qué hooks lleva su subagente, con un vocabulario cerrado de dos valores: `validar_capitulo` y `policy`. Los llevan los tres pasos que escriben prosa —3 `redactar`, 5 `revisar` y 7, la costura—; `validar_capitulo`, y no `policy`, lo llevan además los dos que escriben datos al cerrar el capítulo, 9 `plegar` y 10 `destilar` (RF-209); y ningún otro. Las cribas del paso 8, aunque las haga el mismo rol que cose, no. Un hook que no esté en el vocabulario no carga el guion | `prueba` |
 | RF-121 | Los hooks son hooks `Stop` de Claude Code de verdad y viajan en la orden del ejecutor, en `--settings` con JSON en línea. El aislamiento de §4.11 no se toca: el subagente sigue arrancando en su directorio vacío, sin `CLAUDE.md`, sin `.claude/` y sin MCP. Un encargo sin hooks lleva la misma orden que antes, sin `--settings` | `prueba` |
 | RF-122 | Cada hook es un programa del paquete, `python -m novela.ganchos <hook> <tarea>`. Lee la entrada que le da Claude Code —de ella, solo el último mensaje del agente y si ya ha bloqueado en ese turno—, no abre la base de datos, no escribe nada en disco y no llama a ningún modelo. El esquema y el contrato los lee de `tareas/<tarea>/`, que es entrada versionada (RD-09); la lista de vetos y la reserva de la vuelta le llegan en variables de entorno del proceso. Si bloquea, sale con código 2 y el motivo por su salida de error; si no, sale con 0 | `prueba` |
 | RF-123 | **`validar_capitulo` comprueba la forma, y nada del contenido.** La salida es un objeto JSON con la lista `artefactos`; cada artefacto trae `tipo` y `cuerpo`; cada tipo es uno de los que el contrato de la tarea deja escribir; el tipo principal del `esquema.json` de la tarea aparece al menos una vez y con todos los campos que su esquema declara; y todo `Borrador` trae `texto` no vacío. Las comprobaciones son una lista a la que se añaden otras sin tocar el enganche; la de nombres de la biblia es la única que mira el texto (RF-145) | `prueba` |
@@ -731,7 +731,7 @@ dice qué falló y en qué capítulo. El de nombres va además en el hook
 
 | ID | Decisión | Por qué |
 | --- | --- | --- |
-| D-55 | **En el hook, solo los nombres; lo demás, solo en la puerta** | Un nombre mal escrito está en el texto que el agente acaba de escribir, y una vuelta basta para arreglarlo: es lo que el hook hace bien. La longitud es del capítulo entero, y la única tarea que lo ve junto es la costura, cuyo rol no escribe contenido: estirar o recortar un capítulo es trabajo del Redactor, y pedírselo al Editor de estilo ensancharía su rol. Las `Mencion` nacen al cerrar el capítulo, después de los tres pasos de prosa. Y el esquema de los roles sin hooks no se comprueba al escribir porque no tienen vuelta de corrección: un fallo sería un intento fallido que acaba deteniendo la obra, justo lo que OBJ-07 evita. La forma del artefacto principal de los tres de prosa ya la mira el hook (RF-123) |
+| D-55 | **En el hook, solo los nombres; lo demás, solo en la puerta** (D-93 lo corrige para `plegar` y `destilar`) | Un nombre mal escrito está en el texto que el agente acaba de escribir, y una vuelta basta para arreglarlo: es lo que el hook hace bien. La longitud es del capítulo entero, y la única tarea que lo ve junto es la costura, cuyo rol no escribe contenido: estirar o recortar un capítulo es trabajo del Redactor, y pedírselo al Editor de estilo ensancharía su rol. Las `Mencion` nacen al cerrar el capítulo, después de los tres pasos de prosa. Y el esquema de los roles sin hooks no se comprueba al escribir porque no tienen vuelta de corrección: un fallo sería un intento fallido que acaba deteniendo la obra, justo lo que OBJ-07 evita. La forma del artefacto principal de los tres de prosa ya la mira el hook (RF-123) |
 | D-56 | **Un nombre mal escrito se detecta por distancia de letras, con reglas que prefieren no ver una variante antes que detener la obra por una palabra corriente** | En el hook, un fallo que el agente no corrige es un intento fallido y, agotados los reintentos, detiene la obra. «Pero» está a una letra de «Pedro» y «Marido» de «Mario»: por eso sobrar o faltar una letra solo cuenta en nombres de siete o más, y una palabra que también sale en minúscula no se toma por nombre. El precio declarado es que «Martha» por «Marta» pasa. Es comparar cadenas contra lo escrito en la biblia, como `policy` (D-49): no juzga el texto (§2.1) ni cierra D-05 |
 | D-57 | **Un elemento personalizado obligatorio es todo hecho de la biblia con licencia `personal`** | Es lo que RF-08 ya marca como salido de la vida del destinatario, y la tabla de hechos sabe en qué capítulos se usa cada uno. Contar por `Recuerdo` obligaría a fijar con qué campo apunta una ficha a su recuerdo, que el esquema del Constructor no declara |
 | D-58 | **El rango de longitud está en el guion, fijo, de 1 000 a 4 000 palabras por capítulo** | Fijo e igual para todas las obras, y no derivado de la extensión del brief, lo decidió el dueño. El máximo sale de la ventana de la costura: 4 000 palabras son unos 24 000 caracteres, unos 6 700 tokens a 3,6 por token, y eso cabe en los 8 000 del Editor de estilo sin partir el capítulo (RF-14). Por debajo de 1 000 palabras hay una escena, no un capítulo. Va en el guion, junto a lo demás que gobierna el capítulo, y no en `ajustes.py` |
@@ -1230,20 +1230,32 @@ ejemplo, un `viaja_a`, y RF-141 exigía sus campos a todo `EventoEstado`; pero u
 `transcurre_tiempo` o un `muere` no tienen objeto, y un evento correcto fallaba
 por no inventárselo.
 
+Arreglados esos dos, quedaron 14 fallos de verdad: doce eventos del capítulo 8
+sin `fecha_resultante`, uno del 10 sin `sujeto` y un resumen del 5 sin sus
+compromisos. La puerta hizo bien en pararlos; lo que falla es que se descubran
+con la obra entera terminada. El Contable y el Archivero no tenían hook, y D-55
+lo dejó así porque sin vuelta de corrección un fallo sería un intento fallido
+que acabaría deteniendo la obra. Pero el hook *es* esa vuelta de corrección: el
+agente que entrega un evento sin fecha lo corrige en la misma sesión.
+
 **La decisión, en una frase.** La puerta del esquema da por presente el
 capítulo que puso el backend, y un campo es obligatorio solo si aparece en todos
 los ejemplos que el `esquema.json` da de su tipo; `plegar` declara dos formas de
-evento, una con objeto y otra sin él.
+evento, una con objeto y otra sin él. Y `plegar` y `destilar` llevan
+`validar_capitulo`, para que su esquema se corrija al escribirse y no al
+publicar.
 
 | ID | Requisito | Verificación |
 | --- | --- | --- |
 | RF-207 | **El capítulo del backend cuenta.** Si el artefacto tiene capítulo en su envoltorio —el que puso el backend por RF-181, o el que se respetó del rol—, RF-141 lo da por presente aunque el cuerpo no lo repita. Nada se reescribe: el cuerpo se guarda como vino (RF-23, D-32) y la comprobación mira el cuerpo con el envoltorio al lado. Así la regla vale también para lo ya escrito, sin migrar nada | `prueba` |
 | RF-208 | **Obligatorio es lo que traen todos los ejemplos de su tipo.** Cuando el `esquema.json` de una tarea da más de un ejemplo del mismo tipo, es obligatorio el campo que aparece en todos ellos, y opcional el que falta en alguno. Con un solo ejemplo no cambia nada. El de `plegar` da dos `EventoEstado`: un `viaja_a` con `objeto` y un `transcurre_tiempo` sin él, así que `objeto` es opcional y los demás campos siguen obligatorios. El prompt del Contable dice que el `objeto` se escribe cuando el evento lo tiene | `prueba` |
+| RF-209 | **El Contable y el Archivero llevan `validar_capitulo`.** Los pasos 9 `plegar` y 10 `destilar` declaran ese hook, sin `policy` —no escriben prosa ni pueden traer nada vetado—, y su reserva de la vuelta. Comprueba lo de RF-123 con la regla de RF-208: que el tipo principal de su esquema aparece y que **todo** artefacto de ese tipo trae sus campos obligatorios, así que un `EventoEstado` sin `fecha_resultante` o un `ResumenCapitulo` sin compromisos se devuelven al agente en la sesión. Como en los pasos de prosa, el ejecutor repite la comprobación sobre lo entregado (RF-126) y, agotados los intentos, el `detener_obra` de su paso detiene la obra con su motivo | `prueba` |
 
 | ID | Decisión | Por qué |
 | --- | --- | --- |
 | D-91 | **Se arregla la comprobación, no los datos** | Los eventos estaban bien: lo que fallaba era mirar solo la mitad de lo que el backend sabe del artefacto, y exigir un campo que el tipo de evento no tiene. Reescribir cuerpos rompería la inmutabilidad (RF-23, D-32), y rehacer la obra entera para que un agente repitiera un número que el backend ya tenía sería gastar horas en nada. Como la comprobación se deriva cada vez (D-59), la misma versión pasa en cuanto la regla es la correcta |
 | D-92 | **La opcionalidad sale de los ejemplos del esquema, no de una lista por tipo de evento** | El esquema es el formato que ve el rol y la vara de la puerta a la vez, y así sigue: un ejemplo más enseña al Contable que un `transcurre_tiempo` no lleva objeto y le dice lo mismo a la puerta. Una tabla aparte de campos por `tipo_de_evento` sería una segunda verdad que el rol no ve. Qué objeto le toca a cada tipo lo sigue mirando el Verificador de continuidad, que es quien lee el texto |
+| D-93 | **`validar_capitulo` en `plegar` y `destilar`; corrige D-55 para esos dos pasos** | D-55 no comprobaba al escribir el esquema de los roles sin hook porque no tenían vuelta de corrección. Con el hook la tienen, y el precio de no tenerla ya se ha pagado: una obra de diez capítulos entera, terminada y sin poder publicarse por campos que el agente habría escrito si se los hubieran pedido. `policy` no entra: busca palabras vetadas en prosa, y estos dos pasos no la escriben. La longitud y los elementos personalizados siguen solo en la puerta, como decía D-55 |
 
 **Qué queda fuera.** Que el backend escriba el capítulo dentro del cuerpo: el
 cuerpo es del rol y no se toca. Comprobar el tipo o el valor de cada campo: la
@@ -1253,7 +1265,46 @@ puerta del esquema mira presencia, como hasta ahora.
 terminada con 38 fallos de `esquema` y ninguno de texto.
 
 **Documentos que hay que poner al día en la fase 3.** `validators.md` §7 (la
-puerta de publicación) y §8, los métodos de RF-207 y RF-208.
+puerta de publicación y los guardarraíles) y §8, los métodos de RF-207 a RF-209;
+`architecture.md` §4, los hooks de los subagentes.
+
+### 4.24 El Contable fecha dentro del marco del plan
+
+**El problema.** Con la puerta del esquema arreglada y Lean instalado, la misma
+obra `obr_7a0f5152` falla la cronología 74 veces: 45 de orden temporal y 29 de
+un solo lugar. Las fechas del Planificador son coherentes —`marco.instante` de
+cada escena, de octubre a noviembre de 1584—, pero las del Contable no: 1500 en
+el capítulo 1, 1588 en el 2, 1577 en el 7. El Contable fecha lo que el texto
+dice, y el texto casi nunca dice el año: «pasaron las semanas de la cuaresma».
+Su ventana era el estado en N-1, el texto aceptado y el vocabulario de eventos;
+el estado en N-1 guarda dónde está cada quien, no cuándo, y el capítulo 1 no
+tiene N-1. Sin ancla, el año lo inventa, y un año inventado envenena el orden de
+todos los capítulos siguientes, que es justo lo que Lean mira.
+
+**La decisión, en una frase.** El Contable recibe el marco temporal del
+capítulo —la época de la obra, la última fecha que él mismo cerró y el lugar y
+el instante que el Planificador dio a cada escena del capítulo— y fecha dentro
+de él, salvo que el texto diga otra cosa.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-210 | **El marco temporal del capítulo.** La proyección de `plegar` lleva un material más, `marco_temporal_del_capitulo`: la `epoca` del brief; la `fecha_de_cierre_anterior`, la `fecha_resultante` más tardía entre los `EventoEstado` de capítulos anteriores, o nada en el capítulo 1; y `escenas`, una fila por escena del capítulo, en su orden, con su `id` y el `lugar`, el `instante` y la `duracion` de su `marco`, y nada más de la escena. El prompt del Contable dice que el año sale de ahí cuando el texto no lo da, que una fecha no retrocede respecto a la de cierre anterior salvo que el texto narre un recuerdo, y que el texto manda sobre el plan cuando se contradicen | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-94 | **El Contable ve el marco de las escenas y nada más del plan** | «No ve el plan» era para que transcribiese lo que pasó y no lo que se planeó: un objetivo o una revelación del plan que el texto no cumple no debe acabar en el log. La fecha y el lugar son otra cosa: son el decorado que el Planificador fijó y el Redactor escribió, rara vez se repiten en la prosa, y sin ellos la única alternativa es inventar. Por eso entra solo `marco`, y no el objetivo, el elenco ni lo revelado. La fecha de cierre anterior la escribió el propio Contable, así que no es información nueva, solo memoria que el estado en N-1 no guardaba. Que el texto mande sobre el plan conserva lo que D-05 quería: el Contable calcula y escribe, y el Verificador compara |
+
+**Qué queda fuera.** Que el backend corrija o rellene fechas: la fecha sigue
+siendo del Contable y la cronología sigue derivándose de lo que él escribió
+(D-27). Que el Planificador reciba lo que Lean encontró: lo sigue dejando fuera
+§4.16.
+
+**De dónde sale.** RF-25, RF-40, RF-85; D-05, D-27; §4.16; la obra
+`obr_7a0f5152`, que con Lean instalado falla 74 veces la cronología por fechas
+del Contable sin ancla.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md` §3, lo
+que ve el Contable de estado; `validators.md` §8, el método de RF-210.
 
 ## §5 Requisitos de datos
 
@@ -1433,6 +1484,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.21 El juez de la novela y los briefs de prueba, RD-34, RD-35, RNF-12, RNF-13 | `validators.md` §5, §7 y §9; RF-01, RF-100 a RF-102, RF-156; D-03, D-08; RNF-01 |
 | §4.22 El listado de obras, RI-20 | SPEC2 §12; RF-04, RF-110, RF-116, RF-137, RF-177; RI-02, RI-17 |
 | §4.23 Lo que la puerta del esquema da por presente | RF-23, RF-141, RF-181; D-32, D-59 |
+| §4.24 El Contable fecha dentro del marco del plan | §4.16; RF-25, RF-40, RF-85; D-05, D-27 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1532,9 +1584,16 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    `terminada` y la misma, al publicarse, `publicada`; y la ficha de cada una
    dice la misma situación que el listado.
 18. **La puerta del esquema.** Sin gastar: un `EventoEstado` sin `capitulo` en el
-   cuerpo pero con capítulo en su envoltorio no falla; uno sin él en ninguno de
-   los dos sí; un `transcurre_tiempo` sin `objeto` no falla y un `viaja_a` sin
-   `sujeto` sí. Y la obra `obr_7a0f5152`, sin tocar un dato, pasa la puerta.
+   cuerpo pero con capítulo en su envoltorio no falla; un `transcurre_tiempo`
+   sin `objeto` no falla y uno sin `sujeto` sí. `plegar` y `destilar` llevan
+   `validar_capitulo`, y ese hook devuelve un evento sin `fecha_resultante`. En
+   la obra `obr_7a0f5152`, sin tocar un dato, los fallos de la puerta pasan de 38
+   a los 14 de verdad.
+19. **El marco temporal del Contable.** Sin gastar: la ventana de `plegar` del
+   capítulo 1 lleva la época, ninguna fecha de cierre anterior y el marco de
+   cada escena del capítulo en su orden, sin su objetivo ni su elenco; la del
+   capítulo 2 lleva como fecha de cierre anterior la más tardía que el Contable
+   escribió en el 1.
 
 ## §11 Fuera del alcance de v1
 
