@@ -255,3 +255,70 @@ details[open] > .pegado__resumen {
   font-size: 0.85rem;
   color: var(--tinta-suave);
 }
+
+/* --- Aspecto de presentación ---------------------------------------------- */
+
+.encargo {
+  max-width: 80rem;
+}
+
+.encargo__cabecera {
+  margin-bottom: var(--espacio-6);
+  max-width: 46rem;
+}
+
+.encargo__antetitulo {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--acento-tinta);
+}
+
+.encargo .encargo__titulo {
+  margin: var(--espacio-1) 0 var(--espacio-2);
+  font-family: var(--letra-titulos);
+  font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+  font-weight: 600;
+}
+
+.encargo__entradilla {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--tinta-suave);
+}
+
+.encargo .conversacion,
+.encargo .ficha__grupo,
+.encargo .resultado {
+  border-radius: var(--radio-grande);
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  box-shadow: var(--sombra-1);
+}
+
+.encargo .conversacion {
+  padding: var(--espacio-5);
+}
+
+.encargo .ficha__grupo {
+  padding: var(--espacio-4) var(--espacio-5) var(--espacio-5);
+}
+
+.encargo .ficha__grupo legend {
+  padding: 0 var(--espacio-2);
+  font-family: var(--letra-titulos);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* El nombre interno de cada campo no le dice nada a quien encarga. */
+.encargo .ficha .ruta {
+  display: none;
+}
+
+.encargo textarea,
+.encargo input {
+  border-radius: 12px;
+}

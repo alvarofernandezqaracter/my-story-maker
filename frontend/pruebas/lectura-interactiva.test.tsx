@@ -124,38 +124,21 @@ describe("leer una versión (SPEC2 RF-72) y descargarla (RF-77)", () => {
   });
 });
 
-describe("las críticas de un capítulo (SPEC2 RF-75)", () => {
-  it("se piden al pulsar, del capítulo y la versión leída, y salen tal como vienen", async () => {
-    const usuario = userEvent.setup();
+describe("la lectura no enseña críticas ni defectos", () => {
+  it("ni botón de críticas ni aviso en un capítulo marcado, y no las pide", async () => {
     const pedidas: string[] = [];
     servidor.use(
       http.get(`${API}/obras/:id/criticas`, ({ request }) => {
         pedidas.push(new URL(request.url).search);
-        return HttpResponse.json([
-          {
-            id: "cri_9",
-            capitulo: 2,
-            escena: "e1",
-            estado: "abierta",
-            severidad: "bloqueante",
-            dimension: "coherencia_temporal",
-            detectada_por: "verificador_de_continuidad",
-            evidencia: "«llegó antes de salir»",
-            accion_sugerida: "Retrasar la llegada",
-          },
-        ]);
+        return HttpResponse.json([]);
       }),
     );
     montar();
     const segundo = (await screen.findAllByRole("article"))[1]!;
+    expect(within(segundo).queryByRole("button", { name: /críticas/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/defectos/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/críticas abiertas/i)).not.toBeInTheDocument();
     expect(pedidas).toEqual([]);
-    await usuario.click(within(segundo).getByRole("button", { name: "Ver críticas" }));
-    const lista = await within(segundo).findByRole("list", { name: "Críticas del capítulo 2" });
-    expect(lista).toHaveTextContent("coherencia_temporal");
-    expect(lista).toHaveTextContent("bloqueante");
-    expect(lista).toHaveTextContent("«llegó antes de salir»");
-    expect(lista).toHaveTextContent("Retrasar la llegada");
-    expect(pedidas).toEqual(["?capitulo=2&version=1"]);
   });
 });
 

@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import type { ObraDelTaller } from "../../compartido/api/tipos";
+import { Libro } from "../../compartido/componentes/Libro";
 import { ETIQUETA_DE_SITUACION } from "../../compartido/situacion";
 
 // Una obra en el taller (SPEC2 RF-81). Todo sale tal cual del listado: la
@@ -15,16 +16,18 @@ export function TarjetaDeObra({ obra }: { obra: ObraDelTaller }) {
       data-situacion={obra.situacion}
       aria-label={`${obra.titulo}, ${ETIQUETA_DE_SITUACION[obra.situacion]}`}
     >
-      <span className="situacion" data-situacion={obra.situacion}>
-        {ETIQUETA_DE_SITUACION[obra.situacion]}
+      <span className="tarjeta-de-obra__cabeza">
+        <Libro titulo={obra.titulo} tamano="mini" />
+        <span className="tarjeta-de-obra__identidad">
+          <strong className="tarjeta-de-obra__titulo">{obra.titulo}</strong>
+          <span className="tarjeta-de-obra__epoca">{obra.epoca}</span>
+          {obra.destinatario && <span className="tarjeta-de-obra__para">Para {obra.destinatario}</span>}
+        </span>
       </span>
-      <strong className="tarjeta-de-obra__titulo">{obra.titulo}</strong>
-      <span className="tarjeta-de-obra__epoca">{obra.epoca}</span>
-      {obra.destinatario && <span className="tarjeta-de-obra__para">Para {obra.destinatario}</span>}
 
       <span className="tarjeta-de-obra__progreso">
         <span className="tarjeta-de-obra__fila">
-          <span>Capítulos cerrados</span>
+          <span>Capítulos</span>
           <span>
             {cerrados} / {objetivo}
           </span>
@@ -44,14 +47,11 @@ export function TarjetaDeObra({ obra }: { obra: ObraDelTaller }) {
       {obra.situacion === "detenida" && obra.motivo_de_la_detencion && (
         <span className="tarjeta-de-obra__alerta">{obra.motivo_de_la_detencion}</span>
       )}
-      {(obra.capitulos_marcados > 0 || obra.criticas_abiertas > 0) && (
-        <span className="tarjeta-de-obra__aviso">
-          {obra.capitulos_marcados} marcados · {obra.criticas_abiertas} críticas abiertas
-        </span>
-      )}
 
       <span className="tarjeta-de-obra__pie">
-        <span className="ruta">{obra.id_obra}</span>
+        <span className="situacion" data-situacion={obra.situacion}>
+          {ETIQUETA_DE_SITUACION[obra.situacion]}
+        </span>
         <span>
           v{obra.version_en_curso}
           {obra.version_publicada !== null && ` · publicada la v${obra.version_publicada}`}

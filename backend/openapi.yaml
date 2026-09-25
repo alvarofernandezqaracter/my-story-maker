@@ -1583,6 +1583,11 @@ components:
           - type: 'null'
           title: Dedicatoria
           description: La dedicatoria tal como viene en el brief (RF-177)
+        epoca:
+          type: string
+          title: Epoca
+          description: Epoca y ambito geografico, tal como vienen en el brief
+          default: ''
       type: object
       required:
       - id_obra
@@ -1788,6 +1793,7 @@ components:
           type: string
           title: Epoca
           description: Epoca y ambito geografico, tal como vienen en el brief
+          default: ''
         capitulos_objetivo:
           type: integer
           title: Capitulos Objetivo
@@ -1808,7 +1814,6 @@ components:
       - criticas_abiertas
       - version_en_curso
       - version_publicada
-      - epoca
       - capitulos_objetivo
       - creada_en
       title: ObraDelTaller
