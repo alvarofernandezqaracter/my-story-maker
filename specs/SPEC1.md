@@ -1,9 +1,9 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.12.0
+version: 1.13.0
 estado: aplicada
-fecha: 2026-09-24
+fecha: 2026-09-25
 ambito: backend/
 base:
   - AGENTS.md
@@ -1306,6 +1306,42 @@ del Contable sin ancla.
 **Documentos que hay que poner al día en la fase 3.** `architecture.md` §3, lo
 que ve el Contable de estado; `validators.md` §8, el método de RF-210.
 
+### 4.25 Lo que el ejecutor lee de lo que entrega un agente
+
+**El problema.** Al rehacer `obr_7a0f5152` desde el capítulo 1, la obra se
+detuvo antes de escribir una línea: el Planificador entregó dos veces un JSON
+entre vallas de código que el ejecutor no leyó. No era mala suerte: en las
+trazas de esa obra hay 44 intentos fallidos, y la mayoría no son de contenido.
+Unos 25 son un tipo con tilde —`Crítica`, `Decisión`—, que la tabla de
+gobierno no reconoce porque los tipos del almacén se escriben sin tilde. Unos 12 son JSON entregado entre vallas con
+texto delante o detrás —«No tengo acceso a búsqueda web; registro la
+limitación: …»—, que `leer_entrega` solo aceptaba si la respuesta *empezaba*
+por la valla y *terminaba* en ella. Cada uno es un intento gastado en algo que
+el backend podía leer, y dos seguidos detienen la obra.
+
+**La decisión, en una frase.** El ejecutor lee el objeto JSON donde el agente
+lo haya puesto y reconoce el tipo escrito con tildes; lo que no sea JSON sigue
+siendo un intento fallido.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-211 | **El objeto, donde esté.** `leer_entrega` prueba, por este orden, la respuesta entera; el contenido del primer bloque entre vallas de código, esté donde esté en la respuesta; y el tramo que va de la primera llave de apertura a la última de cierre. Vale el primero que sea un objeto JSON, y el texto alrededor no va a ninguna parte. Si ninguno lo es, el fallo dice el principio y el final de la respuesta y dónde se rompió el JSON, para que una respuesta cortada se distinga de una mal escrita. El hook y el ejecutor siguen usando la misma función (RF-126) | `prueba` |
+| RF-212 | **El tipo, sin tildes.** `leer_entrega` lee el `tipo` de cada artefacto sin tildes: ningún tipo del almacén lleva, así que `Crítica` solo puede querer decir `Critica`. Como lo hace la misma función, el hook y el ejecutor lo leen igual (RF-126). Solo se toca el envoltorio: el cuerpo se guarda como vino (RF-23). Un tipo que ni así existe sigue fallando como hasta ahora, y la tabla de gobierno sigue decidiendo quién escribe qué | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-95 | **Se lee con más tolerancia la forma, no el contenido** | La instrucción común ya pide JSON sin texto alrededor y sin vallas, y los agentes la incumplen de las dos maneras de siempre. Rechazar lo que se puede leer no enseña nada al agente, porque el reintento es otro agente sin memoria del anterior: solo gasta un intento y acerca la detención. Lo que se tolera es exactamente lo que no cambia el significado: dónde está el objeto y una tilde en un nombre de tipo. Un JSON roto, un tipo inventado o un rol que escribe lo que no le toca siguen fallando |
+
+**Qué queda fuera.** Reparar JSON mal formado —comillas sin escapar, una
+respuesta cortada—: eso sí cambiaría lo que se guarda. Normalizar otros campos
+del envoltorio.
+
+**De dónde sale.** RF-23, RF-126; la versión 2 de `obr_7a0f5152`,
+detenida en el Planificador del capítulo 1, y las 44 trazas fallidas de la 1.
+
+**Documentos que hay que poner al día en la fase 3.** `architecture.md` §4, el
+ejecutor de subagentes; `validators.md` §8, los métodos de RF-211 y RF-212.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -1485,6 +1521,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.22 El listado de obras, RI-20 | SPEC2 §12; RF-04, RF-110, RF-116, RF-137, RF-177; RI-02, RI-17 |
 | §4.23 Lo que la puerta del esquema da por presente | RF-23, RF-141, RF-181; D-32, D-59 |
 | §4.24 El Contable fecha dentro del marco del plan | §4.16; RF-25, RF-40, RF-85; D-05, D-27 |
+| §4.25 Lo que el ejecutor lee de lo que entrega un agente | RF-23, RF-126 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1594,6 +1631,10 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    cada escena del capítulo en su orden, sin su objetivo ni su elenco; la del
    capítulo 2 lleva como fecha de cierre anterior la más tardía que el Contable
    escribió en el 1.
+20. **La lectura de lo entregado.** Sin gastar: un objeto JSON entre vallas con
+   texto delante y detrás se lee; uno sin vallas con texto alrededor, también;
+   uno cortado falla diciendo dónde se rompió. Una `Crítica` con tilde se guarda
+   como `Critica`, y un tipo que no existe sigue fallando.
 
 ## §11 Fuera del alcance de v1
 

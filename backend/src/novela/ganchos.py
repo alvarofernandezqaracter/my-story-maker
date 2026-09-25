@@ -77,20 +77,64 @@ class EntregaIlegible(ValueError):
     """Lo que el agente entrego no es un objeto JSON."""
 
 
-def leer_entrega(texto: str) -> Entrega:
-    """El agente devuelve JSON; a veces lo envuelve en vallas de codigo."""
+VALLA = "```"
+
+
+def _candidatos(texto: str) -> list[str]:
+    """Donde puede estar el objeto, por orden (SPEC1 RF-211): la respuesta
+    entera, el primer bloque entre vallas y de la primera llave a la ultima."""
     limpio = texto.strip()
-    if limpio.startswith("```"):
-        limpio = limpio.split("\n", 1)[-1]
-        if limpio.rstrip().endswith("```"):
-            limpio = limpio.rstrip()[: -len("```")]
-    try:
-        devuelto = json.loads(limpio)
-    except json.JSONDecodeError as error:
-        raise EntregaIlegible(f"el agente no devolvio JSON: {texto[:200]!r}") from error
-    if not isinstance(devuelto, dict):
+    candidatos = [limpio]
+    apertura = limpio.find(VALLA)
+    if apertura != -1:
+        dentro = limpio[apertura + len(VALLA) :].split("\n", 1)[-1]
+        cierre = dentro.find(VALLA)
+        candidatos.append(dentro if cierre == -1 else dentro[:cierre])
+    primera, ultima = limpio.find("{"), limpio.rfind("}")
+    if primera != -1 and ultima > primera:
+        candidatos.append(limpio[primera : ultima + 1])
+    return candidatos
+
+
+def _sin_tildes(texto: str) -> str:
+    descompuesto = unicodedata.normalize("NFKD", texto)
+    return "".join(letra for letra in descompuesto if not unicodedata.combining(letra))
+
+
+def _tipos_sin_tildes(entrega: Entrega) -> Entrega:
+    """`Crítica` se lee `Critica`: ningun tipo del almacen lleva tilde (SPEC1
+    RF-212). Solo el envoltorio; el cuerpo queda como vino."""
+    artefactos = entrega.get("artefactos")
+    if not isinstance(artefactos, list):
+        return entrega
+    leidos = [
+        artefacto | {"tipo": _sin_tildes(artefacto["tipo"])}
+        if isinstance(artefacto, dict) and isinstance(artefacto.get("tipo"), str)
+        else artefacto
+        for artefacto in artefactos
+    ]
+    return entrega | {"artefactos": leidos}
+
+
+def leer_entrega(texto: str) -> Entrega:
+    """El agente devuelve JSON; a veces lo envuelve en vallas de codigo o le
+    pone texto alrededor. Vale el primer candidato que sea un objeto."""
+    error: json.JSONDecodeError | None = None
+    for candidato in _candidatos(texto):
+        try:
+            devuelto = json.loads(candidato)
+        except json.JSONDecodeError as fallo:
+            error = error or fallo
+            continue
+        if isinstance(devuelto, dict):
+            return _tipos_sin_tildes(devuelto)
+    if error is None:
         raise EntregaIlegible("el agente devolvio JSON que no es un objeto")
-    return devuelto
+    raise EntregaIlegible(
+        f"el agente no devolvio JSON ({error.msg}, caracter {error.pos} de "
+        f"{len(texto.strip())}): empieza {texto.strip()[:160]!r} y acaba "
+        f"{texto.strip()[-160:]!r}"
+    )
 
 
 def _artefactos(entrega: Entrega) -> list[Any]:
