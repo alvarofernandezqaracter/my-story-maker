@@ -1,16 +1,32 @@
-{
-  "tipo": "EventoEstado",
-  "cuerpo": {
-    "tipo_de_evento": "viaja_a",
-    "sujeto": "per_0a91",
-    "objeto": "lug_1182",
-    "capitulo": 3,
-    "fecha_resultante": "1587-04-03",
-    "lugar_resultante": "lug_1182",
-    "presentes": [
-      "per_0a91",
-      "per_44c2"
-    ],
-    "evidencia": "«salio de Sevilla antes del alba»"
+[
+  {
+    "tipo": "EventoEstado",
+    "cuerpo": {
+      "tipo_de_evento": "viaja_a",
+      "sujeto": "per_0a91",
+      "objeto": "lug_1182",
+      "capitulo": 3,
+      "fecha_resultante": "1587-04-03",
+      "lugar_resultante": "lug_1182",
+      "presentes": [
+        "per_0a91",
+        "per_44c2"
+      ],
+      "evidencia": "«salio de Sevilla antes del alba»"
+    }
+  },
+  {
+    "tipo": "EventoEstado",
+    "cuerpo": {
+      "tipo_de_evento": "transcurre_tiempo",
+      "sujeto": "per_0a91",
+      "capitulo": 3,
+      "fecha_resultante": "1587-05",
+      "lugar_resultante": "lug_1182",
+      "presentes": [
+        "per_0a91"
+      ],
+      "evidencia": "«pasaron las semanas de la cuaresma»"
+    }
   }
-}
+]

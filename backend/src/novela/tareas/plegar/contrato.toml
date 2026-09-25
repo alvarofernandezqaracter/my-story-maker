@@ -13,8 +13,13 @@ cuando = "Al pasar de Aceptado a Cerrado"
 herramientas = []
 
 # Que ve y que no ve (architecture.md 3).
-entrada = ["estado_en_n_menos_1", "texto_aceptado_del_capitulo", "vocabulario_de_eventos"]
-no_ve = ["el plan", "las criticas", "el canon completo"]
+entrada = [
+    "estado_en_n_menos_1",
+    "texto_aceptado_del_capitulo",
+    "vocabulario_de_eventos",
+    "marco_temporal_del_capitulo",
+]
+no_ve = ["el plan salvo el marco de sus escenas", "las criticas", "el canon completo"]
 
 # Que deja escrito. Lo que no este aqui, el backend no se lo deja escribir.
 escribe = ["EventoEstado", "Decision"]

@@ -27,6 +27,7 @@ from novela.nucleo import guion
 from novela.nucleo.caminante import Resultado
 from novela.nucleo.guion import Encargo, GuionInvalido
 from novela.nucleo.proyecciones import Ventana
+from novela.tareas import esquema_de_tarea, prompt_de_tarea
 from novela.vocabularios import VALIDADOR_DE_LA_PUERTA
 
 # --- Cada validador, un caso que pasa y otro que falla ------------------------
@@ -63,6 +64,33 @@ def test_el_esquema_de_una_tarea() -> None:
     ]
     assert validadores.campos_que_faltan(lista, "Mencion", {"hecho": "per_1"}) == ["capitulo"]
     assert validadores.campos_que_faltan(esquema, "Parrafo", {}) is None
+
+
+def test_obligatorio_es_lo_que_traen_todos_los_ejemplos_de_su_tipo() -> None:
+    """SPEC1 RF-208: con dos formas de un tipo, lo que falta en una es opcional."""
+    con_objeto = {"tipo": "EventoEstado", "cuerpo": {"sujeto": "", "objeto": "", "capitulo": 1}}
+    sin_objeto = {"tipo": "EventoEstado", "cuerpo": {"sujeto": "", "capitulo": 1}}
+    dos = [con_objeto, sin_objeto]
+    assert validadores.campos_por_tipo(dos) == {"EventoEstado": {"sujeto", "capitulo"}}
+    completo = {"sujeto": "p", "capitulo": 2}
+    assert validadores.campos_que_faltan(dos, "EventoEstado", completo) == []
+    sin_sujeto = {"objeto": "l", "capitulo": 2}
+    assert validadores.campos_que_faltan(dos, "EventoEstado", sin_sujeto) == ["sujeto"]
+    # Con un solo ejemplo no cambia nada: todo lo suyo es obligatorio.
+    assert validadores.campos_que_faltan(con_objeto, "EventoEstado", {"sujeto": "p"}) == [
+        "capitulo",
+        "objeto",
+    ]
+
+
+def test_el_contable_declara_un_evento_con_objeto_y_otro_sin_el() -> None:
+    """SPEC1 RF-208: `objeto` es opcional en `plegar`; lo demas sigue obligatorio."""
+    esquema = json.loads(esquema_de_tarea("plegar"))
+    obligatorios = validadores.campos_por_tipo(esquema)["EventoEstado"]
+    assert "objeto" not in obligatorios
+    assert {"tipo_de_evento", "sujeto", "capitulo", "fecha_resultante", "lugar_resultante",
+            "presentes", "evidencia"} <= obligatorios
+    assert "objeto" in prompt_de_tarea("plegar")
 
 
 NOMBRES = ("Ines de Salcedo", "Pedro", "Sevilla", "Marta")
@@ -226,6 +254,21 @@ class EjecutorDeLaPuerta:
                     capitulo=evento.capitulo,
                 )
             )
+        ligero = self.defecto in ("evento_ligero", "sin_sujeto")
+        if encargo.tarea == "plegar" and aqui and ligero:
+            for evento in resultado.artefactos:
+                if evento.tipo != "EventoEstado":
+                    continue
+                if self.defecto == "evento_ligero":
+                    # Lo que dejo el Contable en la obra de diez capitulos: sin
+                    # el capitulo en el cuerpo, que ya lo pone el backend, y un
+                    # paso del tiempo sin objeto, que no lo tiene (SPEC1 4.23).
+                    quitar = ("capitulo", "objeto")
+                    evento.cuerpo = {
+                        k: v for k, v in evento.cuerpo.items() if k not in quitar
+                    } | {"tipo_de_evento": "transcurre_tiempo"}
+                else:
+                    evento.cuerpo = {k: v for k, v in evento.cuerpo.items() if k != "sujeto"}
         if self.defecto == "elementos_personalizados" and encargo.tarea == "destilar":
             nala = [
                 fila["id"]
@@ -294,6 +337,30 @@ def test_una_version_con_un_fallo_no_se_publica_y_dice_cual_y_donde(
         assert cliente.get(f"/obras/{id_obra}").json()["version_publicada"] is None
         servida = cliente.get(f"/obras/{id_obra}/versiones/1/puerta").json()
         assert servida == cuerpo["puerta"]
+
+
+def test_el_capitulo_del_backend_y_un_evento_sin_objeto_pasan_la_puerta(tmp_path: Path) -> None:
+    """SPEC1 RF-207 y RF-208: ni el capitulo que pone el backend ni un objeto que
+    el evento no tiene cuentan como campos que faltan."""
+    for cliente in _cliente(tmp_path, EjecutorDeLaPuerta(defecto="evento_ligero")):
+        id_obra = _obra_terminada(cliente)
+        almacen = cliente.app.state.produccion.almacen  # type: ignore[attr-defined]
+        eventos = [
+            a for a in almacen.salidas_de_rol_de_la_version(id_obra, 1)
+            if a.tipo == "EventoEstado" and a.capitulo == 2
+        ]
+        assert eventos and all("capitulo" not in e.cuerpo for e in eventos)
+        assert all("objeto" not in e.cuerpo for e in eventos)
+        puerta = cliente.get(f"/obras/{id_obra}/versiones/1/puerta").json()
+        assert (puerta["pasa"], puerta["fallos"]) == (True, [])
+
+
+def test_un_evento_sin_sujeto_sigue_fallando_el_esquema(tmp_path: Path) -> None:
+    for cliente in _cliente(tmp_path, EjecutorDeLaPuerta(defecto="sin_sujeto")):
+        id_obra = _obra_terminada(cliente)
+        fallos = cliente.get(f"/obras/{id_obra}/versiones/1/puerta").json()["fallos"]
+        assert fallos and {(f["validador"], f["capitulo"]) for f in fallos} == {("esquema", 2)}
+        assert all("`sujeto`" in f["detalle"] for f in fallos)
 
 
 def test_el_nombre_del_destinatario_tiene_que_aparecer(tmp_path: Path) -> None:

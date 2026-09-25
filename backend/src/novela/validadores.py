@@ -42,10 +42,12 @@ def longitud_fuera_de_rango(total: int, minimo: int, maximo: int) -> str | None:
 
 
 def campos_por_tipo(esquema: Any) -> dict[str, set[str]]:
-    """Que campos declara el esquema de una tarea para cada tipo que escribe.
+    """Que campos obligatorios declara el esquema de una tarea para cada tipo.
 
     El `esquema.json` es un ejemplo del artefacto, o una lista de ejemplos
-    cuando la tarea escribe mas de un tipo.
+    cuando la tarea escribe mas de un tipo o mas de una forma de un tipo.
+    Obligatorio es lo que traen todos los ejemplos de su tipo; lo que falta en
+    alguno es opcional (SPEC1 RF-208). Con un solo ejemplo, todo lo suyo.
     """
     ejemplos = esquema if isinstance(esquema, list) else [esquema]
     campos: dict[str, set[str]] = {}
@@ -53,9 +55,9 @@ def campos_por_tipo(esquema: Any) -> dict[str, set[str]]:
         if not isinstance(ejemplo, dict) or not isinstance(ejemplo.get("tipo"), str):
             continue
         cuerpo = ejemplo.get("cuerpo")
-        campos.setdefault(ejemplo["tipo"], set()).update(
-            cuerpo if isinstance(cuerpo, dict) else ()
-        )
+        suyos = set(cuerpo) if isinstance(cuerpo, dict) else set()
+        tipo = ejemplo["tipo"]
+        campos[tipo] = campos[tipo] & suyos if tipo in campos else suyos
     return campos
 
 
