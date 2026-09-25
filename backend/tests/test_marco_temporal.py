@@ -112,6 +112,25 @@ def test_el_planificador_recibe_la_epoca_y_la_fecha_de_cierre(almacen: Almacen) 
     assert "no es anterior a la `fecha_de_cierre_anterior`" in prompt
 
 
+def test_el_contable_recibe_el_reparto_y_los_lugares_con_su_id(almacen: Almacen) -> None:
+    """RF-218: el Contable se inventaba un `id` por capitulo para la misma persona."""
+    id_obra = almacen.crear_obra({"titulo": "T", "epoca": "Salamanca, 1584"})
+    [ines] = almacen.guardar([Artefacto("Personaje", {"nombre": "Ines", "licencia": "plausible",
+                                                     "voz": {"muletillas": ["a fe mia"]}},
+                                        id_obra=id_obra)])
+    [taller] = almacen.guardar([Artefacto("Lugar", {"nombre": "El taller",
+                                                   "descripcion": "largo"}, id_obra=id_obra)])
+    encargo = guion.expandir(guion.paso(9), id_obra=id_obra, capitulo=1, escenas=())[0]
+
+    reparto = ensamblar(almacen, encargo).materiales["reparto_y_lugares"]
+
+    assert reparto == {"personajes": [{"id": ines, "nombre": "Ines"}],
+                       "lugares": [{"id": taller, "nombre": "El taller"}]}
+    prompt = prompt_de_tarea("plegar")
+    assert "no los inventas" in prompt
+    assert "escribes su `viaja_a`" in prompt
+
+
 def test_el_prompt_del_contable_dice_de_donde_sale_el_ano() -> None:
     prompt = prompt_de_tarea("plegar")
     assert "marco temporal" in prompt
