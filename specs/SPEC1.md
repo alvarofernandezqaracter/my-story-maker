@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.11.0
+version: 1.12.0
 estado: aplicada
 fecha: 2026-09-24
 ambito: backend/
@@ -721,7 +721,7 @@ dice qué falló y en qué capítulo. El de nombres va además en el hook
 | ID | Requisito | Verificación |
 | --- | --- | --- |
 | RF-140 | Los cuatro validadores viven en `novela/validadores.py`: funciones puras que reciben lo ya leído y devuelven lo que falla. No abren la base de datos, no escriben en disco y no llaman a ningún modelo. Cada fallo de la puerta dice qué validador lo da —vocabulario cerrado `validador_de_la_puerta`: `esquema`, `nombres`, `longitud`, `elementos_personalizados`—, en qué capítulo está, vacío si no es de ninguno, y un detalle legible | `prueba` |
-| RF-141 | **Esquema.** Todo artefacto que ve la versión (RF-113), escrito por un rol y cuyo tipo declara el `esquema.json` de la tarea de ese rol, trae en su cuerpo todos los campos que ese esquema declara para su tipo. El fallo nombra el artefacto, su tipo y los campos que le faltan. Lo que escribe el backend —la `Traza`, las críticas de RF-23 y RF-99— no es salida de un rol y no se mira | `prueba` |
+| RF-141 | **Esquema.** Todo artefacto que ve la versión (RF-113), escrito por un rol y cuyo tipo declara el `esquema.json` de la tarea de ese rol, trae en su cuerpo todos los campos que ese esquema declara para su tipo. El fallo nombra el artefacto, su tipo y los campos que le faltan. Lo que escribe el backend —la `Traza`, las críticas de RF-23 y RF-99— no es salida de un rol y no se mira. Qué cuenta como presente y qué campo es obligatorio lo precisan RF-207 y RF-208 | `prueba` |
 | RF-142 | **Nombres.** Los nombres de la biblia son el del destinatario y el `nombre` y los `tratamientos` de cada `Personaje`, `Lugar`, `Objeto` y `Faccion`. En el texto de cada `Borrador` y cada `Parrafo`, una palabra que empieza por mayúscula, no es ninguna palabra de esos nombres y se parece a una —solo cambian acentos o mayúsculas; o, en un nombre de cinco letras o más, cambia una sola letra; o, en uno de siete o más, sobra o falta una— es un nombre mal escrito, salvo que la misma palabra aparezca también en minúscula en ese texto, que es lo que delata una palabra corriente. El fallo dice lo escrito y el nombre de la biblia. En la puerta, además, el nombre del destinatario aparece tal cual en algún capítulo | `prueba` |
 | RF-143 | **Longitud.** `guion.toml` declara en `[capitulo]` `palabras_minimas` y `palabras_maximas`, iguales para todas las obras: 1 000 y 4 000. Si faltan, no son enteros positivos o el mínimo pasa del máximo, el guion no carga. Cada capítulo de la versión, contado sobre su texto aceptado, cae dentro del rango; un capítulo sin texto tiene cero palabras | `prueba` |
 | RF-144 | **Elementos personalizados.** Todo hecho de la biblia de la versión con licencia `personal` tiene al menos una `Mencion` en un capítulo de la versión: los capítulos en que se usa (RF-84) no están vacíos. El fallo nombra el hecho | `prueba` |
@@ -1216,6 +1216,45 @@ RF-116, RF-137 y RF-177; RI-02 y RI-17.
 vocabulario `situacion_de_la_obra` junto al resto de vocabularios de proceso, y
 §7, el listado en el borde. `validators.md`: §8, los métodos de RF-204 a RF-206.
 
+### 4.23 Lo que la puerta del esquema da por presente
+
+**El problema.** La primera obra de diez capítulos terminó entera y la puerta no
+la dejó publicar: 38 fallos de `esquema`, todos en `EventoEstado` del Contable
+de estado, sin un solo defecto de texto. Eran dos defectos del backend, no de la
+novela. **El capítulo**: RF-181 dice que en un encargo de capítulo el capítulo
+lo pone el backend, diga lo que diga el JSON del rol, y el caminante lo guarda
+en la columna del artefacto; pero RF-141 miraba solo el cuerpo, así que un
+evento bien situado fallaba porque el rol no repitió en su JSON lo que el
+backend ya sabía. **El `objeto`**: el `esquema.json` de `plegar` es un único
+ejemplo, un `viaja_a`, y RF-141 exigía sus campos a todo `EventoEstado`; pero un
+`transcurre_tiempo` o un `muere` no tienen objeto, y un evento correcto fallaba
+por no inventárselo.
+
+**La decisión, en una frase.** La puerta del esquema da por presente el
+capítulo que puso el backend, y un campo es obligatorio solo si aparece en todos
+los ejemplos que el `esquema.json` da de su tipo; `plegar` declara dos formas de
+evento, una con objeto y otra sin él.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-207 | **El capítulo del backend cuenta.** Si el artefacto tiene capítulo en su envoltorio —el que puso el backend por RF-181, o el que se respetó del rol—, RF-141 lo da por presente aunque el cuerpo no lo repita. Nada se reescribe: el cuerpo se guarda como vino (RF-23, D-32) y la comprobación mira el cuerpo con el envoltorio al lado. Así la regla vale también para lo ya escrito, sin migrar nada | `prueba` |
+| RF-208 | **Obligatorio es lo que traen todos los ejemplos de su tipo.** Cuando el `esquema.json` de una tarea da más de un ejemplo del mismo tipo, es obligatorio el campo que aparece en todos ellos, y opcional el que falta en alguno. Con un solo ejemplo no cambia nada. El de `plegar` da dos `EventoEstado`: un `viaja_a` con `objeto` y un `transcurre_tiempo` sin él, así que `objeto` es opcional y los demás campos siguen obligatorios. El prompt del Contable dice que el `objeto` se escribe cuando el evento lo tiene | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-91 | **Se arregla la comprobación, no los datos** | Los eventos estaban bien: lo que fallaba era mirar solo la mitad de lo que el backend sabe del artefacto, y exigir un campo que el tipo de evento no tiene. Reescribir cuerpos rompería la inmutabilidad (RF-23, D-32), y rehacer la obra entera para que un agente repitiera un número que el backend ya tenía sería gastar horas en nada. Como la comprobación se deriva cada vez (D-59), la misma versión pasa en cuanto la regla es la correcta |
+| D-92 | **La opcionalidad sale de los ejemplos del esquema, no de una lista por tipo de evento** | El esquema es el formato que ve el rol y la vara de la puerta a la vez, y así sigue: un ejemplo más enseña al Contable que un `transcurre_tiempo` no lleva objeto y le dice lo mismo a la puerta. Una tabla aparte de campos por `tipo_de_evento` sería una segunda verdad que el rol no ve. Qué objeto le toca a cada tipo lo sigue mirando el Verificador de continuidad, que es quien lee el texto |
+
+**Qué queda fuera.** Que el backend escriba el capítulo dentro del cuerpo: el
+cuerpo es del rol y no se toca. Comprobar el tipo o el valor de cada campo: la
+puerta del esquema mira presencia, como hasta ahora.
+
+**De dónde sale.** RF-23, RF-141, RF-181; D-32, D-59; la obra `obr_7a0f5152`,
+terminada con 38 fallos de `esquema` y ninguno de texto.
+
+**Documentos que hay que poner al día en la fase 3.** `validators.md` §7 (la
+puerta de publicación) y §8, los métodos de RF-207 y RF-208.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -1393,6 +1432,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.19 Dónde va un artefacto y el testigo del Planificador | `architecture.md` §4 (ciclo de vida del capítulo); §4.17 (el modelo); RF-23, RF-35, RF-90, RF-92, RF-97, RF-98; D-30, D-34 |
 | §4.21 El juez de la novela y los briefs de prueba, RD-34, RD-35, RNF-12, RNF-13 | `validators.md` §5, §7 y §9; RF-01, RF-100 a RF-102, RF-156; D-03, D-08; RNF-01 |
 | §4.22 El listado de obras, RI-20 | SPEC2 §12; RF-04, RF-110, RF-116, RF-137, RF-177; RI-02, RI-17 |
+| §4.23 Lo que la puerta del esquema da por presente | RF-23, RF-141, RF-181; D-32, D-59 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1491,6 +1531,10 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
    sale `en_produccion`, una detenida `detenida`, una terminada sin publicar
    `terminada` y la misma, al publicarse, `publicada`; y la ficha de cada una
    dice la misma situación que el listado.
+18. **La puerta del esquema.** Sin gastar: un `EventoEstado` sin `capitulo` en el
+   cuerpo pero con capítulo en su envoltorio no falla; uno sin él en ninguno de
+   los dos sí; un `transcurre_tiempo` sin `objeto` no falla y un `viaja_a` sin
+   `sujeto` sí. Y la obra `obr_7a0f5152`, sin tocar un dato, pasa la puerta.
 
 ## §11 Fuera del alcance de v1
 
