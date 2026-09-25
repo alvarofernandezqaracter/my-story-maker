@@ -203,15 +203,16 @@ def _elementos_personalizados(
 def sucesos_de_la_cronologia(
     almacen: Almacen, id_obra: str, numero: int
 ) -> list[dict[str, Any]]:
-    """Lo que se vuelca a Lean: la cronologia de la version y quien muere (RF-150).
+    """Lo que se vuelca a Lean: la cronologia de la version, quien muere y quien
+    llega (RF-150, RF-213).
 
-    La vista de RF-86 no dice el sujeto de cada `EventoEstado`; para el suceso
-    `muere` se lee de su cuerpo, tal como lo escribio el Contable. Se copia, no
+    La vista de RF-86 no dice el sujeto de cada `EventoEstado`; para `muere` y
+    `viaja_a` se lee de su cuerpo, tal como lo escribio el Contable. Se copia, no
     se interpreta.
 
     Un cambio del lector deja la misma ficha con dos `id`: el viejo en los
-    capitulos compartidos y el nuevo en los reescritos. Presentes, lugar y quien
-    muere se llevan a la ficha vigente por `sustituye` (RF-177), para que Lean
+    capitulos compartidos y el nuevo en los reescritos. Presentes, lugar, quien
+    muere y quien llega se llevan a la ficha vigente por `sustituye` (RF-177), para que Lean
     no los tome por dos personas o dos lugares.
     """
     sustituidas = almacen.fichas_sustituidas(id_obra, numero)
@@ -230,6 +231,12 @@ def sucesos_de_la_cronologia(
         for evento in almacen.listar("EventoEstado", id_obra, version=numero)
         if evento.cuerpo.get("tipo_de_evento") == "muere"
     }
+    # Quien llega con un `viaja_a` explica estar en dos sitios el mismo dia (RF-213).
+    llegadas = {
+        evento.id: evento.cuerpo.get("sujeto")
+        for evento in almacen.listar("EventoEstado", id_obra, version=numero)
+        if evento.cuerpo.get("tipo_de_evento") == "viaja_a"
+    }
     return [
         suceso
         | {
@@ -239,6 +246,7 @@ def sucesos_de_la_cronologia(
                 for presente in suceso.get("presentes") or []
             ],
             "muere": vigente(muertes.get(suceso["id"])),
+            "llega": vigente(llegadas.get(suceso["id"])),
         }
         for suceso in almacen.cronologia(id_obra, version=numero)
     ]

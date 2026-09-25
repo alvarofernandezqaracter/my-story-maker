@@ -1,10 +1,11 @@
 """El validador formal de la cronologia, con Lean 4 (SPEC1 4.16).
 
 Dos piezas. `volcar` es una funcion pura: traduce la cronologia de una version
-—lo que sirve la vista de RF-86, mas quien muere en cada suceso— a un modulo de
-Lean con los datos y un teorema por invariante y suceso. `DemostradorLean`
-copia el proyecto de `lean/` a un directorio temporal, escribe alli el modulo,
-ejecuta `lake build` y lee de su salida que teoremas no se pudieron demostrar.
+—lo que sirve la vista de RF-86, mas quien muere y quien llega en cada
+suceso— a un modulo de Lean con los datos y un teorema por invariante y
+suceso. `DemostradorLean` copia el proyecto de `lean/` a un directorio
+temporal, escribe alli el modulo, ejecuta `lake build` y lee de su salida que
+teoremas no se pudieron demostrar.
 El directorio se borra al terminar: nada de lo que el sistema produce se queda
 en disco (RD-08, D-62).
 
@@ -42,7 +43,7 @@ _ERROR_EN_EL_MODULO = re.compile(r"Obra\.lean:(\d+):\d+:\s*(.*)")
 _TEOREMA = {
     "orden_temporal": ("orden", "∀ b ∈ cronologia, Precede {s} b"),
     "edad_coherente": ("edad", "EdadCoherente {s}"),
-    "un_solo_lugar": ("lugar", "∀ b ∈ cronologia, UnSoloLugar {s} b"),
+    "un_solo_lugar": ("lugar", "∀ b ∈ cronologia, UnSoloLugar cronologia {s} b"),
     "no_reaparece": ("reaparece", "∀ b ∈ cronologia, NoReaparece {s} b"),
 }
 assert tuple(_TEOREMA) == INVARIANTE_DE_LA_CRONOLOGIA, (
@@ -55,7 +56,10 @@ _EN_PALABRAS = {
     "edad_coherente": (
         "tiene presente a alguien que aun no habia nacido o que pasaria de 120 años"
     ),
-    "un_solo_lugar": "tiene presente a alguien que ese mismo dia esta en otro lugar",
+    "un_solo_lugar": (
+        "tiene presente a alguien que ese mismo dia esta en otro lugar, sin que conste "
+        "que viajase a ninguno de los dos"
+    ),
     "no_reaparece": "deja morir a alguien que vuelve a estar presente despues",
 }
 
@@ -117,14 +121,16 @@ def volcar(sucesos: Sequence[dict[str, Any]]) -> Volcado:
     """Traduce la cronologia a un modulo de Lean (RF-150).
 
     Cada suceso trae lo de la vista de RF-86 —`id`, `capitulo`, `momento`,
-    `lugar` y `presentes`, cada uno con `id` y `nacimiento`— y `muere`, el `id`
-    del personaje que muere en el, si muere alguno. Copia lo escrito: no
+    `lugar` y `presentes`, cada uno con `id` y `nacimiento`—, `muere`, el `id`
+    del personaje que muere en el, si muere alguno, y `llega`, el del que llega
+    con un `viaja_a` (RF-213). Copia lo escrito: no
     calcula edades ni distancias, eso lo demuestra Lean.
     """
     volcado = Volcado(texto="")
     personas = _tabla(
         [p.get("id") for s in sucesos for p in s.get("presentes") or []]
         + [s.get("muere") for s in sucesos]
+        + [s.get("llega") for s in sucesos]
     )
     lugares = _tabla([s.get("lugar") for s in sucesos])
     lineas = [
@@ -159,7 +165,7 @@ def volcar(sucesos: Sequence[dict[str, Any]]) -> Volcado:
         lineas.append(
             f"def {nombre} : Suceso := ⟨{int(suceso.get('capitulo') or 0)}, {momento[0]}, "
             f"{momento[1]}, {lugares.get(suceso.get('lugar'), 0)}, [{', '.join(presentes)}], "
-            f"{personas.get(suceso.get('muere'), 0)}⟩"
+            f"{personas.get(suceso.get('muere'), 0)}, {personas.get(suceso.get('llega'), 0)}⟩"
         )
     lineas.append(f"def cronologia : List Suceso := [{', '.join(nombres)}]")
     lineas.append("")
