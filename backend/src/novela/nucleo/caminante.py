@@ -898,8 +898,17 @@ class Caminante:
     ) -> None:
         """Los permisos se imponen aqui y no en el prompt, y la procedencia la
         pone el backend. Tambien a que capitulo va y en que punto de su ciclo
-        de vida esta: eso no lo decide el rol (RF-181)."""
+        de vida esta: eso no lo decide el rol (RF-181). Y la escena: la del
+        encargo, o una del capitulo, nunca un `id` inventado (RF-216)."""
         del_capitulo = encargo.unidad in UNIDADES_DE_CAPITULO and encargo.capitulo is not None
+        validas: set[str] | None = None
+        if encargo.unidad == "capitulo" and encargo.tarea != "planificar" and del_capitulo:
+            validas = {
+                escena.id
+                for escena in self.almacen.listar(
+                    "Escena", encargo.id_obra, capitulo=encargo.capitulo
+                )
+            }
         for artefacto in resultado.artefactos:
             comprobar_escritura(encargo.rol, artefacto.tipo)
             artefacto.id_obra = artefacto.id_obra or encargo.id_obra
@@ -908,6 +917,10 @@ class Caminante:
             artefacto.procedencia_intento = intento
             if del_capitulo or artefacto.capitulo is None:
                 artefacto.capitulo = encargo.capitulo
+            if encargo.unidad == "escena" and encargo.escena is not None:
+                artefacto.escena = encargo.escena
+            elif validas is not None and artefacto.escena not in validas:
+                artefacto.escena = None
             if artefacto.tipo in ESTADO_DEL_PROCESO:
                 artefacto.estado = None
 
