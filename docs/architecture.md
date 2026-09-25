@@ -301,7 +301,7 @@ Lo que se suele llamar memoria a corto y a largo plazo son aquí tres plazos, y 
 
 | Material | Qué es | Memoria | Política |
 | --- | --- | --- | --- |
-| Canon | Hechos inmutables del mundo y decisiones ya cerradas | Obra | Siempre presente, comprimido, nunca reescrito por el redactor |
+| Canon | Hechos inmutables del mundo y decisiones ya cerradas; no las fuentes, que crecen por capítulo y van en la documentación | Obra | Siempre presente, comprimido, nunca reescrito por el redactor |
 | Estado en N | Dónde está cada quien, qué sabe, qué posee, qué debe | Obra | Derivado, no almacenado: pliegue de los `EventoEstado` hasta N |
 | Compromisos abiertos | Pistas plantadas sin pagar, subtramas vivas, promesas al lector | Obra | Siempre presente; cola ordenada por vencimiento |
 | Continuidad local | Cola literal de los últimos párrafos del capítulo anterior | Obra | Siempre presente en crudo: el estilo se contagia por adyacencia |

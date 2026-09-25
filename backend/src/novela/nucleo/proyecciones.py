@@ -126,11 +126,13 @@ def _canon(p: Peticion) -> Filas:
 
     El `Recuerdo` queda fuera aunque sea de la capa Mundo: no es una ficha, es
     la materia prima con la que el Constructor escribe fichas, y tiene material
-    propio para los dos roles que lo necesitan (RF-16).
+    propio para los dos roles que lo necesitan (RF-16). La `Fuente` tambien:
+    el Documentalista escribe fuentes en cada capitulo y el canon creceria con
+    la obra; quien las necesita las pide por `fuentes_recogidas` (RF-217).
     """
     fichas: Filas = []
     for tipo in TIPOS_DE_LA_CAPA_MUNDO:
-        if tipo == "Recuerdo":
+        if tipo in ("Recuerdo", "Fuente"):
             continue
         fichas += _cuerpos(p.almacen.listar(tipo, p.id_obra))
     return fichas
