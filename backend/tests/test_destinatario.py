@@ -18,7 +18,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from dobles import EjecutorFingido
-from novela.almacen import Almacen
+from novela.almacen import Almacen, Artefacto
 from novela.almacen.artefactos import abrir_almacen
 from novela.almacen.esquema import TABLA_POR_TIPO
 from novela.api.aplicacion import crear_aplicacion
@@ -293,6 +293,24 @@ def test_el_canon_no_arrastra_los_recuerdos(almacen: Almacen) -> None:
 
     assert [ficha for ficha in canon if ficha["tipo"] == "Recuerdo"] == []
     assert [r["texto"] for r in recuerdos] == ["Su perra se llama Nala"]
+
+
+def test_el_canon_no_arrastra_las_fuentes(almacen: Almacen) -> None:
+    """SPEC1 RF-217: las fuentes crecen por capitulo; el canon no."""
+    id_obra = almacen.crear_obra(BRIEF)
+    almacen.guardar([
+        Artefacto("Fuente", {"cita": "Ordenanzas, 1558", "que_afirma": "x"},
+                  id_obra=id_obra, capitulo=3),
+        Artefacto("Practica", {"nombre": "la copia a destajo", "licencia": "plausible"},
+                  id_obra=id_obra),
+    ])
+    peticion = _peticion(almacen, id_obra)
+
+    canon = MATERIALES["canon"](peticion)
+    fuentes = MATERIALES["fuentes_recogidas"](peticion)
+
+    assert [ficha["tipo"] for ficha in canon] == ["Practica"]
+    assert [f["cita"] for f in fuentes] == ["Ordenanzas, 1558"]
 
 
 def test_el_contrato_del_lexico_ve_al_destinatario() -> None:

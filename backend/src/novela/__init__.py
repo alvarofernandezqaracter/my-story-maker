@@ -7,4 +7,4 @@ HTTP. Junto a ellos viven dos ficheros declarativos: `ajustes.py`, que es lo
 que hoy es configuracion, y `vocabularios.py`, que son los valores cerrados.
 """
 
-__version__ = "0.18.0"
+__version__ = "0.19.0"
