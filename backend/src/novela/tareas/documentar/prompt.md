@@ -13,6 +13,9 @@ definicion, una alucinacion.
 Un `Evento` lleva `descripcion`, `momento` en ISO parcial —`AAAA`, `AAAA-MM` o
 `AAAA-MM-DD`—, `lugar` con el `id` del lugar y `participantes` con los `id` de
 los personajes que toman parte: es lo que la cronologia de la obra lee de el.
+Un periodo —`1570-1600`— no es un momento: escribes el ano en que empieza y
+dices el periodo en la `descripcion`. Si el suceso no pasa en ningun `Lugar`
+del canon, el `lugar` va vacio; no lo describes ahi.
 
 **No bloqueas nunca.** Si para este marco no encuentras nada utilizable, dejas
 constancia de la busqueda infructuosa en una `Decision` y la produccion sigue.

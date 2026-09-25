@@ -1,7 +1,7 @@
 ---
 name: SPEC1
 titulo: Backend v1 — Especificación de requisitos de software
-version: 1.15.0
+version: 1.16.0
 estado: aplicada
 fecha: 2026-09-25
 ambito: backend/
@@ -1389,6 +1389,36 @@ dentro de Salamanca.
 **Documentos que hay que poner al día en la fase 3.** `validators.md` §3, los
 invariantes de la cronología, y §8, el método de RF-213.
 
+### 4.27 Lo que el volcado no puede leer como referencia
+
+**El problema.** Al terminar la versión 2 de `obr_7a0f5152`, pedir su puerta
+devolvía un 500. Un `Evento` del mundo —el contexto histórico de las
+universidades de Castilla— traía como `lugar` un objeto descriptivo, con su
+región escrita a mano, y no el `id` de un `Lugar` del canon. El volcado de
+RF-150 metía ese objeto en su tabla de lugares y reventaba. Una puerta que
+revienta no dice qué falla: la versión no se publica y nadie sabe por qué.
+
+**La decisión, en una frase.** Un lugar, un presente, quien muere o quien
+llega que no es un `id` escrito como texto no apunta a nada del canon, y el
+volcado lo trata como «no consta», igual que lo que no trae valor.
+
+| ID | Requisito | Verificación |
+| --- | --- | --- |
+| RF-215 | **Lo que no es un `id` no consta.** En el volcado de RF-150, un `lugar`, un `id` de presente, un `muere` o un `llega` que no es una cadena pasa al valor que no choca con nada (el `0`), como lo que no trae valor. La puerta no devuelve un error por ello: el resto de la cronología se comprueba igual | `prueba` |
+
+| ID | Decisión | Por qué |
+| --- | --- | --- |
+| D-97 | **No consta, y no fallo de formato** | Un fallo de formato bloquearía la versión por un `Evento` del mundo que no pertenece a ningún capítulo, y rehacer desde un capítulo no lo reescribe: la obra quedaría sin poder publicarse nunca. Un lugar descrito en vez de referido no contradice ninguna fecha ni ningún presente: solo no se puede comparar, que es exactamente lo que el «no consta» de RF-150 ya expresa. Qué forma debe tener el lugar de un `Evento` lo sigue mirando la puerta del esquema, por presencia |
+
+**Qué queda fuera.** Resolver una descripción a un `Lugar` del canon por su
+nombre: sería interpretar, y el volcado copia.
+
+**De dónde sale.** RF-150; D-27; la puerta de la versión 2 de `obr_7a0f5152`,
+que devolvía un 500.
+
+**Documentos que hay que poner al día en la fase 3.** `validators.md` §3, lo
+que el volcado da por no consta, y §8, el método de RF-215.
+
 ## §5 Requisitos de datos
 
 | ID | Requisito | Verificación |
@@ -1570,6 +1600,7 @@ la tesis y el elenco como opcionales, y la fila del Constructor de mundo en
 | §4.24 El Contable fecha dentro del marco del plan | §4.16; RF-25, RF-40, RF-85; D-05, D-27 |
 | §4.25 Lo que el ejecutor lee de lo que entrega un agente | RF-23, RF-126 |
 | §4.26 Un solo lugar, con el viaje que lo explica | §4.16, §4.24; RF-150, RF-151; D-05, D-27 |
+| §4.27 Lo que el volcado no puede leer como referencia | §4.16; RF-150; D-27 |
 
 ## §10 Verificación y criterios de aceptación
 
@@ -1687,6 +1718,8 @@ aquí. Lo que sí fija este SRS es cuándo v1 está terminada:
 21. **Un solo lugar, con el viaje.** Con Lean: un presente en dos lugares el
    mismo día pasa si ese día llega a uno de ellos con un `viaja_a`, y falla si
    no consta ningún viaje suyo ese día.
+22. **Lo que no es un `id`.** Sin gastar: un `Evento` del mundo con el lugar
+   escrito como objeto se vuelca como «no consta» y la puerta responde.
 
 ## §11 Fuera del alcance de v1
 

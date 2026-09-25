@@ -198,6 +198,16 @@ def test_el_suceso_viaja_a_lleva_quien_llega_en_el_volcado() -> None:
     assert "[⟨1, 15510101, 15511231⟩], 0, 1⟩" in volcado.texto
 
 
+def test_lo_que_no_es_un_id_se_vuelca_como_no_consta() -> None:
+    """SPEC1 RF-215: un `Evento` del mundo con el lugar descrito, no referido."""
+    raro = _suceso("eve_1", None, "1584", None, [{"id": {"nombre": "x"}, "nacimiento": None}])
+    raro["lugar"] = {"id": "Espana-universidades", "region": "Castilla"}
+    volcado = volcar([_suceso("evs_1", 1, "1584-05-10", "lug_1", [INES]), raro])
+    esperado = "def s2 : Suceso := ⟨0, 15840101, 15841231, 0, [⟨0, 0, 99999999⟩], 0, 0⟩"
+    assert esperado in volcado.texto
+    assert "-- lugar 1: lug_1" in volcado.texto and "-- lugar 2" not in volcado.texto
+
+
 @con_lean
 def test_el_directorio_de_lean_no_queda_en_disco(tmp_path: Path,
                                                  monkeypatch: pytest.MonkeyPatch) -> None:

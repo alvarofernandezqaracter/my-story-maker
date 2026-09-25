@@ -108,13 +108,24 @@ class Volcado:
     no_volcable: list[tuple[dict[str, Any], str, str]] = field(default_factory=list)
 
 
-def _tabla(valores: Sequence[Any]) -> dict[Any, int]:
+def _id(valor: Any) -> str | None:
+    """Solo un `id` escrito como texto apunta a algo del canon; lo demas no
+    consta (SPEC1 RF-215)."""
+    return valor if isinstance(valor, str) else None
+
+
+def _tabla(valores: Sequence[Any]) -> dict[str, int]:
     """Cada `id` a su posicion desde 1, en orden de aparicion. El 0 es «no consta»."""
-    posiciones: dict[Any, int] = {}
-    for valor in valores:
+    posiciones: dict[str, int] = {}
+    for valor in map(_id, valores):
         if valor is not None and valor not in posiciones:
             posiciones[valor] = len(posiciones) + 1
     return posiciones
+
+
+def _posicion(tabla: dict[str, int], valor: Any) -> int:
+    identificador = _id(valor)
+    return tabla.get(identificador, 0) if identificador is not None else 0
 
 
 def volcar(sucesos: Sequence[dict[str, Any]]) -> Volcado:
@@ -157,15 +168,16 @@ def volcar(sucesos: Sequence[dict[str, Any]]) -> Volcado:
                 volcado.no_volcable.append((suceso, campo, str(presente.get("nacimiento"))))
                 nacimiento = SIN_DESDE, SIN_HASTA
             presentes.append(
-                f"⟨{personas.get(presente.get('id'), 0)}, {nacimiento[0]}, {nacimiento[1]}⟩"
+                f"⟨{_posicion(personas, presente.get('id'))}, {nacimiento[0]}, {nacimiento[1]}⟩"
             )
         nombre = f"s{posicion}"
         nombres.append(nombre)
         lineas.append(f"-- {nombre}: {suceso.get('id')}")
         lineas.append(
             f"def {nombre} : Suceso := ⟨{int(suceso.get('capitulo') or 0)}, {momento[0]}, "
-            f"{momento[1]}, {lugares.get(suceso.get('lugar'), 0)}, [{', '.join(presentes)}], "
-            f"{personas.get(suceso.get('muere'), 0)}, {personas.get(suceso.get('llega'), 0)}⟩"
+            f"{momento[1]}, {_posicion(lugares, suceso.get('lugar'))}, "
+            f"[{', '.join(presentes)}], {_posicion(personas, suceso.get('muere'))}, "
+            f"{_posicion(personas, suceso.get('llega'))}⟩"
         )
     lineas.append(f"def cronologia : List Suceso := [{', '.join(nombres)}]")
     lineas.append("")

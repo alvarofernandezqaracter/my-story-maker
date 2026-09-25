@@ -355,6 +355,8 @@ por `prueba`.
 | `un_solo_lugar` | Dos sucesos del mismo día exacto en lugares distintos no comparten presentes, salvo que ese día conste que ese presente llegó a uno de los dos con un `viaja_a` | Fecha, lugar y presentes de cada suceso, y quién llega en cada `viaja_a` | Dos sucesos fechados solo por mes o año, o sin lugar; y un viaje escrito pero imposible por la distancia, que sin distancias no se ve |
 | `no_reaparece` | Quien muere en un suceso no está presente en ninguno posterior, por capítulo o por fecha | Sujeto de cada `EventoEstado` `muere` y presentes de los demás | Una muerte que el Contable no emitió como `muere` |
 
+Lo que no es un `id` escrito como texto —un lugar descrito como objeto, un presente sin `id`— se vuelca como «no consta», igual que lo que no trae valor: no contradice nada y no tumba la puerta (SPEC1 RF-215).
+
 Lean solo mira lo que la cronología registra: un suceso que la prosa narra y
 el Contable no emitió, o un presente que no se anotó, no se pueden
 contradecir. Una fecha que no es ISO parcial no se vuelca y es un fallo. Si
@@ -672,6 +674,7 @@ Esta tabla es el entregable del documento; todo lo anterior la justifica.
 | El Planificador recibe la época y la fecha de cierre del capítulo anterior, y no fecha antes (SPEC1 RF-214) | La ventana de `planificar` del capítulo 4 con la fecha más tardía del 3 y sin escenas; y el prompt que lo dice | `prueba` |
 | El ejecutor y el hook leen el objeto JSON donde esté, y el tipo sin tildes; un JSON roto sigue siendo un fallo que dice dónde se rompió (SPEC1 RF-211, RF-212, D-95) | Objetos con texto delante y detrás, entre vallas y sin ellas; uno cortado; una `Crítica` y una `Decisión` con tilde frente a un tipo inventado; y la misma lectura en el hook y en el ejecutor | `prueba` |
 | Estar en dos lugares el mismo día es coherente si ese día consta el viaje de esa persona a uno de los dos (SPEC1 RF-213, D-96) | Con Lean: del taller a la biblioteca con su `viaja_a`, que pasa, frente a un viaje de otro que no explica a quien no viajó, que falla; y el volcado que lleva quién llega | `prueba` |
+| Un lugar, un presente, quien muere o quien llega que no es un `id` escrito como texto se vuelca como «no consta», sin tumbar la puerta (SPEC1 RF-215, D-97) | Un `Evento` del mundo con el lugar descrito como objeto y un presente sin `id` de texto, volcados como `0` | `prueba` |
 | El texto de la rúbrica no está en el repositorio (SPEC1 RF-202, RNF-13) | Búsqueda de frases de la rúbrica en el árbol y en `git log -p` | `inspeccion` |
 | El lanzador corre los briefs de uno en uno, no arranca nada sin `--si-gasto` y traduce a la misma clave lo que dicen la puerta, los ganchos y el juez (SPEC1 RF-203) | Almacén y veredictos fingidos, más el cotejo de que toda comprobación que un brief declara la sabe observar el lanzador | `prueba` |
 | Los cuatro documentos dicen lo mismo entre sí | Los cotejos de §11 | `analisis` |
